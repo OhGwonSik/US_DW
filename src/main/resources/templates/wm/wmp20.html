@@ -1,0 +1,128 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent">
+		<!-- 검색영역 -->
+		<main class="mobile-content">
+			<div class="search-condition">
+				<div class="row">
+					<div class="condition-title col">
+						<button id="wmp20_toggle" class="toggle-skumkey" disabled>[[#{wm.wlotma.skumkey}]]</button>
+					</div>
+					<div class="input-wrapper col">
+						<input type="text" id="wmp20_input" name="wmp20_input">
+					</div>
+				</div>
+				<div class="row b1">	
+					<button type="button" class="btn-clear btn-white col" id="wmp20_btnReset">[[#{bt.reset}]]</button>				
+				</div>
+			</div>
+			<div class="search-list flex-1">
+				<div class="list-top">
+				  	<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+				</div>
+				
+				<div class="table-wrapper con-box row2">
+				  	<table class="mobile-table wmp20-table">
+						<thead id="thtb">              
+							<tr>
+								<th id="waerkey">[[#{search.whnamlc}]]</th>			
+								<th id="ownerky">[[#{search.ownamlc}]]</th>		
+								<th id="skudesc">[[#{md.mskuma.skudesc}]]</th>
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody"></tbody>
+				  	</table>
+				</div>
+			  </div>
+			  <div class="spinner" id="wmp20Spinner"></div>
+			  <div class="bg"></div>
+		</main>
+	<script>
+		/*  wmp20 - 부품(SKU)조회
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: PDA로 부품 마스터에 있는 부품의 정보를 조회하는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		$(function() {
+			const pageId = 'wmp20';
+			let wmp20List;
+			
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});			
+			//============================================================				
+			//상품코드 바코드 입력시 자동 검색
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keyup', async function(event) {
+				if(event.key === 'Enter'){
+					const upccode = document.querySelector('#'+pageId+'_input').value.trim();
+ 					if(!upccode) {
+ 						document.querySelector('#'+pageId+'_input').value = '';
+ 						$('#' + pageId + '_input').focus();
+ 						return;
+ 					}
+ 					getMskuList(upccode);
+ 					document.querySelector('#'+pageId+'_input').value = '';
+ 					$('#' + pageId + '_input').focus();
+				}
+			});
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function() {
+				location.reload();
+			});
+
+			//================================
+			//PDA 상품조회 값 불러오기
+			//================================
+			async function getMskuList(upccode) {
+				
+				document.querySelector('#wmp20Spinner').style.display = 'block';
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						upccode : upccode
+				};
+				
+				const response = await fetchUtil('GET', '/wm/pda/wmp20/grid', param);
+				wmp20List = await response.json();
+				document.querySelector('#tbody').innerHTML = '';
+				
+				//alert후 포커스하게 하기....
+				if(!wmp20List.length){
+					await alertOpen('[[#{wm.wmp20.noSkumkey}]]', async function(){
+						await $('#' + pageId + '_input').focus();
+						document.querySelector('#wmp20Spinner').style.display = 'none';
+					});
+					return;
+				}
+				
+				let html = '';
+				for(const wmp20Data of wmp20List){
+					html +='<tr>';	
+					html +='<td>' + wmp20Data.warekey + '</td>';
+					html +='<td>' + wmp20Data.ownerky + '</td>';
+					html +='<td>' + wmp20Data.skudesc + '</td>';
+					html +='</tr>';
+				}
+				document.querySelector('#wmp20Spinner').style.display = 'none';
+				document.querySelector('#tbody').insertAdjacentHTML('afterbegin', html);
+			}
+		});
+	</script>
+</div>	
+</html>

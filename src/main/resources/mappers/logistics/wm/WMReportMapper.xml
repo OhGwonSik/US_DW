@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.WMReportMapper">
+
+	<!-- 재고실사지시서 -->
+	<select id="getStockInspectionOrder" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getStockInspectionOrder */
+		select ROW_NUMBER() OVER(order by A.PHYSOKY, A.PHYSOIT
+			 , A.WAREKEY, A.AREAKEY, A.ZONEKEY, A.LOCAKEY, A.SKUMKEY
+			 , C.SKUDESC, A.COMPKEY, A.OWNERKY, A.VENDKEY) as ROWNUM
+			 , A.COMPKEY as COMPKEY
+			 , ifnull(A.PHYSOKY, ' ') as PHYSOKY
+			 , ML.LOCANAM as LOCAKEY
+			 , A.SKUMKEY as SKUMKEY
+			 , C.SKUDESC as SKUDESC
+			 , A.SYSTQTY as SYSTQTY
+			 , A.SUOMKEY as SUOMKEY
+			 , date_format(NOW(), '%Y-%m-%d %H:%i:%s') as PRINTDAY
+			 , (select concat(WAREKEY, ' (', WHNAMLC, ')') from MWARMA where COMPKEY = A.COMPKEY and WAREKEY = A.WAREKEY) as WAREKEY
+			 , (select OWNAMLC from MOWRMA where COMPKEY = A.COMPKEY and OWNERKY = A.OWNERKY) as OWNERKY
+			 , concat(CEILING(MP.PACKQTY), '/', CEILING(A.SYSTQTY / MP.PACKQTY)) as BOXCNT
+		from WPHYIT A
+		inner join MSKUWC C
+			on A.COMPKEY = C.COMPKEY
+		   and A.WAREKEY = C.WAREKEY
+		   and A.OWNERKY = C.OWNERKY
+		   and A.SKUMKEY = C.SKUMKEY
+		inner join MLOCMA ML
+			on ML.COMPKEY = A.COMPKEY
+		   and ML.WAREKEY = A.WAREKEY
+		   and ML.LOCAKEY = A.LOCAKEY
+		left outer join SUSRMA U
+			on U.COMPKEY = A.COMPKEY
+		   and U.USERACT = C.SKUAT01
+		left outer join MPAKMA MP
+			on MP.COMPKEY = C.COMPKEY
+		   and MP.WAREKEY = C.WAREKEY
+		   and MP.TRUNTYP = C.TRUNTYP
+		   and MP.PACKKEY = C.PACKKEY
+		where A.COMPKEY = #{compkey}
+		  and A.AREAKEY = 'STG'
+		  and A.PHYSOKY = #{physoky}
+		<if test="physoitList != null and physoitList.size > 0">
+			and A.PHYSOIT IN
+			<foreach item="item" index="index" collection="physoitList"
+				open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		order by A.PHYSOKY, A.PHYSOIT
+			   , A.WAREKEY, A.AREAKEY, A.ZONEKEY, A.LOCAKEY, A.SKUMKEY
+			   , C.SKUDESC, A.COMPKEY, A.OWNERKY, A.VENDKEY
+	</select>
+
+	<!--일반 피킹지시서 -->
+	<select id="getPickingOrderByNormal" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPickingOrderByNormal */
+		select ROW_NUMBER() OVER(order by WT.COOUTKY, WT.COOUTIT) as ROWNUM
+			 , WT.COMPKEY
+			 , WT.COOUTKY <!-- 수주오더번호 (울산용) -->
+			 , WT.SHPDCKY <!-- 출고문서번호 (광주용) -->
+			 , ifnull(WT.ALLGRKY, ' ') as ALLGRKY
+			 , (select OWNAMLC from MOWRMA MO WHERE MO.COMPKEY = WT.COMPKEY and MO.OWNERKY = WT.OWNERKY) as OWNERKY
+			 , (select COMCDTX from V_MCODEM MC where MC.COMPKEY = WT.COMPKEY and MC.COMCDVL = WT.PICKTYP ) as PICKTYP
+			 , concat(WT.WAREKEY, ' (', (select WHNAMLC from MWARMA MW WHERE MW.COMPKEY = WT.COMPKEY and MW.WAREKEY = WT.WAREKEY), ')') as WAREKEY
+			 , WT.SKUMKEY
+			 , WT.SKUDESC
+			 , (select MZ.ZONENAM from MZONMA MZ where MZ.COMPKEY = WT.COMPKEY and MZ.WAREKEY = WT.WAREKEY and MZ.AREAKEY = WT.FRAREKY and MZ.ZONEKEY = WT.FRZONKY) as ZONENAM
+			 , (select ML.LOCANAM from MLOCMA ML where ML.COMPKEY = WT.COMPKEY and ML.WAREKEY = WT.WAREKEY and ML.AREAKEY = WT.FRAREKY and ML.ZONEKEY = WT.FRZONKY and ML.LOCAKEY = WT.FRLOCKY) as LOCANAM
+			 , SUM(WT.FORDQTY) AS FORDQTY
+			 , WT.FUOMEKY
+			 , date_format(NOW(), '%Y-%m-%d %H:%i:%s') as PRINTDAY
+			 , date_format(NOW(), '%Y-%m-%d') as SHPPDAY
+			 , MSP.UPCCODE
+			 , ifnull(CONCAT(CEILING(MSP.PACKQTY), '/', CEILING(WT.FORDQTY / MSP.PACKQTY)), '0/0') AS BOXCNT
+		from WTAKIT WT
+		inner join (
+				select
+				MS.COMPKEY, MS.WAREKEY, MS.OWNERKY,
+				MS.SKUMKEY, MS.SKUDESC, MS.SUOMKEY,
+				MS.UPCCODE, MS.TRUNTYP, MP.PACKKEY,
+				MP.PACKQTY
+				from MSKUWC MS
+				left outer join MPAKMA MP
+					on MP.COMPKEY = MS.COMPKEY
+				   and MP.WAREKEY = MS.WAREKEY
+				   and MP.TRUNTYP = MS.TRUNTYP
+				   and MP.PACKKEY = MS.PACKKEY
+				) MSP
+			on WT.COMPKEY = MSP.COMPKEY
+		   and WT.WAREKEY = MSP.WAREKEY
+		   and WT.OWNERKY = MSP.OWNERKY
+		   and WT.SKUMKEY = MSP.SKUMKEY
+		where WT.COMPKEY = #{compkey}
+		  and WT.WAREKEY = #{warekey}
+		  and WT.TASKSTS = #{tasksts}
+		  and WT.ALLGRKY = #{allgrky}
+		 <choose>
+			<when test="orhdkey != null and orhdkey != ''">
+				and WT.COOUTKY in
+				<foreach collection="orhdkey" item="orditem" open="("
+					separator="," close=")">
+					#{orditem}
+				</foreach>
+			</when>
+			<otherwise>
+				and WT.COOUTKY = #{cooutky}
+			</otherwise>
+		 </choose>
+<!-- 		<if test="picktyp != null and 'SINGLE'.equals(picktyp)"> -->
+<!-- 			and WT.COOUTKY = #{cooutky} -->
+<!-- 		</if> -->
+		group by WT.COMPKEY, WT.WAREKEY, WT.OWNERKY, WT.SKUMKEY, WT.SKUDESC
+			   , WT.FRAREKY, WT.FRZONKY, WT.FRLOCKY, WT.PICKTYP
+		order by WT.COOUTKY, WT.COOUTIT
+	</select>
+
+	<!-- 반출 피킹지시서 -->
+	<select id="getPickingOrderByReturn" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPickingOrderByReturn */
+		select ROW_NUMBER() OVER(order by WT.OERETKY, WT.OERETIT) as ROWNUM
+			 , WT.COMPKEY
+			 , WT.COOUTKY <!-- 수주오더번호 (울산용) -->
+			 , WT.OERETKY
+			 , WT.SHPDCKY <!-- 출고문서번호 (광주용) -->
+			 , ifnull(WT.ALLGRKY, ' ') as ALLGRKY
+			 , (select OWNAMLC from MOWRMA MO WHERE MO.COMPKEY = WT.COMPKEY and MO.OWNERKY = WT.OWNERKY) as OWNERKY
+			 , (select COMCDTX from V_MCODEM MC where MC.COMPKEY = WT.COMPKEY and MC.COMCDVL = WT.PICKTYP ) as PICKTYP
+			 , concat(WT.WAREKEY, ' (', (select WHNAMLC from MWARMA MW WHERE MW.COMPKEY = WT.COMPKEY and MW.WAREKEY = WT.WAREKEY), ')') as WAREKEY
+			 , WT.SKUMKEY
+			 , WT.SKUDESC
+			 , (select MZ.ZONENAM from MZONMA MZ where MZ.COMPKEY = WT.COMPKEY and MZ.WAREKEY = WT.WAREKEY and MZ.AREAKEY = WT.FRAREKY and MZ.ZONEKEY = WT.FRZONKY) as ZONENAM
+			 , (select ML.LOCANAM from MLOCMA ML where ML.COMPKEY = WT.COMPKEY and ML.WAREKEY = WT.WAREKEY and ML.AREAKEY = WT.FRAREKY and ML.ZONEKEY = WT.FRZONKY and ML.LOCAKEY = WT.FRLOCKY) as LOCANAM
+			 , SUM(WT.FORDQTY) AS FORDQTY
+			 , WT.FUOMEKY
+			 , date_format(NOW(), '%Y-%m-%d %H:%i:%s') as PRINTDAY
+			 , date_format(NOW(), '%Y-%m-%d') as SHPPDAY
+			 , MSP.UPCCODE
+			 , ifnull(CONCAT(CEILING(MSP.PACKQTY), '/', CEILING(WT.FORDQTY / MSP.PACKQTY)), '0/0') AS BOXCNT
+		from WTAKIT WT
+		inner join (
+				select
+				MS.COMPKEY, MS.WAREKEY, MS.OWNERKY,
+				MS.SKUMKEY, MS.SKUDESC, MS.SUOMKEY,
+				MS.UPCCODE, MS.TRUNTYP, MP.PACKKEY,
+				MP.PACKQTY
+				from MSKUWC MS
+				left outer join MPAKMA MP
+					on MP.COMPKEY = MS.COMPKEY
+				   and MP.WAREKEY = MS.WAREKEY
+				   and MP.TRUNTYP = MS.TRUNTYP
+				   and MP.PACKKEY = MS.PACKKEY
+				) MSP
+			on WT.COMPKEY = MSP.COMPKEY
+		   and WT.WAREKEY = MSP.WAREKEY
+		   and WT.OWNERKY = MSP.OWNERKY
+		   and WT.SKUMKEY = MSP.SKUMKEY
+		where WT.COMPKEY = #{compkey}
+		  and WT.WAREKEY = #{warekey}
+		  and WT.TASKSTS = #{tasksts}
+		  and WT.ALLGRKY = #{allgrky}
+		<if test="orhdkey != null and orhdkey != ''">
+			and WT.OERETKY in
+			<foreach collection="orhdkey" item="orditem" open="(" separator="," close=")">
+				#{orditem}
+			</foreach>
+		</if>
+<!-- 		<if test="picktyp != null and 'SINGLE'.equals(picktyp)"> -->
+<!-- 			and WT.OERETKY = #{oeretky} -->
+<!-- 		</if> -->
+		group by WT.COMPKEY, WT.WAREKEY, WT.OWNERKY, WT.SKUMKEY, WT.SKUDESC
+			   , WT.FRAREKY, WT.FRZONKY, WT.FRLOCKY, WT.FUOMEKY, WT.PICKTYP
+		order by WT.OERETKY, WT.OERETIT
+	</select>
+
+	<!-- 일반출고 및 기타출고 피킹지시서(품목수) -->
+	<select id="getPickingOrderItemByNormal" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPickingOrderItemByNormal */
+		select COUNT(A.SKU) as SKUNCNT
+			 , SUM(A.STOCK) as STOTQTY
+		from (
+			select count(WT.SKUMKEY) as SKU
+				 , sum(WT.FORDQTY) as STOCK
+			from WTAKIT WT
+			where WT.COMPKEY = #{compkey}
+			  and WT.WAREKEY = #{warekey}
+			  and WT.TASKSTS = #{tasksts}
+			  and WT.ALLGRKY = #{allgrky}
+			<if test="orhdkey != null and orhdkey != ''">
+				and WT.COOUTKY in
+				<foreach collection="orhdkey" item="orditem" open="("
+					separator="," close=")">
+					#{orditem}
+				</foreach>
+			</if>
+			<if test="picktyp != null and 'SINGLE'.equals(picktyp)">
+				and WT.COOUTKY = #{cooutky}
+			</if>
+			group by WT.SKUMKEY
+		) A
+	</select>
+
+	<!-- 반출출고 피킹지시서(품목수) -->
+	<select id="getPickingOrderItemByReturn" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPickingOrderItemByReturn */
+		select COUNT(A.SKU) as SKUNCNT
+		, SUM(A.STOCK) as STOTQTY
+		from (
+			select count(WT.SKUMKEY) as SKU
+			, sum(WT.FORDQTY) as STOCK
+			from WTAKIT WT
+			where WT.COMPKEY = #{compkey}
+			  and WT.WAREKEY = #{warekey}
+			  and WT.TASKSTS = #{tasksts}
+			  and WT.ALLGRKY = #{allgrky}
+			<if test="orhdkey != null and orhdkey != ''">
+				and WT.OERETKY in
+				<foreach collection="orhdkey" item="orditem" open="("
+					separator="," close=")">
+					#{orditem}
+				</foreach>
+			</if>
+			<if test="picktyp != null and 'SINGLE'.equals(picktyp)">
+				and WT.OERETKY = #{oeretky}
+			</if>
+			group by WT.SKUMKEY
+		) A
+	</select>
+
+	<!-- 적치지시서 -->
+	<select id="getPileOrder" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPileOrder */
+		select ROW_NUMBER() OVER(order by WT.TASKOKY, WT.TASKOIT) as ROWNUM
+			 , WT.COMPKEY
+			 , IFNULL(WT.TASKOKY, ' ') AS TASKOKY
+			 , WT.TASKOIT
+			 , CONCAT(WT.WAREKEY,' (', (SELECT WHNAMLC FROM MWARMA WHERE COMPKEY = WT.COMPKEY AND WAREKEY = WT.WAREKEY ), ')') AS WAREKEY 
+			 , (SELECT OWNAMLC FROM MOWRMA WHERE COMPKEY = WT.COMPKEY AND OWNERKY = WT.OWNERKY ) AS OWNERKY 
+			 , WT.SKUMKEY
+			 , MS.SKUDESC
+			 , (SELECT LOCANAM FROM MLOCMA WHERE COMPKEY = WT.COMPKEY AND WAREKEY = WT.WAREKEY AND AREAKEY = WT.FRAREKY AND ZONEKEY = WT.FRZONKY AND LOCAKEY = WT.FRLOCKY) AS FRLOCKY
+			 , (SELECT ZONENAM FROM MZONMA WHERE COMPKEY = WT.COMPKEY AND WAREKEY = WT.WAREKEY AND AREAKEY = WT.TOAREKY AND ZONEKEY = WT.TOZONKY) AS TOZONKY
+			 , (SELECT LOCANAM FROM MLOCMA WHERE COMPKEY = WT.COMPKEY AND WAREKEY = WT.WAREKEY AND AREAKEY = WT.TOAREKY AND ZONEKEY = WT.TOZONKY AND LOCAKEY = WT.TOLOCKY) AS TOLOCKY
+			 , WT.FORDQTY 
+			 , WT.FUOMEKY 
+			 , MS.UPCCODE
+			 , DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS PRINTDAY 
+			 , CONCAT(CEILING(MP.PACKQTY), '/', CEILING(WT.FORDQTY/MP.PACKQTY)) AS BOXCNT
+		from WTAKIT WT
+		inner join WRCVIT WR
+			on WR.RCVDCKY = WT.RCVDCKY
+		   and WR.COMPKEY = WT.COMPKEY
+		   and WR.WAREKEY = WT.WAREKEY
+		   and WR.RCVDCIT = WT.RCVDCIT
+		inner join MSKUWC MS
+			on MS.COMPKEY = WT.COMPKEY
+		   and MS.WAREKEY = WT.WAREKEY
+		   and MS.OWNERKY = WT.OWNERKY
+		   and MS.SKUMKEY = WT.SKUMKEY
+		left join (
+				select COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, OWNERKY, SKUMKEY, LOTNMKY
+				, sum(STOTQTY) as STOTQTY, sum(SALLQTY) as SALLQTY
+				, sum(SINBQTY) as SINBQTY, sum(SOUBQTY) as SOUBQTY
+				, sum(SBLOQTY) as SBLOQTY
+				from WSTKKY
+				where COMPKEY = #{compkey}
+				  and WAREKEY = #{warekey}
+				  and (STOTQTY-SBLOQTY) > 0
+				  and SALLQTY = 0
+				  and SINBQTY = 0
+				  and SOUBQTY = 0
+				group by COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, OWNERKY, SKUMKEY, LOTNMKY
+				) WS
+			on WS.COMPKEY = WT.COMPKEY
+		   and WS.WAREKEY = WT.WAREKEY
+		   and WS.AREAKEY = WT.TOAREKY
+		   and WS.ZONEKEY = WT.TOZONKY
+		   and WS.LOCAKEY = WT.TOLOCKY
+		   and WS.OWNERKY = WT.OWNERKY
+		   and WS.SKUMKEY = WT.SKUMKEY
+		   and WS.LOTNMKY = WT.LOTNMKY
+		left outer join MPAKMA MP
+			on MP.COMPKEY = WT.COMPKEY
+		   and MP.WAREKEY = WT.WAREKEY
+		   and MP.TRUNTYP = WT.TRUNTYP
+		   and MP.PACKKEY = MS.PACKKEY
+		where WT.COMPKEY = #{compkey}
+		  and WT.WAREKEY = #{warekey}
+		  and WT.DOCCATE = #{doccate}
+		  and WT.DOCTYPE = #{doctype}
+		  and WT.TASKSTS = 'TASK'
+		  and WT.TOAREKY = 'STG'
+		  and WT.TASKOKY = #{taskoky}
+		  <if test="taskoitList != null and taskoitList.size > 0">
+		  and WT.TASKOIT IN
+			  <foreach item="taskoit" index="index" collection="taskoitList" open="(" separator="," close=")">
+				#{taskoit}
+			  </foreach>
+		  </if>
+		  order by WT.TASKOKY, WT.TASKOIT
+	</select>
+
+	<!-- 적치지시서(품목수) -->
+	<select id="getPileOrderSummary" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPileOrderSummary */
+		select
+			WAREKEY,
+			TASKOKY,
+			COUNT(DISTINCT SKUMKEY) AS SKUNCNT,
+			SUM(FORDQTY) AS STOTQTY
+		 from WTAKIT WT
+		where WT.COMPKEY = #{compkey}
+		  and WT.DOCCATE = #{doccate} 
+		  and WT.DOCTYPE = #{doctype}
+		  and WT.TASKSTS = 'TASK' 
+		  and WT.TOAREKY = 'STG' 
+		  and WT.TASKOKY = #{taskoky}
+		  and WT.WAREKEY = #{warekey}
+		 <if test="taskoitList != null and taskoitList.size > 0">
+		  and WT.TASKOIT IN
+			<foreach item="taskoit" index="index"
+				collection="taskoitList" open="(" separator="," close=")">
+				#{taskoit}
+			</foreach>
+		</if>
+		group by WAREKEY, TASKOKY
+	</select>
+	
+
+	<!-- 팔레트라벨 -->
+	<select id="getPalletLabel" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getPalletLabel */
+		select WT.TRUNPID
+			 , WT.TRUNTYP
+			 , MT.TRUNNAM
+		from WTAKIT WT
+		inner join MTUTMA MT
+			on MT.COMPKEY = WT.COMPKEY
+		   and MT.TRUNTYP = WT.TRUNTYP
+		where WT.COMPKEY = #{compkey}
+		  and WT.TRUNPID IN
+		<foreach item="trunpid" index="index" collection="trunpidList" open="(" separator="," close=")">
+			#{trunpid}
+		</foreach>
+		group by WT.TRUNPID, WT.TRUNTYP, MT.TRUNNAM
+	</select>
+
+	<!-- 납품지시서 쿼리 -->
+	<select id="getShipOrder" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getShipOrder */
+		select
+			ROW_NUMBER() OVER(order by SH.ALLGRKY, SH.COOUTIT) as ROWNUM ,
+			concat(SH.ALLGRKY , '|' , SH.COOUTKY , '|' , IFNULL(SH.DESTKEY , '')) as QRCDKEY ,
+			SH.COMPKEY , 
+			(select WHNAMLC from MWARMA where COMPKEY = SH.COMPKEY and WAREKEY = SH.WAREKEY) as WAREKEY , 
+			SH.OWNERKY ,
+			SH.DESTKEY ,
+			(select DENAMLC from MDESMA where COMPKEY = SH.COMPKEY and PTNRKEY = SH.CUSTKEY and DESTKEY = SH.DESTKEY) as DENAMLC ,
+			TS.SKUMKEY , TS.SKUDESC ,
+			TS.ALLGRKY , TS.PICKTYP ,
+			TS.TCMPQTY ,
+			date_format(NOW(), '%Y-%m-%d %H:%i:%s') as PRINTDAY ,
+			date_format(NOW(), '%Y-%m-%d') as SHPPDAY ,
+			SH.SUOMKEY ,
+			TS.COOUTKY ,
+			ifnull(CONCAT(CEILING(MSP.PACKQTY), '/', CEILING(TS.FORDQTY / MSP.PACKQTY)), '0/0') AS BOXCNT
+		from WSHPIT SH
+		inner join (
+			select
+					t.COMPKEY, t.WAREKEY, t.OWNERKY,
+					t.ALLGRKY, t.PICKTYP,
+					t.SHPDCKY, t.SHPDCIT,
+					t.COOUTKY, t.COOUTIT,
+					t.SKUMKEY, t.SKUDESC,
+					SUM(t.TCMPQTY) as TCMPQTY,
+					t.FORDQTY
+			 from WTAKIT t
+			where t.COMPKEY = #{compkey}
+			  and t.WAREKEY = #{warekey}
+			  and t.DOCCATE = '500'
+			  and t.DOCTYPE = '530'
+			  and t.ALLGRKY = #{allgrky}
+			  and t.PICKTYP = #{picktyp}
+			 <if test="cooutky != null and cooutky != ''">
+			  and t.COOUTKY = #{cooutky}
+			 </if>
+			group by ALLGRKY, COOUTKY, COOUTIT
+		) TS on SH.COMPKEY = TS.COMPKEY
+			and SH.WAREKEY = TS.WAREKEY
+			and SH.OWNERKY = TS.OWNERKY
+			and SH.COOUTKY = TS.COOUTKY
+			and SH.COOUTIT = TS.COOUTIT
+		inner join (
+				select
+					  MS.COMPKEY, MS.WAREKEY, MS.OWNERKY,
+					  MS.SKUMKEY, MS.SKUDESC, MS.SUOMKEY,
+					  MS.UPCCODE, MS.TRUNTYP, MP.PACKKEY,
+					  MP.PACKQTY
+				 from MSKUWC MS
+				 left outer join MPAKMA MP
+				   on MP.COMPKEY = MS.COMPKEY
+				  and MP.WAREKEY = MS.WAREKEY
+				  and MP.TRUNTYP = MS.TRUNTYP
+				  and MP.PACKKEY = MS.PACKKEY
+			) MSP on SH.COMPKEY = MSP.COMPKEY
+			and SH.WAREKEY = MSP.WAREKEY
+			and SH.SKUMKEY = MSP.SKUMKEY
+		where SH.COMPKEY = #{compkey}
+		  and SH.WAREKEY = #{warekey}
+		  and TS.PICKTYP = #{picktyp}
+		<choose>
+		  <when test="allgrkyArr != null and allgrkyArr.length > 0">
+		   and TS.ALLGRKY in 
+		   <foreach collection="allgrkyArr" separator="," item="item" open="(" close=")">
+		   	#{item}
+		   </foreach>
+		  </when> 
+		  <otherwise> 
+		   and TS.ALLGRKY = #{allgrky}
+		  </otherwise>
+		</choose>  
+		<if test="cooutky != null and cooutky!= ''">
+		  and TS.COOUTKY = #{cooutky}
+		</if>
+		<if test="shpitst != null and shpitst.trim() != ''"> 
+		  and SH.SHPITST = #{shpitst}
+		</if>
+		<if test="destkey != null and destkey.trim() != ''">
+		  and SH.DESTKEY = #{destkey}
+		</if>
+	</select>
+
+	<select id="getShipOrderItem" resultType="com.logistics.wm.domain.WMReportDTO">
+		/* getShipOrderItem */
+		select COUNT(A.SKU) as SKUNCNT 
+			 , sum(A.STOCK) as STOTQTY
+		from (
+			select count(WT.SKUMKEY) as SKU
+				 , sum(WT.FORDQTY)   as STOCK
+			  from WTAKIT WT 
+			  left outer join WSHPIT WS
+				on WT.COMPKEY = WS.COMPKEY
+			   and WT.WAREKEY = WS.WAREKEY
+			   and WT.COOUTKY = WS.COOUTKY 
+			   and WT.COOUTIT = WS.COOUTIT  
+			   and WS.SHPDCKY = WS.SHPDCKY
+			   and WT.SHPDCIT = WS.SHPDCIT 
+			<where> WT.COMPKEY = #{compkey}
+		 	    and WT.WAREKEY = #{warekey}
+		 	    and WT.ALLGRKY = #{allgrky}
+				and WT.TASKSTS not in ('CANCEL')
+		 	  <if test="cooutky != null and cooutky != ''">   
+				and WT.COOUTKY = #{cooutky}
+			  </if>	
+<!-- 			  <choose> -->
+<!-- 				<when test="grhdkey != null and grhdkey.length > 0"> -->
+<!-- 					and WT.ALLGRKY in -->
+<!-- 					<foreach collection="grhdkey" item="grhditm" open="(" separator="," close=")"> -->
+<!-- 						#{grhditm} -->
+<!-- 					</foreach> -->
+<!-- 				 </when> -->
+<!-- 				 <otherwise> -->
+<!-- 				    and WT.ALLGRKY = #{allgrky} -->
+<!-- 				 </otherwise> -->
+<!-- 			 </choose> -->
+<!-- 			 <if test="oritkey != null and oritkey.length > 0"> -->
+<!-- 		  		   and WT.COOUTKY in -->
+<!-- 			 	<foreach collection="oritkey" item="orititm" open="(" separator="," close=")"> -->
+<!-- 					 #{orititm} -->
+<!-- 				</foreach> -->
+<!-- 			 </if> -->
+			 <if test="orhdkey != null and orhdkey != ''">
+				   and WT.OERETKY in
+				<foreach collection="orhdkey" item="orditem" open="(" separator="," close=")">
+					#{orditem}
+				</foreach>
+			 </if>
+			 <if test="destkey != null and destkey.trim() != ''">
+		   	   	   and WS.DESTKEY = #{destkey}
+			 </if>
+			group by WT.SKUMKEY
+		   </where>
+		) A
+	</select>
+	<!-- 프린트 로그 카운트 -->
+	<select id="getWmPrintLogCount" resultType="integer">
+		/* getWmPrintLogCount */
+		select count(PRINTSQ) as PRINTCOUNT
+		  from SPRTHI
+		where COMPKEY = #{compkey}
+			<if test='type.equals("wmd10_1")'>
+				<if test='doctype.equals("710") or doctype.equals("790") or doctype.equals("730")'>
+					and ALLGRKY = #{allgrky}
+					and COOUTKY = #{cooutky}
+				</if>
+				<if test='!doctype.equals("710") and !doctype.equals("790") and !doctype.equals("730")'>
+					and SHPDCKY = #{allgrky}
+				</if>
+			</if>
+			<if test='type.equals("wmd10_2")'>
+				<if test='doctype.equals("710") or doctype.equals("790") or doctype.equals("730")'>
+					and ALLGRKY = #{allgrky}
+				</if>
+				<if test='!doctype.equals("710") and !doctype.equals("790") and !doctype.equals("730")'>
+					and SHPDCKY = #{allgrky}
+				</if>
+			</if>
+			<if test='type.equals("wmd70")'>
+				and TASKOKY = #{taskoky}
+			</if>
+			<if test='type.equals("wmd60")'>
+				and PHYSOKY = #{physoky}
+			</if>
+			<if test='type.equals("wmd30")'>
+				<if test='doctype.equals("710") or doctype.equals("790") or doctype.equals("730")'>
+					and ALLGRKY = #{allgrky}
+					and PROGRID = #{progrid}
+					and COOUTKY in 
+					<foreach collection="oritkey" item="item" separator="," open="(" close=")">
+					 #{item}
+					</foreach>
+				</if>
+				<if test='!doctype.equals("710") and !doctype.equals("790") and !doctype.equals("730")'>
+					and SHPDCKY = #{allgrky}
+					and PROGRID = #{progrid}
+				</if>
+			</if>
+	</select>
+
+
+	<select id="wmAddPrintList" statementType="CALLABLE" parameterType="com.logistics.wm.domain.WMReportDTO">
+		{ 
+			/* wmAddPrintList */
+			CALL SP_SY_SPRTHI (#{compkey}, #{warekey}, #{doccate},
+			#{doctype},
+			#{progrid}, #{dochkey}, #{docitem}, #{loguser},
+			#{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=VARCHAR})		
+		}
+	</select>
+</mapper>

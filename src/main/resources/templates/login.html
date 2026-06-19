@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"  xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+	<meta charset="utf-8">
+    <meta http-equiv="Content-Language" content="ko" >
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
+	<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+	<META HTTP-EQUIV="Expires" CONTENT="-1">
+	<link id="rPath" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+ 	<!-- 파비콘 -->
+	<link rel="manifest" th:href="@{/manifest_pc.json}" />
+	<link rel="apple-touch-icon" sizes="57x57" th:href="@{/v1/assets/favicon/apple-icon-57x57.png}">
+	<link rel="apple-touch-icon" sizes="60x60" th:href="@{/v1/assets/favicon/apple-icon-60x60.png}">
+	<link rel="apple-touch-icon" sizes="72x72" th:href="@{/v1/assets/favicon/apple-icon-72x72.png}">
+	<link rel="apple-touch-icon" sizes="76x76" th:href="@{/v1/assets/favicon/apple-icon-76x76.png}">
+	<link rel="apple-touch-icon" sizes="114x114" th:href="@{/v1/assets/favicon/apple-icon-114x114.png}">
+	<link rel="apple-touch-icon" sizes="120x120" th:href="@{/v1/assets/favicon/apple-icon-120x120.png}">
+	<link rel="apple-touch-icon" sizes="144x144" th:href="@{/v1/assets/favicon/apple-icon-144x144.png}">
+	<link rel="apple-touch-icon" sizes="152x152" th:href="@{/v1/assets/favicon/apple-icon-152x152.png}">
+	<link rel="apple-touch-icon" sizes="180x180" th:href="@{/v1/assets/favicon/apple-icon-180x180.png}">
+	<link rel="icon" type="image/png" sizes="192x192"  th:href="@{/v1/assets/favicon/android-icon-192x192.png}">
+	<link rel="icon" type="image/png" sizes="32x32" th:href="@{/v1/assets/favicon/favicon-32x32.png}">
+	<link rel="icon" type="image/png" sizes="96x96" th:href="@{/v1/assets/favicon/favicon-96x96.png}">
+	<link rel="icon" type="image/png" sizes="16x16" th:href="@{/v1/assets/favicon/favicon-16x16.png}">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/v1/assets/favicon/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+
+	<title></title>
+    <!-- CSS -->
+	<link rel="stylesheet" th:href="@{/v1/css/main.css}">
+
+	<script th:src="@{/v1/scripts/jquery-3.6.0.min.js}"></script>
+	<script th:src="@{/v1/scripts/jquery-ui.min.js}"></script>
+	<script th:src="@{/v1/scripts/script.js}"></script>
+	<style>
+		.wrapper {
+			min-width: auto;
+			min-height: auto;
+		}
+		.login-wrapper .login-wrap {
+			position: relative;
+		}
+		.errmsg {
+			color: red;
+			font-weight: bold;
+			text-align: center;
+			position: absolute;
+			top: 40%;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 100%;
+		}
+	</style>
+</head>
+<body>
+	<div class="wrapper login-wrapper">
+		<div class="login-wrap con-box">
+			<div class="login-title-wrap">
+				<img src="" alt="" class="img-logo">
+				<div class="login-title">
+					스마트물류플랫폼
+					<span>울산</span>
+				</div>
+			</div>
+			<div id="errmsg" class="errmsg"></div>
+			<form method="post" id="frmLogin" onsubmit="return false;">
+			<div class="input-login-wrapper">
+
+				<input type="hidden" id="token" data-token-name="${_csrf.headerName}" placeholder="Password" value="${_csrf.token}">
+				<input type="hidden" name="compkey" id="compkey"  th:value="200" >
+				<input type="hidden" name="langkey" id="langkey"  th:value="us" >
+				<input type="text" name="useract" id="useract" class="ic-id" placeholder="아이디">
+				<input type="password" name="passwrd" id="passwrd" class="ic-pw" placeholder="비밀번호" th:value="1">
+
+				<button type="button" class="btn-login" id="login-button">로그인</button>
+				<div class="join-find">
+					<a href="">비밀번호 찾기</a>
+					<div class="v-line"></div>
+					<a href="#" onclick="location.href='/signUp'">회원등록</a>
+				</div>
+			</div>
+			</form>
+			<div class="copyright">Copyright © 스마트물류플랫폼 All right reserved.</div>
+		</div>
+	</div>
+</body>
+
+<script>
+const rPath = $('#rPath').attr('data-contextPath')?$('#rPath').attr('data-contextPath'):'';
+$(function(){
+	$("#useract").focus();
+
+	$("#login-button").click(function(){
+		login();
+	});
+
+	$("#langkey").change(function(){
+		changeLocale();
+	});
+
+    $("#frmLogin").keypress(function (e) {
+        if (e.keyCode === 13) {
+        	login();
+        }
+    });
+});
+
+function login(){
+	if($("#useract").val()=='') $("#useract").val('1');
+
+	$.ajax({
+		url: rPath+"/login_proc",
+		type :  "POST",
+		dataType : "json",
+		data : {
+			compkey : $("#compkey").val(),
+			langkey : $("#langkey").val(),
+			useract : $("#useract").val(),
+			passwrd : $("#passwrd").val()
+
+		},
+		beforeSend : function(xhr)
+		{
+    		var token = $("#token").val();
+    		var header = "X-CSRF-TOKEN";
+			xhr.setRequestHeader(header, token);
+		},
+		success : function(response){
+			if(response.code == "200"){
+				window.location = response.item.url;
+			} else {
+				$("#errmsg").text(response.message);
+				$("#passwrd").val("");
+				$("#useract").focus();
+			}
+		},
+		error : function(err){
+			let errObj = err.responseJSON;
+
+			if(!errObj){
+				errObj = JSON.parse(err.responseText);
+			}
+			document.querySelector('#errmsg').innerHTML = errObj.message;
+		}
+	})
+}
+
+//2023.10.19 프레임에서 로그인 페이지 접근시 31005 서버로 이동처리
+let isFrame = window.location != window.parent.location ? true : false;
+if(isFrame){
+	window.parent.location.href = window.location.ancestorOrigins[0] + '/com/login';
+}
+</script>
+</html>

@@ -1,0 +1,350 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="wms10Warekey" class="setting-grid-title">[[#{wm.wms10.warekey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wms10Warekey">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wms10Doccate" class="setting-grid-title">[[#{wm.wms10.doccate}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wms10Doccate">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wms10Doctype" class="setting-grid-title">[[#{wm.wms10.doctype}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wms10Doctype">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wms10Rsncode" class="setting-grid-title">[[#{wm.wms10.rsncode}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wms10Rsncode">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wms10CrMonth" class="setting-grid-title">[[#{wm.wms10.crmonth}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="month" id="wms10CrMonthFrom"> <span>~</span> <input type="month" id="wms10CrMonthTo">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="wms10Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="wms10Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wms10Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : wms10
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.09
+	  - 설명 : 물류통계
+	  ------------------------------------------
+	*/
+$(function(){
+	//----------- 전역변수 ------------//
+	const wms10ComboData = {};
+	let wms10InitData;
+	//----------- 전역변수 end ------------//
+
+	//============================================================
+	// 검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function() {
+		getWms10List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		await clearWms10SearchCondtion();
+		await resetSearchConditions();
+		makeEmptyGrid(wms10Grid);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Warekey').on('change', async function(){ // warehouse selectbox 바뀌면
+		await clearWms10SearchCondtion();
+
+	    const $doccateSelectBox = $('#' + '[[${gprogrid}]]' + 'Doccate');
+		const rsncodeRelations = wms10InitData['rsncode'];
+		const doccatefilter = rsncodeRelations.filter(e => !this.value ? null : e['warekey'] === this.value)
+																.map(e => {
+																	const obj = new Object;
+																	obj[e['doccate']] = e['docctnm'];
+																	return obj;
+																});
+		const doccateSet = doccatefilter.filter((obj, idx) => doccatefilter.findIndex(e => Object.keys(e)[0] === Object.keys(obj)[0]) === idx);
+		for(const doccate of doccateSet){
+			for(let [key, value] of Object.entries(doccate)){ // Destructuring assignment
+				$doccateSelectBox.append($('<option></option>', {'value' : key, 'text' : value}));
+			}
+		}
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Doccate').on('change', async function(){ // doccate selectbox 바뀌면
+	    const $warekeySelectBox = $('#' + '[[${gprogrid}]]' + 'Warekey');
+	    const $doccateSelectBox = $('#' + '[[${gprogrid}]]' + 'Doccate');
+	    const $doctypeSelectBox = $('#' + '[[${gprogrid}]]' + 'Doctype');
+	    const $rsncodeSelectBox = $('#' + '[[${gprogrid}]]' + 'Rsncode');
+
+		await clearSelectbox($doctypeSelectBox);
+		await clearSelectbox($rsncodeSelectBox);
+
+		const rsncodeRelations = wms10InitData['rsncode'];
+		const doctypefilter = rsncodeRelations.filter(e => !$warekeySelectBox.val() && !this.value ? e :  e['warekey'] === $warekeySelectBox.val() && e['doccate'] === this.value)
+																.map(e => {
+																	const obj = new Object;
+																	obj[e['doctype']] = e['doctynm'];
+																	return obj;
+																});
+		const doctypeSet = doctypefilter.filter((obj, idx) => doctypefilter.findIndex(e => Object.keys(e)[0] === Object.keys(obj)[0]) === idx);
+		for(const doctype of doctypeSet){
+			for(let [key, value] of Object.entries(doctype)){ // Destructuring assignment
+				$doctypeSelectBox.append($('<option></option>', {'value' : key, 'text' : value}));
+			}
+		}
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Doctype').on('change', async function(){ // doctype selectbox 바뀌면
+	    const $warekeySelectBox = $('#' + '[[${gprogrid}]]' + 'Warekey');
+	    const $doccateSelectBox = $('#' + '[[${gprogrid}]]' + 'Doccate');
+	    const $doctypeSelectBox = $('#' + '[[${gprogrid}]]' + 'Doctype');
+	    const $rsncodeSelectBox = $('#' + '[[${gprogrid}]]' + 'Rsncode');
+
+		await clearSelectbox($rsncodeSelectBox);
+
+		const rsncodeRelations = wms10InitData['rsncode'];
+		const rsncodefilter = rsncodeRelations.filter(e => !$warekeySelectBox.val() && !$doccateSelectBox && !this.value ? e :  e['warekey'] === $warekeySelectBox.val() && e['doccate'] === $doccateSelectBox.val() && e['doctype'] === this.value)
+																.map(e => {
+																	const obj = new Object;
+																	obj[e['rsncode']] = e['rsncdnm'];
+																	return obj;
+																});
+		const rsncodeSet = rsncodefilter.filter((obj, idx) => rsncodefilter.findIndex(e => Object.keys(e)[0] === Object.keys(obj)[0]) === idx);
+		for(const rsncode of rsncodeSet){
+			for(let [key, value] of Object.entries(rsncode)){ // Destructuring assignment
+				$rsncodeSelectBox.append($('<option></option>', {'value' : key, 'text' : value}));
+			}
+		}
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'CrMonthFrom, #' + '[[${gprogrid}]]' + 'CrMonthTo').on('change', async function(){ // 검색영역 날짜 바뀌면 validation
+	    const $currentStartDate = $('#' + '[[${gprogrid}]]' + 'CrMonthFrom').val();
+	    const $currentEndDate = $('#' + '[[${gprogrid}]]' + 'CrMonthTo').val();
+		if($currentEndDate && $currentStartDate>$currentEndDate){
+			alert('[[#{ms.dateConditionError}]]');
+			$('#' + '[[${gprogrid}]]' + 'CrMonthFrom').val('');
+		}
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const wms10GridCM = [
+		{ title: '[[#{common.grid.recIndx}]]', dataType: 'string', dataIndx: '[[#{common.grid.recIndx}]]', editable: false, hidden: true },
+		{ title: '[[#{md.mrscma.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true },
+		{ title: '[[#{md.mrscma.warekey}]]', dataType: 'string', dataIndx: 'warekey', editable: false,
+            render: function (ui) {
+                const option = wms10ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+                return { text : option ? option[ui.cellData] : ''};
+         	}
+		}, {
+			title : '[[#{wm.wms10.wtables}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'wtables',
+			editable : false
+		}, {
+			title : '[[#{md.mrscma.doccate}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'doccate',
+			editable : false,
+			hidden : true
+		}, {
+			title : '[[#{md.mdocma.docctnm}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'docctnm',
+			editable : false
+		}, {
+			title : '[[#{md.mrscma.doctype}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'doctype',
+			editable : false,
+			hidden : true
+		}, {
+			title : '[[#{md.mdocma.doctynm}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'doctynm',
+			editable : false
+		}, {
+			title : '[[#{md.mrscma.rsncode}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'rsncode',
+			editable : false,
+			hidden : true
+		}, {
+			title : '[[#{md.mrscma.rsncdnm}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'rsncdnm',
+			editable : false
+		}, {
+			title : '[[#{wm.wms10.crmonth}]]',
+			width : 100,
+			dataType : 'string',
+			dataIndx : 'crmonth',
+			editable : false,
+			render : function(ui){
+				return {
+					text : ui.cellData?.replace(regDivideDateYM ,divideDateFormatYM)
+				}
+			}
+		}, {
+			title : '[[#{wm.wms10.rscount}]]',
+			width : 100,
+			dataType : 'integer',
+			dataIndx : 'rscount',
+			editable : false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const wms10Grid = new GridUtil(wms10GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 조회 세팅
+	wms10Grid.setFind();
+
+	// Grid 생성시 이벤트
+	wms10Grid.setCreate(async function (evt, ui) {
+		const response = await initWms10();
+
+		wms10InitData = response.item;
+		setEndDateCondition();
+
+		for(let key of Object.keys(wms10InitData)){
+			const gData = wms10InitData[key];
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+				wms10ComboData[key] = gData.map(function(obj){
+		        	let rObj = {};
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+			}
+
+			if('warekey' === key){
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'))
+			}
+		}
+	});
+
+	// Grid 객체 생성
+	wms10Grid.open();
+
+	// 검색영역 초기화 함수
+	function clearWms10SearchCondtion(){
+	    const $doccateSelectBox = $('#' + '[[${gprogrid}]]' + 'Doccate');
+	    const $doctypeSelectBox = $('#' + '[[${gprogrid}]]' + 'Doctype');
+	    const $rsncodeSelectBox = $('#' + '[[${gprogrid}]]' + 'Rsncode');
+
+		clearSelectbox($doccateSelectBox);
+		clearSelectbox($doctypeSelectBox);
+		clearSelectbox($rsncodeSelectBox);
+	}
+
+	// 검색영역 select Box 초기화 함수
+	function clearSelectbox($obj){
+		if($obj === null){
+			return;
+		}
+
+		$obj.children().remove();
+		$obj.append($('<option></option>', {'value' : '','text' : '[[#{ms.chooseAll}]]'}));
+	}
+
+	// 검색영역 format 설정
+	function setEndDateCondition(){ // input(date) 설정
+		const eDate = new Date()
+		const $endStdDate = $('#' + '[[${gprogrid}]]' + 'CrMonthTo');
+		const endDate = String(eDate.getFullYear()) + String((eDate.getMonth()+1)).padStart(2, '0'); // 날짜 형식 맞추기
+
+		$endStdDate.val(endDate.replace(regDivideDateYM,divideDateFormatYM));
+	}
+
+	// 그리드 조회 함수
+	async function getWms10List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const data = {
+							warekey : $('#' + '[[${gprogrid}]]' + 'Warekey').val(),
+							doccate : $('#' + '[[${gprogrid}]]' + 'Doccate').val(),
+							doctype : $('#' + '[[${gprogrid}]]' + 'Doctype').val(),
+							rsncode : $('#' + '[[${gprogrid}]]' + 'Rsncode').val(),
+							crMonthFrom : $('#' + '[[${gprogrid}]]' + 'CrMonthFrom').val(),
+							crMonthTo : $('#' + '[[${gprogrid}]]' + 'CrMonthTo').val()
+						 };
+
+		const url = '[[#{common.url.wm}]]' + '[[#{common.url.statistics}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			if(resContent.length===0){
+				alert('[[#{ms.getDataZero}]]');
+			}
+			grid.option( 'dataModel', { data: resContent, recIndx: '[[#{common.grid.recIndx}]]' } );
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 페이지 초기화 함수
+	async function initWms10(){
+		const url = '[[#{common.url.wm}]]' + '[[#{common.url.statistics}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const response = await fetchUtil('GET', url);
+
+		return response.json();
+	}
+});
+</script>
+</div>
+</html>

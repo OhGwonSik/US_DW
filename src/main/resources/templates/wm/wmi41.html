@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+                 <label for="wmi41Warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                 <div class="setting-grid-content">
+                     <div class="input-group">
+                        <select id="wmi41Warekey"
+								data-cb-val="combovl"
+								data-cb-name="combonm"
+								data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList"
+								data-cb-select=""
+						></select>
+                     </div>
+                 </div>
+                 <label for="wmi41Ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                 <div class="setting-grid-content">
+                     <div class="input-group">
+                         <select id="wmi41Ownerky"
+                         	data-cb-val="combovl"
+							data-cb-name="combonm"
+							data-cb-url="/md/common/partner/owner" data-cb-variable="ownerkyList"
+							data-cb-select=""
+                         ><option value="">[[#{wm.wmi40.all}]]</option>
+                         </select>
+                     </div>
+                 </div>
+                 <label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wstkdy.stkdate}]]</label>
+				 <div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmi41DateFrom"
+							th:value="${#dates.format(#dates.createToday(), 'yyyy-MM-dd')}" onkeyup="setInputDateDel(this)" /> <span>~</span> 
+						<input type="date" max="2999-12-31" id="wmi41DateTo" 
+							th:value="${#dates.format(#dates.createToday(), 'yyyy-MM-dd')}" onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+				<label class="setting-grid-title" for="wmi41Skumkey">[[#{md.mskuwc.skumkey}]]</label>
+                <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmi41Skumkey" th:placeholder="${#messages.msg('md.mskuma.skumkey')}" name="wmi41Skumkey" />
+                    </div>
+                </div>
+				<label class="setting-grid-title" for="wmi41Skudesc">[[#{md.mskuwc.skudesc}]]</label>
+                <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmi41Skudesc" th:placeholder="${#messages.msg('md.mskuma.skudesc')}" name="wmi41Skudesc" />
+                    </div>
+                </div>
+				<label class="setting-grid-title" for="wmi41Taskoky">[[#{wm.wtakit.taskoky}]]</label>
+                  <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmi41Taskoky" th:placeholder="${#messages.msg('wm.wtakit.taskoky')}" />
+                    </div>
+                </div>
+                <label class="setting-grid-title" for="wmi41Adjsoky">[[#{wm.wtrhis.adjsoky}]]</label>
+                  <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmi41Adjsoky" th:placeholder="${#messages.msg('wm.wtrhis.adjsoky')}" />
+                    </div>
+                </div>
+                <label class="setting-grid-title" for="wmi41Physoky">[[#{wm.wtrhis.physoky}]]</label>
+                  <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmi41Physoky" th:placeholder="${#messages.msg('wm.wtrhis.physoky')}" />
+                    </div>
+                </div>
+                <label class="setting-grid-title" for="wmi41Shpdcky">[[#{wm.wtrhis.shpdcky}]]</label>
+                  <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmi41Shpdcky" th:placeholder="${#messages.msg('wm.wtrhis.shpdcky')}" />
+                    </div>
+                </div>
+			</div>
+			<div class="search-btn-group">
+                <button type="button" class="btn-search btn-navy btn-green" id="wmi41Search"><img>[[#{bt.search}]]</button>
+                <button type="button" class="btn-clear btn-white" id="wmi41Reset"><img>[[#{bt.reset}]]</button>
+            </div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmi41Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+      $(function(){
+         const pageId = "[[${gprogrid}]]";
+         const list = "List";
+         let wmi41Grid;
+         
+      	// 조회 이벤트
+		$('#' + pageId + 'Search').click(async function(){
+			await wmi41List();
+		});
+      	
+		$('#' + pageId + 'Reset').click(function(){
+			resetSearchConditions();
+			$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+			wmi41Grid.searchList([]);
+		});
+     
+         const wmi41GridCM = [
+        	 	{ title: "rowkey", width: 100, dataType: "string", dataIndx: "rowkey", hidden: true , editable: false },
+				{ title: "[[#{wm.wtrhis.compkey}]]", width: 100, dataType: "string", dataIndx: "compkey" , hidden: true , editable: false },
+				{ title: "[[#{wm.wtrhis.whtrhky}]]", width: 100, dataType: "string", dataIndx: "whtrhky" , editable: false },
+				{ title: "[[#{grid.whnamlc}]]", width: 100, dataType: "string", dataIndx: "warekey" , editable: false },
+				{ title: "[[#{wm.wtrhis.doccate}]]", width: 100, dataType: "string", dataIndx: "doccate" , editable: false },
+				{ title: "[[#{wm.wtrhis.doctype}]]", width: 100, dataType: "string", dataIndx: "doctype" , editable: false },
+				{ title: "[[#{md.mdocma.doctynm}]]", width: 100, dataType: "string", dataIndx: "doctynm" , editable: false },
+				{ title: "[[#{md.marema.areanam}]]", width: 100, dataType: "string", dataIndx: "areakey" , editable: false },
+				{ title: "[[#{md.mzonma.zonenam}]]", width: 100, dataType: "string", dataIndx: "zonekey" , editable: false },
+				{ title: "[[#{md.mlocma.locanam}]]", width: 100, dataType: "string", dataIndx: "locakey" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotnmky}]]", width: 100, dataType: "string", dataIndx: "lotnmky" , editable: false },
+				{ title: "[[#{grid.ownamlc}]]", width: 100, dataType: "string", dataIndx: "ownerky" , editable: false },
+				{ title: "[[#{grid.skuCode}]]", width: 100, dataType: "string", dataIndx: "skumkey" , editable: false },
+				{ title: "[[#{grid.skunm}]]", width: 100, dataType: "string", dataIndx: "skudesc" , editable: false },
+				{ title: "[[#{wm.wtrhis.stotqty}]]", width: 100, dataType: "integer", dataIndx: "stotqty" , format: '###,###,###' , editable: false ,
+					summary: { type: "sum" }
+				},
+				{ title: "[[#{wm.wtrhis.sallqty}]]", width: 100, dataType: "integer", dataIndx: "sallqty" , format: '###,###,###' , editable: false ,
+					summary: { type: "sum" }
+				},
+				{ title: "[[#{wm.wtrhis.sinbqty}]]", width: 100, dataType: "integer", dataIndx: "sinbqty" , format: '###,###,###' , editable: false ,
+					summary: { type: "sum" }
+				},
+				{ title: "[[#{wm.wtrhis.soubqty}]]", width: 100, dataType: "integer", dataIndx: "soubqty" , format: '###,###,###' , editable: false ,
+					summary: { type: "sum" }
+				},
+				{ title: "[[#{wm.wtrhis.sbloqty}]]", width: 100, dataType: "integer", dataIndx: "sbloqty" , format: '###,###,###' , editable: false ,
+					summary: { type: "sum" }
+				},
+				{ title: "[[#{wm.wtrhis.suomkey}]]", width: 100, dataType: "string", dataIndx: "suomkey" , editable: false },
+				{ title: "[[#{wm.wtrhis.proddat}]]", width: 100, dataType: "string", dataIndx: "proddat" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat01}]]", width: 100, dataType: "string", dataIndx: "lotat01" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat02}]]", width: 100, dataType: "string", dataIndx: "lotat02" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat03}]]", width: 100, dataType: "string", dataIndx: "lotat03" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat04}]]", width: 100, dataType: "string", dataIndx: "lotat04" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat05}]]", width: 100, dataType: "string", dataIndx: "lotat05" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat06}]]", width: 100, dataType: "string", dataIndx: "lotat06" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat07}]]", width: 100, dataType: "string", dataIndx: "lotat07" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat08}]]", width: 100, dataType: "string", dataIndx: "lotat08" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat09}]]", width: 100, dataType: "string", dataIndx: "lotat09" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat10}]]", width: 100, dataType: "string", dataIndx: "lotat10" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat11}]]", width: 100, dataType: "string", dataIndx: "lotat11" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat12}]]", width: 100, dataType: "string", dataIndx: "lotat12" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat13}]]", width: 100, dataType: "string", dataIndx: "lotat13" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat14}]]", width: 100, dataType: "string", dataIndx: "lotat14" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat15}]]", width: 100, dataType: "string", dataIndx: "lotat15" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat16}]]", width: 100, dataType: "string", dataIndx: "lotat16" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat17}]]", width: 100, dataType: "string", dataIndx: "lotat17" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat18}]]", width: 100, dataType: "string", dataIndx: "lotat18" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat19}]]", width: 100, dataType: "string", dataIndx: "lotat19" , editable: false },
+				{ title: "[[#{wm.wtrhis.lotat20}]]", width: 100, dataType: "string", dataIndx: "lotat20" , editable: false },
+				{ title: "[[#{wm.wtrhis.stkstat}]]", width: 100, dataType: "string", dataIndx: "stkstat" , editable: false },
+				{ title: "[[#{wm.wtrhis.blockid}]]", width: 100, dataType: "string", dataIndx: "blockid" , editable: false },
+				{ title: "[[#{wm.wtrhis.physrow}]]", width: 100, dataType: "string", dataIndx: "physrow" , editable: false },
+				{ title: "[[#{wm.wtrhis.physsec}]]", width: 100, dataType: "string", dataIndx: "physsec" , editable: false },
+				{ title: "[[#{wm.wtrhis.physflo}]]", width: 100, dataType: "string", dataIndx: "physflo" , editable: false },
+				{ title: "[[#{wm.wtrhis.rcvdcky}]]", width: 100, dataType: "string", dataIndx: "rcvdcky" , editable: false },
+				{ title: "[[#{wm.wtrhis.rcvdcit}]]", width: 100, dataType: "integer", dataIndx: "rcvdcit" , format: '###,###,###' , editable: false },
+				{ title: "[[#{wm.wtrhis.taskoky}]]", width: 100, dataType: "string", dataIndx: "taskoky" , editable: false },
+				{ title: "[[#{wm.wtrhis.taskoit}]]", width: 100, dataType: "integer", dataIndx: "taskoit" , format: '###,###,###' , editable: false },
+				{ title: "[[#{wm.wtrhis.adjsoky}]]", width: 100, dataType: "string", dataIndx: "adjsoky" , editable: false },
+				{ title: "[[#{wm.wtrhis.adjsoit}]]", width: 100, dataType: "integer", dataIndx: "adjsoit" , format: '###,###,###' , editable: false },
+				{ title: "[[#{wm.wtrhis.physoky}]]", width: 100, dataType: "string", dataIndx: "physoky" , editable: false },
+				{ title: "[[#{wm.wtrhis.physoit}]]", width: 100, dataType: "integer", dataIndx: "physoit" , format: '###,###,###' , editable: false },
+				{ title: "[[#{wm.wtrhis.shpdcky}]]", width: 100, dataType: "string", dataIndx: "shpdcky" , editable: false },
+				{ title: "[[#{wm.wtrhis.shpdcit}]]", width: 100, dataType: "integer", dataIndx: "shpdcit" , format: '###,###,###' , editable: false },
+				{ title: "[[#{wm.wtrhis.storfky}]]", width: 100, dataType: "string", dataIndx: "storfky" , editable: false },
+				{ title: "[[#{wm.wtrhis.credate}]]", width: 100, dataType: "string", dataIndx: "credate" , editable: false },
+				{ title: "[[#{wm.wtrhis.cretime}]]", width: 100, dataType: "string", dataIndx: "cretime" , editable: false },
+				{ title: "[[#{wm.wtrhis.creuser}]]", width: 100, dataType: "string", dataIndx: "creuser" , editable: false },
+				{ title: "[[#{wm.wtrhis.lmodate}]]", width: 100, dataType: "string", dataIndx: "lmodate" , editable: false },
+				{ title: "[[#{wm.wtrhis.lmotime}]]", width: 100, dataType: "string", dataIndx: "lmotime" , editable: false },
+				{ title: "[[#{wm.wtrhis.lmouser}]]", width: 100, dataType: "string", dataIndx: "lmouser" , editable: false },
+         ];
+         
+         wmi41Grid = new GridUtil(wmi41GridCM, pageId , pageId + 'Grid');
+         
+         wmi41Grid.setFind();
+         
+         wmi41Grid.setCreate(async function(evt , ui){
+        	 await _commonInit();	 
+        	 $('#' + pageId + 'Ownerky').pqSelect({
+				deselect : false
+			 });
+         });
+         
+         wmi41Grid.open();
+       
+       	 async function wmi41List(){
+ 			let grid = pq.grid('#' + pageId + 'Grid');
+       		let param = {
+     			taskoky  : $('#' + pageId + 'Taskoky').val() ,
+       			warekey  : $('#' + pageId + 'Warekey option:selected').val() ,
+       			ownerky  : $('#' + pageId + 'Ownerky option:selected').val() ,
+       			datefrom : $('#' + pageId + 'DateFrom').val() ,
+       			dateto   : $('#' + pageId + 'DateTo').val() ,
+       			skumkey  : $('#' + pageId + 'Skumkey').val() ,
+       			skudesc  : $('#' + pageId + 'Skudesc').val() , 
+       			adjsoky  : $('#' + pageId + 'Adjsoky').val() , 
+       			physoky  : $('#' + pageId + 'Physoky').val() , 
+       			shpdcky  : $('#' + pageId + 'Shpdcky').val() , 
+       		};
+
+ 			grid.showLoading();
+			const wmi41Res = await fetchUtil('GET' , '/wm/inventory/' + pageId + '/grids/1' , param);
+			try{
+			    if(wmi41Res.status !== 200){
+			       throw new Error("[[#{ms.saveErr}]]");
+			    }
+			    const rData = await wmi41Res.json();
+				wmi41Grid.searchList(rData);
+				grid.hideLoading();
+			    
+			}catch(err){
+				alert('code : ' + wmi41Res.status + '\n' + err + '\n' + wmi41Res.statusText); // get method 통신의 경우
+				grid.hideLoading();
+			}
+		 }
+      });
+      </script>
+	</div>
+</html>

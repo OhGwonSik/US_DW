@@ -1,0 +1,1069 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdo05Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdo05Warekey"></select>
+					</div>
+				</div>
+				<label for="mdo05Areanam" class="setting-grid-title">[[#{md.mdo05.areanam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdo05.areanam')}" id="mdo05Areanam">
+					</div>
+				</div>
+				<label for="mdo05Zonenam" class="setting-grid-title">[[#{md.mdo05.zonenam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdo05.zonenam')}" id="mdo05Zonenam">
+					</div>
+				</div>
+				<label for="mdo05Locanam" class="setting-grid-title">[[#{md.mdo05.locanam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdo05.locanam')}" id="mdo05Locanam">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdo05Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdo05Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdo05Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdo05Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdo05
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.07
+	  - 설명 : 로케이션 등록
+	  ------------------------------------------
+	*/
+
+$(function(){
+	//----------- 전역변수 ------------//
+	const mdo05ComboData = {};
+	let mdo05InitData;
+	let wareAreaRelationsArray = [];
+	let wareAreaZoneRelationsArray = [];
+	let mdo05WarekeyCondition; // 현재 warekey 검색값 저장
+	//----------- 전역변수 end ------------//
+
+	//============================================================
+	// 검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function() {
+		getMdo05List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function() {
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length===0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({ all: true });
+
+		//============================================================
+    	//체크 데이터 중 필수 값 체크
+    	//============================================================
+        for(let gCheck of gridCheck){
+    		const essentialCols = ['warekey', 'areakey', 'zonekey', 'locakey', 'locanam', 'loctype', 'locstat'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol)['title'] + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({rowIndxPage: gCheck.pq_ri, colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )});
+
+	    	  		return false;
+    			}
+    		}
+   			for(let gData of grid.getData()){
+   				const keyCols = ['warekey', 'areakey', 'zonekey', 'locakey'];
+   				const locationCol = ['warekey', 'locakey'];
+   				const complexKeyDuplication = isKeyDuplication(keyCols, gCheck, gData);
+   				const locationDuplication = isKeyDuplication(locationCol, gCheck, gData);
+
+   				if(gCheck.pq_ri !== gData.pq_ri && (complexKeyDuplication || locationDuplication)){
+   					const alertTxt = () => {
+   						let rText = '';
+
+   						if(complexKeyDuplication){
+   							rText = makeDuplicateRowText(keyCols, grid, gCheck, gData);
+   						} else if(locationDuplication){
+							rText = makeDuplicateRowText(locationCol, grid, gCheck, gData);
+   						}
+
+   						return rText + ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+   					}
+
+   					alert(alertTxt());
+   	      			grid.focus({
+						rowIndxPage: (gCheck.pq_ri),
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'warekey' } )
+					});
+
+   	      			return false;
+   				}
+   			}
+        }
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z].state !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdo05List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdo05Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdo05GridCM = [
+    	{
+    		title: '',
+    		dataType: 'bool',
+    		dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+            type: 'checkbox',
+            sortable: false,
+            editor: false,
+            align: 'center',
+            cb: {
+           		all: false,
+           		header: true
+            }
+     	},
+		{
+     		title: '[[#{common.grid.recIndx}]]',
+     		dataType: 'string',
+     		dataIndx: '[[#{common.grid.recIndx}]]',
+     		editable: false,
+     		hidden: true
+     	},
+		{
+     		title: '[[#{md.mlocma.compkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'compkey',
+     		editable: false,
+     		hidden: true
+     	},
+		{
+     		title: '[[#{grid.whnamlc}]]',
+     		dataType: 'string',
+     		dataIndx: 'warekey',
+     		editable: false,
+            render: ui => {
+                const option = mdo05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	}
+		},
+		{
+			title: '[[#{md.mdo05.areakey}]]',
+			dataType: 'string',
+			dataIndx: 'areakey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+	            options: ui => {
+					return wareAreaRelationsArray.map(obj => {
+	         			if(obj['warekey'] === mdo05WarekeyCondition){
+	         				let rObj = {};
+
+	         				rObj[obj[ui.dataIndx]] = obj['areanam'] + '(' + obj[ui.dataIndx] + ')';
+
+	         				return rObj;
+	         			}
+					}).filter(e => e);
+				},
+	        	prepend: { '': ' ' }
+			},
+			render: ui => {
+            	const content = wareAreaRelationsArray.find(obj => obj['warekey'] === mdo05WarekeyCondition && obj[ui.dataIndx] === ui.cellData);
+
+            	return { text: content && ui.cellData ? content['areanam'] + '(' + ui.cellData + ')' : ui.cellData };
+			},
+            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.mdo05.zonekey}]]',
+			dataType: 'string',
+			dataIndx: 'zonekey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => {
+ 	            	return wareAreaZoneRelationsArray.map(obj => {
+	        			if(obj['warekey'] === mdo05WarekeyCondition && obj['areakey'] === ui.rowData['areakey']){
+	           				let rObj = {};
+
+	           				rObj[obj[ui.dataIndx]] = obj['zonenam'] + '(' + obj[ui.dataIndx] + ')';
+
+	           				return rObj;
+	        			}
+	        		}).filter(e => e);
+	        	},
+	        	prepend: { '': ' ' }
+			},
+			render: ui => {
+            	const content = wareAreaZoneRelationsArray.find(obj => obj['warekey'] === mdo05WarekeyCondition
+		            																				&& obj['areakey'] === ui.rowData['areakey']
+		            																				&& obj[ui.dataIndx] === ui.cellData);
+
+            	return { text: content ? content['zonenam'] + '(' + ui.cellData + ')' : ui.cellData };
+			},
+            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.mlocma.locakey}]]',
+			dataType: 'string',
+			dataIndx: 'locakey',
+        	styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+            validations: [
+				{
+					type: 'minLen',
+					value: 1,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]'
+				}
+            ],
+         	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.mlocma.locanam}]]',
+			dataType: 'string',
+			dataIndx: 'locanam',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 1,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.loctype}]]',
+			dataType: 'string',
+			dataIndx: 'loctype',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+						search: false,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdo05ComboData[ui.dataIndx],
+	        	prepend: { '': ' ' }
+            },
+            render: ui => {
+            	const option = mdo05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{md.mlocma.locstat}]]',
+			dataType: 'string',
+			dataIndx: 'locstat',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+						search: false,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdo05ComboData[ui.dataIndx],
+	        	prepend: { '': ' ' }
+            },
+            render: ui => {
+            	const option = mdo05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{md.mlocma.louseyn}]]',
+			dataType: 'string',
+			dataIndx: 'louseyn',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.capachk}]]',
+			dataType: 'string',
+			dataIndx: 'capachk',	//Capacity check
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.locdept}]]',
+			dataType: 'integer',
+			dataIndx: 'locdept',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+						{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.locwidh}]]',
+			dataType: 'integer',
+			dataIndx: 'locwidh',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+	 			{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.locweig}]]',
+			dataType: 'float',
+			dataIndx: 'locweig',
+			format: '#,###.000',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]'
+				},
+				{
+					type: 'regexp',
+					value: regNum10Dot3,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.locheig}]]',
+			dataType: 'integer',
+			dataIndx: 'locheig',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.loccubi}]]',
+			dataType: 'float',
+			dataIndx: 'loccubi',
+			format: '#,###.000',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]'
+				},
+				{
+					type: 'regexp',
+					value: regNum10Dot3,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.inbrtno}]]',
+			dataType: 'integer',
+			dataIndx: 'inbrtno',	//Route for inbound
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.otbrtno}]]',
+			dataType: 'integer',
+			dataIndx: 'otbrtno',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.mixdsku}]]',
+			dataType: 'string',
+			dataIndx: 'mixdsku',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.mixdlot}]]',
+			dataType: 'string',
+			dataIndx: 'mixdlot',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.remtloc}]]',
+			dataType: 'string',
+			dataIndx: 'remtloc',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.usptloc}]]',
+			dataType: 'string',
+			dataIndx: 'usptloc',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.uspkloc}]]',
+			dataType: 'string',
+			dataIndx: 'uspkloc',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mlocma.blockid}]]',
+			dataType: 'string',
+			dataIndx: 'blockid',	//Block
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.physrow}]]',
+			dataType: 'string',
+			dataIndx: 'physrow',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 3,
+					msg: '[[#{ms.validations.maxLenLength(3)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.physsec}]]',
+			dataType: 'string',
+			dataIndx: 'physsec',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 3,
+					msg: '[[#{ms.validations.maxLenLength(3)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.physflo}]]',
+			dataType: 'string',
+			dataIndx: 'physflo',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 3,
+					msg: '[[#{ms.validations.maxLenLength(3)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mlocma.equstat}]]',
+			dataType: 'string',
+			dataIndx: 'equstat',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+						search: false,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdo05ComboData[ui.dataIndx],
+	        	prepend: { '': ' ' }
+            },
+            render: ui => {
+            	const option = mdo05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{md.mlocma.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlocma.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlocma.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlocma.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlocma.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlocma.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdo05Grid = new GridUtil(mdo05GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+	mdo05Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdo05Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+	mdo05Grid.setAdd(function(evt, ui){
+		if(!mdo05WarekeyCondition){
+			alert('[[#{ms.noSearchError}]]');
+
+			return;
+		}
+
+		const rowData = {
+			state: true,
+			compkey: '[[${userattr.compkey}]]',
+			warekey: mdo05WarekeyCondition,
+			locstat: '[[#{md.mdo05.locstat.default}]]',
+			louseyn: 'Y',
+			capachk: 'N',
+			mixdsku: 'Y',
+			mixdlot: 'Y',
+			remtloc: 'N',
+			usptloc: 'N',
+			uspkloc: 'N'
+		};
+		const rowIndx = this.addRow({
+			rowData: rowData,
+			checkEditable: false
+		});
+
+        this.goToPage({ rowIndx: rowIndx });
+		this.focus({
+			rowIndxPage: rowIndx,
+			colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx } )
+		});
+	});
+
+	// Grid 생성시 이벤트
+	mdo05Grid.setCreate(async function (evt, ui) {
+		const response = await initMdo05();
+		mdo05InitData = response.item;
+
+		for(let key of Object.keys(mdo05InitData)){
+			const gData = mdo05InitData[key];
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+			}
+
+			if('' !== target){
+				$('#' + target + ' option').remove();
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'))
+			}
+
+			if('comcdky' === key){
+				const items = ['loctype','locstat','equstat'];
+
+				for(let item of items){
+					const itemFilter = gData.filter(obj => obj['comcdky'] === item.toUpperCase());
+					const options = itemFilter.map(obj => {
+			        	let rObj = {};
+
+			        	rObj[obj['combovl']] = obj['combonm'];
+
+			        	return rObj;
+					});
+
+					mdo05ComboData[item] = options;
+				}
+			} else {
+				const options = gData.map(obj => {
+		        	let rObj = {};
+
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+
+				mdo05ComboData[key] = options;
+			}
+		}
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdo05Grid.setChange(async function (evt, ui) {
+    	if('edit' === ui.source || 'clear' === ui.source || 'paste' === ui.source){
+			const updateRowList = [];
+
+			for(const updateData of ui.updateList) {
+        		const newRow = { state: true };
+          		const clearCols = ['locakey', 'locanam', 'loctype', 'locstat'];
+
+   				if(updateData.newRow.hasOwnProperty('areakey') && updateData.oldRow.hasOwnProperty('areakey')){
+                   	const options = wareAreaRelationsArray.find(obj => obj['warekey'] === updateData.rowData['warekey'] && obj['areakey'] === updateData.rowData['areakey']);
+
+                   	newRow['areakey'] = options && updateData.rowData['areakey'] ? options['areakey'] : null;
+
+                   	if(options){
+                   		newRow['areakey'] = options['areakey'];
+                   	} else {
+                   		for(const cols of clearCols){
+                  			newRow[cols] = null;
+                  		}
+
+                   		newRow['areakey'] = null;
+           				newRow['zonekey'] = null;
+                   	}
+       			}
+
+       			if((updateData.newRow.hasOwnProperty('zonekey') && updateData.oldRow.hasOwnProperty('zonekey'))){
+                   	const options = wareAreaZoneRelationsArray.find(obj => obj['warekey'] === updateData.rowData['warekey']
+		   																							&& obj['areakey'] === updateData.rowData['areakey']
+		   																							&& obj['zonekey'] === updateData.rowData['zonekey']);
+
+   					if(options){
+   						newRow['zonekey'] = options['zonekey'];
+   					} else {
+   	   					for(const cols of clearCols){
+   	   	          			newRow[cols] = null;
+   	   	          		}
+
+   						newRow['zonekey'] = null;
+   					}
+       			}
+
+    			if(updateData.newRow.hasOwnProperty('locakey') && updateData.oldRow.hasOwnProperty('locakey')){
+    				newRow['locakey'] = updateData.newRow['locakey']?.toUpperCase();
+    			}
+
+    			const selectBoxCols = ['loctype', 'locstat', 'equstat'];
+
+    			for(const cols of selectBoxCols) {
+        			if(updateData.newRow.hasOwnProperty(cols) && updateData.oldRow.hasOwnProperty(cols)){
+        				const option = mdo05ComboData[cols].find(obj => obj[updateData.rowData[cols]]);
+
+    				    newRow[cols] = option ? updateData.rowData[cols] : null;
+        			}
+    			}
+
+    			updateRowList.push({
+					rowIndx: updateData.rowIndx,
+					newRow: newRow
+				});
+    		}
+
+			this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	} else if('checkbox' === ui.source){
+			const updateRowList = [];
+
+			for(let updateData of ui.updateList) {
+        		const newRow = { state: true }
+    			const checkboxCols = ['louseyn', 'capachk', 'mixdsku', 'mixdlot', 'remtloc', 'usptloc', 'uspkloc'];
+
+    			for(let checkboxCol of checkboxCols){
+    				if(updateData.newRow.hasOwnProperty(checkboxCol)){
+            			updateRowList.push({
+							rowIndx: updateData.rowIndx,
+							newRow: newRow
+						});
+           			}
+    			}
+    		}
+
+			this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+
+    	if('paste' === ui.source){
+    		ui.addList.forEach( addData =>
+       			addData.newRow = {
+  					state: true,
+  					compkey: '[[${userattr.compkey}]]',
+  					warekey: mdo05WarekeyCondition,
+  	    			louseyn: addData?.newRow?.louseyn || 'Y',
+  	    			capachk: addData?.newRow?.capachk || 'N',
+  	    			mixdsku: addData?.newRow?.mixdsku || 'Y',
+  	    			mixdlot: addData?.newRow?.mixdlot || 'Y',
+  	    			remtloc: addData?.newRow?.remtloc || 'N',
+  	    			usptloc: addData?.newRow?.usptloc || 'N',
+  	    			uspkloc: addData?.newRow?.uspkloc || 'N'
+        	});
+
+			this.updateRow({
+				rowList: ui.addList,
+				checkEditable: false
+			});
+    	}
+	});
+
+	// Grid 객체 생성
+	mdo05Grid.open();
+
+	// 그리드 조회 함수
+	async function getMdo05List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		mdo05WarekeyCondition = $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val();
+
+		grid.showLoading();
+		await Promise.all([getWareAreaRelations(), getWareAreaZoneRelations()]); // 비동기로 각 함수를 실행하고, 다 완료 될때까지 대기(동기)
+
+		const data = {
+			 warekey: $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val(),
+			 areanam: $('#' + '[[${gprogrid}]]' + 'Areanam').val(),
+			 zonenam: $('#' + '[[${gprogrid}]]' + 'Zonenam').val(),
+			 locanam: $('#' + '[[${gprogrid}]]' + 'Locanam').val()
+		 };
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 그리드 저장 함수
+	async function saveMdo05List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdo05Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdo05Response.status === 200){
+			await getMdo05List();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 그리드 selectbox 랜더링용 관계 데이터 조회 함수(창고-에어리어)
+	async function getWareAreaRelations(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/wa-relations';
+		const response = await fetchUtil('GET', url);
+
+		wareAreaRelationsArray = await response.json();
+	}
+
+	// 그리드 selectbox 랜더링용 관계 데이터 조회 함수(창고-에어리어-존)
+	async function getWareAreaZoneRelations(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/waz-relations';
+		const response = await fetchUtil('GET', url);
+
+		wareAreaZoneRelationsArray = await response.json();
+	}
+
+	// 페이지 초기화 함수
+	async function initMdo05(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const response = await fetchUtil('GET', url);
+
+		return response.json();
+	}
+});
+</script>
+</div>
+</html>

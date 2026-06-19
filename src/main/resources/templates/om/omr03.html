@@ -1,0 +1,681 @@
+<!-- 	/*  OMR03 - OMR01 반출현황조회
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 안성민 
+	*   설명			: OMR03 반출등록된 상품 조회
+	*/
+ -->
+
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div class="tab-contents">
+	<div class="location"></div>
+	<div class="search-conditions con-box">
+		<div class="setting-grid">
+			<label for="omr03_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-group">
+					<select id="omr03_warekey" name="omr03_warekey"
+						data-cb-variable="warekey" data-cb-val="combovl"
+						data-cb-name="combonm"
+						data-cb-url="/md/common/organization/warehouse-user"></select>
+				</div>
+			</div>
+			<label for="omr03_ownerkey" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-group">
+					<select id="omr03_ownerky" name="omr013_ownerky"
+						data-cb-variable="ownerky" data-cb-val="combovl"
+						data-cb-name="combonm" data-cb-url="/md/common/partner/owner">
+					</select>
+				</div>
+			</div>
+			<label for="omr03_oeinsdt" class="setting-grid-title ic-title-nece">[[#{om.omr.oeinsdt}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-wrapper">
+					<input type="date" max="2999-12-31" id="omr03_oeinsdt_from"
+						onkeyup="setInputDateDel(this)" /> <span>~</span>
+					<input type="date" max="2999-12-31" id="omr03_oeinsdt_to"
+						onkeyup="setInputDateDel(this)" />
+				</div>
+			</div>
+			<label for="omr03_skumkey" class="setting-grid-title">[[#{om.omr.skumkey}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-wrapper">
+					<input type="text" th:placeholder="${#messages.msg('om.omr.skumkey')}" id="omr03_skumkey" name="omr03_skumkey" />
+				</div>
+			</div>
+			<label for="omr03_skudesc" class="setting-grid-title">[[#{om.omr.skudesc}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-wrapper">
+					<input type="text" th:placeholder="${#messages.msg('om.omr.skudesc')}" id="omr03_skudesc" name="omr03_skudesc" />
+				</div>
+			</div>
+			<label class="setting-grid-title">[[#{om.omr.oeinsst}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-check-group" id="omr03_oeinsstCheckbox"></div>
+			</div>
+			<label class="setting-grid-title">[[#{om.omr.rsndesc}]]</label>
+			<div class="setting-grid-content">
+				<div class="input-check-group" id="omr03_rsncdnmCheckbox"></div>
+			</div>
+		</div>
+		<div class="search-btn-group">
+			<button type="button" class="btn-search btn-navy btn-green"
+				id="omr03_btnSearch">
+				<img />[[#{bt.search}]]
+			</button>
+			<button type="button" class="btn-clear btn-white" id="omr03_btnReset">
+				<img />[[#{bt.reset}]]
+			</button>
+		</div>
+	</div>
+	<div class="search-list">
+		<div class="list-top">
+			<div class="list-title ic-title-mark">
+				<span th:text="${gnatitle}"></span>
+			</div>
+			<div class="edit-btn-wrapper">
+				<button class="btn-white" id="omr03_btnPrint">
+					<img class="ic-bt-print" />인쇄
+				</button>
+			</div>
+		</div>
+	</div>
+	<div class="list-grid-wrapper con-box">
+		<div id="omr03_pqgrid" style="height: 400px"></div>
+	</div>
+	<!-- 로딩이미지 부분 -->
+	<div class="spinner" id="spinner"></div>
+	<!-- 	<div class="d-flex justify-content-center">
+			<div id="lodingImg" class="spinner-border" role="status"
+				style="display: none; width: 3rem; height: 3rem;">
+				<span class="sr-only">Loading...</span>
+			</div>
+		</div> -->
+	</div>
+	<script>
+      $(function () {
+        var pageId = "omr03";
+
+        const omr03OeinsdtFrom = document.querySelector("#omr03_oeinsdt_from");
+        const omr03OeinsdtTo = document.querySelector("#omr03_oeinsdt_to");
+        //영업일자 세팅
+        //omr03OeinsdtFrom.value = moment().subtract(1, "M").format("YYYY-MM-DD"); //한달전
+        //omr03OeinsdtTo.value = moment().add(1, "d").format("YYYY-MM-DD"); //오늘 + 1일
+        omr03OeinsdtFrom.value = moment().subtract(1, "d").format("YYYY-MM-DD"); // 하루전
+        omr03OeinsdtTo.value = moment().format("YYYY-MM-DD"); // 오늘
+
+        //pqGrid ColModel Object
+        let omr03GridColModel;
+
+        //pqGrid Grid Object
+        let omr03GridObject;
+        let initData;
+        let omr03Warekey;
+        let omr03Ownerky;
+
+         $(document).ready(function () {
+          const initParam = {
+            warekey: "",
+            ownerky: "",
+            skudesc: "",
+            skumkey: "",
+            oeinsdtFrom: null,
+            oeinsdtTo: null,
+            rsncode: "",
+          };
+
+          initOMRData(initParam);
+        });
+ 
+        $("#" + pageId + "_btnSearch").click(async function () {
+          await searchOmr03List();
+          
+          if(!omr03GridObject.getGrid().pdata.length) {
+  			//alert('[[#{ms.getDataZero}]]');
+  			omr03GridObject.getGrid().option('dataModel', { data: [] });
+  			omr03GridObject.getGrid().refreshDataAndView();
+	  	  }
+	     });
+
+        $("#" + pageId + "_btnReset").click(function () {
+          refreshOmr03List();
+        });
+
+        $("#" + pageId + "_btnPrint").click(function () {
+          printOmr03List();
+        });
+
+        //pqGrid ColModel 객체
+        omr03GridColModel = [
+          {
+            title: "",
+            dataType: "String",
+            dataIndx: "state",
+            type: "checkBoxSelection",
+            align: "center",
+            maxWidth: "30",
+            maxHeight: "30",
+            menuIcon: false,
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          },
+          {
+            title: "[[#{om.omr.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            hidden : true,
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey1",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.ownerkey}]]",
+            dataType: "string",
+            dataIndx: "ownerky1",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.oeretky}]]",
+            dataType: "string",
+            dataIndx: "oeretky",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.skudesc}]]",
+            dataType: "string",
+            dataIndx: "skudesc",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.skumkey}]]",
+            dataType: "string",
+            dataIndx: "skumkey",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.rtodqty}]]",
+            dataType: "integer",
+            dataIndx: "rtodqty",
+            align: "right",
+            editable: false,
+            format: "#,###",
+            summary: { type: 'sum' },
+          },
+          {
+            title: "[[#{om.omr.rtcfqty}]]",
+            dataType: "integer",
+            dataIndx: "rtcfqty",
+            editable: false,
+            format: "#,###",
+            summary: { type: 'sum' },
+          },
+          {
+            title: "[[#{om.omr.stotqty}]]",
+            dataType: "integer",
+            dataIndx: "stotqty",
+            editable: false,
+            format: "#,###",
+            hidden : true,
+            summary: { type: 'sum' },
+          },
+          {
+            title: "[[#{om.omr.oeinsdt}]]",
+            dataType: "date",
+            dataIndx: "oeinsdt",
+            format: "yy-mm-dd",
+            editable: false,
+          },
+          {
+            title: "[[#{om.oereti.oeinstm}]]",
+            dataType: "string",
+            dataIndx: "oeinstm",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.comcdtx}]]",
+            dataType: "string",
+            dataIndx: "comcdtx",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.suomkey}]]",
+            dataType: "string",
+            dataIndx: "suomkey",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.rsncode}]]",
+            dataType: "string",
+            dataIndx: "rsncode",
+            editable: false,
+          },
+          {
+            title: "[[#{om.oereti.rsndesc}]]",
+            dataType: "string",
+            dataIndx: "rsndesc",
+            editable: false,
+            filter: {
+              crules: [{ condition: "begin" }],
+            },
+          },
+          {
+            title: "[[#{om.omr.stockky}]]",
+            dataType: "string",
+            dataIndx: "stockky",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.areakey}]]",
+            dataType: "string",
+            dataIndx: "areanam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.zonekey}]]",
+            dataType: "string",
+            dataIndx: "zonenam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.locakey}]]",
+            dataType: "string",
+            dataIndx: "locanam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.updtchk}]]",
+            dataType: "integer",
+            dataIndx: "updtchk",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.subsect}]]",
+            dataType: "string",
+            dataIndx: "subsect",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.truntyp}]]",
+            dataType: "string",
+            dataIndx: "truntyp",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.trunpid}]]",
+            dataType: "string",
+            dataIndx: "trunpid",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.lotnmky}]]",
+            dataType: "string",
+            dataIndx: "lotnmky",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.creuser}]]",
+            dataType: "string",
+            dataIndx: "trunpid",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.retat01}]]",
+            dataType: "string",
+            dataIndx: "retat01",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.retat02}]]",
+            dataType: "string",
+            dataIndx: "retat02",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.retat03}]]",
+            dataType: "string",
+            dataIndx: "retat03",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.lmodate}]]",
+            dataType: "string",
+            dataIndx: "lmodate",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.lmotime}]]",
+            dataType: "string",
+            dataIndx: "lmotime",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.lmouser}]]",
+            dataType: "string",
+            dataIndx: "lmouser",
+            editable: false,
+          },
+        ];
+
+        //pqGrid 객체
+        omr03GridObject = new GridUtil(
+          omr03GridColModel,
+          "[[${gprogrid}]]",
+          pageId + "_pqgrid"
+        );
+        
+        omr03GridObject.setFind();
+        
+        // 같은 OERETKY묶어서 체크해주는기능
+        omr03GridObject.setCheck(function (event, ui) {
+          const findSameOeretky = omr03GridObject
+            .getGrid()
+            .getData()
+            .filter(function (obj) {
+              return (
+                obj.oeretky === ui.rowData.oeretky && obj.asnstat !== "NEW"
+              );
+            });
+          for (const sameOeretky of findSameOeretky) {
+            this.updateRow({
+              rowIndx: sameOeretky.pq_ri,
+              newRow: {
+                state: ui.check ? "Y" : "N",
+              },
+              checkEditable: false,
+            });
+          }
+        });
+
+        omr03GridObject.setCreate(async function(event, ui){
+        	await _commonInit();
+        	
+            omr03Warekey = document.querySelector('#omr03_warekey').value;
+    		omr03Ownerky = document.querySelector('#omr03_ownerky').value;		
+    		
+    		// 20231018 화주로그인=화주 고정 옵션 수정
+    		if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+				const html = '<option value="" selected>[[#{om.omr.all}]]</option>';
+				document.querySelector('#omr03_ownerky').insertAdjacentHTML('afterbegin', html); 
+				$('#omr03_ownerky').pqSelect({ deselect : false }); 
+			}
+    		
+/*     		 $('#omr03_ownerky').pqSelect().on('change', async function(){ 
+    			const grid = omr03GridObject.getGrid();	
+    			if(grid.pdata.length) {
+    				if(!confirm('[[#{ms.listViewRollback}]]')){
+    					document.querySelector('#omr03_ownerky').value = omr03Ownerky;
+    					$('#omr03_ownerky').pqSelect('refreshData');
+    					return;
+    				}
+    				grid.option('dataModel', { data: [] });
+    				grid.refreshDataAndView();
+    			}
+    			omr03Ownerky = document.querySelector('#omr03_ownerky').value;
+    			//initList.skuwcList = await getSkuwcList();
+    		 }); */
+    		
+        });
+        
+        //pqGrid 이벤트발생시 validate 함수
+        omr03GridObject.setBeforeValidate(function (event, ui) {
+          if (
+            ui.source != "undo" &&
+            (ui.source == "edit" ||
+              ui.source == "paste" ||
+              ui.source == "checkbox")
+          ) {
+            let rownum = ui.updateList[0].rowIndx;
+            this.updateRow({
+              rowIndx: rownum,
+              newRow: {
+                state: "Y",
+              },
+              checkEditable: false,
+            });
+          }
+        });
+
+        //pqGrid 랜더링
+        omr03GridObject.open();
+
+        async function printOmr03List() {
+          let grid = omr03GridObject.getGrid();
+          let gridDataList = grid.getData();
+
+          const checkList = gridDataList.filter(function (obj) {
+            return obj.state === "Y";
+          });
+          if (!checkList.length) {
+            alert("[[#{ms.choiceRowZero}]]");
+            return;
+          }
+          // p
+          if (confirm("[[#{om.omr.printOut}]]")) {
+            //로딩 이미지.
+            $("#lodingImg").css("display", "");
+
+            const report = [];
+            for (const checkData of checkList) {
+              const findData = report.find(function (obj) {
+                return (
+                  obj.warekey === checkData.warekey &&
+                  obj.oeretky === checkData.oeretky
+                );
+              });
+              if (!findData) {
+                const reportObj = {
+                  oeretky: checkData.oeretky,
+                  compkey: "[[${userattr.compkey}]]",
+                  progrid: "[[${gprogrid}]]",
+                  warekey: checkData.warekey,
+                  user: "[[${userattr.useract}]]",
+                  type: "omd20",
+                };
+                report.push(reportObj);
+                
+                await reportPrint(report, 'om');
+              }
+            }
+
+          }
+        }
+
+        //============================================================
+        //그리드 초기화 버튼 이벤트
+        //============================================================
+        function refreshOmr03List() {
+          // 창고,화주 초기화에 필요한 코드 
+          const selectedWarekey = $("#" + pageId + "_warekey").prop(
+            "selectedIndex",
+            0
+          );
+          const selectedOwnerky = $("#" + pageId + "_ownerky").prop(
+            "selectedIndex",
+            0
+          );
+          $('#' + pageId + '_ownerky').pqSelect('refreshData');
+          document.getElementById("omr03_skudesc").value = "";
+          document.getElementById("omr03_skumkey").value = "";
+          
+  		document.querySelectorAll('div[id*="omr03_"].input-check-group input').forEach(function(element) {
+  			element.checked = element.id || element.disabled;
+		});
+
+          //영업일자 세팅
+          omr03OeinsdtFrom.value = moment().subtract(1, "d").format("YYYY-MM-DD"); // 하루 전
+          omr03OeinsdtTo.value = moment().add(0, "d").format("YYYY-MM-DD"); //오늘 + 1일
+
+          omr03GridObject.searchList([]);
+        }
+
+        //검색조건 수주일자 input 클릭시 일자 선택 제한
+        $("#omr03_oeinsdt_from , #omr03_oeinsdt_to").on("click", function () {
+          //수주일자 from 최대 일자 선택
+          $("#omr03_oeinsdt_from").attr("max", omr03OeinsdtTo.value);
+
+          //수주일자 to 최소 일자 선택
+          $("#omr03_oeinsdt_to").attr("min", omr03OeinsdtFrom.value);
+        });
+        
+
+
+        async function initOMRData(param) {
+          let rData = await fetchUtil("", "/om/omr03/omr03Select.do", param);
+          initData = await rData.json();
+    
+          await setCheckboxByUsertyp("oeinsst");
+          await setCheckboxByUsertyp("rsncdnm");
+
+          omr03GridObject.searchList(initData.omr03List);
+
+
+        }
+
+        //============================================================
+        //영역 검색 버튼 이벤트
+        //============================================================
+        async function searchOmr03List() {
+          const grid = pq.grid('#omr03_pqgrid');
+          
+          let param = {
+            warekey: $("#omr03_warekey").val(),
+            ownerky: $("#omr03_ownerky").val(),
+            skudesc: $("#omr03_skudesc").val(),
+            skumkey: $("#omr03_skumkey").val(),
+            oeinsdtFrom: $("#omr03_oeinsdt_from").val(),
+            oeinsdtTo: $("#omr03_oeinsdt_to").val(),
+            oeinsst: $("input[name='omr03_oeinsst']:checked")
+              .map(function () {
+                return $(this).val();
+              })
+              .get(),
+            rsncdnm: $("input[name='omr03_rsncdnm']:checked")
+              .map(function () {
+                return $(this).val();
+              })
+              .get(),
+          };
+          
+          grid.showLoading();
+          let rData = await fetchUtil("", "/om/omr03/omr03Select.do", param);
+          initData = await rData.json();
+          
+       	  // 231211 1750 추가 rsncode를 combonm으로 매핑하는 로직
+       	initData.omr03List.forEach((item, index) => {
+            let matchingRsncdnm = initData.rsncdnmList.find(rsncdnm => rsncdnm.combovl === item.rsncode);
+            if (matchingRsncdnm) {
+                initData.omr03List[index].rsncode = matchingRsncdnm.combonm;
+            } else {
+                // combovl에 대응하는 combonm이 없는 경우
+                // 예를 들어, rsncode를 유지하거나 기본값으로 설정할 수 있습니다.
+                //initData.omr03List[index].rsncode = '기본값 또는 원래의 rsncode';
+            }
+        });
+
+          grid.hideLoading();
+          omr03GridObject.searchList(initData.omr03List);
+        }
+
+        async function setCheckboxByUsertyp(columnName) {
+
+          let html = "";
+          for (const column of initData[columnName + "List"]) {
+            if (column.combovl === "CAN") {
+              continue;
+            }
+
+            html += '<label class="check-box">';
+            html +=
+              '<input type="checkbox" name="omr03_' +
+              columnName +
+              '" value="' +
+              column.combovl +
+              '">';
+            html += "<span>" + column.combonm + "</span></label>";
+          }
+          document
+            .querySelector("#" + pageId + '_' + columnName + "Checkbox")
+            .insertAdjacentHTML("beforeend", html);
+
+          //3PL, 화주 공동화면. 3PL과 화주에게 다른 doctype checkbox 노출. 화주 : 400 입고, 420 부품사입고만 조회 가능 / 3PL : 전체 조회 가능
+          if (initData[columnName + "List"].length !== 1) {
+            let allCheckHTML = '<label class="check-box">';
+            allCheckHTML +=
+              '<input type="checkbox" id="omr03_' +
+              columnName +
+              'AllCheck" name="omr03_' +
+              columnName +
+              '" value="">';
+            allCheckHTML += "<span>전체</span></label>";
+            document
+              .querySelector("#" + pageId + '_' + columnName + "Checkbox")
+              .insertAdjacentHTML("afterBegin", allCheckHTML);
+            document.querySelector(
+              "#omr03_" + columnName + "AllCheck"
+            ).checked = true;
+            checkboxEvent(columnName);
+            return;
+          }
+
+          const columnObj = document.querySelector(
+            'input[name="omr03_' + columnName + '"]'
+          );
+          columnObj.checked = true;
+          columnObj.addEventListener("click", function (event) {
+            event.preventDefault();
+          });
+        }
+
+        //checkboxEvent. 전체 선택 시 나머지 체크박스 해제. 전체를 제외한 체크박스 모두 선택 시 전체 선택.
+        function checkboxEvent(columnName) {
+          document
+            .querySelectorAll('input[name="omr03_' + columnName + '"]')
+            .forEach(function (element) {
+              element.addEventListener("change", function () {
+                document.querySelector(
+                  "#omr03_" + columnName + "AllCheck"
+                ).checked = false;
+                const checkedObjs = document.querySelectorAll(
+                  'input[name="omr03_' + columnName + '"]:checked'
+                );
+                const notAllCheckObjs = document.querySelectorAll(
+                  'input[name="omr03_' +
+                    columnName +
+                    '"]:not(#omr03_' +
+                    columnName +
+                    "AllCheck)"
+                );
+                if (
+                  notAllCheckObjs.length === checkedObjs.length ||
+                  element.id ==="omr03_" + columnName + "AllCheck"
+                ) {
+                  document.querySelector(
+                    "#omr03_" + columnName + "AllCheck"
+                  ).checked = true;
+                  for (const checkedObj of checkedObjs) {
+                    checkedObj.checked = false;
+                  }
+                } else if (!checkedObjs.length) {
+                  document.querySelector(
+                    "#omr03_" + columnName + "AllCheck"
+                  ).checked = true;
+                }
+              });
+            });
+        }
+      });
+    </script>
+<!--  mainConten 종료 -->
+</div>
+</html>

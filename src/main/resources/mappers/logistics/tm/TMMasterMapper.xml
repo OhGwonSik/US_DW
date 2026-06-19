@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.tm.mapper.TMMasterMapper">
+
+	<!-- <select id="getVehicleList" resultType="hashMap">
+		select * from TVHCMA V where V.COMPKEY = #{compkey}
+	</select> -->
+
+<!-- TVHCMA : 차량 리스트 -->
+  <!-- tmm01 : 그리드 조회 -->
+  <select id="selectTmm01List" resultType="com.logistics.tm.domain.TMMasterDTO">
+    /* selectTmm01List */
+    SELECT CONCAT(TVH.COMPKEY, TVH.WAREKEY, TVH.VEHICKY) as ROWKEY
+      /* TVH.* */
+      , TVH.COMPKEY
+      , TVH.CARRIER
+      , TVH.WAREKEY
+      , TVH.VEHICKY
+      <!-- , (SELECT WHNAMKO FROM MWARMA MW WHERE MW.COMPKEY = TVH.COMPKEY AND MW.WAREKEY = TVH.WAREKEY) AS WHNAMKO -->
+      <!-- , ((SELECT WHNAMKO FROM MWARMA WHERE COMPKEY = TVH.COMPKEY AND WAREKEY = TVH.WAREKEY) AS WHNAMKO) -->
+      , MW.WHNAMKO
+      , TVH.VHCFNAM
+      , TVH.VHCSNAM
+      , TVH.DLVTYPE
+      , TVH.VHCOPTY
+      , TVH.VHCTYPE
+      , TRN.COMCDTX as vhctypename
+      , TVH.VHCTNCD
+      , TVH.MAXWEGT
+      , TVH.MAXCAPA
+      , TVH.SPERFYN
+      , TVH.SPELFYN
+      , TVH.SPECVYN
+      , TVH.SPE04YN
+      , TVH.SPE05YN
+      , TVH.VEHGRNM
+      , TVH.VEHCSNM
+      , TVH.VEHTPYN
+      , TVH.INBVHYN
+      , TVH.OUBVHYN
+      , TVH.GPSEQYN
+      , TVH.GPSVHID
+      , TVH.imei
+      , TVH.msisdn
+      , TVH.VHRCSTS
+      , TVH.VHUSEYN
+      , TVH.VHCMEMO
+      , TVH.MDESTKY
+      , TVH.OWNERNM
+      , fn_com_todate(TVH.CREDATE) as CREDATE
+      , fn_com_totime(TVH.CRETIME) as CRETIME
+      , fn_sy_usernam(TVH.COMPKEY, TVH.CREUSER) as CREUSER
+      , fn_com_todate(TVH.LMODATE) as LMODATE
+      , fn_com_totime(TVH.LMOTIME) as LMOTIME
+      , fn_sy_usernam(TVH.COMPKEY, TVH.LMOUSER) as LMOUSER
+
+    FROM TVHCMA TVH
+      LEFT OUTER JOIN (
+        SELECT MWA.WHNAMKO, MWA.COMPKEY, MWA.WAREKEY FROM MWARMA MWA
+      ) MW
+      ON MW.COMPKEY = TVH.COMPKEY AND MW.WAREKEY = TVH.WAREKEY
+
+      LEFT OUTER JOIN (
+        select MC.COMCDVL, MC.COMCDTX
+        from V_MCODEM MC
+        where MC.COMCDKY = 'VHCTYPE'
+          and MC.COMPKEY = #{userData.compkey}
+      ) TRN
+        on TRN.COMCDVL = TVH.VHCTYPE
+
+      <!-- LEFT OUTER JOIN (
+        SELECT
+          TPV.COMPKEY
+          , TPV.VEHICKY
+          , TPV.USERACT
+          , s.USERNAM
+          , s.TELPHNM
+          , TPV.WAREKEY
+          , TPV.VAUMEMO
+          , TPV.VHUSEYN
+        FROM TPVASS TPV
+        , SUSRMA s WHERE TPV.USERACT = s.USERACT
+      ) TPV
+      ON TPV.COMPKEY = TVH.COMPKEY AND TPV.WAREKEY = TVH.WAREKEY AND TPV.VEHICKY = TVH.VEHICKY -->
+    WHERE 1=1
+      AND TVH.COMPKEY = #{userData.compkey}
+
+		<!-- and 검색조건 창고, 운송사코드, 내부차량명, 차량코드, 차량번호 -->
+		<if test='warekey != null and warekey != ""'>
+			<!-- AND TVH.WAREKEY LIKE CONCAT('%', #{warekey}, '%') -->
+			AND TVH.WAREKEY = #{warekey}
+		</if>
+		<if test='carrier != null and carrier != ""'>
+			AND carrier LIKE CONCAT('%', #{carrier}, '%')
+		</if>
+		<if test='vhcsnam != null and vhcsnam != ""'>
+			AND VHCSNAM LIKE CONCAT('%', #{vhcsnam}, '%')
+		</if>
+		<if test='vehicky != null and vehicky != ""'>
+			AND TVH.VEHICKY LIKE CONCAT('%', #{vehicky}, '%')
+		</if>
+		<if test='vhcfnam != null and vhcfnam != ""'>
+			AND VHCFNAM LIKE CONCAT('%', #{vhcfnam}, '%')
+		</if>
+		<if test='vehgrnm != null and vehgrnm != ""'>
+			AND VEHGRNM LIKE CONCAT('%', #{vehgrnm}, '%')
+		</if>
+		<if test='vhuseyn != null and vhuseyn != ""'>
+			AND TVH.VHUSEYN = #{vhuseyn}
+		</if>
+		<!-- <if test='useract != null and useract != ""'>
+			AND TVH.USERACT = #{useract}
+		</if> -->
+		<!-- <if test='mdestky != null and mdestky != ""'>
+			AND TVH.MDESTKY = #{mdestky}
+		</if> -->
+		<if test='usernam != null and usernam != ""'>
+			<!-- AND TPV.USERNAM  LIKE CONCAT('%', #{usernam}, '%') -->
+			AND TVH.VEHICKY in (
+
+        SELECT
+          TPV.VEHICKY
+          FROM TPVASS TPV
+        WHERE TPV.COMPKEY = TVH.COMPKEY
+          AND TPV.WAREKEY = TVH.WAREKEY
+          <!-- AND TPV.VEHICKY = TVH.VEHICKY -->
+          AND TPV.USERACT in (
+            SELECT
+              s.USERACT
+              FROM V_SUSRMA s
+            WHERE s.USERNAM  LIKE CONCAT('%', #{usernam}, '%')
+          )
+      )
+		</if>
+		<if test='useract != null and useract != ""'>
+			AND TVH.VEHICKY in (
+
+        SELECT
+          TPV.VEHICKY
+          FROM TPVASS TPV
+        WHERE <!-- TPV.COMPKEY = TVH.COMPKEY
+          AND TPV.WAREKEY = TVH.WAREKEY
+          AND --> TPV.USERACT LIKE CONCAT('%', #{useract}, '%')
+      )
+		</if>
+    <!-- 사용하지 않음 -->
+    <!--
+		<if test='telphnm != null and telphnm != ""'>
+			< ! - -  AND TPV.TELPHNM  LIKE CONCAT('%', #{telphnm}, '%') - - >
+
+			AND TVH.VEHICKY in (
+
+        SELECT
+          TPV.VEHICKY
+          FROM TPVASS TPV
+        WHERE TPV.COMPKEY = TVH.COMPKEY
+          AND TPV.WAREKEY = TVH.WAREKEY
+          < ! - -  AND TPV.VEHICKY = TVH.VEHICKY  - - >
+          AND TPV.USERACT in (
+            SELECT
+              s.USERACT
+              FROM SUSRMA s
+            WHERE s.TELPHNM  LIKE CONCAT('%', #{telphnm}, '%')
+          )
+      )
+		</if>
+    -->
+  </select>
+
+  <insert id="insertVehicleList" parameterType="hashmap">
+    /* insertVehicleList */
+    insert into TVHCMA(
+      COMPKEY , WAREKEY , VEHICKY , VHCFNAM ,
+      VHCSNAM , DLVTYPE , CARRIER , VHCOPTY ,
+      VHCTYPE , VHCTNCD , MAXWEGT , MAXCAPA ,
+      SPERFYN , SPELFYN , SPECVYN , SPE04YN ,
+      SPE05YN , VEHGRNM , VEHCSNM , VEHTPYN ,
+      INBVHYN , OUBVHYN ,
+      GPSEQYN , GPSVHID , IMEI, MSISDN ,
+      VHRCSTS , VHCMEMO, VHUSEYN ,
+      MDESTKY , OWNERNM ,
+      CREDATE , CRETIME , CREUSER ,
+      LMODATE , LMOTIME , LMOUSER
+    )
+
+    values
+		<foreach collection="insertList" item="item" index="index" separator=",">
+    (
+      #{userData.compkey} , #{item.warekey} ,  FN_TM_VEHICKY() , #{item.vhcfnam} ,
+      #{item.vhcsnam} , #{item.dlvtype} , #{item.carrier} , #{item.vhcopty} ,
+      #{item.vhctype} , #{item.vhctncd} , #{item.maxwegt} , #{item.maxcapa} ,
+      #{item.sperfyn} , #{item.spelfyn} , #{item.specvyn} , #{item.spe04yn} ,
+      #{item.spe05yn} , #{item.vehgrnm} , #{item.vehcsnm} , #{item.vehtpyn} ,
+      #{item.inbvhyn} , #{item.oubvhyn} ,
+      #{item.gpseqyn} , #{item.gpsvhid} , #{item.imei}, #{item.msisdn} ,
+      #{item.vhrcsts}, #{item.vhcmemo}, #{item.vhuseyn} ,
+      #{item.mdestky} , #{item.ownernm} ,
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{userData.useract},
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{userData.useract}
+    )
+		</foreach>
+  </insert>
+
+  <update id="updateVehicleList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+    /* updateVehicleList */
+		<foreach collection="updateList" item="item" index="index" separator=";">
+      update TVHCMA V
+        set
+          V.WAREKEY = #{item.warekey}
+        , V.VHCFNAM = #{item.vhcfnam}
+        , V.VHCSNAM = #{item.vhcsnam}
+        , V.DLVTYPE = #{item.dlvtype}
+        , V.CARRIER = #{item.carrier}
+        , V.VHCOPTY = #{item.vhcopty}
+        , V.VHCTYPE = #{item.vhctype}
+        , V.VHCTNCD = #{item.vhctncd}
+        , V.MAXWEGT = #{item.maxwegt}
+        , V.MAXCAPA = #{item.maxcapa}
+        , V.SPERFYN = #{item.sperfyn}
+        , V.SPELFYN = #{item.spelfyn}
+        , V.SPECVYN = #{item.specvyn}
+        , V.SPE04YN = #{item.spe04yn}
+        , V.SPE05YN = #{item.spe05yn}
+        , V.VEHGRNM = #{item.vehgrnm}
+        , V.VEHCSNM = #{item.vehcsnm}
+        , V.VEHTPYN = #{item.vehtpyn}
+        , V.INBVHYN = #{item.inbvhyn}
+        , V.OUBVHYN = #{item.oubvhyn}
+        , V.GPSEQYN = #{item.gpseqyn}
+        , V.GPSVHID = #{item.gpsvhid}
+        , V.IMEI = #{item.imei}
+        , V.MSISDN = #{item.msisdn}
+        , V.VHRCSTS = #{item.vhrcsts}
+        , V.VHCMEMO = #{item.vhcmemo}
+        , V.VHUSEYN = #{item.vhuseyn}
+        , V.MDESTKY = #{item.mdestky}
+        , V.OWNERNM = #{item.ownernm}
+
+        , V.LMODATE = to_char(NOW(), 'YYYYMMDD')
+        , V.LMOTIME = to_char(NOW(), 'hh24miss')
+        , V.LMOUSER = #{userData.useract}
+
+      where
+        V.COMPKEY= #{item.compkey}
+        and V.VEHICKY= #{item.vehicky}
+        and V.WAREKEY= #{item.oldwarekey}
+		</foreach>
+  </update>
+
+  <!-- <delete id="deleteVehicleList" parameterType="com.logistics.tm.domain.TvhcmaVO">
+    delete from TVHCMA
+      where 1=1
+        and COMPKEY = #{compkey}
+        and WAREKEY = #{warekey}
+        and VEHICKY = #{vehicky}
+  </delete> -->
+
+<!-- TPVASS : 차량-기사 맵핑  -->
+  <!-- Tpvass 조회 -->
+  <select id="selectTpvassList" resultType="com.logistics.tm.domain.TMMasterDTO">
+    /* selectTpvassList */
+    SELECT CONCAT(TPV.COMPKEY, TPV.WAREKEY, TPV.USERACT) as ROWKEY
+      , TPV.COMPKEY
+      , TPV.VEHICKY
+      , TPV.USERACT
+      , TPV.WAREKEY
+      , TPV.VAUMEMO
+      , TPV.VHUSEYN
+      , TPV.VHOWNYN
+
+      , USER.USERNAM
+      <!-- , USER.TELPHNM -->
+      , USER.USERACT
+
+      , fn_com_todate(TPV.CREDATE) as CREDATE
+      , fn_com_totime(TPV.CRETIME) as CRETIME
+      , fn_sy_usernam(TPV.COMPKEY, TPV.CREUSER) as CREUSER
+      , fn_com_todate(TPV.LMODATE) as LMODATE
+      , fn_com_totime(TPV.LMOTIME) as LMOTIME
+      , fn_sy_usernam(TPV.COMPKEY, TPV.LMOUSER) as LMOUSER
+
+    FROM TPVASS TPV
+      , V_SUSRMA USER
+      <!-- LEFT JOIN SUSRMA USER ON USER.ROWKEY2 = (
+        SELECT
+          CONCAT() as ROWKEY2
+          FROM SUSRMA USER
+          WHERE
+          LIMIT 1 -->
+        <!-- SELECT
+          USER.COMPKEY,
+          USER.USERACT,
+          USER.USERTYP,
+          USER.USERNAM,
+          USER.TELPHNM
+        FROM SUSRMA USER -->
+      <!-- ) USER -->
+      <!-- ON TPV.COMPKEY = USER.COMPKEY
+        AND TPV.USERACT = USER.USERACT
+        AND USER.USERTYP = 'DRIVER' -->
+    WHERE 1=1
+      AND TPV.COMPKEY = USER.COMPKEY
+      AND TPV.USERACT = USER.USERACT
+      AND USER.USERTYP = 'DRIVER'
+      AND TPV.COMPKEY = #{userData.compkey}
+
+		<if test='vehicky != null and vehicky != ""'>
+			AND vehicky LIKE CONCAT('%', #{vehicky}, '%')
+		</if>
+		<if test='warekey != null and warekey != ""'>
+			AND warekey LIKE CONCAT('%', #{warekey}, '%')
+		</if>
+
+  </select>
+
+  <!-- Tpvass 입력 -->
+  <insert id="insertTpvassList" parameterType="hashmap">
+    /* insertTpvassList */
+    insert into TPVASS(
+      COMPKEY , VEHICKY , USERACT ,
+      WAREKEY , VAUMEMO , VHUSEYN , VHOWNYN,
+
+      CREDATE , CRETIME , CREUSER ,
+      LMODATE , LMOTIME , LMOUSER
+    )
+
+    values
+		<foreach collection="insertList" item="item" index="index" separator=",">
+    (
+      #{userData.compkey} , #{item.vehicky} , #{item.useract} ,
+      #{item.warekey} , #{item.vaumemo} , #{item.vhuseyn} , #{item.vhownyn} ,
+
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{userData.useract},
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{userData.useract}
+    )
+		</foreach>
+  </insert>
+
+  <!-- Tpvass 수정 -->
+  <update id="updateTpvassList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+    /* updateTpvassList */
+		<foreach collection="updateList" item="item" index="index" separator=";">
+      update TPVASS V
+        set
+          V.WAREKEY = #{item.warekey}
+        , V.VAUMEMO = #{item.vaumemo}
+        <!-- , V.VHCMEMO = #{item.vhcmemo} -->
+        , V.VHUSEYN = #{item.vhuseyn}
+        , V.VHOWNYN = #{item.vhownyn}
+
+        , V.LMODATE = to_char(NOW(), 'YYYYMMDD')
+        , V.LMOTIME = to_char(NOW(), 'hh24miss')
+        , V.LMOUSER = #{userData.useract}
+
+      where V.COMPKEY= #{item.compkey}
+        and V.VEHICKY= #{item.vehicky}
+        and V.USERACT= #{item.useract}
+        <!-- and V.OWNERNM= #{item.ownernm} -->
+		</foreach>
+  </update>
+
+  <select id="selectTshrhdSelectBox" resultType="com.logistics.tm.domain.TMMasterDTO">
+    /* selectTshrhdSelectBox */
+    SELECT COMPKEY, WAREKEY, SHTRTKY as COMBOVL, SHTRTNM as COMBONM
+      FROM TSHRHD
+     WHERE COMPKEY = #{userData.compkey}
+    <if test='warekey != null and warekey != ""'>
+       AND WAREKEY = #{warekey}
+    </if>
+    <choose>
+      <when test='tsuseyn != null and tsuseyn != ""'>
+        AND TSUSEYN = #{tsuseyn}
+      </when>
+      <otherwise>
+        AND TSUSEYN = 'Y'
+      </otherwise>
+    </choose>
+     GROUP BY COMPKEY, WAREKEY, SHTRTKY, SHTRTNM
+     ORDER BY COMPKEY, WAREKEY, SHTRTKY, SHTRTNM
+  </select>
+  <!-- TSHRHD : 셔틀리스트 -->
+  <!-- TSHRHD 조회 -->
+  <select id="selectTshrhdList" resultType="com.logistics.tm.domain.TMMasterDTO">
+    /* selectTshrhdList */
+    SELECT CONCAT(SHT.COMPKEY, SHT.WAREKEY, SHT.SHTRTKY) as ROWKEY
+      /* SHT.* */
+      , SHT.COMPKEY
+      , SHT.WAREKEY
+      , SHT.SHTRTKY
+
+      , SHT.DESTKEY
+
+      , SHT.INBSHYN
+      , SHT.OUBSHYN
+
+      , SHT.SHTGRNM
+      , SHT.SHTRTNM
+      , SHT.shtcytm
+      , SHT.shtmemo
+      , SHT.tsuseyn
+
+      , IFNULL(JOINIT.itemnumb, 0) as itemnumb
+      , IFNULL(JOINVE.vehiclenumb, 0) as vehiclenumb
+
+      , fn_com_todate(SHT.CREDATE) as CREDATE
+      , fn_com_totime(SHT.CRETIME) as CRETIME
+      , fn_sy_usernam(SHT.COMPKEY, SHT.CREUSER) as CREUSER
+      , fn_com_todate(SHT.LMODATE) as LMODATE
+      , fn_com_totime(SHT.LMOTIME) as LMOTIME
+      , fn_sy_usernam(SHT.COMPKEY, SHT.LMOUSER) as LMOUSER
+
+    FROM TSHRHD SHT
+      LEFT JOIN (
+        SELECT warekey,shtrtky,compkey, count(*) as itemnumb FROM TSHRIT SHIT GROUP BY CONCAT(warekey,shtrtky,compkey)
+      ) JOINIT
+        ON JOINIT.warekey = SHT.warekey
+        AND JOINIT.shtrtky = SHT.shtrtky
+        AND JOINIT.compkey = SHT.compkey
+
+      LEFT JOIN (
+        SELECT warekey,shtrtky,compkey, count(*) as vehiclenumb FROM TSHRVH SHVE GROUP BY CONCAT(warekey,shtrtky,compkey)
+      ) JOINVE
+        ON JOINVE.warekey = SHT.warekey
+        AND JOINVE.shtrtky = SHT.shtrtky
+        AND JOINVE.compkey= SHT.compkey
+
+    WHERE 1=1
+      AND SHT.COMPKEY = #{userData.compkey}
+		<!-- and 검색조건 창고, 셔틀그룹, 셔틀노선명  -->
+		<if test='warekey != null and warekey != ""'>
+			AND SHT.warekey LIKE CONCAT('%', #{warekey}, '%')
+		</if>
+		<if test='shtgrnm != null and shtgrnm != ""'>
+			AND SHT.shtgrnm LIKE CONCAT('%', #{shtgrnm}, '%')
+		</if>
+		<if test='shtrtnm != null and shtrtnm != ""'>
+			AND SHT.shtrtnm LIKE CONCAT('%', #{shtrtnm}, '%')
+		</if>
+		<if test='tsuseyn != null and tsuseyn != ""'>
+			AND SHT.tsuseyn = #{tsuseyn}
+		</if>
+
+		<if test='destkey != null and destkey != ""'>
+			AND SHT.SHTRTKY  IN (
+        SELECT IT.SHTRTKY FROM TSHRIT IT
+          WHERE IT.DESTKEY = #{destkey}
+      )
+		</if>
+		<if test='denamlc != null and denamlc != ""'>
+			AND SHT.SHTRTKY  IN (
+        SELECT IT.SHTRTKY FROM TSHRIT IT
+          WHERE IT.DESTKEY IN (
+            SELECT DES.DESTKEY FROM MDESMA DES
+              WHERE DES.DENAMLC LIKE CONCAT('%', #{denamlc}, '%')
+          )
+      )
+		</if>
+		<if test='vhcsnam != null and vhcsnam != ""'>
+			AND SHT.SHTRTKY  IN (
+        SELECT IT2.SHTRTKY FROM TSHRVH IT2
+          WHERE IT2.VEHICKY IN (
+
+            SELECT VH.VEHICKY FROM TVHCMA VH
+              WHERE VH.VHCSNAM LIKE CONCAT('%', #{vhcsnam}, '%')
+
+          )
+      )
+		</if>
+		<if test='vhuseyn != null and vhuseyn != ""'>
+			AND SHT.SHTRTKY  IN (
+        SELECT IT2.SHTRTKY FROM TSHRVH IT2
+          WHERE IT2.VEHICKY IN (
+
+            SELECT VH.VEHICKY FROM TVHCMA VH
+              WHERE VH.VHUSEYN LIKE CONCAT('%', #{vhuseyn}, '%')
+
+          )
+      )
+		</if>
+
+    ORDER BY SHTGRNM, SHTRTNM, CREDATE
+  </select>
+
+
+  <!-- Tshrhd 입력 -->
+  <insert id="insertTshrhdList" parameterType="hashmap">
+    /* insertTshrhdList */
+    insert into TSHRHD(
+      COMPKEY , WAREKEY, SHTRTKY,
+      SHTGRNM , SHTRTNM, SHTCYTM,
+      SHTMEMO , TSUSEYN, DESTKEY,
+
+      INBSHYN ,
+      OUBSHYN ,
+
+      CREDATE , CRETIME , CREUSER ,
+      LMODATE , LMOTIME , LMOUSER
+    )
+
+    values
+		<foreach collection="list" item="item" index="index" separator=",">
+    (
+      #{item.userData.compkey} , #{item.warekey} , FN_TM_SHTRTKY() ,
+      #{item.shtgrnm} , #{item.shtrtnm} , #{item.shtcytm} ,
+      #{item.shtmemo} , #{item.tsuseyn} , #{item.destkey} ,
+
+      #{item.inbshyn} ,
+      #{item.oubshyn} ,
+
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{item.userData.useract},
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{item.userData.useract}
+    )
+		</foreach>
+  </insert>
+
+  <!-- Tshrhd 수정 -->
+  <update id="updateTshrhdList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+    /* updateTshrhdList */
+		<foreach collection="list" item="item" index="index" separator=";">
+      update TSHRHD S
+        set
+          S.WAREKEY = #{item.warekey}
+        , S.SHTGRNM = #{item.shtgrnm}
+        , S.SHTRTNM = #{item.shtrtnm}
+        , S.SHTCYTM = #{item.shtcytm}
+        , S.SHTMEMO = #{item.shtmemo}
+        , S.TSUSEYN = #{item.tsuseyn}
+
+        , S.DESTKEY = #{item.destkey}
+        , S.INBSHYN = #{item.inbshyn}
+        , S.OUBSHYN = #{item.oubshyn}
+
+        , S.LMODATE = to_char(NOW(), 'YYYYMMDD')
+        , S.LMOTIME = to_char(NOW(), 'hh24miss')
+        , S.LMOUSER = #{item.userData.useract}
+
+      where S.COMPKEY= #{item.compkey}
+        and S.WAREKEY= #{item.warekey}
+        and S.SHTRTKY= #{item.shtrtky}
+		</foreach>
+  </update>
+
+
+<!-- TSHRIT -->
+  <!-- TSHRIT 조회 -->
+  <select id="selectTshritList" resultType="com.logistics.tm.domain.TMMasterDTO">
+    /* selectTshritList */
+    SELECT CONCAT(SHT.COMPKEY, SHT.WAREKEY, SHT.SHTRTKY, SHT.SHTRTIT) as ROWKEY
+      /* SHT.* */
+      , SHT.COMPKEY
+      , SHT.WAREKEY
+      , SHT.SHTRTKY
+
+      , SHT.shtrtit
+      , SHT.custkey
+      , SHT.destkey
+      , SHT.shtrpty
+
+      , fn_com_todate(SHT.CREDATE) as CREDATE
+      , fn_com_totime(SHT.CRETIME) as CRETIME
+      , fn_sy_usernam(SHT.COMPKEY, SHT.CREUSER) as CREUSER
+      , fn_com_todate(SHT.LMODATE) as LMODATE
+      , fn_com_totime(SHT.LMOTIME) as LMOTIME
+      , fn_sy_usernam(SHT.COMPKEY, SHT.LMOUSER) as LMOUSER
+
+    FROM TSHRIT SHT
+    WHERE 1=1
+      AND SHT.COMPKEY = #{userData.compkey}
+		<!-- and 검색조건 창고, 셔틀키  -->
+		<if test='warekey != null and warekey != ""'>
+			AND SHT.warekey LIKE CONCAT('%', #{warekey}, '%')
+		</if>
+		<if test='shtrtky != null and shtrtky != ""'>
+			AND SHT.SHTRTKY LIKE CONCAT('%', #{shtrtky}, '%')
+		</if>
+    <!-- ORDER BY SHT.shtrtit -->
+    ORDER BY CASE WHEN SHT.SHTRTKY = 'START' THEN 1
+                  WHEN SHT.SHTRTKY = 'ARRIVAL' THEN 2
+                  WHEN SHT.SHTRTKY = 'END' THEN 3
+                  ELSE 4
+              END
+  </select>
+
+
+  <!-- TSHRIT 입력 -->
+  <insert id="insertTshritList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+    /* insertTshritList */
+    insert into TSHRIT(
+      COMPKEY , WAREKEY, SHTRTKY,
+      shtrtit , custkey, destkey,
+      shtrpty,
+
+      CREDATE , CRETIME , CREUSER ,
+      LMODATE , LMOTIME , LMOUSER
+    )
+
+    values
+		<foreach collection="list" item="item" index="index" separator=",">
+    (
+      #{item.userData.compkey} , #{item.warekey} , #{item.shtrtky} ,
+      FN_TM_SHTRTIT(#{item.userData.compkey},#{item.warekey},#{item.shtrtky}) , #{item.custkey} , #{item.destkey} ,
+      #{item.shtrpty},
+
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{item.userData.useract},
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{item.userData.useract}
+    )
+		</foreach>
+  </insert>
+
+  <!-- TSHRIT 수정 -->
+  <update id="updateTshritList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+    /* updateTshritList */
+		<foreach collection="list" item="item" index="index" separator=";">
+      <!-- update TSHRHD S  -->
+      update TSHRIT S
+        set
+          S.WAREKEY = #{item.warekey}
+        , S.SHTRTKY = #{item.shtrtky}
+        , S.custkey = #{item.custkey}
+        , S.destkey = #{item.destkey}
+        , S.shtrpty = #{item.shtrpty}
+
+        , S.LMODATE = to_char(NOW(), 'YYYYMMDD')
+        , S.LMOTIME = to_char(NOW(), 'hh24miss')
+        , S.LMOUSER = #{item.userData.useract}
+
+      where S.COMPKEY= #{item.compkey}
+        and S.WAREKEY= #{item.warekey}
+        and S.SHTRTKY= #{item.shtrtky}
+        and S.SHTRTIT= #{item.shtrtit}
+		</foreach>
+  </update>
+
+  <!-- 삭제  -->
+  <delete id="deleteTshritList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+		<foreach collection="list" item="item"  separator=";">
+		DELETE from TSHRIT
+      WHERE COMPKEY= #{item.compkey}
+        AND WAREKEY= #{item.warekey}
+        AND SHTRTKY= #{item.shtrtky}
+        AND SHTRTIT= #{item.shtrtit}
+		</foreach>
+  </delete>
+
+
+<!-- TSHRVH : 셔틀-차량 맵핑 -->
+  <!-- TSHRVH 조회 -->
+  <select id="selectTshrvhList" resultType="com.logistics.tm.domain.TMMasterDTO">
+    /* selectTshrvhList */
+    SELECT CONCAT(COMPKEY, WAREKEY, SHTRTKY, VEHICKY) as ROWKEY
+      /* VH.* */
+      , VH.COMPKEY
+      , VH.WAREKEY
+      , VH.SHTRTKY
+      , VH.VEHICKY
+
+      , VH.srvehod
+      , VH.shtvcap
+      /* , VH.tsuseyn */
+
+      , fn_com_todate(VH.CREDATE) as CREDATE
+      , fn_com_totime(VH.CRETIME) as CRETIME
+      , fn_sy_usernam(VH.COMPKEY, VH.CREUSER) as CREUSER
+      , fn_com_todate(VH.LMODATE) as LMODATE
+      , fn_com_totime(VH.LMOTIME) as LMOTIME
+      , fn_sy_usernam(VH.COMPKEY, VH.LMOUSER) as LMOUSER
+
+    FROM TSHRVH VH
+    WHERE 1=1
+      AND VH.COMPKEY = #{userData.compkey}
+		<!-- and 검색조건 창고, 셔틀키  -->
+		<if test='warekey != null and warekey != ""'>
+			AND VH.warekey LIKE CONCAT('%', #{warekey}, '%')
+		</if>
+		<if test='shtrtky != null and shtrtky != ""'>
+			AND VH.SHTRTKY LIKE CONCAT('%', #{shtrtky}, '%')
+		</if>
+    ORDER BY VH.srvehod
+  </select>
+
+
+  <!-- TSHRVH 입력 -->
+  <insert id="insertTshrvhList" parameterType="hashmap">
+    /* insertTshrvhList */
+    insert into TSHRVH(
+      COMPKEY , WAREKEY, SHTRTKY,
+      VEHICKY , srvehod, shtvcap,
+
+      CREDATE , CRETIME , CREUSER ,
+      LMODATE , LMOTIME , LMOUSER
+    )
+
+    values
+		<foreach collection="list" item="item" index="index" separator=",">
+    (
+      #{item.userData.compkey} , #{item.warekey} , #{item.shtrtky} ,
+      #{item.vehicky} , #{item.srvehod} , #{item.shtvcap} ,
+
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{item.userData.useract},
+      to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{item.userData.useract}
+    )
+		</foreach>
+  </insert>
+
+  <!-- TSHRVH 수정 -->
+  <update id="updateTshrvhList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+    /* updateTshrvhList */
+		<foreach collection="list" item="item" index="index" separator=";">
+      update TSHRVH V
+        set
+          V.WAREKEY = #{item.warekey}
+        , V.SHTRTKY = #{item.shtrtky}
+        , V.VEHICKY = #{item.vehicky}
+        , V.srvehod = #{item.srvehod}
+        , V.shtvcap = #{item.shtvcap}
+
+        , V.LMODATE = to_char(NOW(), 'YYYYMMDD')
+        , V.LMOTIME = to_char(NOW(), 'hh24miss')
+        , V.LMOUSER = #{item.userData.useract}
+
+      where V.COMPKEY= #{item.compkey}
+        and V.WAREKEY= #{item.warekey}
+        and V.SHTRTKY= #{item.shtrtky}
+        and V.VEHICKY= #{item.oldvehicky}
+		</foreach>
+  </update>
+
+  <!-- 삭제  -->
+  <delete id="deleteTshrvhList" parameterType="com.logistics.tm.domain.TMMasterDTO">
+		<foreach collection="list" item="item"  separator=";">
+		DELETE from TSHRVH
+      WHERE COMPKEY= #{item.compkey}
+        AND WAREKEY= #{item.warekey}
+        AND SHTRTKY= #{item.shtrtky}
+        AND VEHICKY= #{item.vehicky}
+		</foreach>
+  </delete>
+
+
+  <!-- customer list for Select box -->
+  <select id="selectCustomerList" resultType="com.logistics.md.domain.MptnmaDTO">
+  <!-- selectCustomerList -->
+    SELECT * from MPTNMA
+			/* MCUSMA_bakdel */
+    WHERE 1=1
+			<!-- AND COMPKEY = #{compkey} -->
+			AND COMPKEY = #{userData.compkey}
+      AND PTUSEYN = 'Y'
+
+  </select>
+	<select id="selectDestList" resultType="com.logistics.md.domain.MdesmaDTO">
+  <!-- selectDestList -->
+		SELECT DESTKEY, DENAMLC FROM MDESMA DES
+		WHERE DES.COMPKEY = #{userData.compkey}
+      AND DES.DEUSEYN = 'Y'
+		<!-- WHERE DES.COMPKEY = #{compkey} -->
+
+	</select>
+
+  <!-- 변동운송비용 노선-차량 조회  -->
+  <select id="selectShtrtkyVehicky" resultType="com.logistics.tm.domain.TMMasterDTO">
+  <!-- selectShtrtkyVehicky -->
+	SELECT th.SHTRTKY as combovl  , th.SHTRTNM as combonm , tv.VEHICKY, th.COMPKEY , th.WAREKEY 
+	  FROM TSHRHD th /* TM Shuttle Routing(노선) */
+	 INNER JOIN TSHRVH tv /* TM 셔틀노선 기본차량 */
+	    ON tv.COMPKEY = th.COMPKEY
+	   AND tv.WAREKEY = th.WAREKEY 
+	   AND tv.SHTRTKY = th.SHTRTKY
+  </select>
+
+
+</mapper>

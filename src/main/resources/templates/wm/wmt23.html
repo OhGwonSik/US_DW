@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang='ko' xmlns:th='http://www.thymeleaf.org'>
+	<div th:fragment='fragments-mainContent' class='tab-content'>
+		<div class="tab-contents">
+            <div class="location"></div>
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<label for="wmt23warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id='wmt23Warekey' 
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"  
+							data-cb-variable="warekeyList"></select>
+                        </div>
+                    </div>
+					<label for="wmt23ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id='wmt23Ownerky' 
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/partner/owner" 
+							data-cb-variable="ownerkyList">
+							<option value="">[[#{wm.wmt23.all}]]</option>
+							</select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{wm.wtakit.taskoky}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt23Taskoky' name='wmt23Taskoky' th:placeholder="${#messages.msg('wm.wtakit.taskoky')}">
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{md.mskust.skumkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt23Skumkey' name='wmt23Skumkey' th:placeholder="${#messages.msg('md.mskust.skumkey')}">
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{md.mskuwc.skudesc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt23Skudesc' name='wmt23Skudesc' th:placeholder="${#messages.msg('md.mskuwc.skudesc')}">
+                        </div>
+                    </div>
+                    <label for="wmt22Tasksts" class="setting-grid-title">[[#{wm.wtakit.tasksts}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                        	 <select id='wmt23Tasksts'>
+                        	 	<option value="NEW">[[#{wm.wmt23.new}]]</option>
+                        	 	<option value="TSCOMP">[[#{wm.wmt23.tscomp}]]</option>
+                        	 </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" id='wmt23Search'><img>[[#{bt.search}]]</button>
+                    <button type="button" class="btn-clear btn-white" id="wmt23Reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button class="btn-white d-none" id='wmt23Cancel'><img class="ic-bt-cancel">[[#{bt.cancel}]]</button>
+                        <button class="btn-navy btn-green" id='wmt23Save'><img class="ic-bt-save">[[#{bt.save}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="wmt23Grid"></div>
+                </div>
+            </div>
+        </div>
+		<script>
+		$(function(){
+			const pageId = '[[${gprogrid}]]';
+			const wmt23GridId = '#' + pageId + 'Grid';
+			const saveDom = '#' + pageId + 'Save' + ','+ '#' + pageId + 'Cancel';
+			let wmt23Grid;
+			
+			wmt23Init();
+			
+			$(saveDom).on('click', async function(e){
+				let targetId = this.id.substring(pageId.length);
+				await saveFunc(targetId.toLowerCase());
+			});
+			
+			$('#' + pageId + 'Search').click(async function(){
+				await getwmt23List();
+			});
+			
+			$('#' + pageId + 'Reset').click(async function(){
+				resetSearchConditions();
+				$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+				getwmt23GridList([]);
+			});
+			
+			$('#' + pageId + 'Tasksts').change(async function(){
+				if(this.value === "[[#{wm.wmt23.tscompVal}]]"){
+		      	 	$('#' + pageId + 'Save').removeClass('d-flex');
+		      	 	$('#' + pageId + 'Save').addClass('d-none');
+				 	$('#' + pageId + 'Cancel').removeClass('d-none');
+		      	 	$('#' + pageId + 'Cancel').addClass('d-flex');
+				}else{
+				 	$('#' + pageId + 'Save').removeClass('d-none');
+		      	 	$('#' + pageId + 'Save').addClass('d-flex');
+					$('#' + pageId + 'Cancel').removeClass('d-flex');
+		      	 	$('#' + pageId + 'Cancel').addClass('d-none');
+				}
+			});
+			
+			
+			const wmt23GridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+		            type: 'checkbox', sortable: false, editor: false,
+		            cb: { all: false, header: true } ,
+		            editable : function(ui){
+		            	return editable = ui.rowData.fordqty == 0 ? false : true;
+		            }
+		     	},
+		     	{ title: '[[#{wm.wtakit.rowkey}]]', dataType: 'string',  dataIndx: 'rowkey', hidden : true , editable: false ,},	
+				{ title: '[[#{wm.wtakit.compkey}]]', dataType: 'string',  dataIndx: 'compkey', hidden : true , editable: false ,},	
+				{ title: '[[#{wm.wtakit.taskoky}]]', dataType: 'string', dataIndx: 'taskoky' , editable : false },	
+				{ title: '[[#{wm.wtakit.taskoit}]]', dataType: 'string', dataIndx: 'taskoit' , hidden: true , editable : false },	
+				{ title: '[[#{wm.wtakit.warekey}]]', dataType: 'string',  dataIndx: 'warekey', hidden: true , editable: false },	
+				{ title: '[[#{wm.wtakit.ownerky}]]', dataType: 'string',  dataIndx: 'ownerky', editable: false },	
+				{ title: '[[#{grid.skuCode}]]', dataType: 'string',  dataIndx: 'skumkey' , editable : false },	
+				{ title: '[[#{grid.skunm}]]', dataType: 'string',  dataIndx: 'skudesc' , editable : false },
+				{ title: '[[#{wm.wtakit.doccate}]]', dataType: 'string',  dataIndx: 'doccate' , editable: false },
+				{ title: '[[#{wm.wtakit.doctype}]]', dataType: 'string',  dataIndx: 'doctype' , editable : false},	
+				{ title: '[[#{md.mdocma.docctnm}]]', dataType: 'string',  dataIndx: 'doctynm' ,  editable: false },
+				{ title: '[[#{wm.wmt23.stotqty}]]', dataType: 'integer',  dataIndx: 'stotqty' , editable : false },
+				{ title: '[[#{wm.wtakit.fordqty}]]', dataType: 'integer',  dataIndx: 'fordqty' , editable : false },	
+				{ title: '[[#{wm.wmt23.tcmpqty}]]', dataType: 'integer',  dataIndx: 'tcmpqty' ,
+					styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },	  
+					editable: function(ui){
+						return editable = ui.rowData.fordqty == 0 ? false : true;
+					} 
+				},
+			];
+			
+			wmt23Grid = new GridUtil(wmt23GridCM, pageId , pageId + 'Grid');
+
+			wmt23Grid.setFind();
+			wmt23Grid.setReset();
+			
+			wmt23Grid.setChange(function(evt , ui) {
+				const updateList = ui.updateList;
+				if(ui.source === 'edit' || ui.source === 'update'){
+					updateList.forEach((obj) => {
+						let newRow  = obj.newRow;
+						let rowData = obj.rowData;
+						let stotqty = rowData.stotqty // 세트 zone 수량
+						let fordqty = rowData.fordqty; // 지시수량
+						let compqty = stotqty > fordqty ? fordqty : stotqty;  // 비교수량
+						if(newRow.hasOwnProperty('tcmpqty')){
+							if(compqty < newRow.tcmpqty) {
+								// 세트zone 수량 or 지시수량 중 최소값으로 비교할 것.
+								alert('[[#{wm.wmt23.minQtyMsg}]]' + " " + newRow.tcmpqty + '[[#{wm.wmt23.countMsg}]]');
+								newRow.tcmpqty = fordqty;	
+							}
+							
+							this.updateRow({
+								rowIndx : obj.rowIndx,
+								newRow : { state : 'Y' , tcmpqty : newRow.tcmpqty }, 
+								checkEditable : false
+							});
+						}
+					});
+				}	
+			});
+			
+			wmt23Grid.open();
+			
+			async function wmt23Init(){
+				await _commonInit();
+				$('#' + pageId + 'Ownerky').pqSelect({
+					deselect : false
+				});
+			}
+			async function getwmt23List(){
+				let grid = pq.grid(wmt23GridId);
+				let param = {
+					warekey : $('#' + pageId + 'Warekey').val(),
+					ownerky : $('#' + pageId + 'Ownerky').val(),
+					skumkey : $('#' + pageId + 'Skumkey').val(),
+					skudesc : $('#' + pageId + 'Skudesc').val(),
+					taskoky : $('#' + pageId + 'Taskoky').val(),
+					tasksts : $('#' + pageId + 'Tasksts').val()
+				};
+				
+				grid.showLoading();
+				let res = await fetchUtil('GET', '/wm/task/' + pageId + '/grids/1', param);
+				try{
+					if(res.status !==200){
+						throw new Error('[[#{ms.fetchError}]]');
+					}
+					const rData = await res.json();
+					wmt23Grid.searchList(rData);
+					
+					grid.hideLoading();
+				}catch(err){
+					alert('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+					grid.hideLoading();
+				}
+			}
+			
+			// 저장시 patch , 취소시 post
+			async function saveFunc(func){
+				const grid = pq.grid(wmt23GridId);
+				const wmt23CheckedList = grid.Checkbox('state').getCheckedNodes();
+				if(wmt23CheckedList.length){
+					const wmt23GridList = grid.getChanges({all:true});
+					wmt23CheckedList.updateList = wmt23CheckedList;
+					if(confirm('[[#{ms.checksave}]]')){
+						grid.showLoading();
+						let wmt23ResData = await fetchUtil('POST' , '/wm/task/' + pageId + '/' + func, wmt23GridList);
+						try{
+							if(wmt23ResData.status != 200){
+								throw new Error('[[#{ms.saveErr}]]');
+							}
+// 							alert('[[#{ms.saveSuccess}]]');
+							await getwmt23List();
+							grid.hideLoading();
+						}catch(err){
+							alert('code : ' + wmt23ResData.status + '\n' + err + '\n' + wmt23ResData.statusText); // get method 통신의 경우 
+							grid.hideLoading();
+						}
+					}
+				}else{
+					alert('[[#{ms.choiceRowZero}]]');
+					return;
+				}
+			}
+		});
+		</script>
+	</div>
+</html>

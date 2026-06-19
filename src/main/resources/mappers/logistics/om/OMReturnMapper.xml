@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.logistics.om.mapper.OMReturnMapper">
+
+	<!-- OMR01 재고조회 -->
+	<select id="selectOmr01List"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectOmr1List */
+			SELECT 
+			CONCAT(WK.COMPKEY, WK.OWNERKY, WK.SKUMKEY) as ROWKEY
+			,WK.COMPKEY, WK.STOCKKY, WK.WAREKEY, MW.WHNAMLC as WAREKEY1, WK.AREAKEY
+			,WK.ZONEKEY, WK.LOCAKEY, WK.SUBSECT, WK.TRUNTYP
+			,WK.TRUNPID, WK.LOTNMKY, WK.OWNERKY  ,MO.OWNAMLC as OWNERKY1, MS.SKUMKEY
+			,MS.SKUDESC, WK.VENDKEY, WK.SIRBCOD, WK.STOTQTY
+			,WK.SALLQTY, WK.SINBQTY, WK.SOUBQTY, WK.SBLOQTY
+			,MS.SUOMKEY, WK.PRODDAT, WK.SHELIFE, WK.EXPIDAT
+			,WK.RCVFRDT, WK.LOTFRKY, WK.LOTAT01, date_format(WK.RCVDCDT, '%Y-%m-%d') as RCVDCDT
+			,WK.LOTAT02, WK.LOTAT03, WK.LOTAT04, WK.LOTAT05
+			,WK.LOTAT06, WK.LOTAT07, WK.LOTAT08, WK.LOTAT09
+			,WK.LOTAT10, WK.LOTAT11, WK.LOTAT12, WK.LOTAT13
+			,WK.LOTAT14, WK.LOTAT15, WK.LOTAT16, WK.LOTAT17
+			,WK.LOTAT18, WK.LOTAT19, WK.LOTAT20, MC.COMCDTX as STKSTAT1		
+			,WK.BLOCKID, WK.PHYSROW, WK.PHYSSEC, WK.PHYSFLO
+			,WK.RCVDCKY, WK.RCVDCIT, WK.TASKOKY, WK.TASKOIT
+			,WK.ADJSOKY, WK.ADJSOIT, WK.PHYSOKY, WK.PHYSOIT
+			,WK.STORFKY, WK.DOCCATE, WK.DOCTYPE, WK.CREDATE
+			,WK.CRETIME, fn_sy_usernam(WK.COMPKEY, WK.CREUSER) as CREUSER, WK.LMODATE, WK.LMOTIME
+			,fn_sy_usernam(WK.COMPKEY, WK.LMOUSER) as LMOUSER, WK.INDIBZL, WK.INDIARC, WK.UPDTCHK
+			,SKUAT03, WK.STKSTAT, MA.AREANAM , MZ.ZONENAM, ML.LOCANAM 
+		FROM 
+			WSTKKY WK
+		INNER JOIN MSKUWC MS
+		   ON WK.COMPKEY = MS.COMPKEY
+		  AND WK.WAREKEY = MS.WAREKEY
+		  AND WK.OWNERKY = MS.OWNERKY
+		  AND WK.SKUMKEY = MS.SKUMKEY
+		INNER JOIN MWARMA MW
+			ON WK.COMPKEY = MW.COMPKEY
+			AND WK.WAREKEY = MW.WAREKEY
+		INNER JOIN MOWRMA MO
+			ON WK.COMPKEY = MO.COMPKEY 
+			AND WK.OWNERKY = MO.OWNERKY
+		INNER JOIN V_MCODEM MC
+			ON WK.COMPKEY = MC.COMPKEY
+			AND WK.STKSTAT = MC.COMCDVL
+			AND MC.COMCDKY = 'STKSTAT'
+		INNER JOIN MAREMA MA
+			ON WK.COMPKEY  = MA.COMPKEY 
+			AND WK.WAREKEY = MA.WAREKEY
+			AND WK.AREAKEY  = MA.AREAKEY 
+		INNER JOIN MZONMA MZ
+			ON WK.COMPKEY = MZ.COMPKEY
+			AND WK.WAREKEY = MZ.WAREKEY 
+			AND WK.AREAKEY = MZ.AREAKEY
+			AND WK.ZONEKEY = MZ.ZONEKEY
+		INNER JOIN MLOCMA ML 
+			ON WK.COMPKEY = ML.COMPKEY
+			AND WK.WAREKEY = ML.WAREKEY 
+			AND WK.AREAKEY = ML.AREAKEY 
+			AND WK.ZONEKEY = ML.ZONEKEY 
+			AND WK.LOCAKEY = ML.LOCAKEY 	
+		WHERE
+			WK.COMPKEY = #{compkey}
+			AND WK.STOTQTY > 0
+			AND WK.AREAKEY = 'STG' 
+		<if test='warekey != null and warekey != ""'>
+			and WK.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and WK.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkey != null and skumkey != ""'>
+		  AND UPPER(WK.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+		  AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>
+		ORDER BY WK.RCVDCDT DESC
+	</select>
+
+
+	<!-- OMR01 상품코드 조회 -->
+	<select id="selectOmr01SkuList"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectOmr01SkuList */
+		select DISTINCT skumkey,skudesc from WSTKKY
+		WHERE COMPKEY = #{compkey}
+		AND OWNERKY = #{ownerky}
+		<if test='warekey != null and warekey != ""'>
+			and UPPER(WAREKEY) = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and UPPER(OWNERKY) = #{ownerky}
+		</if>
+		<if test='skumkey != null and skumkey != ""'>
+			and UPPER(SKUMKEY) = #{skumkey}
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			and UPPER(SKUDESC) = #{skudesc}
+		</if>
+	</select>
+	
+	<!-- OMR01 공통코드 조회 -->
+	<select id="selectCommonCode"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectCommonCode */
+		SELECT 
+	    ROW_NUMBER() OVER() AS ROWNUM,
+	    compkey, 
+	    warekey,
+	    doccate,
+	    doctype,
+	    rsncode,
+	    rsncdnm,
+	    rscate1,
+	    NULL AS docctnm,
+	    NULL AS doctynm
+		FROM 
+		    MRSCMA 
+		WHERE 
+		    COMPKEY = #{compkey}
+		    AND(doctype='330' OR doctype='340')
+		    AND doccate='300'
+		    AND rscate1='NORMAL'
+		UNION ALL
+		SELECT 
+		    ROW_NUMBER() OVER() AS ROWNUM,
+		    compkey,
+		    warekey,
+		    doccate,
+		    doctype,
+		    NULL AS rsncode,
+		    NULL AS rsncdnm,
+		    NULL AS rscate1,
+		    docctnm,
+		    doctynm
+		FROM 
+		    MDOCMA 
+		WHERE 
+		    COMPKEY = #{compkey} AND doccate='300' and doctype='330'
+	</select>
+	
+	<!-- OMR01 V_MCODEM 조회 -->
+	<select id="selectMcodemList"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectMcodemList */
+		select DISTINCT comcdky, comcdvl, comkytx, comcdtx 
+		from V_MCODEM 
+		where comcdky = 'STKSTAT'
+	</select>
+	
+	<!-- OMR01 MDOCMA->MORDMA 조회 -->
+	<select id="selectMordmaType" resultType="com.logistics.om.domain.MordmaDTO">
+		/* selectMordmaList */
+		select COOCATE 
+			 , COOTYPE as COMBOVL
+			 , OCOCTNM
+			 , COOTYNM as COMBONM
+		  from MORDMA
+		  <where>
+		  	and COMPKEY = #{compkey}
+		  	<if test='warekey != null and warekey != ""'>
+				and WAREKEY = #{warekey}
+			</if>
+			<if test='coocate != null and coocate != ""'>
+				and COOCATE = #{coocate}
+			</if>
+			<if test='cootype != null and cootype != ""'>
+				and COOTYPE = #{cootype}
+			</if>
+			<if test='cootypes != null and cootypes.size > 0'>
+				and COOTYPE IN
+				<foreach collection="cootypes" item="item" index="index" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			<choose>
+				<when test='couseyn != null and couseyn != ""'>
+					and COUSEYN = #{couseyn}
+				</when>
+				<otherwise>
+					and COUSEYN = 'Y'
+				</otherwise>
+			</choose>
+		  </where>
+		group by COOTYPE, COOTYNM
+		order by COOTYPE, COOTYNM
+	</select>
+	
+	<!-- OMR01 반출데이터의 저장(등록) -->
+	<insert id="insertOmr01Data" parameterType="com.logistics.om.domain.OeretiVO">
+		/* insertOmr01Data */ 
+		insert into OERETI 
+			(COMPKEY,OERETKY,OERETIT,OEINSDT,OEINSTM
+			,RSNCODE,RSNDESC,WAREKEY,OWNERKY,SKUMKEY
+			,STKSTAT,SUOMKEY,RTODQTY,CREDATE
+			,CRETIME,DOCCATE,DOCTYPE,AREAKEY,ZONEKEY
+			,LOCAKEY,STOCKKY,OEINSST,SKUDESC,STOTQTY
+			,CREUSER,RETAT01,RETAT02,RETAT03)
+		VALUES 
+		(#{compkey},#{oeretky},FN_OM_OERETIT(#{compkey} , #{oeretky}) ,date_format(NOW() , '%Y%m%d'),date_format(NOW() , '%H%i%s')
+		,#{rsncode},#{rsndesc},#{warekey},#{ownerky},#{skumkey}
+		,#{stkstat},#{suomkey},#{rtodqty},date_format(NOW() , '%Y%m%d')
+		,date_format(NOW() , '%H%i%s'),#{doccate},#{doctype},#{areakey},#{zonekey}
+		,#{locakey},#{stockky},'NEW',#{skudesc},#{stotqty},#{creuser},#{skuat03},IFNULL(#{retat02}, ''), IFNULL(#{retat03}, ''))
+	</insert>
+	
+	<!-- OMR01 oeretky 채번 -->
+	    <select id="selectOeretky" resultType="String">
+    	/* selectOeretky */
+     	select FN_OM_OERETKY() from dual;  
+    </select>
+    
+   	<!-- OMR01 조정지시 조회-->
+	<select id="checkOeadjiByStockky"
+		resultType="String">
+		/* checkOeadjiByStockky */
+		SELECT
+				STOCKKY
+		FROM
+				OEADJI
+		WHERE
+				OEINSST = 'NEW'
+				AND STOCKKY = #{stockky}
+				AND STOTQTY >= 0
+	</select>
+	
+	<!-- OMR 반출오더전송 -->
+    <select id="sp_om_oereti" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		{ CALL sp_om_oereti( #{compkey}, #{oeretky}, #{creuser},
+			#{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR},
+			#{O_ORESULT, mode=OUT, jdbcType=INTEGER} )
+		}
+	</select>
+    
+    <!-- OMR03 반출현황조회 -->
+	<select id="selectOmr03List"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectOmr03List */
+	SELECT   
+	    O.COMPKEY, O.OERETKY, O.OERETIT, O.OERETIT,
+	    O.OEINSST, O.RSNCODE, O.RSNDESC, O.WAREKEY, O.DOCCATE,
+	    O.DOCTYPE, O.STOCKKY, O.AREAKEY, O.ZONEKEY, O.LOCAKEY,
+	    O.OWNERKY, O.SKUMKEY, O.SKUDESC, O.SUOMKEY, O.RTCFQTY,
+	    O.RTODQTY, O.PTNRKEY, O.CRETIME, fn_sy_usernam(O.COMPKEY, O.CREUSER) as CREUSER, 
+	    O.STOTQTY, O.OEINSST, MW.WHNAMLC as WAREKEY1, MO.OWNAMLC as OWNERKY1,
+	    O.LMODATE, O.LMOTIME, O.LMOUSER, O.UPDTCHK,
+	    O.SUBSECT, O.TRUNTYP, O.TRUNPID, O.LOTNMKY, O.SALLQTY,
+	    O.SINBQTY, O.SOUBQTY, O.SBLOQTY, O.RETAT01, O.RETAT02,
+	    O.RETAT03, MA.AREANAM , MZ.ZONENAM, ML.LOCANAM,
+		date_format(O.CREDATE, '%Y-%m-%d')as CREDATE,
+		date_format(O.OEINSDT, '%Y-%m-%d')as OEINSDT,
+		date_format(str_to_date(O.OEINSTM, '%H%i%s'), '%H:%i:%s') as OEINSTM,
+		M.COMCDVL as STKSTAT1, M.COMCDTX, M.COMKYTX
+	FROM 
+	    OERETI O
+	INNER JOIN 
+	    V_MCODEM M ON O.OEINSST  = M.COMCDVL AND M.COMPKEY=O.COMPKEY AND M.COMCDKY='OEINSST'
+	INNER JOIN
+	    MWARMA MW ON O.COMPKEY = MW.COMPKEY AND O.WAREKEY = MW.WAREKEY
+	INNER JOIN
+	    MOWRMA MO ON O.COMPKEY = MO.COMPKEY AND O.OWNERKY = MO.OWNERKY
+	INNER JOIN MAREMA MA ON
+		O.COMPKEY = MA.COMPKEY
+		AND O.AREAKEY = MA.AREAKEY
+		AND O.WAREKEY  = MA.WAREKEY 
+	INNER JOIN MZONMA MZ
+		ON O.COMPKEY  = MZ.COMPKEY 
+		AND O.WAREKEY = MZ.WAREKEY 
+		AND O.AREAKEY = MZ.AREAKEY
+		AND O.ZONEKEY  = MZ.ZONEKEY
+    INNER JOIN MLOCMA ML 
+		ON O.COMPKEY  = ML.COMPKEY 
+		AND O.WAREKEY = ML.WAREKEY 
+		AND O.AREAKEY = ML.AREAKEY 
+		AND O.ZONEKEY = ML.ZONEKEY 
+		AND O.LOCAKEY  = ML.LOCAKEY 	
+	WHERE 
+	    O.COMPKEY = #{compkey} 
+	    AND (O.doctype='330' OR O.doctype='340')
+	    AND O.doccate='300'
+	    AND (O.OEINSST = 'NEW' OR O.OEINSST = 'CMP')
+	<choose>
+	<when test='oeinsdtFrom != null and oeinsdtFrom != "" and oeinsdtTo == ""'>
+		<![CDATA[ and O.OEINSDT >= replace(#{oeinsdtFrom},'-','') ]]>
+	</when>
+	<when test='oeinsdtTo != null and oeinsdtTo != "" and oeinsdtFrom == ""'>
+		<![CDATA[ and O.OEINSDT <= replace(#{oeinsdtTo},'-','') ]]>
+	</when>
+	<when test='oeinsdtFrom != null and oeinsdtFrom != "" and oeinsdtTo != null and oeinsdtTo != ""'>
+		   and O.OEINSDT between replace(#{oeinsdtFrom},'-','') and replace(#{oeinsdtTo},'-','')
+	</when>	
+	</choose>
+	<if test='warekey != null and warekey != ""'>
+		AND O.WAREKEY = #{warekey}
+	</if>
+	<if test='ownerky != null and ownerky != ""'>
+		AND O.OWNERKY = #{ownerky}
+	</if>
+	<if test='skumkey != null and skumkey != ""'>
+		AND UPPER(O.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+	</if>
+	<if test='skudesc != null and skudesc != ""'>
+		AND UPPER(O.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+	</if>
+	<if test='oeinsst != null and oeinsst != ""'>
+		AND UPPER(O.OEINSST) LIKE CONCAT('%', UPPER(#{oeinsst}), '%')
+	</if>
+	<if test='rsncdnm != null and rsncdnm != ""'>
+		 AND (
+		    <foreach collection="rsncdnm.split(',')" item="code" separator=" OR ">
+		      UPPER(O.RSNCODE) LIKE CONCAT('%', UPPER(#{code}), '%')
+		    </foreach>
+		  )
+	</if>
+	<if test='oeinsdt != null and oeinsdt != ""'>
+	    AND DATE_FORMAT(OEINSDT, '%Y%m%d') = #{oeinsdt}
+	</if>
+		ORDER BY O.OERETKY DESC
+	</select>
+	
+	<!-- OMR03/OMR04 반출(취소)사유조회 -->
+	<select id="selectRsncdnmList"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectRsncdnmList */
+		SELECT 
+	    rsncode as COMBOVL,
+	    rsncdnm as COMBONM
+		FROM 
+		    MRSCMA 
+		WHERE 
+		    COMPKEY = #{compkey}
+		    AND(doctype='330' OR doctype='340')
+		    AND doccate='300'
+		    AND rscate1= #{rscate1}
+	</select>
+	
+	 <!-- OMR04 반출취소조회 -->
+	<select id="selectOmr04List"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectOmr04List */
+	SELECT  
+	    O.COMPKEY, O.OERETKY, O.OERETIT, O.OERETIT, O.RECRSCD, O.RECRSNM,
+	    O.OEINSST, O.RSNCODE, O.RSNDESC, O.WAREKEY, O.DOCCATE,
+	    O.DOCTYPE, O.STOCKKY, O.AREAKEY, O.ZONEKEY, O.LOCAKEY,
+	    O.OWNERKY, O.SKUMKEY, O.SKUDESC, O.STKSTAT, O.SUOMKEY,
+	    O.RTODQTY, O.PTNRKEY, O.CRETIME, fn_sy_usernam(O.COMPKEY, O.CREUSER) as CREUSER,
+	    O.STOTQTY, O.OEINSST, MW.WHNAMLC as WAREKEY1, MO.OWNAMLC as OWNERKY1,
+	    O.UPDTCHK, O.LMOTIME, fn_sy_usernam(O.COMPKEY, O.LMOUSER) as LMOUSER, MA.AREANAM , 
+	    MZ.ZONENAM, ML.LOCANAM,
+		date_format(O.CREDATE, '%Y-%m-%d')as CREDATE,
+		date_format(O.OEINSDT, '%Y-%m-%d')as OEINSDT,  
+		date_format(O.LMODATE, '%Y-%m-%d')as LMODATE,
+		date_format(str_to_date(O.OEINSTM, '%H%i%s'), '%H:%i:%s') as OEINSTM,
+		M.COMCDTX as STKSTAT1
+	FROM 
+	    OERETI O
+	INNER JOIN 
+	    V_MCODEM M ON O.STKSTAT = M.COMCDVL AND M.COMPKEY=O.COMPKEY AND M.COMCDKY='STKSTAT'
+	INNER JOIN
+	    MWARMA MW ON O.COMPKEY = MW.COMPKEY AND O.WAREKEY = MW.WAREKEY
+	INNER JOIN
+	    MOWRMA MO ON O.COMPKEY = MO.COMPKEY AND O.OWNERKY = MO.OWNERKY
+	INNER JOIN MAREMA MA ON
+		O.COMPKEY = MA.COMPKEY
+		AND O.AREAKEY = MA.AREAKEY
+		AND O.WAREKEY  = MA.WAREKEY 
+	INNER JOIN MZONMA MZ
+		ON O.COMPKEY  = MZ.COMPKEY 
+		AND O.WAREKEY = MZ.WAREKEY 
+		AND O.AREAKEY = MZ.AREAKEY
+		AND O.ZONEKEY  = MZ.ZONEKEY
+    INNER JOIN MLOCMA ML 
+		ON O.COMPKEY  = ML.COMPKEY 
+		AND O.WAREKEY = ML.WAREKEY 
+		AND O.AREAKEY = ML.AREAKEY 
+		AND O.ZONEKEY = ML.ZONEKEY 
+		AND O.LOCAKEY  = ML.LOCAKEY 	
+	WHERE 
+	    O.COMPKEY = #{compkey}  
+	    AND (O.doctype='330' OR O.doctype='340')
+	    AND O.doccate='300'
+	    AND (O.OEINSST = 'CAN')
+	<choose>
+	<when test='oeinsdtFrom != null and oeinsdtFrom != "" and oeinsdtTo == ""'>
+		<![CDATA[ and O.OEINSDT >= replace(#{oeinsdtFrom},'-','') ]]>
+	</when>
+	<when test='oeinsdtTo != null and oeinsdtTo != "" and oeinsdtFrom == ""'>
+		<![CDATA[ and O.OEINSDT <= replace(#{oeinsdtTo},'-','') ]]>
+	</when>
+	<when test='oeinsdtFrom != null and oeinsdtFrom != "" and oeinsdtTo != null and oeinsdtTo != ""'>
+		   and O.OEINSDT between replace(#{oeinsdtFrom},'-','') and replace(#{oeinsdtTo},'-','')
+	</when>	
+	</choose>    
+	<if test='warekey != null and warekey != ""'>
+		AND O.WAREKEY = #{warekey}
+	</if>
+	<if test='ownerky != null and ownerky != ""'>
+		AND O.OWNERKY = #{ownerky}
+	</if>
+	<if test='skumkey != null and skumkey != ""'>
+		AND UPPER(O.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+	</if>
+	<if test='skudesc != null and skudesc != ""'>
+		AND UPPER(O.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+	</if>
+	<if test='recrsnm != null and recrsnm != ""'>
+		AND UPPER(O.RECRSCD) LIKE CONCAT('%', UPPER(#{recrsnm}), '%')
+	</if>
+	<if test='oeinsdt != null and oeinsdt != ""'>
+	    AND DATE_FORMAT(OEINSDT, '%Y%m%d') = #{oeinsdt}
+	</if>
+		ORDER BY O.OERETKY DESC
+	</select>
+	
+	 <!-- OMR05 반출취소등록 -->
+	<select id="selectOmr05List"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectOmr05List */
+		SELECT  
+			CONCAT(O.COMPKEY, O.OWNERKY, O.SKUMKEY) as ROWKEY,
+		    O.COMPKEY, O.OERETKY, O.OERETIT, O.OERETIT,
+		    O.OEINSST, O.RSNCODE, O.RSNDESC, O.WAREKEY, O.DOCCATE,
+		    O.DOCTYPE, O.STOCKKY, O.AREAKEY, O.ZONEKEY, O.LOCAKEY,
+		    O.OWNERKY, O.SKUMKEY, O.SKUDESC, O.STKSTAT, O.SUOMKEY,
+		    O.RTODQTY, O.PTNRKEY, fn_sy_usernam(O.COMPKEY, O.CREUSER) as CREUSER, O.STOTQTY, M.COMCDTX, 
+		    MW.WHNAMLC as WAREKEY1, MO.OWNAMLC as OWNERKY1,
+		    MA.AREANAM , MZ.ZONENAM, ML.LOCANAM,O.CRETIME,
+		    date_format(O.CREDATE, '%Y-%m-%d')as CREDATE,
+		    date_format(O.OEINSDT, '%Y-%m-%d')as OEINSDT,
+		    date_format(str_to_date(O.OEINSTM, '%H%i%s'), '%H:%i:%s') as OEINSTM
+		FROM 
+		    OERETI O
+		INNER JOIN 
+		    V_MCODEM M ON O.STKSTAT = M.COMCDVL AND M.COMPKEY= #{compkey} AND M.COMCDKY='STKSTAT'
+		INNER JOIN
+		    MWARMA MW ON O.COMPKEY = MW.COMPKEY AND O.WAREKEY = MW.WAREKEY
+		INNER JOIN
+		    MOWRMA MO ON O.COMPKEY = MO.COMPKEY AND O.OWNERKY = MO.OWNERKY
+		INNER JOIN MAREMA MA ON
+			O.COMPKEY = MA.COMPKEY
+			AND O.AREAKEY = MA.AREAKEY
+			AND O.WAREKEY  = MA.WAREKEY 
+		INNER JOIN MZONMA MZ
+			ON O.COMPKEY  = MZ.COMPKEY 
+			AND O.WAREKEY = MZ.WAREKEY 
+			AND O.AREAKEY = MZ.AREAKEY
+			AND O.ZONEKEY  = MZ.ZONEKEY
+	    INNER JOIN MLOCMA ML 
+			ON O.COMPKEY  = ML.COMPKEY 
+			AND O.WAREKEY = ML.WAREKEY 
+			AND O.AREAKEY = ML.AREAKEY 
+			AND O.ZONEKEY = ML.ZONEKEY 
+			AND O.LOCAKEY  = ML.LOCAKEY 	
+		WHERE 
+		    O.COMPKEY = #{compkey} 
+		    AND (O.doctype='330' OR O.doctype='340')
+		    AND O.doccate='300'
+		    AND O.OEINSST = 'NEW'
+	<choose>
+	<when test='oeinsdtFrom != null and oeinsdtFrom != "" and oeinsdtTo == ""'>
+		<![CDATA[ and O.OEINSDT >= replace(#{oeinsdtFrom},'-','') ]]>
+	</when>
+	<when test='oeinsdtTo != null and oeinsdtTo != "" and oeinsdtFrom == ""'>
+		<![CDATA[ and O.OEINSDT <= replace(#{oeinsdtTo},'-','') ]]>
+	</when>
+	<when test='oeinsdtFrom != null and oeinsdtFrom != "" and oeinsdtTo != null and oeinsdtTo != ""'>
+		   and O.OEINSDT between replace(#{oeinsdtFrom},'-','') and replace(#{oeinsdtTo},'-','')
+	</when>	
+	</choose>    	    
+	<if test='warekey != null and warekey != ""'>
+		AND O.WAREKEY = #{warekey}
+	</if>
+	<if test='ownerky != null and ownerky != ""'>
+		AND O.OWNERKY = #{ownerky}
+	</if>
+	<if test='skumkey != null and skumkey != ""'>
+		AND UPPER(O.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+	</if>
+	<if test='skudesc != null and skudesc != ""'>
+		AND UPPER(O.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+	</if>
+	<if test='oeinsdt != null and oeinsdt != ""'>
+	    AND DATE_FORMAT(O.OEINSDT, '%Y%m%d') = #{oeinsdt}
+	</if>
+		ORDER BY O.OERETKY DESC
+	</select>
+	
+	<!-- OMR05 반출사유+반출코드 조회  -->
+	<select id="selectCancelCode"
+		resultType="com.logistics.om.domain.OeretiVO">
+		/* selectCommonCode */
+		SELECT 
+		ROW_NUMBER() OVER() AS ROWNUM,
+		compkey, warekey,doccate,doctype,rsncode
+		,rsncdnm,rscate1
+		FROM MRSCMA 
+		WHERE COMPKEY = #{compkey}
+		AND(doctype='330' OR doctype='340')
+		AND doccate='300'
+		AND rscate1='CANCEL'
+	</select>
+	
+	<!-- OMR05 반출취소데이터의 저장(등록) -->
+	<update id="updateOmr05Data" parameterType="com.logistics.om.domain.OeretiVO">
+		/* updateOmr05Data */ 
+	 UPDATE OERETI
+	    SET 
+	        RECRSCD = #{cancode},
+	        RECRSNM = #{recrsnm},
+	        DOCCATE = '300',
+        	DOCTYPE = #{doctype},
+        	OEINSST = 'CAN',
+        	LMODATE = date_format(NOW() , '%Y%m%d'),
+        	LMOTIME = date_format(NOW() , '%H%i%s'),
+        	LMOUSER = #{creuser},
+        	UPDTCHK = #{updtchk}+1
+	    WHERE 
+			OERETKY = #{oeretky}
+		AND		
+			OERETIT = #{oeretit}
+<!-- 		AND
+			 UPDTCHK = (
+			 SELECT UPDTCHK FROM OERETI WHERE STOCKKY = #{stockky} AND OEINSST = 'NEW'
+			 ) -->
+			
+	</update>
+	
+	<!-- OMR 반출취소전송 -->
+    <select id="sp_om_oereti_cancel" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		{ CALL sp_om_oereti_cancel( #{compkey}, #{oeretky}, #{creuser},
+			#{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR},
+			#{O_ORESULT, mode=OUT, jdbcType=INTEGER} )
+		}
+	</select>
+	
+	<!-- omr11 : 회수오더등록 -->
+	<insert id="insertOmr11Data"
+		parameterType="com.logistics.om.domain.SalesOrderDTO">
+		/* insertOcosal */
+		insert into OCOSAL(
+			COMPKEY, COOUTKY, COOUTIT, DOCCATE, DOCTYPE,
+			POSTDAT, SALDATE, SALTIME, TOWARKY, CUSTKEY,
+			DESTKEY, OWNERKY, 
+			SKUSKEY, SKUMKEY, SKUDESC, SOITQTY, RGITQTY,
+			SHCFQTY, SUOMKEY, DCTCTYP,SALSTAT, SAATN01,
+			SAATN02, SAATN03, SAATN04, SAATN05, SAATC01,
+			SAATC02, SAATC03,SAATC04, SAATC05, CREDATE,
+			CRETIME , CREUSER , LMODATE , LMOTIME, LMOUSER,
+			SAATC06, SAATC07, SAATC08, SAATC09, SAATC10,
+			SALRQDT,SALMEMO
+			
+		)
+		values
+		(
+			#{userData.compkey}, #{cooutky}, FN_OM_COOUTIT(#{userData.compkey}, #{cooutky}),
+			#{coocate}, #{cootype},
+			DATE_FORMAT(#{postdat},'%Y%m%d'), DATE_FORMAT(NOW(),'%Y%m%d'), DATE_FORMAT(NOW(),'%H%i%s'), #{warekey},
+			#{custkey}, #{destkey}, #{ownerky},
+			#{skuskey}, #{skumkey}, #{skudesc}, #{soitqty}, #{rgitqty}, 
+			#{shcfqty}, #{suomkey}, #{dctctyp}, #{salstat}, #{saatn01}, 
+			#{saatn02}, #{saatn03}, #{saatn04}, #{saatn05}, IFNULL(#{saatc01}, ''), 
+			IFNULL(#{saatc02}, ''), IFNULL(#{saatc03}, ''),IFNULL(#{saatc04}, ''), IFNULL(#{saatc05}, ''), date_format(NOW(),'%Y%m%d'),
+			date_format(NOW(),'%H%i%s'), #{userData.useract} , date_format(NOW(),'%Y%m%d'), date_format(NOW(),'%H%i%s'), #{userData.useract},
+			IFNULL(#{saatc06}, #{cooutky}), IFNULL(#{saatc07}, ''),IFNULL(#{saatc08}, ''),IFNULL(#{saatc09}, ''),IFNULL(#{saatc10}, ''),
+			DATE_FORMAT(#{postdat},'%Y%m%d'),upper(ifnull(#{salmemo},''))
+			
+		)
+	</insert>
+
+	
+	
+</mapper>

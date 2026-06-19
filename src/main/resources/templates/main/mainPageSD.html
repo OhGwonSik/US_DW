@@ -1,0 +1,14 @@
+	
+	<th:block th:replace="~{/main/fragment/comHead.html :: fragments-comHead}"></th:block>
+	<th:block th:replace="~{/main/fragment/comScript.html :: fragments-comScript}"></th:block>
+	<th:block th:replace="${gprogcmd}"></th:block>
+	<div id="modalCommon"></div>
+	<div id="modalsyu6"></div>
+	<div id="modalsyu10"></div>
+	<script>
+		$("#modalsyu6").load(rPath + '/main/modalLoad?gprogurl=/com/modal/syu6.html');
+		$("#modalsyu10").load(rPath + '/main/modalLoad?gprogurl=/com/modal/syu10.html');
+	</script>
+			
+ 
+ 

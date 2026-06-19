@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.om.mapper.OMReportMapper">
+	
+	<!-- 반출증 -->
+	<select id="getExportCard" resultType="com.logistics.om.domain.OMReportDTO">
+		/* getExportCard */
+		select ROW_NUMBER() OVER(order by OE.COMPKEY, OE.OERETIT) as ROWNUM
+			 , OE.COMPKEY
+			 , OE.OERETKY
+			 , concat(MO.OWADDR1, ' ', MO.OWADDR2, ' ', MO.OWADDR3) as OWADDR
+			 , MS.SKUMKEY
+			 , MS.SKUDESC
+			 , OE.RTODQTY
+			 , MS.SKUAT03
+			 , OE.SUOMKEY
+			 , Fn_com_todate(OE.OEINSDT) as OEINSDT
+			 , MR.RSNCDNM
+			 , MO.OWNAMLC
+			 , fn_sy_usernam(OE.COMPKEY, OE.CREUSER) as CREUSER
+		from OERETI OE
+		inner join MSKUWC MS
+			on MS.COMPKEY = OE.COMPKEY
+			and MS.WAREKEY = OE.WAREKEY
+			and MS.OWNERKY = OE.OWNERKY
+			and MS.SKUMKEY = OE.SKUMKEY
+		inner join MRSCMA MR
+			on MR.COMPKEY = OE.COMPKEY
+			and MR.WAREKEY = OE.WAREKEY
+			and MR.DOCCATE = '300'
+			and MR.DOCTYPE IN ('330', '340')
+			and MR.RSNCODE = OE.RSNCODE
+		inner join MOWRMA MO
+			on MO.COMPKEY = OE.COMPKEY
+			and MO.OWNERKY = OE.OWNERKY
+		where OE.OERETKY = #{oeretky}
+			and OE.COMPKEY = #{compkey}
+		order by OE.COMPKEY, OE.OERETIT
+	</select>
+	
+	<!-- 납입카드 -->
+	<select id="getPaymentCard" resultType="com.logistics.om.domain.OMReportDTO">
+		/* getPaymentCard */
+		select ROW_NUMBER() OVER(order by WA.EOASNKY, WA.EOASNIT) as ROWNUM
+			 , OC.COPODKY
+			 , concat(MO.OWNAMLC, '(', WA.OWNERKY, ')') as OWNERKY
+			 , date_format(OC.REQDATE, '%Y년 %m월 %d일') as REQDATE
+			 , MD.DENAMLC
+			 , MS.SKUMKEY
+			 , MS.SKUDESC
+			 , WA.ASNDQTY
+			 , MS.SKUAT03
+			 , WA.AUOMKEY
+			 , concat(CEILING(MP.PACKQTY), '/', CEILING(WA.ASNDQTY / MP.PACKQTY)) as BOXCNT
+			 , WA.ASNMEMO
+			 , ifnull(WA.EOASNKY, ' ') as EOASNKY
+			 , WA.WAREKEY
+			 , MP.TRUNTYP
+		from WASNIF WA
+		left outer join OCOPUR OC
+			on OC.COMPKEY = WA.COMPKEY
+			and OC.COPODKY = WA.COPODKY
+			and OC.COPODIT = WA.COPODIT
+		inner join MSKUWC MS
+			on MS.COMPKEY = WA.COMPKEY
+			and MS.WAREKEY = WA.WAREKEY
+			and MS.OWNERKY = WA.OWNERKY
+			and MS.SKUMKEY = WA.SKUMKEY
+		left outer join MPAKMA MP
+			on MS.COMPKEY = MP.COMPKEY
+			and MS.WAREKEY = MP.WAREKEY
+			and WA.TRUNTYP = MP.TRUNTYP
+			and MS.PACKKEY  = MP.PACKKEY
+		left outer join MDESMA MD
+			on MD.COMPKEY = WA.COMPKEY
+			and MD.PTNRKEY = WA.CUSTKEY
+			and MD.DESTKEY = WA.DESTKEY
+		inner join MOWRMA MO
+			on MO.COMPKEY = WA.COMPKEY
+			and MO.OWNERKY = WA.OWNERKY
+		where WA.EOASNKY = #{eoasnky}
+		  and WA.COMPKEY = #{compkey}
+		  and WA.ASNSTAT != 'CANCEL'
+		order by WA.EOASNKY, WA.EOASNIT
+	</select>
+	
+	<select id="getPaymentCardParameter" resultType="com.logistics.om.domain.OMReportDTO">
+		select sum(WA.ASNDQTY) as totalAsndqty, count(OC.COPODKY) as totalColumn
+		from WASNIF WA
+		left outer join OCOPUR OC 
+			on OC.COMPKEY = WA.COMPKEY 
+		   and OC.COPODKY = WA.COPODKY 
+		   and OC.COPODIT = WA.COPODIT 
+		where WA.EOASNKY = #{eoasnky} 
+		  and WA.COMPKEY = #{compkey}
+		  and WA.ASNSTAT != 'CANCEL'
+	</select>
+	
+	<!-- 프린트 로그 카운트 -->
+	<select id="getOmPirntLogCount" resultType="integer">
+		select count(PRINTSQ) as PRINTCOUNT 
+		from SPRTHI
+		where COMPKEY = #{compkey} 
+			<if test='type.equals("omd10")'>
+				and EOASNKY = #{eoasnky}
+			</if>
+			<if test='type.equals("omd20")'>
+				and OERETKY = #{oeretky}
+			</if>
+	</select>
+	
+	<!-- 프린트 프로시저 -->
+	<select id="omAddPrintList" statementType="CALLABLE" parameterType="com.logistics.om.domain.OMReportDTO">
+		{ CALL SP_SY_SPRTHI (#{compkey}, #{warekey}, #{doccate}, #{doctype}, 
+		#{progrid}, #{dochkey}, #{docitem}, #{loguser}, 
+		#{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=VARCHAR}) }
+	</select>
+	
+</mapper>

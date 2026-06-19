@@ -1,0 +1,659 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="wmr20_warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr20_warekey"></select>
+					</div>
+				</div>
+				<label for="wmr20_ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr20_ownerky">
+							<option value="" selected>[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wmr20_doctype" class="setting-grid-title">[[#{wm.wrcvit.doctype}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr20_doctype">
+							<option value="" selected>[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wrcvit.rcvitst}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="wmr20_rcvdcst">
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wrcvit.rcvdcdt}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmr20_rcvdcdt_from"
+							onkeyup="setInputDateDel(this)" /> <span>~</span> <input
+							type="date" max="2999-12-31" id="wmr20_rcvdcdt_to"
+							onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="wmr20_search" onclick="wmr20Search()">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="wmr20_reset"
+					onclick="wmr20Refresh()">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmr20_h_grid"></div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-grid-wrapper con-box">
+				<div id="wmr20_i_grid"></div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+$(function(){
+	/*  wmr20 - 입하조회
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 최강호 
+	*   설명			: 입하등록한 재고를 조회하는 페이지
+	*   수정 내역		:
+	*   수정일시		:
+	*	수정자		: 
+	*	변경 사항		: 
+	*/
+	let wmr20InitData = wmr20Init();
+	
+	//============================================================	 
+	// Head Grid
+	//============================================================
+	let wmr20HeadGridCM = [
+		{ title: "[[#{wm.wrcvit.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false, hidden: true },	//Company Key
+		{ title: "[[#{wm.wrcvit.rcvdcky}]]", dataType: "string",  dataIndx: "rcvdcky", editable: false},	//입고문서 번호
+		{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx: "warekey", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},	//창고
+		{ title: "[[#{wm.wrcvit.doccate}]]", dataType: "string",  dataIndx: "doccate", editable: false, hidden: true},	//문서유형
+		{ title: "[[#{wm.wrcvit.doctype}]]", dataType: "string",  dataIndx: "doctype", editable: false, hidden: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//문서타입
+		{ title: "[[#{wm.wrcvit.rcvdcst}]]", dataType: "string",  dataIndx: "rcvdcst", editable: false, hidden: true,		//입고문서 상태
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},
+		{ title: "[[#{wm.wrcvit.rcvitst}]]", dataType: "string",  dataIndx: "rcvitst", editable: false,		//입고아이템 상태
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},
+		{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx: "ownerky", editable: false,		//화주
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},
+		{ title: "[[#{wm.wrcvit.asndqty}]]", dataType: "integer", dataIndx: "asndqty", editable: false,		//입고예정 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wrcvit.rcveqty}]]", dataType: "integer", dataIndx: "rcveqty", editable: false,		//입하대상 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wrcvit.rchsqty}]]", dataType: "integer", dataIndx: "rchsqty", editable: false,		//입하완료 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{md.mskuwc.vendkey}]]", dataType: "string",  dataIndx: "vendkey", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		}, //입고처
+		{ title: "[[#{wm.wrcvit.rcvdcdt}]]", dataType: "string",  dataIndx: "rcvdcdt", editable: false},	//입고일자
+		{ title: "[[#{wm.wmr20.itemcnt}]]", dataType: "integer", dataIndx: "itemcnt", editable: false},		//Item Cnt
+	];
+	
+	let wmr20HeadGrid = new GridUtil(wmr20HeadGridCM, '[[${gprogrid}]]', 'wmr20_h_grid');
+	wmr20HeadGrid.setFind();
+	
+	wmr20HeadGrid.setCreate(function (evt, ui) {
+		if(wmr20InitData.warekeyList){
+			let column = this.getColumn({ dataIndx: "warekey" });
+        	let options = wmr20InitData.warekeyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+		if(wmr20InitData.ownerkyList){
+    		let column = this.getColumn({ dataIndx: "ownerky" });
+        	let options = wmr20InitData.ownerkyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(wmr20InitData.rcvdcstList){
+    		let column = this.getColumn({ dataIndx: "rcvdcst" });
+        	let options = wmr20InitData.rcvdcstList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		
+		$('#wmr20_ownerky').pqSelect({
+			deselect: false
+		});
+		
+	});
+	
+	wmr20HeadGrid.setRowDblClick(async function( event, ui ) { 
+		let grid = pq.grid("#wmr20_i_grid");
+		let vendkey = '';
+		
+		if(ui.rowData.vendkey !== undefined){
+			vendkey = ui.rowData.vendkey;
+		}
+       	let data = { 
+       		compkey : ui.rowData.compkey
+       	  , ownerky : ui.rowData.ownerky
+       	  , rcvdcky : ui.rowData.rcvdcky
+       	  , warekey : ui.rowData.warekey
+       	  , doctype : ui.rowData.doctype
+       	  , rcvdcdt : ui.rowData.rcvdcdt
+       	  , rcvitst : ui.rowData.rcvitst
+       	  , vendkey : vendkey
+		};
+       	grid.showLoading();
+       	
+       	let response = await fetchUtil("GET", "/wm/inbound/wmr20/grids/2", data);
+    	
+       	try{
+      	 	if(response.status === 200){
+        		resContent = await response.json();
+        		if(resContent.length===0){
+        			//alert('[[#{ms.getDataZero}]]');
+        		}
+        		grid.option( "dataModel", { data: resContent } );
+        		grid.refreshDataAndView();
+        	}
+       	}catch(err){
+       		console.log(err);
+       	}finally{
+    		grid.hideLoading();
+       	}
+       	
+	});
+	
+	wmr20HeadGrid.open();
+	
+	//============================================================	 
+	// Item Grid
+	//============================================================
+	let wmr20ItemGridCM = [
+		{ title: "[[#{wm.wrcvit.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false, hidden: true },	//Company Key
+		{ title: "[[#{wm.wrcvit.rcvdcky}]]", dataType: "string",  dataIndx: "rcvdcky", editable: false},	//입고문서 번호
+		{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx: "warekey", editable: false, hidden: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//창고
+		{ title: "[[#{wm.wrcvit.rcvdcit}]]", dataType: "integer", dataIndx: "rcvdcit", editable: false},	//입고문서 아이템
+		{ title: "[[#{wm.wrcvit.doccate}]]", dataType: "string",  dataIndx: "doccate", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//문서유형
+		{ title: "[[#{wm.wrcvit.doctype}]]", dataType: "string",  dataIndx: "doctype", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//문서타입
+		{ title: "[[#{wm.wrcvit.rcvdcst}]]", dataType: "string",  dataIndx: "rcvdcst", editable: false,	hidden: true,	//입고문서 상태
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},
+		{ title: "[[#{wm.wrcvit.lotnmky}]]", dataType: "string",  dataIndx: "lotnmky", editable: false},	//LOT NUMBER
+		{ title: "[[#{wm.wrcvit.rcvitst}]]", dataType: "string",  dataIndx: "rcvitst", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//입고문서 아이템 상태
+		{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx: "ownerky", editable: false,		//화주
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},
+		{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx: "skumkey", editable: false, hidden: false},	//부품코드
+		{ title: "[[#{grid.skunm}]]", dataType: "string",  dataIndx: "skudesc", editable: false, hidden: false},	//부품명
+		{ title: "[[#{wm.wrcvit.asndqty}]]", dataType: "integer", dataIndx: "asndqty", editable: false,		//입고예정 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wrcvit.rcveqty}]]", dataType: "integer", dataIndx: "rcveqty", editable: false,		//입하대상 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wrcvit.rchsqty}]]", dataType: "integer", dataIndx: "rchsqty", editable: false,		//입하완료 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wrcvit.rvlocky}]]", dataType: "string",  dataIndx: "rvlocky", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//입하 Loc Key
+		{ title: "[[#{wm.wrcvit.rcvdcdt}]]", dataType: "string",  dataIndx: "rcvdcdt", editable: false},	//입고일자
+		{ title: "[[#{wm.wrcvit.eoasnky}]]", dataType: "string",  dataIndx: "eoasnky", editable: false},	//ASN No
+		{ title: "[[#{wm.wrcvit.eoasnit}]]", dataType: "integer", dataIndx: "eoasnit", editable: false},	//ASN item number
+		{ title: "[[#{wm.wrcvit.rcvrscd}]]", dataType: "string",  dataIndx: "rcvrscd", editable: false, hidden: true,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }	
+		},	//입고사유 코드
+		{ title: "[[#{wm.wrcvit.rcvrsnm}]]", dataType: "string",  dataIndx: "rcvrsnm", editable: false, hidden: false},	//입고사유 내용
+		{ title: "[[#{wm.wrcvit.rcarscd}]]", dataType: "string",  dataIndx: "rcarscd", editable: false, hidden: true},	//입고취소 사유코드
+		{ title: "[[#{wm.wrcvit.rcarscd}]]", dataType: "string",  dataIndx: "rsncdnm", editable: false},	//입고취소 사유코드
+		{ title: "[[#{wm.wmr20.rcarnam}]]", dataType: "string",  dataIndx: "rcarnam", editable: false, hidden: true},		//입고취소 사유코드명
+		{ title: "[[#{wm.wrcvit.rcarsnm}]]", dataType: "string",  dataIndx: "rcarsnm", editable: false},	//입고취소 사유내용
+		{ title: "[[#{wm.wrcvit.rcadate}]]", dataType: "string",  dataIndx: "rcadate", editable: false},	//입고취소 일자
+		{ title: "[[#{wm.wrcvit.rcatime}]]", dataType: "string",  dataIndx: "rcatime", editable: false},	//입고취소 시간
+		{ title: "[[#{md.mskuwc.vendkey}]]", dataType: "string",  dataIndx: "vendkey", editable: false,
+			editor: { type: "select", options: [] },
+            render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "";
+            }
+		},
+		{ title: "[[#{wm.wrcvit.shelife}]]", dataType: "integer",  dataIndx: "shelife", editable: false, hidden: true},	//유통기한
+		{ title: "[[#{wm.wrcvit.expidat}]]", dataType: "string",  dataIndx: "expidat", editable: false, hidden: true},	//유통기간
+		{ title: "[[#{wm.wrcvit.credate}]]", dataType: "string",  dataIndx: "credate", editable: false},	//생성일자
+		{ title: "[[#{wm.wrcvit.cretime}]]", dataType: "string",  dataIndx: "cretime", editable: false},	//생성시간
+		{ title: "[[#{wm.wrcvit.creuser}]]", dataType: "string",  dataIndx: "creuser", editable: false},	//생성자
+		{ title: "[[#{wm.wrcvit.lmodate}]]", dataType: "string",  dataIndx: "lmodate", editable: false},	//수정일자
+		{ title: "[[#{wm.wrcvit.lmotime}]]", dataType: "string",  dataIndx: "lmotime", editable: false},	//수정시간
+		{ title: "[[#{wm.wrcvit.lmouser}]]", dataType: "string",  dataIndx: "lmouser", editable: false}		//수정자
+	];
+	
+	let wmr20ItemGrid = new GridUtil(wmr20ItemGridCM, '[[${gprogrid}]]', 'wmr20_i_grid');
+	wmr20ItemGrid.setFind();
+	wmr20ItemGrid.open();
+});
+
+function wmr20Init(){
+	//url에서 입하일자 받아옴
+	let urlRcvdcdt = new URL(document.location.href);
+	let urlParam = urlRcvdcdt.searchParams;
+	let rcvdcdtValue = urlParam.get('rcvdcdt');
+	
+	if(rcvdcdtValue !== null && rcvdcdtValue.length == 8){
+		let currentDate = rcvdcdtValue.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+		$('#wmr20_rcvdcdt_from').val(currentDate);
+		$('#wmr20_rcvdcdt_to').val(currentDate);
+	} else{
+		$('#wmr20_rcvdcdt_from').val(moment().subtract(1, "d").format("YYYY-MM-DD"));	// 1일전
+		$('#wmr20_rcvdcdt_to').val(moment().format("YYYY-MM-DD"));
+	}
+	
+	let wmr20Init = callAjax('data', 'GET', "/wm/inbound/wmr20/init/1"); 
+	
+	// 창고 리스트
+	if(wmr20Init.warekeyList){
+		$("#wmr20_warekey option").not("[value='']").remove();
+		$.each(wmr20Init.warekeyList, function(key, value) {
+			$('#wmr20_warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	}
+	
+	// 화주 리스트
+	if(wmr20Init.ownerkyList){
+		$("#wmr20_ownerky option").not("[value='']").remove();
+		$.each(wmr20Init.ownerkyList, function(key, value) { 
+			$('#wmr20_ownerky').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	}
+	
+	// doctype 리스트
+	if(wmr20Init.doctypeList){
+		$("#wmr20_doctype option").not("[value='']").remove();
+		function matchingDocType(obj) {
+	        return obj['warekey'] === wmr20Init.warekeyList[0]?.combovl && obj['doccate'] === '400';
+	    }
+
+	    let findList = wmr20Init.doctypeList.filter(matchingDocType);
+
+	    $.each(findList, function(key, value) {
+	        $('#wmr20_doctype').append($("<option></option>").attr("value", value.doctype).text(value.doctynm)); 
+	    });
+	}
+	
+	if(wmr20Init.rcvdcstList){
+		$.each(wmr20Init.rcvitstList, function(key, value){
+			if(value.combovl === 'CANPART' || value.combovl === 'CANFULL'){
+				return;
+			}
+			
+			let checkBoxDiv = $('<div class="check-box">');
+            let checkBoxInput = $('<input type="checkbox" name="wmr20_rcvdcst" id="wmr20_rcvdcst_' + value.combovl + '" value="' + value.combovl + '" checked>');
+            let checkBoxLabel = $('<label for="wmr20_rcvdcst_' + value.combovl + '">' + value.combonm + '</label>');
+            
+            checkBoxDiv.append(checkBoxInput);
+            checkBoxDiv.append(checkBoxLabel);
+            $('#wmr20_rcvdcst').append(checkBoxDiv);
+		});
+	}
+	
+	//============================================================
+	// 창고 Change 이벤트
+	//============================================================
+	$('#wmr20_warekey').on('change', function(){
+		let gridHead = pq.grid("#wmr20_h_grid");
+		let gridItem = pq.grid("#wmr20_i_grid");
+		
+		let wmr20ChangeInit = callAjax('data', 'GET', "/md/common/code/doctype", {warekey: $(this).val(), doccate: '400'});
+		$("#wmr20_doctype option").not("[value='']").remove();
+		$.each(wmr20ChangeInit, function(key, value) { 
+			$('#wmr20_doctype').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+		
+	});
+	
+	return wmr20Init;
+}
+
+//============================================================
+//input 키보드 엔터 이벤트
+//============================================================
+function wmr20Keyup(){
+	let key = this.event.key || this.event.keyCode;
+	if (key === 'Enter' || key === 13) {
+		wmr20Search();
+	}
+}
+//============================================================
+//검색 이벤트
+//============================================================
+async function wmr20Search(){
+	let gridHead = pq.grid("#wmr20_h_grid");
+	let gridItem = pq.grid("#wmr20_i_grid");
+	
+	let data = { 
+		warekey : $('#wmr20_warekey').val()
+	  , ownerky : $('#wmr20_ownerky').val()
+	  , doctype : $('#wmr20_doctype').val()
+	  , rcvitsts : checkRcvitsts()
+	  , rcvdcdtfrom : $('#wmr20_rcvdcdt_from').val()
+	  , rcvdcdtto : $('#wmr20_rcvdcdt_to').val()
+	};
+	
+	gridHead.showLoading();
+	gridItem.showLoading();
+	
+	let searchInit = await fetchUtil('GET', "/wm/inbound/wmr20/init/1", {warekey: data.warekey});
+	
+	let response = await fetchUtil("GET", "/wm/inbound/wmr20/grids/1", data);
+	
+	try{
+		if(response.status === 200){
+			let wmr20SearchInit = await searchInit.json();
+			if(wmr20SearchInit.gridDoctypeList){
+	    		let column = gridHead.getColumn({ dataIndx: "doctype" });
+	        	let options = wmr20SearchInit.gridDoctypeList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.rcvitstList){
+	    		let column = gridHead.getColumn({ dataIndx: "rcvitst" });
+	        	let options = wmr20SearchInit.rcvitstList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.warekeyList){
+				let column = gridItem.getColumn({ dataIndx: "warekey" });
+	        	let options = wmr20SearchInit.warekeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+			}
+			if(wmr20SearchInit.ownerkyList){
+	    		let column = gridItem.getColumn({ dataIndx: "ownerky" });
+	        	let options = wmr20SearchInit.ownerkyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.rcvdcstList){
+	    		let column = gridItem.getColumn({ dataIndx: "rcvdcst" });
+	        	let options = wmr20SearchInit.rcvdcstList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.rcvitstList){
+	    		let column = gridItem.getColumn({ dataIndx: "rcvitst" });
+	        	let options = wmr20SearchInit.rcvitstList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.gridDoctypeList){
+	    		let column = gridItem.getColumn({ dataIndx: "doctype" });
+	        	let options = wmr20SearchInit.gridDoctypeList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.doccateList){
+	    		let column = gridItem.getColumn({ dataIndx: "doccate" });
+	        	let options = wmr20SearchInit.doccateList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.doccate] = obj.docctnm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.lockyList){
+	    		let column = gridItem.getColumn({ dataIndx: "rvlocky" });
+	        	let options = wmr20SearchInit.lockyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.vendkeyList){
+	    		let column = gridHead.getColumn({ dataIndx: "vendkey" });
+	        	let options = wmr20SearchInit.vendkeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.vendkeyList){
+	    		let column = gridItem.getColumn({ dataIndx: "vendkey" });
+	        	let options = wmr20SearchInit.vendkeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr20SearchInit.rcvrscdList){
+	    		let column = gridItem.getColumn({ dataIndx: "rcvrscd" });
+	        	let options = wmr20SearchInit.rcvrscdList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			
+			resContent = await response.json();
+			if(resContent.length===0){
+				gridHead.hideLoading();
+				gridItem.hideLoading();
+			}
+			gridHead.option( "dataModel", { data: resContent, recIndx: "rowkey" } );
+			gridHead.refreshDataAndView();
+			gridItem.option( "dataModel", { data: [] } );
+			gridItem.refreshDataAndView();
+		}
+	} catch(err){
+		console.log(err);
+	} finally{
+		gridHead.hideLoading();
+		gridItem.hideLoading();
+	}
+	
+}
+
+//============================================================
+//검색조건 초기화
+//============================================================
+function wmr20Refresh(){
+	let gridHead = pq.grid("#wmr20_h_grid");
+	let gridItem = pq.grid("#wmr20_i_grid");
+	
+	document.getElementById("wmr20_warekey").value = $('#wmr20_warekey option:first').val();
+	
+	$('#wmr20_ownerky').pqSelect();
+	let pqSelectElement = $('#wmr20_ownerky')[0];
+	pqSelectElement.selectedIndex = 0;
+	$('#wmr20_ownerky').pqSelect('refreshData');
+
+	let wmr20ChangeInit = callAjax('data', 'GET', "/md/common/code/doctype", {warekey:$('#wmr20_warekey option:first').val(), doccate: '400'});
+	$("#wmr20_doctype option").not("[value='']").remove();
+	$.each(wmr20ChangeInit, function(key, value) { 
+		$('#wmr20_doctype').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+	});
+	
+	document.getElementById("wmr20_doctype").value = $('#wmr20_doctype option:first').val();
+	
+	$('.check-box input[name="wmr20_rcvdcst"]').prop('checked', true);
+	
+	$('#wmr20_rcvdcdt_from').val(moment().subtract(1, "d").format("YYYY-MM-DD"));
+	$('#wmr20_rcvdcdt_to').val(moment().format("YYYY-MM-DD"));
+	
+	gridHead.option('dataModel', { data : [] });
+	gridHead.refreshDataAndView();
+	
+	gridItem.option('dataModel', { data : [] });
+	gridItem.refreshDataAndView();
+}
+	
+//============================================================	
+//체크 rcvdcst 필터 이벤트
+//============================================================
+function checkRcvitsts(){
+	let rcvitst = "";
+	
+	$('input:checkbox[name=wmr20_rcvdcst]').each(function (index) {
+		rcvitst += $(this).is(":checked") ? ","+$(this).val() : ""
+	});
+	
+	if(rcvitst.indexOf(',') === 0){
+		rcvitst = rcvitst.substr(1);
+	}
+	
+	return rcvitst;
+}
+</script>
+
+</div>
+</html>

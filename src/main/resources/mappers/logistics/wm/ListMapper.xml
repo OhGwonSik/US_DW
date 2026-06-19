@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.ListMapper">
+
+	<select id="getWmlt1WrcvitList" resultType="com.logistics.wm.domain.WrcvitVO">
+		select
+		   concat(A.COMPKEY , A.RCVDCKY) as rowkey 
+		 , A.COMPKEY as compkey , A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit , A.WAREKEY as warekey
+		 , A.DOCCATE as doccate , A.DOCTYPE as doctype	
+		 , A.RCVDCST as rcvdcst , A.RCVITST as rcvitst		
+		 , A.ORDGRKY as ordgrky , A.VENDKEY as vendkey , A.CARRKEY as carrkey
+		 , A.TRUCKNO as truckno , A.TRUCTON as tructon , A.TRUNTYP as truntyp , A.TRUNPID as trunpid				
+		 , A.LOTNMKY as lotnmky , A.OWNERKY as ownerky
+		 , A.SKUMKEY as skumkey , A.SKUDESC as skudesc 
+		 , C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04 , C.SKUGR05 as skugr05 
+		 , C.SKUAT01 as skuat01 , C.ROINQTY as roinqty , C.BRANDCD as brandcd
+		 , A.SIRBCOD as sirbcod , A.ASNDQTY as asndqty , A.AUOMKEY as auomkey
+		 , A.RCVEQTY as rcveqty , A.RUOMKEY as ruomkey , A.RCHSQTY as rchsqty , A.RCHSUOM as rchsuom
+		 , A.PAWDQTY as pawdqty , A.PUOMKEY as puomkey , A.PAWHQTY as pawhqty
+		 , A.PHUOMKY as phuomky , A.RVLOCKY as rvlocky
+		 , A.PASTRKY as pastrky , A.PALOCKY as palocky
+		 , A.RCVDCYN as rcvdcyn , A.RCVRSCD as rcvrscd , A.RCVRSNM as rcvrsnm
+		 , A.PRODDAT as proddat , A.SHELIFE as shelife , A.EXPIDAT as expidat	
+		 , A.RCVDCDT as rcvdcdt , A.RCVFRDT as rcvfrdt , A.LOTFRKY as lotfrky
+		 , A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 , A.LOTAT04 as lotat04		
+		 , A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 , A.LOTAT08 as lotat08		
+		 , A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 , A.LOTAT12 as lotat12		
+		 , A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 , A.LOTAT16 as lotat16		
+		 , A.REFSDIT as refsdit			
+		 , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime ,fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+		 , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime ,fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+		 , A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk
+		from WRCVIT A
+		 inner join MSKUWC C on A.COMPKEY = C.COMPKEY							
+                   			and A.WAREKEY = C.WAREKEY 							
+                   			and A.OWNERKY = C.OWNERKY							
+                   			and A.SKUMKEY = C.SKUMKEY                   							
+		 where 1=1
+		  and  A.COMPKEY = #{compkey}
+		   <if test="rcvdcky !=null and rcvdcky !=''">
+		   and A.RCVDCKY LIKE concat('%', #{rcvdcky}, '%')
+		  </if>
+		  <if test="warekey!=null and warekey!=''">
+		   and A.WAREKEY = #{warekey}
+		  </if>
+		  <if test="doctype!=null and doctype!=''">
+		   and A.DOCTYPE = #{doctype}
+		  </if>
+		  <if test="ownerky!=null and ownerky!=''">
+		   and A.OWNERKY = #{ownerky}
+		  </if>
+		  <if test="vendkey!=null and vendkey!=''">
+		   and A.VENDKEY IN (select PTNRKEY from MPTNMA where ptnrtyp ="VENDER" and ptnamlc = #{vendkey} )
+		  </if>
+		  <if test="skumkey!=null and skumkey!=''">
+		   and A.SKUMKEY Like concat('%', #{skumkey} , '%')
+		  </if>
+		  <if test="skudesc!=null and skudesc!=''">
+		   and A.SKUDESC Like concat('%', #{skudesc} , '%')
+		  </if>
+		  <if test="rcvdcst!=null and rcvdcst!=''">
+		   and A.RCVDCST = #{rcvdcst}
+		  </if>
+		  <if test="brandcd!=null and brandcd!=''">
+		   and C.BRANDCD = #{brandcd}
+		  </if>
+		 order by A.RCVDCKY	, A.RCVDCIT
+	</select>
+	
+
+	<select id="getWmlt2WtakitList" resultType="com.logistics.wm.domain.WtakitVO">
+		select							
+			  concat(A.COMPKEY , A.TASKOKY) as rowkey
+			, A.COMPKEY as compkey , A.TASKOKY as taskoky , A.TASKOIT as taskoit
+			, A.WAREKEY as warekey , A.DOCCATE as doccate , A.DOCTYPE as doctype
+			, A.TASKSTS as tasksts , A.ORDGRKY as ordgrky , C.VENDKEY as vendkey
+			, A.TRUNTYP as truntyp , A.TRUNPID as trunpid , A.LOTNMKY as lotnmky
+			, A.OWNERKY as ownerky , A.FRAREKY as frareky , A.FRZONKY as frzonky , A.FRLOCKY as frlocky
+			, A.TOAREKY as toareky , A.TOZONKY as tozonky , A.TOLOCKY as tolocky
+			, A.SKUMKEY as skumkey , A.SKUDESC as skudesc
+			, A.FORDQTY as fordqty , A.FUOMEKY as fuomeky , A.TCMPQTY as tcmpqty , A.TUOMEKY as tuomeky
+			, C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04 , C.SKUGR05 as skugr05
+			, C.SKUAT01 as skuat01 , C.ROINQTY as roinqty , A.SIRBCOD as sirbcod		
+			, A.PRODDAT as proddat , A.SHELIFE as shelife , A.EXPIDAT as expidat
+			, date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt , date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt , A.LOTFRKY as lotfrky
+			, A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 , A.LOTAT04 as lotat04
+			, A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 , A.LOTAT08 as lotat08
+			, A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 , A.LOTAT12 as lotat12
+			, A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 , A.LOTAT16 as lotat16
+			, A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 , A.LOTAT20 as lotat20
+			, A.STKSTAT as stkstat 
+			, A.TASKG01 as taskg01 , A.TASKG02 as taskg02 , A.TASKG03 as taskg03 , A.TASKG04 as taskg04 , A.TASKG05 as taskg05
+			, A.PARSNCD as parsncd , A.PARSNNM as parsnnm , A.PKRSNCD as pkrsncd , A.PKRSNNM as pkrsnnm
+			, A.MOVTEAM as movteam , A.MOVUSID as movusid 
+			, A.MVSTDAT as mvstdat , A.MVSTTIM as mvsttim , A.MVEDDAT as mveddat , A.MVEDTIM as mvedtim
+			, A.EOASNKY as eoasnky , A.EOASNIT as eoasnit
+			, A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit
+			, A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit
+			, A.REFPODC as refpodc , A.REFPOIT as refpoit , A.REFSODC as refsodc , A.REFSOIT as refsoit		
+			, A.REFDNDC as refdndc , A.REFDNIT as refdnit , A.REFSDDC as refsddc , A.REFSDIT as refsdit		
+			, A.STORFKY as storfky
+			, date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime ,fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser 
+			, date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime ,fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser 
+			, A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk
+			, C.BRANDCD as brandcd	
+		from WTAKIT A							
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY							
+		                   and A.WAREKEY = C.WAREKEY 							
+		                   and A.OWNERKY = C.OWNERKY							
+		                   and A.SKUMKEY = C.SKUMKEY                   							
+		where 1=1	
+		 and  A.COMPKEY = #{compkey}
+		   <if test="taskoky !=null and taskoky !=''">
+		   and A.TASKOKY LIKE concat('%', #{taskoky}, '%')
+		  </if>
+		  <if test="warekey!=null and warekey!=''">
+		   and A.WAREKEY = #{warekey}
+		  </if>
+		  <if test="doctype!=null and doctype!=''">
+		   and A.DOCTYPE = #{doctype}
+		  </if>
+		  <if test="ownerky!=null and ownerky!=''">
+		   and A.OWNERKY = #{ownerky}
+		  </if>
+		  <if test="tasksts!=null and tasksts!=''">
+		   and A.TASKSTS = #{tasksts}
+		  </if>
+		  <if test="vendkey!=null and vendkey!=''">
+		   and C.VENDKEY IN (select PTNRKEY from MPTNMA where ptnrtyp ="VENDER" and ptnamlc =#{vendkey} ) 
+		  </if>
+		  <if test="skumkey!=null and skumkey!=''">
+		   and A.SKUMKEY Like concat('%', #{skumkey} , '%')
+		  </if>
+		  <if test="skudesc!=null and skudesc!=''">
+		   and A.SKUDESC Like concat('%', #{skudesc} , '%')
+		  </if>	
+		  <if test="brandcd!=null and brandcd!=''">
+		   and C.BRANDCD = #{brandcd}  
+		  </if>			
+		order by A.TASKOKY ,A.TASKOIT					
+	</select>
+	
+	
+	<select id="getWmlt3WtakitList" resultType="com.logistics.wm.domain.WshpitVO">
+		select
+		     concat(A.COMPKEY , A.SHPDCKY) as rowkey							
+		   , A.COMPKEY , A.SHPDCKY , A.SHPDCIT , A.WAREKEY 
+	       , A.DOCCATE , A.DOCTYPE 
+	       , A.SHPDCST , A.SHPITST 	
+	       , A.OGSTRKY , A.ALSTRKY , A.OWNERKY , A.SKUMKEY , A.SKUDESC 
+	       , date_format(A.SHPPDAY, '%Y-%m-%d') as shppday , date_format(A.SHPPTIM, '%H-%i-%s') as shpptim , date_format(A.SHPSDAY, '%Y-%m-%d') as shpsday 
+	       , date_format(A.SHPSTIM, '%H-%i-%s') as shpstim , date_format(SUBSTR(A.SPEHTIM,9), '%H-%i-%s') as spehtim , date_format(SUBSTR(A.SPEITIM,9), '%H-%i-%s') as speitim 		
+	       , date_format(A.SALDATE, '%Y-%m-%d') as saldate
+	       , A.CUSTKEY , A.RETAKEY 
+	       , A.SALMEMO , date_format(A.SALRQDT, '%Y-%m-%d') as salrqdt , date_format(A.SALRQTM, '%H-%i-%s') as salrqtm	
+	       , A.SHCUQTY , A.RGITQTY , A.SHALQTY , A.SHPKQTY , A.SHCFQTY 
+	       , A.SUOMKEY 
+	       , C.SKUGR02 , C.SKUGR03 , C.SKUGR04 , C.SKUGR05 , C.SKUAT01 , C.ROINQTY , C.BRANDCD
+	       , A.PAYTYPE , A.DCTCTYP , A.PAKLBKY , A.ALLGRKY 
+	       , A.REFPODC , A.REFPOIT 
+	       , A.REFSODC , A.REFSOIT
+	       , A.REFDNDC , A.REFDNIT 	
+	       , A.REFSDDC , A.REFSDIT 	
+	       , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+	       , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+	       , A.INDIBZL , A.INDIARC , A.UPDTCHK
+		from WSHPIT A										
+		 inner join MSKUWC C on A.COMPKEY = C.COMPKEY							
+		  and A.WAREKEY = C.WAREKEY 							
+		  and A.OWNERKY = C.OWNERKY							
+		  and A.SKUMKEY = C.SKUMKEY                   							
+		where 1=1							
+		 and  A.COMPKEY = #{compkey}
+		 <if test="shpdcky !=null and shpdcky !=''">
+		  and A.SHPDCKY LIKE concat('%', #{shpdcky}, '%')
+		 </if>
+		 <if test="shpdcst !=null and shpdcst !=''">
+		  and A.SHPDCST = #{shpdcst}
+		 </if>
+		 <if test="warekey!=null and warekey!=''">
+		  and A.WAREKEY = #{warekey}
+		 </if>
+		 <if test="doctype!=null and doctype!=''">
+		  and A.DOCTYPE = #{doctype}
+		 </if>
+		 <if test="ownerky!=null and ownerky!=''">
+		  and A.OWNERKY = #{ownerky}
+		 </if>
+		 <if test="skumkey!=null and skumkey!=''">
+		  and A.SKUMKEY Like concat('%', #{skumkey} , '%')
+		 </if>
+		 <if test="skudesc!=null and skudesc!=''">
+		  and A.SKUDESC Like concat('%', #{skudesc} , '%')
+		 </if>
+		 <if test="brandcd!=null and brandcd!=''">
+		  and C.BRANDCD = #{brandcd} 
+		 </if>				
+		order by A.SHPDCKY , A.SHPDCIT 		
+	</select>
+	
+	<select id="getWmlt4WadjitList" resultType="com.logistics.wm.domain.WadjitVO">
+		select						
+			concat(A.COMPKEY , A.ADJSOKY , A.ADJSOIT) as rowkey
+		  , A.COMPKEY as compkey , A.ADJSOKY as adjsoky , A.ADJSOIT as adjsoit			
+		  , A.WAREKEY as warekey , A.DOCCATE as doccate , A.DOCTYPE as doctype		
+		  , A.ADJMODE as adjmode , A.ADJGRKY as adjgrky			
+		  , A.RSNCODE as rsncode , A.ADJSRMK as adjsrmk
+		  , A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey	, A.LOCAKEY as locakey		
+		  , A.SUBSECT as subsect		
+		  , A.TRUNTYP as truntyp , A.TRUNPID as trunpid			
+		  , A.LOTNMKY as lotnmky		
+		  , A.OWNERKY as ownerky	
+		  , A.SKUMKEY as skumkey , A.SKUDESC as skudesc	
+		  , C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03	, C.SKUGR04 as skugr04 , C.SKUGR05 as skugr05 
+		  , C.SKUAT01 as skuat01 , C.ROINQTY as roinqty		
+		  , A.VENDKEY as vendkey , A.SIRBCOD as sirbcod		
+		  , A.STOTQTY as stotqty , A.SALLQTY as sallqty	, A.SINBQTY as sinbqty , A.SOUBQTY as soubqty , A.SBLOQTY as sbloqty		
+		  , A.SUOMKEY as suomkey		
+		  , date_format(A.PRODDAT, '%Y-%m-%d') as proddat , A.SHELIFE as shelife , date_format(A.EXPIDAT, '%Y-%m-%d') as expidat	
+		  , date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt , date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt			
+		  , A.LOTFRKY as lotfrky			
+		  , A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 , A.LOTAT04 as lotat04 
+		  , A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 , A.LOTAT08 as lotat08 
+		  , A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 , A.LOTAT12 as lotat12 
+		  , A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 , A.LOTAT16 as lotat16 
+		  , A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 , A.LOTAT20 as lotat20 		
+		  , A.STKSTAT as stkstat , A.BLOCKID as blockid 	
+		  , A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo 		
+		  , A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit 			
+		  , A.TASKOKY as taskoky , A.TASKOIT as taskoit 			
+		  , A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit 			
+		  , A.PHYSOKY as physoky , A.PHYSOIT as physoit , A.STORFKY as storfky 				
+		  , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser  	
+		  , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser  		
+		  , A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk 		
+		  , C.BRANDCD as brandcd
+		from WADJIT A						
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY						
+		                   and A.WAREKEY = C.WAREKEY 						
+		                   and A.OWNERKY = C.OWNERKY						
+		                   and A.SKUMKEY = C.SKUMKEY 						
+		where 1=1			
+		 and A.COMPKEY = #{compkey}
+		 <if test="adjsoky != null and adjsoky != ''">				
+		 and A.ADJSOKY like concat( '%' , #{adjsoky} , '%')				
+		</if>
+		<if test="warekey != null and warekey != ''">				
+		 and A.WAREKEY = #{warekey}			
+		</if>
+		<if test="ownerky != null and ownerky != ''">				
+		 and A.OWNERKY = #{ownerky}			
+		</if>	
+		<if test="locakey != null and locakey != ''">
+		 and A.LOCAKEY like concat( '%' , #{locakey} , '%')					
+		</if>	
+		<if test="vendkey != null and vendkey != ''">
+		 and A.VENDKEY IN (select PTNRKEY from MPTNMA where PTNRTYP ="VENDER" and PTNAMLC = #{vendkey} ) 					
+		</if>
+		<if test="skumkey != null and skumkey != ''">
+		 and A.SKUMKEY like concat( '%' , #{skumkey} , '%')					
+		</if>	
+		<if test="skudesc != null and skudesc != ''">
+		 and A.SKUDESC like concat( '%' , #{skudesc} , '%')					
+		</if>	
+		<if test="stkstat != null and stkstat != ''">	
+		 and A.STKSTAT = #{stkstat} 		
+		 </if>	
+		 <if test="brandcd != null and brandcd != ''">	
+		 and C.BRANDCD = #{brandcd} 		
+		 </if>
+		 order by A.ADJSOKY, A.ADJGRKY, A.ADJSOIT		
+	</select>
+	
+	<select id="getWmlt5WphyitList" resultType="com.logistics.wm.domain.WphyitVO">
+		select			
+			concat(A.COMPKEY , A.PHYSOKY , A.PHYSOIT) as rowkey							
+		  ,	A.COMPKEY as compkey , A.PHYSOKY as physoky , A.PHYSOIT as physoit		
+		  , A.WAREKEY as warekey , A.DOCCATE as doccate , A.DOCTYPE as doctype			
+		  , A.PHYMODE as phymode , A.PHYGRKY as phygrky , A.STOCKKY as stockky			
+		  , A.AREAKEY as areakey , A.ZONEKEY as zonekey , A.LOCAKEY as locakey				
+		  , A.SUBSECT as subsect , A.TRUNTYP as truntyp	, A.TRUNPID as trunpid					
+		  , A.LOTNMKY as lotnmky , A.OWNERKY as ownerky				
+		  , A.SKUMKEY as skumkey , A.SKUDESC as skudesc			
+		  , C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04 , C.SKUGR05 as skugr05				
+		  , C.SKUAT01 as skuat01 , C.ROINQTY as roinqty				
+		  , A.VENDKEY as vendkey , A.SIRBCOD as sirbcod				
+		  , A.SYSTQTY as systqty , A.PHYSQTY as physqty , A.COMPQTY as compqty , A.COMPQTY-A.SYSTQTY as diffqty 									
+		  , A.SUOMKEY as suomkey  , A.RSNCODE as rsncode , A.PHYSRMK as physrmk 			
+		  , A.STKSTAT as stkstat , A.BLOCKID as blockid 			
+		  , A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo 				
+		  , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser 	
+		  , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser 	
+		  , A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk 						
+		  , C.BRANDCD as brandcd
+		from WPHYIT A										
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY										
+		                   and A.WAREKEY = C.WAREKEY 										
+		                   and A.OWNERKY = C.OWNERKY										
+		                   and A.SKUMKEY = C.SKUMKEY                   										
+		where 1=1										
+		 and A.COMPKEY = #{compkey}
+		 and A.PHYMODE = 'COMPLETED'	
+		 <if test="physoky != null and physoky != ''">				
+		 and A.PHYSOKY like concat( '%' , #{physoky} , '%')				
+		</if>	
+		 <if test="warekey != null and warekey != ''">				
+		 and A.WAREKEY = #{warekey} 				
+		</if>
+		<if test="ownerky != null and ownerky != ''">				
+		 and A.OWNERKY = #{ownerky}			
+		</if>	
+		<if test="vendkey != null and vendkey != ''">
+		 and A.VENDKEY IN (select PTNRKEY from MPTNMA where PTNRTYP ="VENDER" and PTNAMLC = #{vendkey}) 				
+		</if>	
+		<if test="skumkey != null and skumkey != ''">
+		 and A.SKUMKEY like concat( '%' , #{skumkey} , '%')					
+		</if>	
+		<if test="skudesc != null and skudesc != ''">
+		 and A.SKUDESC like concat( '%' , #{skudesc} , '%')					
+		</if>	
+		<if test="stkstat != null and stkstat != ''">	
+		 and A.STKSTAT = #{stkstat} 		
+		</if>
+		<if test="brandcd != null and brandcd != ''">	
+		 and C.BRANDCD = #{brandcd} 		
+		</if>
+		order by A.WAREKEY , A.AREAKEY , A.ZONEKEY , A.LOCAKEY 	
+	    	   , A.SKUMKEY , A.SKUDESC 	
+	    	   , A.COMPKEY , A.OWNERKY , A.VENDKEY 
+	</select>
+	
+	
+	<select id="getWmlt6WstkkyList" resultType="com.logistics.wm.domain.WstkdyDTO">
+		select		
+		   concat(A.COMPKEY , A.STKDATE , A.STKTIME , A.STKTIME) as rowkey											
+		 , A.COMPKEY as compkey					
+		 , date_format(A.STKDATE, '%Y-%m-%d') as stkdate 						
+		 , date_format(A.STKTIME, '%H-%i-%s') as stktime
+		 , A.STOCKKY as stockky 						
+		 , A.WAREKEY as warekey , A.AREAKEY as areakey , A.ZONEKEY as zonekey , A.LOCAKEY as locakey 						
+		 , A.LOTNMKY as lotnmky , A.OWNERKY as ownerky 						
+		 , A.SKUMKEY as skumkey , A.SKUDESC as skudesc 						
+		 , A.VENDKEY as vendkey , A.STOTQTY as stotqty 						
+		 , case 								
+		 	when (A.STOTQTY != 0 and A.SALLQTY = 0 and A.SINBQTY = 0 and A.SOUBQTY = 0) then							
+		 			  A.STOTQTY - A.SBLOQTY					
+		   else							
+		 			0					
+		   end as avalqty 		, A.SALLQTY as sallqty 					
+		 , A.SINBQTY as sinbqty , A.SOUBQTY as soubqty , A.SBLOQTY as sbloqty 					
+		 , A.SUOMKEY as suomkey , date_format(A.PRODDAT, '%Y-%m-%d') as proddat , A.STKSTAT as stkstat					
+		 , A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo					
+		 , A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit							
+		 , A.TASKOKY as taskoky , A.TASKOIT as taskoit							
+		 , A.ADJSOKY as adjsoky , A.ADJSOIT as adjsoit							
+		 , A.PHYSOKY as physoky , A.PHYSOIT as physoit							
+		 , A.STORFKY as storfky							
+		 , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser 	
+		 , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+		 , M.BRANDCD as brandcd
+		from WSTKDY A   
+		 inner join MSKUWC M on M.COMPKEY = A.COMPKEY
+		  and M.OWNERKY = A.OWNERKY
+		  and M.WAREKEY = A.WAREKEY
+		  and M.SKUMKEY = A.SKUMKEY				
+		 where 1=1	
+		   and A.compkey = #{compkey}				
+		  <if test="warekey != null and warekey != ''">				
+		   and A.WAREKEY = #{warekey}			
+		  </if>
+		  <if test="ownerky != null and ownerky != ''">				
+		   and A.OWNERKY = #{ownerky}			
+		  </if>	
+		  <if test="skumkey != null and skumkey != ''">
+		   and A.SKUMKEY like concat( '%' , #{skumkey} , '%')					
+		  </if>	
+		  <if test="skudesc != null and skudesc != ''">
+		   and A.SKUDESC like concat( '%' , #{skudesc} , '%')					
+		  </if>	
+		 <if test="skudesc != null and skudesc != ''">
+		   and A.SKUDESC like concat( '%' , #{skudesc} , '%')					
+		  </if>	
+		  <if test="taskoky != null and taskoky != ''">
+		   and A.TASKOKY like concat( '%' , #{taskoky} , '%')					
+		  </if>	
+		  <if test="brandcd != null and brandcd != ''">
+		   and M.BRANDCD = #{brandcd}					
+		  </if>	
+		   and A.STKDATE between replace(#{datefrom}, '-' , '') and replace(#{dateto}, '-' , '')					
+		</select>				
+	
+	
+		<select id="getWmlt7MskuwcList" resultType="com.logistics.md.domain.MskuwcDTO">
+			select		
+			     concat(A.COMPKEY , A.WAREKEY , A.OWNERKY , A.SKUMKEY) as rowkey				
+			   , A.COMPKEY as compkey , A.WAREKEY as warekey , A.OWNERKY as ownerky					
+			   , date_format(B.STKDATE, '%Y-%m-%d') as stkdate , date_format(B.STKTIME, '%H-%i-%s') as stktime					
+			   , A.SKUMKEY as skumkey , A.SKUDESC as skudesc					
+			   , B.SKUWABC as skuwabc , A.SKUTYPE as skutype , A.VENDKEY as vendkey				
+			   , A.VNDFDAY as vndfday , A.BRANDCD as brandcd , A.ROINQTY as roinqty , A.MIXRATO as mixrato					
+			   , A.SKUGR02 as skugr02 , A.SKUGR03 as skugr03 , A.SKUGR04 as skugr04 , A.SKUGR05 as skugr05
+			   , (SELECT USERNAM FROM SUSRMA WHERE COMPKEY = A.COMPKEY AND USERACT = A.SKUAT01 AND USERGR1 != 'N') as skuat01
+			   , A.SUOMKEY as suomkey , A.ITMCOST as itmcost , A.SELPRIC as selpric , A.SKUSTAT as skustat 
+			   , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime ,fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			   , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime ,fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			from MSKUWC A 		
+			 inner join MSKUTH B on A.COMPKEY = B.COMPKEY									
+				                   and A.WAREKEY = B.WAREKEY									
+				                   and A.OWNERKY = B.OWNERKY									
+				                   and A.SKUMKEY = B.SKUMKEY									
+			where 1=1	
+			 and A.COMPKEY = #{compkey}				
+			 <if test="warekey != null and warekey != ''">				
+			 and A.WAREKEY = #{warekey}			
+			</if>
+			<if test="ownerky != null and ownerky != ''">				
+			 and A.OWNERKY = #{ownerky}			
+			</if>	
+			<if test="skumkey != null and skumkey != ''">
+			 and A.SKUMKEY like concat( '%' , #{skumkey} , '%')					
+			</if>	
+			<if test="skudesc != null and skudesc != ''">
+			 and A.SKUDESC like concat( '%' , #{skudesc} , '%')					
+			</if>	
+			<if test="brandcd != null and brandcd != ''">
+			 and A.BRANDCD = #{brandcd}					
+			</if>	
+			 and B.STKDATE = replace(#{stkdate}, '-' , '')					
+		</select>
+</mapper>

@@ -1,0 +1,16 @@
+services:
+  us_dw:
+    image: harbor.runtime.co.kr/runwms/us_dw:latest
+    container_name: us_dw
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8001"
+    # expose: ["8080"] # -> ??
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    networks:
+      - runtime_default
+
+networks:
+  runtime_default:
+    external: true

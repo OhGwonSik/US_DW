@@ -1,0 +1,743 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent" class="tab-content">
+		<div class="tab-contents">
+            <div class="location"></div>
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<label for="tmm07_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tmm07_warekey" name="tmm07_warekey"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user" onchange="changeWarekey(this.value)">
+							</select>
+                        </div>
+                    </div>
+                    <label for="tmm07_saatc05" class="setting-grid-title">[[#{tm.tmm07.saatc05}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper">
+							<input type="text" id="tmm07_saatc05" th:placeholder="${#messages.msg('tm.tmm07.saatc05')}">
+						</div>
+					</div>
+					<label for="tmm07_cartype" class="setting-grid-title">[[#{tm.tmm07.cartype}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper">
+							<input type="text" id="tmm07_cartype" th:placeholder="${#messages.msg('tm.tmm07.cartype')}">
+						</div>
+					</div>
+					<label for="tmm07_destkey" class="setting-grid-title">[[#{om.ocodma.destkey}]]</label>
+					<div class="input-group">
+                        <select id="tmm07_destkey" name="tmm07_destkey"
+							data-cb-val="destkey" data-cb-name="denamlc" data-cb-url="/tm/area/common/destlist"
+							data-cb-variable="destkeyList">
+							<option value="">[[#{tm.common.all}]]</option>
+						</select>
+                    </div>
+					<label for="tmm07_ptnamlc" class="setting-grid-title">[[#{tm.tmm07.ptnamlc}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper">
+							<input type="text" id="tmm07_ptnamlc" th:placeholder="${#messages.msg('tm.tmm07.ptnamlc')}">
+						</div>
+					</div>
+					<label for="tmm07_cartynm" class="setting-grid-title">[[#{tm.tmm07.cartynm}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper">
+							<input type="text" id="tmm07_cartynm" th:placeholder="${#messages.msg('tm.tmm07.cartynm')}">
+						</div>
+					</div>
+                </div>
+                <div class="search-btn-group">
+					<button type="button" class="btn-search btn-navy btn-green" id="tmm07_search"><img>[[#{bt.search}]]</button>
+                    <button type="button" class="btn-clear btn-white" id="tmm07_reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button type="button" class="btn-navy btn-green" id="tmm07_save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="tmm07_pqgrid"></div>
+                </div>
+            </div>
+        </div>
+	<script>
+	/* *******************************************************
+	 * 최초 생성일시 : 2023-09-21
+	 * 최초 생성자 : 최재환
+	 * 설명 : 생산차종들을 추가하거나 삭제 설정할 수 있는 마스터 화면입니다.
+	 *********************************************************/
+	 
+	let responseData;
+	const pageId = 'tmm07';
+	const gridId = '#' + pageId + '_pqgrid';
+	let tempDestkeyArr = [];
+	let usernam;
+	let custList;
+	let grid;
+	let destList;
+
+	$(function() {
+
+		_commonInit();
+
+		const tmm07GridCM = [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: { all: false, header: true}
+			},
+			{ title: '[[#{tm.tmm07.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.updtchk}]]', dataType: 'string', dataIndx: 'updtchk', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.saatc05}]]', dataType: 'string', dataIndx: 'saatc05before', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.custkey}]]', dataType: 'string', dataIndx: 'custkey', editable: false, hidden: true},
+			{ title: '[[#{grid.wareCode}]]', dataType: 'string', dataIndx: 'warekey', editable: false, hidden: true},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false, hidden: true},
+			{ title: '[[#{tm.tmm07.ptnamlc}]]', dataType: 'string', dataIndx: 'ptnamlc',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				},
+				editor: {
+					type: 'select',
+					prepend: { '' : '' },
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				},
+				render: gridRender
+			},
+			{ title: '[[#{tm.tmm07.destkey}]]', dataType: 'string', dataIndx: 'destkey',editable: false, hidden: true},
+			{ title: '[[#{om.ocodma.destkey}]]', dataType: 'string', dataIndx: 'denamlc',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				},
+				editor: {
+					type: 'select',
+					prepend: { '' : '' },
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				},
+				render: function(ui) {
+					let option;
+					let ptnrkey;
+					if(ui.rowData.rowkey){
+		 				ptnrkey = ui.rowData.custkey;
+		 			}
+		 			if(!ui.rowData.rowkey){
+		 				ptnrkey = ui.rowData.ptnamlc;
+		 			}
+					if(ptnrkey && tempDestkeyArr[ptnrkey]) {
+						option = tempDestkeyArr[ptnrkey].find(function(obj) {
+							return (obj.destkey === ui.cellData);
+						});
+					}
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : ui.rowData.denamlc;
+					return option ? option.denamlc : ui.rowData.denamlc;
+				}
+			},
+			{ title: '[[#{tm.tmm07.saatc05}]]', dataType: 'string', dataIndx: 'saatc05after',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead01}]]"
+				}
+			},
+			{ title: '[[#{tm.tmm07.cartype}]]', dataType: 'string', dataIndx: 'cartype',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				}
+			},
+			{ title: '[[#{tm.tmm07.cartynm}]]', dataType: 'string', dataIndx: 'cartynm',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				}
+			}
+		]
+
+		const tmm07Grid = new GridUtil(tmm07GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+		tmm07Grid.setFind();
+ 		tmm07Grid.setReset();
+
+		tmm07Grid.setDelete(function(evt, ui) {
+			const checkList = this.Checkbox('state').getCheckedNodes();
+	       	if(!checkList.length) {
+	       		alert('[[#{ms.choiceRowZero}]]');
+	       		return;
+	       	}
+
+	   		if(confirm(checkList.length + '[[#{ms.allRowDelete}]]')) {
+	  			for(const checkData of checkList) {
+	  				this.deleteRow({ rowIndx: checkData.pq_ri });
+	  	   		}
+	   		}
+		});
+
+		tmm07Grid.setBeforeValidate(function(event, ui){
+			if(ui.source === 'edit'){
+				if(ui.updateList[0].newRow.cartype){
+				// for문 index === ui.updateList[0].rowIndx 인 경우 제외하고 수정된 컬럼값 비교 필요
+					let gridData = tmm07Grid.getGrid().getData();
+					for(let i = 0;i<gridData.length;i++){
+						if(i !== ui.updateList[0].rowIndx){
+							if(gridData[i]['cartype'] === ui.updateList[0].newRow.cartype || gridData[i]['cartype'] === ui.updateList[0].newRow.cartype.toUpperCase()){
+								alert('[[#{tm.tmm07.cartype}]] ' + '[[#{ms.DuplicateKeyErr}]]');
+								tmm07Grid.getGrid().setSelection( { rowIndx: ui.updateList[0].rowIndx, dataIndx: 'cartype' });
+								event.preventDefault();
+								return;
+							}
+						}
+					}
+				}
+			}
+
+			if (ui.source != 'undo' && (ui.source == 'edit' || ui.source == 'paste' || ui.source == 'checkbox')){
+	        	let rownum = ui.updateList[0].rowIndx;
+	        	this.updateRow( {
+	       			rowIndx : rownum,
+	       		    newRow : {
+	       		    	"state": "Y"
+	       		    },
+	       		    checkEditable: false
+	       		});
+	        }
+		});
+
+		//============================================================
+		//그리드 create 이벤트
+		//============================================================
+
+		tmm07Grid.setCreate(async function (evt, ui) {
+
+			await _commonInit();
+			await custListData();
+
+		});
+
+		//============================================================
+		//그리드 change 이벤트
+		//============================================================
+		tmm07Grid.setChange(async function (evt, ui) {
+			grid = pq.grid(gridId);
+			if(ui.source === 'edit') {
+				if(ui.updateList[0].newRow.hasOwnProperty('ptnamlc')){
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { custkey : ui.updateList[0].newRow.ptnamlc },
+			   		    checkEditable: false
+			   		});
+				}
+
+				if(ui.updateList[0].newRow.hasOwnProperty('warekey') && !ui.updateList[0].newRow.warekey) {
+					alert('[[#{tm.tmm07.warekey}]]'+'[[#{ms.checkValue}]]');
+					this.updateRow({
+						rowIndx: ui.updateList[0].rowIndx,
+						newRow: ui.updateList[0].oldRow,
+						state: false,
+						checkEditable: false
+					});
+					return;
+				}
+				if(ui.updateList[0].newRow.ptnamlc || ui.updateList[0].newRow.ptnamlc === '' || ui.updateList[0].newRow.ptnamlc === null) {
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowData.pq_ri,
+			   		    newRow : { denamlc : '' },
+			   		    checkEditable: false
+			   		});
+					const custData = {
+							ptnrkey: ui.updateList[0].newRow.ptnamlc
+					}
+
+					let destList = await fetchUtil('GET', '/tm/area/common/destlist', custData);
+					destList = await destList.json();
+
+					comboCreateData(pageId + '_pqgrid', 'denamlc', destList, {combovl: 'destkey', combonm: 'denamlc'});
+ 				}
+				if(ui.updateList[0].newRow.saatc05after && ui.updateList[0].newRow.saatc05after.length>20) {
+					alert('[[#{tm.tmm07.saatc05}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(20)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { saatc05after : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'saatc05after',
+					});
+					return;
+				}
+				if(ui.updateList[0].newRow.cartype && ui.updateList[0].newRow.cartype.length>10) {
+					alert('[[#{tm.tmm07.cartype}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(10)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { cartype : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'cartype',
+					});
+					return;
+				}
+			}else if(ui.source === 'paste') {
+				pasteEvt(ui.updateList);
+				pasteEvt(ui.addList);
+				
+				if(ui.updateList[0].newRow.hasOwnProperty('ptnamlc')){
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { custkey : ui.updateList[0].newRow.ptnamlc },
+			   		    checkEditable: false
+			   		});
+				}
+				if(ui.updateList[0].newRow.ptnamlc || ui.updateList[0].newRow.ptnamlc === '' || ui.updateList[0].newRow.ptnamlc === null) {
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowData.pq_ri,
+			   		    newRow : { denamlc : '' },
+			   		    checkEditable: false
+			   		});
+
+					getDestkeyByCustkey(ui.updateList[0].newRow.ptnamlc, tempDestkeyArr);
+				}
+				if(ui.updateList[0].newRow.saatc05after && ui.updateList[0].newRow.saatc05after.length>20) {
+					alert('[[#{tm.tmm07.saatc05}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(20)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { saatc05after : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'saatc05after',
+					});
+					return;
+				}
+				if(ui.updateList[0].newRow.cartype && ui.updateList[0].newRow.cartype.length>10) {
+					alert('[[#{tm.tmm07.cartype}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(10)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { cartype : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'cartype',
+					});
+					return;
+				}
+			}
+		});
+
+		//============================================================
+		//서브그리드 CellClick 이벤트
+		//============================================================
+	 	tmm07Grid.setCellClick(async function(event, ui) {
+	 		let ptnrkey;
+	 		if(ui.dataIndx === 'denamlc') {
+	 			if(ui.rowData.rowkey){
+	 				ptnrkey = ui.rowData.custkey;
+	 			}
+	 			if(!ui.rowData.rowkey){
+	 				ptnrkey = ui.rowData.ptnamlc;
+	 			}
+	 			if(!ptnrkey) {
+	 	 				alert('[[#{tm.tmm07.ptnamlc}]]'+' [[#{ms.choiceValue}]]');
+	 	 				tmm07Grid.getGrid().setSelection({ rowIndx : ui.rowIndx, dataIndx : 'ptnamlc' });
+	 	 				tmm07Grid.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'ptnamlc' });
+	 	 				return;
+ 				}
+	 			const destkeyList = await getDestkeyByCustkey(ptnrkey, tempDestkeyArr);
+
+				comboCreateData(pageId + '_pqgrid', 'denamlc', destkeyList, { combovl : 'destkey', combonm : 'denamlc' });
+	 		}
+	 	});
+
+	 	//============================================================
+		//그리드 CellKeyDown 이벤트
+		//============================================================
+	 	tmm07Grid.setCellKeyDown(async function(event, ui) {
+	 		let ptnrkey;
+
+	 		if(ui.dataIndx === 'denamlc') {
+	 			if(ui.rowData.rowkey){
+	 				ptnrkey = ui.rowData.custkey;
+	 			}
+	 			if(!ui.rowData.rowkey){
+	 				ptnrkey = ui.rowData.ptnamlc;
+	 			}
+	 			if(!ptnrkey) {
+ 	 				alert('[[#{tm.tmm07.ptnamlc}]]'+' [[#{ms.choiceValue}]]');
+ 	 				tmm07Grid.getGrid().setSelection({ rowIndx : ui.rowIndx, dataIndx : 'ptnamlc' });
+ 	 				tmm07Grid.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'ptnamlc' });
+ 	 				return;
+				}
+ 				const destkeyList = await getDestkeyByCustkey(ptnrkey, tempDestkeyArr);
+
+				comboCreateData(pageId + '_pqgrid', 'denamlc', destkeyList, { combovl : 'destkey', combonm : 'denamlc' });
+	 		}
+	 	});
+
+		//============================================================
+		//그리드 add 이벤트
+		//============================================================
+		tmm07Grid.setAdd(async function (evt, ui) {
+				grid = pq.grid(gridId);
+			    await usernamData();
+
+				const rowIndx = this.addRow({
+					rowData: {
+						state: true,
+						warekey: $('#' + pageId + '_warekey').val(),
+						whnamlc: $('#' + pageId + '_warekey :selected').text(),
+						creuser: usernam,
+						ptnamlc: custList.length === 1 ? custList[0].ptnrkey : ''
+						},
+					checkEditable: false
+				});
+				grid.focus({rowIndxPage: grid.pdata.length-1, colIndx: $('#' + pageId + '_pqgrid').pqGrid( 'getColIndx', { dataIndx: 'state'} )});
+		});
+
+		tmm07Grid.open();
+
+		$('#' + pageId + '_search').click(async function(){
+
+			await tmm07_initData();
+
+		});
+		//============================================================
+		//검색조건 초기화 이벤트
+		//============================================================
+		$('#' + pageId + '_reset').click(function () {
+			$('#' + pageId + '_warekey').val($('#' + pageId + '_warekey option:first').val());
+			$('#' + pageId + '_destkey').val($('#' + pageId + '_destkey option:first').val());
+
+			$('#' + pageId + '_saatc05').val('');
+			$('#' + pageId + '_cartype').val('');
+			$('#' + pageId + '_ptnamlc').val('');
+			$('#' + pageId + '_cartynm').val('');
+
+			grid = pq.grid('#' + pageId + '_pqgrid');
+
+			grid.showLoading();
+
+			grid.option('dataModel', {data: []}); // 해당 그리드 초기화
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+
+		});
+
+	});
+	//============================================================
+	//데이터 조회
+	//============================================================
+	async function tmm07_initData() {
+		grid = pq.grid(gridId);
+
+		const data = {
+				// 검색할 조건을 가지고 있는 변수
+ 				warekey: $('#' + pageId + '_warekey').val(),
+ 				saatc05: $('#' + pageId + '_saatc05').val().replace(/(\s*)/g, ''),
+ 				cartype: $('#' + pageId + '_cartype').val().replace(/(\s*)/g, ''),
+ 				destkey: $('#' + pageId + '_destkey').val(),
+ 				ptnamlc: $('#' + pageId + '_ptnamlc').val().replace(/(\s*)/g, ''),
+ 				cartynm: $('#' + pageId + '_cartynm').val().replace(/(\s*)/g, '')
+		}
+		grid.showLoading();
+		try{
+			const response = await fetchUtil('GET', "/tm/area/tmm07/grids/1", data);
+
+			//============================================================
+			//그리드 Option
+			//============================================================
+			if(response.status === 200) {
+				const resContent = await response.json();
+
+				grid.option('dataModel', {
+					data: resContent,
+					recIndx: 'rowkey'
+				});
+
+				grid.refreshDataAndView();
+				grid.hideLoading();
+			}
+		} catch(err){
+			alert('[[#{ms.fetchError}]]');
+		} finally{
+			grid.hideLoading();
+		}
+	}
+
+	//============================================================
+	//고객리스트 조회
+	//============================================================
+	async function custListData() {
+
+		custList = await fetchUtil('GET', '/tm/area/tmm07/custlist', {});
+		custList = await custList.json();
+
+		await comboCreateData(pageId + '_pqgrid', 'ptnamlc', custList, {combovl: 'ptnrkey', combonm: 'ptnamlc'});
+
+	}
+
+	//============================================================
+	//그리드 render
+	//============================================================
+	function gridRender(ui) {
+		let option = ui.column.editor.options.find(function (obj) {
+			return (obj[ui.cellData] != null);
+		});
+		if(ui.column.dataIndx === 'denamlc'){
+				return option ? option[ui.cellData] : ui.rowData.denamlc;
+		}
+		if(ui.column.dataIndx === 'ptnamlc'){
+			return option ? option[ui.cellData] : ui.rowData.ptnamlc;
+		}
+	}
+
+	//MPTNMA : 고객에 따른 도착지 조회. array에 미존재 시 DB에서 조회 후 array에 추가.
+	async function getDestkeyByCustkey(param, arr) {
+
+		if(!arr[param]) {
+			const custData = {
+					ptnrkey: param
+			}
+			destList = await fetchUtil('GET', '/tm/area/common/destlist', custData);
+			destList = await destList.json();
+			arr[param] = destList;
+			
+			comboCreateData(pageId + '_pqgrid', 'denamlc', destList, {combovl: 'destkey', combonm: 'denamlc'});
+		}else {
+			destList = arr[param]
+		}
+
+		return destList;
+	}
+
+	//============================================================
+	//USERNAM 생성
+	//============================================================
+	async function usernamData(){
+
+		usernam = await fetchUtil('GET', '/tm/area/common/usernam');
+		usernam = await usernam.text();
+	}
+	
+	function pasteEvt(list) {
+		const grid = pq.grid(gridId);
+		const gridData = grid.getData();
+		let duplicateCheck = new Map();
+		
+		for(let i=0; i<list.length; i++) {
+			grid.updateRow({
+				rowIndx: list[i].rowIndx,
+				newRow: {
+					state: true,
+					ptnamlc: custList.length === 1 ? custList[0].ptnrkey : '',
+					warekey: $('#' + pageId + '_warekey').val(),
+					whnamlc: $('#' + pageId + '_warekey :selected').text(),
+					creuser: usernam
+				},
+				checkEditable: false
+			});
+			
+			if(list[i].newRow.cartype) {
+				for(let k=0; k<gridData.length; k++) {
+					if(k !== list[i].rowIndx) {
+						if(gridData[k]['cartype'] === list[i].newRow.cartype || gridData[k]['cartype'] === list[i].newRow.cartype.toUpperCase()) {
+							duplicateCheck.set(list[i].newRow.cartype.toUpperCase(), list[i].rowIndx);
+						}
+					}
+				}
+				
+				for(const [key, value] of duplicateCheck) {
+					grid.updateRow({
+						rowIndx: value,
+						newRow: {
+							cartype: ''
+						},
+						checkEditable: false
+					});
+				}
+			}
+			
+			if(list[i].newRow.denamlc) {
+				if(!list[i].rowData.ptnamlc) {
+					list[i].rowData.denamlc = '';
+				}else {
+					getDestkeyByCustkey(list[i].rowData.ptnamlc, tempDestkeyArr);
+					
+					const destData = destList.find(function(element) {
+						if(element.destkey === list[i].newRow.denamlc) {
+							return element;
+						}else if(element.denamlc === list[i].newRow.denamlc) {
+							return list[i].rowData.denamlc = element.destkey;
+						}
+					});
+					
+					if(!destData) {
+						list[i].rowData.denamlc = '';
+					}
+				}
+			}
+		}
+		
+		if(duplicateCheck.size > 0) {
+			alert('[[#{tm.tmm07.cartype}]] ' + '[[#{ms.DuplicateKeyErr}]]');
+		}
+	}
+
+	//============================================================
+	//저장
+	//============================================================
+	$('#' + pageId + '_save').click(async function() {
+		const grid = pq.grid(gridId);
+		const gridCheck = grid.Checkbox('state').getCheckedNodes();
+		const gridChange = grid.getChanges({all : true});
+		const gridData = grid.getData();
+		const duplicateRow = [];
+		
+ 		if(!gridCheck.length && !gridChange.deleteList.length){
+ 			alert('[[#{ms.choiceRowZero}]]');
+ 			return false;
+ 		}
+
+		if(gridChange.updateList.length){
+			for(let i = 0;i<gridChange.updateList.length;i++){
+				if(!gridChange.updateList[i]['state']){
+					gridChange.updateList.pop();
+				}
+			}
+
+		}
+		if(gridChange.addList.length){
+			for(let i = 0;i<gridChange.addList.length;i++){
+				if(!gridChange.addList[i]['state']){
+					gridChange.addList.pop();
+				}
+			}
+
+		}
+
+		if(gridCheck.length) {
+			for(let i=0; i<gridCheck.length; i++) {
+				if(!gridCheck[i].warekey) {
+					alert('[[#{tm.tmm07.warekey}]] ' + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'warekey' });
+					return;
+				}
+				if(!gridCheck[i].saatc05after) {
+					alert('[[#{tm.tmm07.saatc05}]] ' + '[[#{ms.requiredValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'saatc05after' });
+					return;
+				}
+				if(!gridCheck[i].cartype) {
+					alert('[[#{tm.tmm07.cartype}]] ' + '[[#{ms.requiredValue}]]');
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'cartype'});
+					return;
+				}
+			}
+		}
+		
+		const duplicateSet = new Set();
+		
+		for(const data of gridData) {
+			duplicateSet.add(data['cartype']);
+		}
+		
+		if(duplicateSet.size !== gridData.length) {
+			alert('[[#{tm.tmm07.cartype}]] ' + '[[#{ms.DuplicateKeyErr}]]');
+			return;
+		}
+
+		const result = confirm('[[#{ms.checksave}]]');
+
+		if(result){
+			for(let i = 0;i<gridChange.oldList.length;i++){
+				// 도착지명이나 고객명 수정사항 없을 시 이름값에 키값을 대입
+				if(!gridChange.oldList[i].hasOwnProperty('denamlc')){
+					gridChange.updateList[i].denamlc = gridChange.updateList[i].destkey;
+				}
+				if(!gridChange.oldList[i].hasOwnProperty('ptnamlc')){
+					gridChange.updateList[i].ptnamlc = gridChange.updateList[i].custkey;
+				}
+			}
+			
+			const data = {
+					addList: gridChange.addList,
+					updateList: gridChange.updateList,
+					deleteList: gridChange.deleteList
+			}
+
+			try {
+				const response = await fetchUtil('POST', '/tm/area/tmm07/ocodmasave', data);
+
+				if(response.status === 200) {
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+
+					await tmm07_initData();
+				}else {
+					alert('[[#{ms.saveErr}]]');
+				}
+			}catch(err) {
+				alert('[[#{ms.saveErr}]]');
+			}finally {
+				grid.hideLoading();
+			}
+		}
+	});
+
+	//============================================================
+	//검색 엔터키 이벤트
+	//============================================================
+
+    async function enterKeySearch(event) {
+
+        if (event.key === 'Enter') {
+
+			await tmm07_initData(); // 헤드그리드 재조회
+        }
+    }
+
+    // 모든 input 요소 가져오기
+    const inputElements = document.querySelectorAll('.input-wrapper');
+
+    // 각 input 요소에 이벤트 리스너 추가
+    inputElements.forEach(input => {
+        input.addEventListener('keyup', enterKeySearch);
+    });
+
+    let prevWarekey = $('#tmm07_warekey').val();
+
+	$("#tmm07_warekey").on('change', function(){
+		const grid = pq.grid(gridId);
+		if(grid.getData().length){
+			if(confirm('[[#{ms.listViewRollback}]]')){
+				grid.option('dataModel', { data: [] });
+				grid.refreshDataAndView();
+			} else{
+				document.querySelector('#tmm07_warekey').value = prevWarekey;
+			}
+		} else{
+			prevWarekey = $('#tmm07_warekey').val();
+		}
+	});
+	</script>
+	</div>
+</html>

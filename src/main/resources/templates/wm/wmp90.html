@@ -1,0 +1,666 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-list flex-1">
+			<ul class="nav nav-tabs" id="wmp90_tab">
+				<li class="nav-item active">
+					<a class="nav-link inbound" data-toggle="tab" href="#wmp90_inbound" data-tab-type="inbound">[[#{wm.wmp90.inbound}]]</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link search" data-toggle="tab" href="#wmp90_search" data-tab-type="search">[[#{wm.wmp90.search}]]</a>
+				</li>	  	
+			</ul>
+			<div class="tab-pane show" id="wmp90_inbound">
+				<div class="row k">
+					<button class="btn-home" onclick="kioskHome()"><img></button>
+					<button type="button" class="btn-save btn-main col k" id="wmp90_save">[[#{bt.save}]]</button>
+				</div>
+				<div class="search-wrap">
+					<div class="search-box">
+						<div class="search-title">
+							<label>[[#{wm.wmp90.eoasnky}]]</label>
+						</div>
+						<div class="search-content" id="wmp90DivEoansky"></div>
+					</div>
+					<div class="search-box">
+						<div class="search-title">
+							<label>[[#{wm.wmp90.asndqty}]]</label>
+						</div>
+						<div class="search-content" id="wmp90DivAsndqty"></div>
+					</div>
+					<div class="search-box">
+						<div class="search-title">
+							<label>[[#{wm.wmp90.rcveqty}]]</label>
+						</div>
+						<div class="search-content" id="wmp90DivRcveqty"></div>
+					</div>
+				</div>
+				<div class="search-condition">
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.whnamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="hidden" id="wmp90_inbound_compkey" name="wmp90_inbound_compkey">
+							<input type="hidden" id="wmp90_inbound_warekey" name="wmp90_inbound_warekey">
+							<input type="text" id="wmp90_inbound_warenam" name="wmp90_inbound_warenam" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.ownamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp90_inbound_ownerky" name="wmp90_inbound_ownerky" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect02">[[#{wm.wmp90.eoasnky}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp90_inbound_eoasnky" name="wmp90_inbound_eoasnky">
+						</div>
+					</div>
+				</div>
+				<div class="table-wrapper con-box row2">
+					<table class="mobile-table">
+						<thead id="thtb_inbound">
+							<tr>	
+								<th><input type="checkbox" id="wmp90TotalBox"></th>
+								<th id="inbound_eoasnky" style="display: none">[[#{wm.wmp90.eoasnky}]]</th>
+								<th id="inbound_eoasnit" style="display: none">[[#{wm.wmp90.eoasnit}]]</th>	
+								<th id="inbound_ownerky" style="display: none"></th>
+								<th id="inbound_expidat" style="display: none"></th>
+								<th id="inbound_ownernm">[[#{search.ownamlc}]]</th>		
+								<th id="inbound_skumkey">[[#{search.skuCode}]]</th>
+								<th id="inbound_skudesc">[[#{search.skunm}]]</th>
+								<th id="inbound_propqty">[[#{wm.wmp90.propqty}]]</th>
+								<th id="inbound_salfqty">[[#{wm.wmp90.salfqty}]]</th>
+								<th id="inbound_stotqty">[[#{wm.wmp91.stotqty}]]</th>
+								<th id="inbound_asndqty">[[#{wm.wmp90.asndqty}]]</th>
+								<th id="inbound_rchsqty">[[#{wm.wmp90.rchsqty}]]</th>
+								<th id="inbound_rcveqty">[[#{wm.wmp90.rcveqty}]]</th>
+								<th id="inbound_asndate">[[#{wm.wmp90.asndate}]]</th>
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_inbound"></tbody>
+					</table>
+				</div>
+			</div>
+			<div class="tab-pane" id="wmp90_search">
+					<div class="row k">
+						<button class="btn-home" onclick="kioskHome()"><img></button>
+						<div class="row k">
+							<button type="button" class="btn-clear btn-white col k" id="wmp90_btnReset">[[#{bt.reset}]]</button>
+							<button type="button" class="btn-search btn-main col k" id="wmp90_btnSearch">[[#{bt.search}]]</button>
+						</div>
+					</div>
+				<div class="search-condition">
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.whnamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp90_search_warekey" name="wmp90_search_warekey" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.ownamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp90_search_ownerky" name="wmp90_search_ownerky" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect02">[[#{wm.wmp.eoasnky}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp90_search_eoasnky" name="wmp90_search_eoasnky">
+						</div>
+					</div>
+				</div>
+				<div class="table-wrapper con-box row2">
+					<table class="mobile-table">
+						<thead id="thtb_search">
+							<tr>		
+								<th id="search_ownerky">[[#{search.ownamlc}]]</th>		
+								<th id="search_skumkey">[[#{search.skuCode}]]</th>
+								<th id="search_skudesc">[[#{search.skunm}]]</th>
+								<th id="search_tolocky">[[#{wm.wmp90.tolocky}]]</th>
+								<th id="search_doctynm">[[#{wm.wmp90.doctynm}]]</th>							
+								<th id="search_asnstat">[[#{wm.wmp90.asnstat}]]</th>
+								<th id="search_asndqty">[[#{wm.wmp90.asndqty}]]</th>
+								<th id="search_rchsqty">[[#{wm.wmp90.rchsqty}]]</th>
+								<th id="search_asndate" style="display:none">[[#{wm.wmp90.asndate}]]</th>
+								<th id="search_rcvdcdt">[[#{wm.wmp90.rcvdcdt}]]</th>
+								<th id="search_rcvdctm">[[#{wm.wmp90.rcvdctm}]]</th>								
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_search"></tbody>
+					</table>
+				</div>
+			</div>
+			<div class="spinner-border" id="spinner" style="display : none"></div>
+      		<div class="bg"></div>
+		</div>
+	</main>
+	<script>
+		/*  wmp90 - 키오스크 - 입고
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: 키오스크를 이용하여 ASN번호를 스캔하여 창고로 부품(SKU)을 입하등록 및 입하된 정보를 확인할 수 있는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		$(function() {
+			
+			//로그인을 안하는 페이지라서 기본값 200
+			window.addEventListener('offline',function(){
+ 				document.querySelector('#spinner').style.display='none';
+ 				document.querySelector('.bg').style.display='none';
+ 				
+				alertOpen('[[#{wm.wmp90.internetFail}]]',function(){
+					location.href= rPath + '/kiosk?account_code=200';
+				});
+			});
+			
+			const pageId = 'wmp90';
+			let wmp90List;
+			let totalAsndqty= 0;
+			let totalRchsqty= 0;
+			let skumkeyMsg = '';
+			
+			const urlParams = new URLSearchParams(window.location.search);
+			const accountCode = urlParams.get('account_code');
+			
+			//바코드 찍을수있게 포커스
+			document.querySelector('#'+pageId+'_inbound_eoasnky').focus();
+			
+			tabGridInit();
+			
+			buttonControl();
+			
+
+ 			//============================================================				
+ 			//상품코드,로케이션 바코드 입력시 자동 검색
+ 			//============================================================
+ 			document.querySelectorAll('input[id*="eoasnky"]').forEach(function(element){
+ 				element.addEventListener('keyup', async function(event){
+ 					if(event.keyCode === 13){
+ 	 					const tab = document.querySelector(".nav-item.active").children[0].dataset.tabType;
+ 	 					await getWasnifList(tab);
+ 					}
+ 				});
+ 			});
+
+ 			//============================================================	 
+ 			//텝 메뉴 클릭 이벤트(플래그로 display none, block 컨트롤)
+ 			//============================================================
+			document.querySelectorAll('#wmp90_tab .nav-item').forEach(async function (element){
+				element.addEventListener('click', async function(){
+					let displayFlag = true;
+					let tabType = element.children[0].dataset.tabType;
+					
+					if(tabType === 'inbound'){
+						if(document.querySelectorAll('#tBody_search tr, #tBody_manual tr').length){
+							event.stopImmediatePropagation();
+							const result = await confirmOpenAsync('[[#{ms.listViewRollback}]]')
+							
+							if(result){
+								document.querySelector('#tBody_search').innerHTML = '';
+								document.querySelector('#'+pageId + '_search_warekey').value = '';
+								document.querySelector('#'+pageId + '_search_ownerky').value = '';
+								document.querySelector('#'+pageId + '_search_eoasnky').value = '';
+								document.querySelector('#'+pageId+'DivEoansky').innerHTML = '';
+								document.querySelector('#'+pageId+'DivAsndqty').innerHTML = '';
+								document.querySelector('#'+pageId+'DivRcveqty').innerHTML = '';
+							}else{
+								displayFlag = false;
+							}
+						}
+					}else if(tabType === 'search'){
+						if(document.querySelectorAll('#tBody_inbound tr, #tBody_manual tr').length){
+							event.stopImmediatePropagation();
+							const result = await confirmOpenAsync('[[#{ms.listViewRollback}]]');
+							
+							if(result){
+								document.querySelector('#'+ pageId +'TotalBox').checked = false;
+								document.querySelector('#tBody_inbound').innerHTML = '';
+								document.querySelector('#'+pageId + '_inbound_compkey').value = '';
+								document.querySelector('#'+pageId + '_inbound_warekey').value = '';
+								document.querySelector('#'+pageId + '_inbound_warenam').value = '';
+								document.querySelector('#'+pageId + '_inbound_ownerky').value = '';
+								document.querySelector('#'+pageId + '_inbound_eoasnky').value = '';
+								document.querySelector('#'+pageId+'DivEoansky').innerHTML = '';
+								document.querySelector('#'+pageId+'DivAsndqty').innerHTML = '';
+								document.querySelector('#'+pageId+'DivRcveqty').innerHTML = '';
+							}else{
+								displayFlag = false;
+							}
+						}
+					}
+					//탭 화면 변경 시점을 맞추기 위한 지연
+					setTimeout(function(){
+						document.querySelector('#'+pageId + '_'+ tabType +'_eoasnky').focus();
+					},100);
+					
+					if(displayFlag){
+
+						document.querySelectorAll('.mobile-content .tab-pane').forEach(function (elementTab){
+							elementTab.classList.remove('show');
+						});
+						document.querySelector(element.children[0].getAttribute('href')).classList.add('show');
+						
+						document.querySelectorAll('.nav-item').forEach(function(elementTabItem){
+							elementTabItem.classList.remove('active');
+						});
+						this.classList.add('active');
+					}
+					buttonControl();
+				});
+			});
+ 			//============================================================	 
+ 			//조회 탭 영역 검색 버튼 이벤트
+ 			//============================================================	
+			document.querySelector('#'+pageId+'_btnSearch').addEventListener('click', async function(){
+ 				if(!navigator.onLine){
+ 					alertOpen('[[#{wm.wmp90.internetFail}]]', async function(){
+ 						location.href= rPath + '/kiosk?account_code=200';
+ 					});
+ 				}
+				const tab = document.querySelector(".nav-item.active").children[0].dataset.tabType;
+				await getWasnifList(tab);
+			});
+ 			//============================================================	 
+ 			//초기화 버튼(조회탭만)
+ 			//============================================================ 			
+			document.querySelector('#'+pageId+'_btnReset').addEventListener('click', async function(){
+				const tab = document.querySelector(".nav-item.active").children[0].dataset.tabType;
+				
+				const result = await confirmOpenAsync('[[#{ms.listViewRollback}]]');
+					
+				if(result){
+					document.querySelector('#'+pageId+'_'+tab+'_warekey').value = '';
+					document.querySelector('#'+pageId+'_'+tab+'_ownerky').value = '';
+					document.querySelector('#'+pageId+'_'+tab+'_eoasnky').value = '';
+					document.querySelector('#tBody_search').innerHTML = '';
+				}
+				document.querySelector('#'+pageId+'_'+tab+'_eoasnky').focus();
+			});
+ 			//============================================================	 
+ 			//키오스크 저장 버튼 이벤트(입고, 수동입고탭 구분해서 저장)
+ 			//============================================================	
+			document.querySelector('#'+pageId+'_save').addEventListener('click',async function(){
+				
+ 				if(!navigator.onLine){
+					document.querySelector('#spinner').style.display='none';
+					document.querySelector('.bg').style.display='none';
+ 					alertOpen('[[#{wm.wmp90.internetFail}]]',function(){
+ 						location.href= rPath + '/kiosk?account_code=200';
+ 					});
+ 					return;
+ 				}
+				const tab = document.querySelector(".nav-item.active").children[0].dataset.tabType;
+				const thObjs = document.querySelector('#thtb_'+tab).querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tBody_'+tab).querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});	
+				
+				if(!boxCheckedList.length){
+					alertOpen('[[#{wm.wmp90.noRowChecked}]]', function(){
+						document.querySelector('#'+ pageId +'_'+ tab +'_eoasnky').focus();
+					});
+					return;
+				}
+ 				
+				let rcveqtySum = 0;
+				let keyArray = [];
+				//체크박스떄문에 1부터
+				for(let i=1;i<thObjs.length;i++){
+					let objId = thObjs[i].getAttribute('id');
+					let objIdPart = objId.substring(objId.indexOf('_') + 1);
+					keyArray.push(objIdPart);
+				}
+				let param;
+				let wmp90SaveList = [];
+				
+				skumkeyMsg = '';
+				
+				if(tab === 'inbound'){
+					for(let i=0;i<trTagList.length;i++){
+						if(!compareAsnstatandNow(trTagList[i].querySelector('.asndate').innerHTML)){
+							alertOpen('[[#{wm.wmp90.unmacthAsndateAndNow}]]', async function(){
+								await unmatchAsndateAndNow();
+								document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value = '';
+								document.querySelector('#'+pageId + '_' + tab + '_eoasnky').focus();
+							});
+							return;
+						}
+						param = {};
+						for(let j=1;j<trTagList[i].querySelectorAll('td').length;j++){
+							if(j === 13){
+								if(!Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value) || Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value) < 0){
+									alertOpen('[[#{wm.wmp90.inputRcveqty}]]', function(){
+										trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();	
+									});
+									return;
+								}
+								if(Number(trTagList[i].querySelectorAll('td')[j-2].innerHTML) - Number(trTagList[i].querySelectorAll('td')[j-1].innerHTML) < trTagList[i].querySelectorAll('td')[j].querySelector('input').value){
+									alertOpen('[[#{wm.wmp90.reInputRcveqty}]]', function(){
+										trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();	
+									});
+									return;
+								}
+								await salfqtyChecked(trTagList[i].querySelectorAll('td')[j]);
+								rcveqtySum += Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value);
+								param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].querySelector('input').value;
+							}else{
+								param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].innerHTML;	
+							}
+						}
+						param['compkey'] = document.querySelector('#'+pageId+'_'+tab+'_compkey').value;
+						param['warekey'] = document.querySelector('#'+pageId+'_'+tab+'_warekey').value;
+						wmp90SaveList.push(param);
+					}
+				}
+				
+				//string으로 입고인지, 수동입고 구분 플래그->서버에서 가름
+				const result = await confirmOpenAsync(skumkeyMsg ? skumkeyMsg + ' [[#{wm.wmp90.checkSalfqtyConfirm}]]' : '[[#{ms.checksave}]]');
+				
+				if(result){
+					try{
+		 				document.querySelector('#spinner').style.display = 'block';
+		 				document.querySelector('.bg').style.display = 'block';
+						const rData =  await fetchUtil('POST','/wm/pda/wmp90/save',{addList : wmp90SaveList, tabFlag : tab });
+						if(rData.status === 200){
+							if(tab === 'inbound'){
+								alertOpen(document.querySelector('#'+pageId+'_'+tab+'_eoasnky').value + ' [[#{wm.wmp90.total}]] ' + rcveqtySum + '[[#{wm.wmp90.confirmInbound}]]', function(){
+									document.querySelector('#'+pageId+'_'+tab+'_eoasnky').value = '';
+									document.querySelector('#'+pageId + '_' + tab + '_warekey').value = '';
+									document.querySelector('#'+pageId + '_' + tab + '_warenam').value = '';
+									document.querySelector('#'+pageId + '_' + tab + '_compkey').value = '';
+									document.querySelector('#'+pageId + '_' + tab + '_ownerky').value = '';
+									document.querySelector('#'+pageId+'DivEoansky').innerHTML = '';
+									document.querySelector('#'+pageId+'DivAsndqty').innerHTML = '';
+									document.querySelector('#'+pageId+'DivRcveqty').innerHTML = '';
+									document.querySelector('#'+ pageId +'TotalBox').checked = false;
+									document.querySelector('#'+pageId+'_'+tab+'_eoasnky').focus();
+								});
+							}
+							document.querySelector('#tBody_'+tab).innerHTML = '';
+						}
+					}catch(err){
+						alertOpen('[[#{ms.saveErr}]]');
+						return;
+					}finally{
+		 				document.querySelector('#spinner').style.display = 'none';
+		 				document.querySelector('.bg').style.display = 'none';
+					}
+				}
+			});
+ 			//================================
+ 			//키오스크 ASN 입하조회 값 불러오기
+ 			//================================
+			async function getWasnifList(tab){
+ 				
+ 				if(!navigator.onLine){
+					document.querySelector('#spinner').style.display='none';
+					document.querySelector('.bg').style.display='none';
+ 					alertOpen('[[#{wm.wmp90.internetFail}]]',function(){
+ 						location.href= rPath + '/kiosk?account_code=200';
+ 					});
+ 					return;
+ 				}
+ 				
+ 				document.querySelector('#spinner').style.display="block";
+ 				document.querySelector('.bg').style.display="block";
+ 				
+				if(!document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value){
+					
+	 				document.querySelector('#spinner').style.display="none";
+	 				document.querySelector('.bg').style.display="none";
+					document.querySelector('#'+pageId + '_' + tab + '_warekey').value = '';
+					document.querySelector('#'+pageId + '_' + tab + '_ownerky').value = '';
+					document.querySelector('#'+pageId + '_' + tab + '_eoasnky').focus();
+					return;
+				}
+ 				
+				const param = {
+						eoasnky : document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value,
+						compkey : accountCode
+				}
+				
+				let html = '';
+				
+				if(tab === 'inbound'){
+					const response = await fetchUtil('GET', '/wm/pda/wmp90/grid/1', param);
+
+					if(await response.status === 200){
+						wmp90List = await response.json();
+						
+						if(!wmp90List.length){
+			 				document.querySelector('#spinner').style.display="none";
+			 				document.querySelector('.bg').style.display="none";
+							alertOpen('[[#{wm.wmp90.noDataASN}]]', function(){
+								totalAsndqty = 0;
+								totalRchsqty = 0;
+								document.querySelector('#tBody_'+tab).innerHTML = '';
+								document.querySelector('#'+pageId+'TotalBox').checked = false;
+								document.querySelector('#'+pageId+'DivEoansky').innerHTML = '';
+								document.querySelector('#'+pageId+'DivAsndqty').innerHTML = '';
+								document.querySelector('#'+pageId+'DivRcveqty').innerHTML = '';
+								document.querySelector('#'+pageId + '_' + tab + '_warekey').value = '';
+								document.querySelector('#'+pageId + '_' + tab + '_warenam').value = '';
+								document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value = '';
+								document.querySelector('#'+pageId + '_' + tab + '_ownerky').value = '';
+								document.querySelector('#'+pageId + '_' + tab + '_eoasnky').focus();
+							});
+							return;
+						}
+						
+						document.querySelector('#'+pageId+'DivEoansky').innerHTML = document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value;
+						document.querySelector('#'+pageId + '_' + tab + '_warekey').value = wmp90List[0].warekey;
+						document.querySelector('#'+pageId + '_' + tab + '_warenam').value = wmp90List[0].whnamlc;
+						document.querySelector('#'+pageId + '_' + tab + '_compkey').value = wmp90List[0].compkey;
+						document.querySelector('#'+pageId + '_' + tab + '_ownerky').value = wmp90List[0].ownamlc;
+						document.querySelector('#tBody_'+tab).innerHTML = '';
+						totalAsndqty = 0;
+						totalRchsqty = 0;
+						//안전재고 > 총재고 + 입하수량 => 안전재고 미달 알림
+						for(const wmp90Data of wmp90List){
+							totalAsndqty += Number(wmp90Data.asndqty);
+							totalRchsqty += (compareAsnstatandNow(wmp90Data.asndate) ? Number(wmp90Data.asndqty - wmp90Data.rchsqty) : 0);
+							html += '<tr>';
+							html += '<td><input type="checkbox" class="checkbox" ' + (compareAsnstatandNow(wmp90Data.asndate) ? 'checked ' : '') + 'onclick="rowCheckboxControl(this)"></td>';
+							html += '<td class="eoasnky" style="display:none">' + wmp90Data.eoasnky + '</td>';
+							html += '<td class="eoasnit" style="display:none">' + wmp90Data.eoasnit + '</td>';
+							html += '<td class="ownerky" style="display:none">' + wmp90Data.ownerky + '</td>'; 
+							html += '<td class="expidat" style="display:none">' + (wmp90Data.expidat ? wmp90Data.expidat : '') + '</td>';
+							html += '<td class="ownernm" >' + wmp90Data.ownamlc + '</td>';
+							html += Number(wmp90Data.salfqty) > Number(wmp90Data.stotqty) + (Number(wmp90Data.asndqty) - Number(wmp90Data.rchsqty)) ? '<td class="skumkey out-of-stock">' : '<td class="skumkey">';
+							html += wmp90Data.skumkey + '</td>';
+							html += Number(wmp90Data.salfqty) > Number(wmp90Data.stotqty) + (Number(wmp90Data.asndqty) - Number(wmp90Data.rchsqty)) ? '<td class="skudesc out-of-stock">' : '<td class="skudesc">';
+							html += wmp90Data.skudesc +'</td>';
+							html += '<td class="propqty">' + wmp90Data.propqty +'</td>';
+							html += '<td class="salfqty">' + wmp90Data.salfqty +'</td>';
+							html += '<td class="stotqty">' + wmp90Data.stotqty +'</td>';
+							html += '<td class="asndqty">' + wmp90Data.asndqty + '</td>';
+							html += '<td class="rchsqty">' + wmp90Data.rchsqty + '</td>';
+							html += '<td><input type="number" class="rcveqty" value="' + (wmp90Data.asndqty - wmp90Data.rchsqty) +'" onchange="rchsqtyControl(this)"></td>';
+							html += '<td class="asndate">' + wmp90Data.asndate +'</td>';
+							html += '</tr>';						
+						}
+						document.querySelector('#'+pageId+'DivAsndqty').innerHTML = totalAsndqty;
+						document.querySelector('#'+pageId+'DivRcveqty').innerHTML = totalRchsqty;
+						document.querySelector('#tBody_'+tab).insertAdjacentHTML('afterbegin',html);
+						rowCheckboxControl();
+					}
+				}else if(tab === 'search'){
+					totalAsndqty = '';
+					totalRchsqty = '';
+					const response = await fetchUtil('GET', '/wm/pda/wmp90/grid/2', param);
+					
+					wmp90List = await response.json();
+					
+					if(!wmp90List.length){
+		 				document.querySelector('#spinner').style.display="none";
+		 				document.querySelector('.bg').style.display="none";
+						alertOpen('[[#{wm.wmp90.noDataASN}]]', function(){
+							document.querySelector('#'+pageId + '_' + tab + '_warekey').value = '';
+							document.querySelector('#'+pageId + '_' + tab + '_ownerky').value = '';
+							document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value = '';
+							document.querySelector('#'+pageId + '_' + tab + '_eoasnky').focus();
+							document.querySelector('#tBody_'+tab).innerHTML = '';
+						});
+						return;
+					}
+
+					document.querySelector('#'+pageId + '_' + tab + '_warekey').value = wmp90List[0].whnamlc;
+					document.querySelector('#'+pageId + '_' + tab + '_ownerky').value = wmp90List[0].ownamlc;
+					document.querySelector('#tBody_'+tab).innerHTML = '';
+					
+					for(const wmp90Data of wmp90List){
+						html += '<tr>';
+						html += '<td class="ownerky">' + wmp90Data.ownamlc + '</td>';
+						html += '<td class="skumkey">' + wmp90Data.skumkey + '</td>';
+						html += '<td class="skudesc">' + wmp90Data.skudesc +'</td>';
+						if(wmp90Data.locanam){
+							html += '<td class="tolocky">' + wmp90Data.locanam +'</td>';
+						}else{
+							html += '<td class="tolocky">' + wmp90Data.rvlocna +'</td>';
+						}
+						html += '<td class="doctynm">' + (wmp90Data.doctype === '430' ? '[[#{wm.wmp90.manual}]]' : '[[#{wm.wmp90.inbound}]]') +'</td>';
+						html += '<td class="asnstat">' + wmp90Data.comcdtx +'</td>';
+						html += '<td class="asndqty">' + wmp90Data.asndqty +'</td>';
+						html += '<td class="rchsqty">' + wmp90Data.rchsqty +'</td>';
+						html += '<td class="asndate" style="display:none">' + wmp90Data.asndate +'</td>';
+						html += '<td class="rcvdcdt">' + wmp90Data.rcvdcdt +'</td>';
+						html += '<td class="rcvdctm">' + wmp90Data.rcvdctm + '</td>';
+						html += '</tr>';
+					}
+					document.querySelector('#'+pageId+'DivAsndqty').innerHTML = totalAsndqty;
+					document.querySelector('#'+pageId+'DivRcveqty').innerHTML = totalRchsqty;
+					document.querySelector('#tBody_'+tab).insertAdjacentHTML('afterbegin',html);
+				}
+ 				document.querySelector('#spinner').style.display="none";
+ 				document.querySelector('.bg').style.display="none";
+				document.querySelector('#'+pageId + '_' + tab + '_eoasnky').value = '';
+				document.querySelector('#'+pageId + '_' + tab + '_eoasnky').focus();
+			}
+			
+			function tabGridInit(){
+				$(".mobile-content .tab-pane").removeClass("active");
+				$(".mobile-content .tab-pane.show").addClass("active");
+			}
+			
+			function buttonControl(){//active 인거 확인
+				if(document.querySelector('#wmp90_tab .nav-item.active').children[0].dataset.tabType === 'search'){
+					document.querySelector('#'+pageId + '_btnSearch').style.display = 'block';
+					document.querySelector('#'+pageId + '_save').style.display = 'none';
+				}else{
+					document.querySelector('#'+pageId + '_btnSearch').style.display = 'none';
+					document.querySelector('#'+pageId + '_save').style.display = 'block';
+				}
+			}
+			//전체 체크박스
+			document.querySelector('#'+ pageId +'TotalBox').addEventListener('click', function(){
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(tagObj){
+					if(document.querySelector('#'+ pageId +'TotalBox').checked){
+						if(!tagObj.checked){
+							totalRchsqty += Number(tagObj.closest('tr').querySelector('.rcveqty').value);
+						}
+						tagObj.checked = document.querySelector('#'+ pageId +'TotalBox').checked;
+						document.querySelector('#'+pageId+'DivRcveqty').innerHTML = totalRchsqty = totalRchsqty < 0 ? 0 : totalRchsqty;
+					}else{
+						tagObj.checked = document.querySelector('#'+ pageId +'TotalBox').checked;
+						totalRchsqty -= Number(tagObj.closest('tr').querySelector('.rcveqty').value);
+						document.querySelector('#'+pageId+'DivRcveqty').innerHTML = totalRchsqty = totalRchsqty < 0 ? 0 : totalRchsqty;
+					}
+				});
+				document.querySelector('#'+ pageId + '_inbound_eoasnky').focus();
+			});
+			
+			//로우별 체크박스 기능
+			rowCheckboxControl = function(obj){
+				
+				let checkedCnt = 0;
+				
+				totalRchsqty = 0;
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(element){
+					if(element.checked){
+						checkedCnt++;
+						totalRchsqty += Number(element.closest('tr').querySelector('.rcveqty').value);
+					}
+					document.querySelector('#'+ pageId +'TotalBox').checked = document.querySelectorAll('input[class*="checkbox"]').length === checkedCnt;
+				});
+				document.querySelector('#'+pageId+'DivRcveqty').innerHTML = totalRchsqty = totalRchsqty < 0 ? 0 : totalRchsqty;
+				document.querySelector('#'+ pageId + '_inbound_eoasnky').focus();
+			}
+			
+			//입하수량 변경시 헤더에 토탈 값 핸들링
+			rchsqtyControl = function (obj){
+				const rowObj = obj.closest('tr');
+				const salfqty = Number(obj.closest('tr').querySelector('.salfqty').innerHTML);
+				const stotqty = Number(obj.closest('tr').querySelector('.stotqty').innerHTML);
+				const rcveqty = Number(obj.value);
+				
+				rowCheckboxControl(obj.closest('tr').querySelector('.checkbox'));
+				
+				//2023-12-26일에 클래스로 바꾸기
+				if (salfqty > (stotqty + rcveqty)) {
+				    rowObj.querySelector('.skumkey').classList.add('out-of-stock');
+				    rowObj.querySelector('.skudesc').classList.add('out-of-stock');
+				} else {
+				    rowObj.querySelector('.skumkey').classList.remove('out-of-stock');
+				    rowObj.querySelector('.skudesc').classList.remove('out-of-stock');
+				}
+			}
+			
+			//asnstat(입고예정일자가 오늘인지 아닌지 확인해주는 함수(오늘이 아닐 경우 경고))
+			function compareAsnstatandNow(asndate){
+				const today = new Date();   
+
+				const year = today.getFullYear(); // 년도
+				let month = today.getMonth() + 1;  // 월
+				let date = today.getDate();  // 날짜
+				
+				month = month >= 10 ? month : "0" + month;
+				date = date >= 10 ? date : "0" + date;
+				
+				const nowDate = ''+ year + month + date;
+				
+				return nowDate >= asndate.replace(/-/g, '');
+			}
+			
+			async function salfqtyChecked(trData){
+				
+				const salfqty = Number(trData.closest('tr').querySelector('.salfqty').innerHTML);
+				const stotqty = Number(trData.closest('tr').querySelector('.stotqty').innerHTML);
+				const rcveqty = Number(trData.childNodes[0].value);
+				const skumkey = trData.closest('tr').querySelector('.skumkey').innerHTML;
+				
+				skumkeyMsg += salfqty > (stotqty + rcveqty) ? (skumkeyMsg ? ', ' : '') + skumkey : '';
+			}
+			//저장버튼 클릭시 입고예정일이 오늘이 아니고 체크박스가 체크되어있을때 체크 풀어주는 함수
+			async function unmatchAsndateAndNow(){
+				document.querySelectorAll('.asndate').forEach(function(element){
+					if(!compareAsnstatandNow(element.innerHTML)){
+						element.closest('tr').querySelector('.checkbox').checked = false;
+						rowCheckboxControl();
+					}
+				});
+			}
+			
+			kioskHome = function(){
+				location.href = rPath + '/kiosk?account_code='+accountCode;
+			}
+		});
+	</script>
+</div>	
+</html>

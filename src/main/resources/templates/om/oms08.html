@@ -1,0 +1,486 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="oms08_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="oms08_towarky"
+						name="oms08_towarky" data-cb-val="combovl" data-cb-name="combonm"
+						data-cb-url="/md/common/organization/warehouse-user"
+						data-cb-variable="warekeyList"></select>
+					</div>
+				</div>
+				<label for="oms08_ownerky" class="setting-grid-title">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="oms08_ownerky"
+						name="oms08_ownerkyList" data-cb-val="combovl"
+						data-cb-name="combonm" data-cb-url="/md/common/partner/owner"
+						data-cb-variable="ownerkyList">
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{om.ocosal.postdat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="oms08_postdateFrom" name="postdateFrom" /> 
+						<span>~</span> 
+						<input type="date" max="2999-12-31" id="oms08_postdateTo" name="postdateTo"/>
+					</div>
+				</div>
+				<label class="setting-grid-title ic-title-nece">[[#{md.mordma.cootype}]]</label>
+                <div class="setting-grid-content">
+                    <div class="input-group">
+                    	<select id="oms08_cootype" name="oms08_cootype">
+                    		<option value="">[[#{ms.select}]]</option>
+                    	</select>
+                    </div>
+                </div>
+				<label for="oms08_skumkey" class="setting-grid-title">[[#{search.skuCode}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.skuCode')}"
+						onkeyup="oms08Keyup()" id="oms08_skumkey">
+					</div>
+				</div>
+				<label for="oms08_skudesc" class="setting-grid-title">[[#{search.skunm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.skunm')}"
+						onkeyup="oms08Keyup()" id="oms08_skudesc">
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{om.ocosal.salstat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="oms08_salstatCheckbox">
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{om.ocosal.custkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="oms08_custkey"
+						name="oms08_custkey" data-cb-val="ptnrkey" data-cb-name="ptnamlc"
+						data-cb-url="/om/purchase/common/partner/customer"
+						data-cb-variable="custkeyList">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{om.ocosal.destkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="oms08_destkey"
+						name="oms08_destkey">
+							<option value="">[[#{om.ocosal.custkey}]][[#{ms.choiceValue}]]</option>
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{om.ocosal.trnstat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="oms08_trnstatCheckbox">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="oms08_searchBtn"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="oms08_resetBtn"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="oms08_pqgrid"></div>
+			</div>
+		</div>
+	</div>
+<script>
+/* *************************************************************
+ * 최초 생성일시 : 2023-08-01
+ * 최초 생성자 : 정민경
+ * 설명 : 3PL과 화주가 등록된 납품오더의 운송 상태를 확인할 수 있는 화면입니다. 
+ ***************************************************************/
+$(function(){
+	let pageId = 'oms08';
+	let gridId = pageId + '_pqgrid';
+	
+	let oms08InitList;
+	const oms08PostdateFrom = document.querySelector('#oms08_postdateFrom');
+	const oms08PostdateTo = document.querySelector('#oms08_postdateTo');
+	
+	//수주일자 세팅
+	oms08PostdateFrom.value = moment().format("YYYY-MM-DD");		
+	oms08PostdateTo.value = moment().format("YYYY-MM-DD");			//오늘
+	
+	//oms08 pqgrid ColModel
+	let oms08GridCM;
+	
+	//oms08 pqgrid Grid Object
+	let oms08GridObj;
+	
+	//============================================================	
+	//운송오더조회 그리드 
+	//============================================================
+	oms08GridCM = [
+		{ title: "[[#{om.ocosal.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false },	//Company Key
+        { title: "[[#{om.ocosal.cooutky}]]", dataType: "string",  dataIndx: "cooutky", editable: false },	//고객수주 오더번호
+ 		{ title: "[[#{om.ocosal.cooutit}]]", dataType: "integer", dataIndx: "cooutit", editable: false },	//고객수주 아이템번호
+ 		{ title: "[[#{om.ocosal.doctype}]]", 	 dataType: "string",  dataIndx: "doctype", editable: false },	//문서타입
+ 		{ title: "[[#{om.ocosal.saldate}]]", dataType: "string",  dataIndx: "saldate", editable: false },	//수주일자
+ 		{ title: "[[#{om.ocosal.salstat}]]", dataType: "string",  dataIndx: "salstat", editable: false },	//수주상태
+ 		{ title: "[[#{om.ocosal.custkey}]]", dataType: "string",  dataIndx: "custkey", editable: false },	//고객
+ 		{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx: "towarky", editable: false ,hidden : true },	//대상창고키
+ 		{ title: "[[#{om.ocosal.salrqdt}]]", dataType: "string",  dataIndx: "salrqdt", editable: false },	//고객요청도착일
+ 		{ title: "[[#{om.ocosal.salrqtm}]]", dataType: "string",  dataIndx: "salrqtm", editable: false },	//고객요청도착시간
+ 		{ title: "[[#{om.ocosal.salmemo}]]", dataType: "string",  dataIndx: "salmemo", editable: false },	//고객요구사항
+ 		{ title: "[[#{om.ocosal.destkey}]]", dataType: "string",  dataIndx: "destkey", editable: false },	//도착지
+ 		{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx: "ownerky", editable: false },		//화주
+ 		{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx: "skumkey", editable: false },		//상품코드
+ 		{ title: "[[#{grid.skunm}]]", dataType: "string",  dataIndx: "skudesc", editable: false },			//상품명
+ 		{ title: '[[#{om.ocosal.soitqty}]]', dataType: 'integer', dataIndx: 'soitqty', format: '#,###', editable: false ,summary : { type : 'sum' }},	//주문수량
+ 		{ title: '[[#{om.ocosal.rgitqty}]]', dataType: 'integer', dataIndx: 'rgitqty', format: '#,###', editable: false ,summary : { type : 'sum' }},	//출고지시수량
+ 		{ title: '[[#{om.ocosal.shcfqty}]]', dataType: 'integer', dataIndx: 'shcfqty', format: '#,###', editable: false ,summary : { type : 'sum' }},	//출고완료수량
+ 		{ title: '[[#{om.ocosal.diffqty}]]', dataType: 'integer', dataIndx: 'diffqty', format: '#,###', editable: false ,summary : { type : 'sum' }},	//출고부족수량
+ 		{ title: '[[#{md.mpakma.packqty}]]', dataType: 'integer', dataIndx: 'packqty', format: '#,###', editable: false ,summary : { type : 'sum' }},	//입수량
+ 		{ title: '[[#{om.oms.packbox}]]', dataType: 'integer', dataIndx: 'packbox', format: '#,###', editable: false ,summary : { type : 'sum' }},	//박스수량
+ 		{ title: "[[#{om.ocosal.suomkey}]]", dataType: "string",  dataIndx: "suomkey", editable: false },	//기본단위
+ 		{ title: "[[#{om.ocosal.oubstat}]]", dataType: "string",  dataIndx: "oubstat", editable: false ,hidden: true},	//출고처리상태
+ 		{ title: '[[#{om.ocosal.inbstat}]]', dataType: 'string',  dataIndx: 'inbstat', editable: false , hidden: true},	//입고처리상태
+ 		{ title: "[[#{om.ocosal.trnstat}]]", dataType: "string",  dataIndx: "trnstat", editable: false },	//운송처리상태
+ 		{ title: '[[#{om.ocosal.dctctyp}]]', dataType: 'string',  dataIndx: 'dctctyp', editable: false , hidden : false},	//dc/tc
+ 		{ title: "[[#{om.ocosal.vendkey}]]", dataType: "string",  dataIndx: "vendkey", editable : false , hidden : true},	//부품사
+ 		{ title: "[[#{om.ocosal.saatn01}]]", dataType: "integer", dataIndx: "saatn01", editable: false },	//ProcessNo
+ 		{ title: "[[#{om.ocosal.saatn02}]]", dataType: "integer", dataIndx: "saatn02", editable: false },	//GroupNo
+ 		{ title: "[[#{om.ocosal.saatn03}]]", dataType: "integer", dataIndx: "saatn03", editable: false },	//CellNo
+ 		{ title: "[[#{om.ocosal.saatn04}]]", dataType: "integer", dataIndx: "saatn04", editable: false },	//수주속성N04
+ 		{ title: "[[#{om.ocosal.saatn05}]]", dataType: "integer", dataIndx: "saatn05", editable: false },	//수주속성N05
+ 		{ title: "[[#{om.ocosal.saatc01}]]", dataType: "string",  dataIndx: "saatc01", editable: false },	//수주속성C01 BODY_NO
+ 		{ title: "[[#{om.ocosal.saatc02}]]", dataType: "string",  dataIndx: "saatc02", editable: false },	//수주속성C02 차대번호
+ 		{ title: "[[#{om.ocosal.saatc03}]]", dataType: "string",  dataIndx: "saatc03", editable: false },	//수주속성C03 alc 코드
+ 		{ title: "[[#{om.ocosal.saatc04}]]", dataType: "string",  dataIndx: "saatc04", editable: false },	//수주속성C04 alc Index
+ 		{ title: "[[#{om.ocosal.saatc05}]]", dataType: "string",  dataIndx: "saatc05", editable: false },	//수주속성C05 차종
+ 		{ title: "[[#{om.ocosal.saatc06}]]", dataType: "string",  dataIndx: "saatc06", editable: false },	//수주속성C06 palletNo
+ 		{ title: "[[#{om.ocosal.saatc07}]]", dataType: "string",  dataIndx: "saatc07", editable: false },	//수주속성C07 작업영역순번
+ 		{ title: "[[#{om.ocosal.saatc08}]]", dataType: "string",  dataIndx: "saatc08", editable: false },	//수주속성C08 작업영역명칭
+ 		{ title: "[[#{om.ocosal.saatc09}]]", dataType: "string",  dataIndx: "saatc09", editable: false },	//수주속성C09 자동배차차량순번
+ 		{ title: "[[#{om.ocosal.saatc10}]]", dataType: "string",  dataIndx: "saatc10", editable: false },	//수주속성C10 서열정보 SEQ
+		{ title: "[[#{om.ocosal.closlyn}]]", dataType: "string",  dataIndx: "closlyn", editable: false },	//Order close YN
+		{ title: "[[#{om.ocosal.credate}]]", dataType: "string",  dataIndx: "credate", editable: false },	//생성일자
+		{ title: "[[#{om.ocosal.cretime}]]", dataType: "string",  dataIndx: "cretime", editable: false },	//생성시간
+		{ title: "[[#{om.ocosal.creuser}]]", dataType: "string",  dataIndx: "creuser", editable: false },	//생성자
+		{ title: "[[#{om.ocosal.lmodate}]]", dataType: "string",  dataIndx: "lmodate", editable: false },	//수정일자
+		{ title: "[[#{om.ocosal.lmotime}]]", dataType: "string",  dataIndx: "lmotime", editable: false },	//수정시간
+		{ title: "[[#{om.ocosal.lmouser}]]", dataType: "string",  dataIndx: "lmouser", editable: false }	//수정자
+	];
+	
+	oms08GridObj = new GridUtil(oms08GridCM, '[[${gprogrid}]]', gridId);
+	
+	oms08GridObj.setFind();
+	
+	oms08GridObj.setCreate(async function(evt,ui){
+		await _commonInit();
+		
+		if(custkeyList.length === 1){
+			$('#oms08_custkey option:eq(0)').remove();  
+			$('#oms08_custkey').val(custkeyList[0].ptnrkey);
+			
+			let destkeyList = await changeCustkeyByDestkey($('#oms08_custkey').val());
+			if(destkeyList){
+				let html='<option value="" selected>전체</option>';
+				for(const destkey of destkeyList){
+					html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+				}
+				$('#oms08_destkey').html(html);
+			}
+		}else{	//전체 선책시
+			$('#oms08_destkey').children('option').remove();	
+			$('#oms08_destkey').append('<option value="">[[#{om.ocosal.custkey}]][[#{ms.choiceValue}]]</option>');
+			//기존에 들어가있던 option값 지우고 기본 세팅
+		}
+		$('#oms08_destkey').pqSelect({ deselect : false });
+		
+		//3PL 계정 접속 시
+		if(!('[[${userattr.ownerky}]]')){
+			const html = '<option value ="" selected>[[#{ms.chooseAll}]]</option>';
+			document.querySelector('#'+ pageId + '_ownerky').insertAdjacentHTML('afterBegin', html);
+			$('#' + pageId + '_ownerky').pqSelect({deselect : false});
+		}
+		
+		//init data - 상태 list
+		const initParam = {warekey : $('#oms08_towarky').val()};
+		const oms08InitData = await fetchUtil('GET', '/om/sales/oms08/init',initParam);
+		oms08InitList = await oms08InitData.json();
+		
+		/* 상태 체크박스 */
+		setCheckboxInSearchArea('salstat', oms08InitList.mcodemList, pageId);
+		setCheckboxInSearchArea('trnstat', oms08InitList.trnstatList, pageId);  
+		
+		/* 고객오더타입 셀렉트박스 */
+		let cootypeHtml = '';
+		for(const cootypeData of oms08InitList.cootypeList){
+			cootypeHtml += '<option value="' + cootypeData.combovl + '">' + cootypeData.combonm + '</option>';
+		}
+		
+		$('#oms08_cootype').append(cootypeHtml);
+	})
+	
+	//그리드 오픈
+	oms08GridObj.open();
+
+	//============================================================	 
+	//그리드 search 버튼 이벤트 
+	//============================================================
+	$('#'+ pageId +'_searchBtn').click(async function() { 
+
+		if(!$('#oms08_cootype').val()){
+			alert('[[#{md.mordma.cootype}]][[#{ms.choiceValue}]]');
+			$('#oms08_cootype').focus();
+			return;
+		}
+		
+		await oms08Search();
+	});
+	
+	//============================================================
+	//검색 데이터 초기화 
+	//============================================================
+	$('#'+ pageId +'_resetBtn').on('click',function(){
+		document.querySelectorAll('input[id*="oms08_"][type="text"] , select[id*="oms08_"]').forEach(function(el){
+			if(el.localName === 'select'){
+				if(el.id === 'oms08_towarky' && el.selectedIndex !== 0){
+					el.selectedIndex = 0;
+					changeTowarkyByCootype(el.value);
+					return;
+				}
+				if(el.id === 'oms08_destkey' && custkeyList.length !== 1 ){
+					$('#oms08_destkey').children('option').remove();	
+					$('#oms08_destkey').append('<option value="">[[#{om.ocosal.custkey}]][[#{ms.choiceValue}]]</option>');
+				}
+				el.selectedIndex = 0;
+				if(el.className === 'pq-select'){	//도착지, 화주
+					$('#' + el.id).pqSelect('refreshData');
+				}
+			}else if(el.localName === 'input'){
+				el.value = '';
+			}
+		});
+		
+		document.querySelectorAll('div[id*="oms08_"].input-check-group input').forEach(function(element) {
+			element.checked = element.id || element.disabled;
+		});
+		//수주일자 세팅
+		oms08PostdateFrom.value = moment().format("YYYY-MM-DD");		
+		oms08PostdateTo.value = moment().format("YYYY-MM-DD");						//오늘
+		
+		oms08GridObj.searchList([]);
+	});
+	
+	//============================================================	
+	// 고객키 change에 따른 도착지 select list 수정
+	//============================================================
+	$('#' + pageId +'_custkey').on('change',async function(){
+		const custkey = $('#oms08_custkey').val();
+		if(custkey && custkey != ''){
+			let destkeyList = await changeCustkeyByDestkey(custkey);
+			let html='';
+			if(destkeyList.length !== 0){
+				html = '<option value="" selected>전체</option>';
+				for(const destkey of destkeyList){
+					html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+				}
+			}else{
+				html += '<option value="">[[#{om.common.noDestkey}]]</option>';
+			}
+			$('#oms08_destkey').html(html);
+		}else{	//전체 선책시
+			$('#oms08_destkey').children('option').remove();	
+			$('#oms08_destkey').append('<option value="">[[#{om.ocosal.custkey}]][[#{ms.choiceValue}]]</option>');
+			//기존에 들어가있던 option값 지우고 기본 세팅
+		}
+		$('#oms08_destkey').pqSelect('refreshData');
+	})
+	
+	$('#'+ pageId + '_towarky').on('change',function(){
+		changeTowarkyByCootype(this.value);
+	})
+	
+	//검색조건 수주일자 input 클릭시 일자 선택 제한
+	$('#oms08_postdateFrom , #oms08_postdateTo').on('click',function(){
+		//수주일자 from 최대 일자 선택
+		$('#oms08_postdateFrom').attr('max',oms08PostdateTo.value);
+		
+		//수주일자 to 최소 일자 선택 
+		$('#oms08_postdateTo').attr('min',oms08PostdateFrom.value);
+	})
+	
+	//일자 keydown 초기화
+	document.querySelectorAll('input[type= "date"]').forEach(function(ele){
+		ele.addEventListener('keydown',function(evt){
+			if(evt.key === 'Backspace' || evt.key === 'Delete'){
+				ele.value = '';
+			}
+		})
+	});
+	
+	async function changeTowarkyByCootype(towarky){
+		const params = {
+				warekey : towarky,
+				coocate : '200'
+		}
+		
+		const rData = await fetchUtil('GET','/om/common/cootype',params);
+		const changeCootypeList = await rData.json();
+		
+		let html = '<option value="" selected>[[#{ms.select}]]</option>';
+		for(const cootypeData of changeCootypeList){
+			html += '<option value="' + cootypeData.combovl + '">' + cootypeData.combonm + '</option>';
+		}
+		$('#'+pageId + '_cootype').html(html);
+	}
+});
+//============================================================	
+//도착지 이벤트
+//============================================================
+async function changeCustkeyByDestkey(param){
+	const rData = await fetchUtil('GET','/om/purchase/common/destination/' + param);
+	const destkeyList = await rData.json();
+	return destkeyList;
+}
+
+//============================================================	
+// 검색 이벤트
+//============================================================
+async function oms08Search(){
+	const grid = pq.grid('#oms08_pqgrid');
+	const searchParams = document.querySelectorAll('input[id*="oms08_"][type="text"], select[id*="oms08_"]');
+	const params = {
+			salstats : [],
+			trnstats : []
+	};
+	
+	//체크박스를 제외한 검색 조건 param.
+	for(const searchParam of searchParams) {
+		const key = searchParam.id.substring(6);
+		params[key] = searchParam.value;
+	}
+	
+	//전체 체크가 되어있지 않은 상태 검색조건 params에 push
+	const checkedObjs = document.querySelectorAll('input[name*="oms08_"]:checked');
+	for(const checkObj of checkedObjs) {
+		if(checkObj.name === 'oms08_salstat') {
+			params.salstats.push(checkObj.value);
+		}else if(checkObj.name === 'oms08_trnstat') {
+			params.trnstats.push(checkObj.value);
+		}
+	}
+	
+	const dateParamObj = document.querySelectorAll('input[id*="oms08_postdate"]');
+	for(const dateParam of dateParamObj){
+		params[dateParam.name] = dateParam.value.replaceAll('-','');
+	}
+	
+	grid.showLoading();
+	
+	const rData = await fetchUtil('GET','/om/sales/oms08/grid/list' , params);
+	
+	if(rData.status === 200){
+		const oms08List = await rData.json();
+		if(oms08List.length){
+			grid.option( 'dataModel', { data: oms08List, recIndx: 'rowkey' } );
+		}else{
+			grid.option('dataModel', { data: [] });
+		}
+	}
+	grid.refreshDataAndView();
+	grid.hideLoading();
+}
+
+//============================================================
+//검색조건 영역 체크박스 생성.
+//============================================================
+function setCheckboxInSearchArea(columnName, dataList, pageId) {
+	
+	const selector = pageId + '_' + columnName;
+
+	if(document.querySelector('input[name="'+ selector +'"]')) {
+		return;
+	}
+	
+	let html = '';
+	for(const column of dataList) {
+		if(column.combovl != 'CANCEL'){
+			html += '<label class="check-box">';
+			html += '<input type="checkbox" name="' + selector +'" value="' +  column.combovl +'">';
+			html +=  '<span>' + column.combonm + '</span></label>';
+		}
+	}
+	
+	document.querySelector('#' + selector + 'Checkbox').insertAdjacentHTML('beforeend', html);
+	
+	// 문서타입이 존재하지 않을 시에 임시로 전체 체크박스 추가되도록.
+	if(dataList.length !== 1) {	
+		let allCheckHTML = '<label class="check-box">';
+		allCheckHTML += '<input type="checkbox" id="' + selector +'AllCheck" value="">';
+		allCheckHTML += '<span>[[#{ms.chooseAll}]]</span></label>';
+		document.querySelector('#' + selector +'Checkbox').insertAdjacentHTML('afterBegin', allCheckHTML);
+		document.querySelector('#' + selector +'AllCheck').checked = true;
+	}
+	
+	// 검색조건 체크박스의 개수가 하나일 시 체크 해제 못하고 체크 유지되도록.
+	const checkboxObjs = document.querySelectorAll('#' + selector + 'Checkbox input');
+	if(checkboxObjs.length === 1) {
+		checkboxObjs[0].disabled = true;
+		checkboxObjs[0].checked = true;
+		checkboxObjs[0].addEventListener('click', function(event){
+			event.preventDefault();
+		});
+		return;
+	}
+	
+	checkboxEvent(columnName, pageId);	
+}
+//checkboxEvent. 전체 선택 시 나머지 체크박스 해제. 전체를 제외한 체크박스 모두 선택 시 전체 선택.
+function checkboxEvent(columnName, pageId) { 
+
+	const selector = pageId + '_' + columnName;
+	const checkboxSelector = '#' + selector + 'Checkbox input'; 
+	const allCheckObj = document.querySelector('#' + selector + 'AllCheck'); 
+	const notAllCheckObjs = document.querySelectorAll('input[name="' + selector + '"]');
+	
+	document.querySelectorAll(checkboxSelector).forEach(function(element) {
+		element.addEventListener('change', function() {
+			allCheckObj.checked = false;
+			const checkedObjs = document.querySelectorAll('input[name="' + selector + '"]' + ':checked');
+			if(notAllCheckObjs.length === checkedObjs.length || !checkedObjs.length || element.id === selector + 'AllCheck') {
+				allCheckObj.checked = true;
+				for(const checkedObj of checkedObjs) {
+					checkedObj.checked = false;	
+				}
+			}
+		});
+	}); 
+}
+
+//============================================================	
+//고객오더키 문자 제한 event
+//============================================================
+function inputNumberOnly(el){
+	el.value = el.value.replace(/\D/g, '');
+}
+
+function oms08Keyup(){
+	const key = this.event.key || this.event.keyCode;
+    if (key === 'Enter' || key === 13) {
+    	oms08Search();
+    }
+}
+</script>
+
+</div>
+</html>

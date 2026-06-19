@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!--  해더 시작  -->
+<div class="header" id="mainHeader" th:fragment="fragments-mainHeader">
+    <div class="location">    
+        <div class="nav-home"><img class="ic-home"></div>
+        <div class="nav-menu">
+            <button class="btn-nav-menu">물류납품<img class="ic-input-down"></button>
+            <ul class="menu-list con-box">
+                <li><button type="button">물류납품</button></li>
+                <li><button type="button">물류창고</button></li>
+                <li><button type="button">물류운송</button></li>
+                <li><button type="button">물류관제</button></li>
+                <li><button type="button">물류공유</button></li>
+                <li><button type="button">운영관리</button></li>
+                <li><button type="button">시스템관리</button></li>
+            </ul>              
+        </div>
+        <div class="nav-menu">
+            <button class="btn-nav-menu">발주<img class="ic-input-down"></button>
+            <ul class="menu-list con-box">
+                <li><button type="button">발주</button></li>
+                <li><button type="button">수주</button></li>
+                <li><button type="button">재고</button></li>
+                <li><button type="button">반품</button></li>             
+            </ul>             
+        </div>
+        <div class="nav-menu">
+            <button class="btn-nav-menu">납입카드 출력<img class="ic-input-down"></button>
+            <ul class="menu-list con-box">
+                <li><button type="button">입고오더등록</button></li>
+                <li><button type="button">납입카드 출력</button></li>
+                <li><button type="button">ASN 등록</button></li>
+                <li><button type="button">ASN 정보 전송</button></li>
+                <li><button type="button">입고현황조회</button></li>
+                <li><button type="button">취소 ASN 선택</button></li>
+                <li><button type="button">ASN 취소 등록</button></li>
+                <li><button type="button">취소 정보 전송</button></li>
+            </ul>              
+        </div>          
+    </div>
+    <div class="nav-favorite">          
+        <button class="btn-favorite"><img class="ic-bookmark on">즐겨찾기 <img class="ic-input-down"></button>
+        <ul class="fa-list con-box">
+            <li><button type="button">납입카드 출력</button></li>
+            <li><button type="button">재고상태변경처리</button></li>
+            <li><button type="button">납품오더취소 등록</button></li>
+            <li><button type="button">피킹처리</button></li>
+            <li><button type="button">운송오더상세</button></li>
+        </ul>          
+    </div>
+</div>
+<!--  해더 종료  -->
+</html>

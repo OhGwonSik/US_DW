@@ -1,0 +1,146 @@
+<html xmlns:th="http://www.thymeleaf.org"  xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Language" content="ko" >
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
+	<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+	<META HTTP-EQUIV="Expires" CONTENT="-1">
+	<link id="rPath" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+	<link id="authProtocol" th:data-authProtocol="${@environment.getProperty('server.auth.protocol')}"/>
+	<link id="authDomain" th:data-authDomain="${@environment.getProperty('server.auth.host')}"/>
+
+	<!-- 파비콘 -->
+	<link rel="manifest" th:href="@{/manifest_kiosk.json}" />
+	<link rel="apple-touch-icon" sizes="57x57" th:href="@{/v2/assets/favicon/apple-icon-57x57.png}">
+	<link rel="apple-touch-icon" sizes="60x60" th:href="@{/v2/assets/favicon/apple-icon-60x60.png}">
+	<link rel="apple-touch-icon" sizes="72x72" th:href="@{/v2/assets/favicon/apple-icon-72x72.png}">
+	<link rel="apple-touch-icon" sizes="76x76" th:href="@{/v2/assets/favicon/apple-icon-76x76.png}">
+	<link rel="apple-touch-icon" sizes="114x114" th:href="@{/v2/assets/favicon/apple-icon-114x114.png}">
+	<link rel="apple-touch-icon" sizes="120x120" th:href="@{/v2/assets/favicon/apple-icon-120x120.png}">
+	<link rel="apple-touch-icon" sizes="144x144" th:href="@{/v2/assets/favicon/apple-icon-144x144.png}">
+	<link rel="apple-touch-icon" sizes="152x152" th:href="@{/v2/assets/favicon/apple-icon-152x152.png}">
+	<link rel="apple-touch-icon" sizes="180x180" th:href="@{/v2/assets/favicon/apple-icon-180x180.png}">
+	<link rel="icon" type="image/png" sizes="192x192"  th:href="@{/v2/assets/favicon/android-icon-192x192.png}">
+	<link rel="icon" type="image/png" sizes="32x32" th:href="@{/v2/assets/favicon/favicon-32x32.png}">
+	<link rel="icon" type="image/png" sizes="96x96" th:href="@{/v2/assets/favicon/favicon-96x96.png}">
+	<link rel="icon" type="image/png" sizes="16x16" th:href="@{/v2/assets/favicon/favicon-16x16.png}">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/v2/assets/favicon/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+
+	<title></title>
+	<!-- CSS -->
+	<link rel="stylesheet" th:href="@{/v2/css/mobile.css}">
+	<link rel="stylesheet" th:href="@{/v2/css/mobile11.css}">
+	<link rel="stylesheet" th:href="@{/v2/css/kiosk.css}">
+
+	<script th:src="@{/v1/scripts/jquery-3.6.0.min.js}"></script>
+	<script th:src="@{/v1/scripts/jquery-ui.min.js}"></script>
+	<script th:src="@{/v1/scripts/script.js}"></script>
+	<script th:src="@{/js/fetchAPI.js}"></script>
+</head>
+<body>
+	<div class="mobile-wrap bg-white">
+		<header class="mobile-head">
+			<button class="btn-home" onclick="kioskHome()"><img></button>
+			<div class="title">로그인</div>
+			<span></span>
+		</header>
+		<main class="mobile-content">
+			<div class="login-wrap">
+				<div class="login-title-wrap">
+					<img src="" alt="" class="img-logo">
+					<div class="login-title">
+						KIOSK
+						스마트물류플랫폼
+					</div>
+				</div>
+			  	<div class="region">울산</div>
+				<div id="errmsg" class="idpw-check" role="alert"></div>
+				<form method="post" id="frmLogin" onsubmit="return false;"> 
+					<div class="input-login-wrapper">
+						<input type="hidden" id="token" data-token-name="${_csrf.headerName}" placeholder="Password" value="${_csrf.token}">
+						<input type="hidden" name="compkey" id="compkey"  th:value="200" >
+						<input type="hidden" name="langkey" id="langkey"  th:value="us" >
+						<input type="text" name="useract" id="useract" class="ic-id" placeholder="아이디" autofocus>
+						<input type="password" name="passwrd" id="passwrd" class="ic-pw" placeholder="비밀번호">
+						<!-- <div class="sign-line">[[#{sy.main.login.memberyet}]]  아직 회원이아니신가요? <button type="button" class="btn sign-link" onclick="location.href='/signUp'" th:text="${#messages.msg('sy.main.login.btnsignup')}"></button></div> -->
+						<button type="button" class="btn-login" id="login-button">로그인</button>
+					</div>
+				</form>
+				<div class="webview">
+					<a href="">비밀번호 찾기</a>
+					<div class="v-line"></div>
+					<a href="#" onclick="location.href='/signUp'">회원등록</a>
+				</div>
+				<div class="copyright">Copyright © 스마트물류플랫폼 All right reserved.</div>
+			</div>
+		</main>
+	</div>
+</body>
+
+<script>
+	const rPath = $('#rPath').attr('data-contextPath')?$('#rPath').attr('data-contextPath'):'';
+	const urlParams = new URLSearchParams(window.location.search);
+	const accountCode = urlParams.get('account_code');
+	
+	$(function(){
+		
+		$("#useract").focus();
+
+		$("#login-button").click(function(){
+			login();
+		})	;
+
+		$("#langkey").change(function(){
+			changeLocale();
+		});
+
+		$("#frmLogin").keypress(function (e) {
+			if (e.keyCode === 13) {
+				login();
+			}
+		});
+		kioskHome = function(){
+			location.href = rPath + '/kiosk?account_code='+accountCode;
+		}
+	});
+
+	function login(){
+		const authProtocol = $('#authProtocol').attr('data-authProtocol')?$('#authProtocol').attr('data-authProtocol'):'';
+		const authDomain = $('#authDomain').attr('data-authDomain')?$('#authDomain').attr('data-authDomain'):'';
+
+		let data = {
+			username : $('#useract').val(),
+			password : $('#passwrd').val(),
+			accountCode: accountCode
+		};
+
+		let tokenData;
+
+		$.ajax({
+			type : 'POST',
+			url : authProtocol+'://'+authDomain+'/api/authenticate',
+			data : JSON.stringify(data),
+			contentType : 'application/json',
+			//dataType: 'json',
+			success : async function(response) {
+				response.token = response.token.replaceAll('Bearer ', '');
+				tokenData = response.token;
+				const res =  await fetchUtil('POST', '/createAuthCookie', { token : tokenData} );
+				if(res.status == "200"){
+					let url = rPath+"[[${domain}]]";
+					window.location = decodeURIComponent(url);
+				}
+			},
+			error : function(error) {
+				// 서버로부터 응답이 실패로 돌아왔을 때 실행할 코드
+				console.log('Error occurred:', error);
+				alert("아이디 또는 비밀번호가 다릅니다.");
+			}
+		});
+	}
+</script>
+
+</html>

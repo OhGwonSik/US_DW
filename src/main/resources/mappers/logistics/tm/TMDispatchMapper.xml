@@ -1,0 +1,850 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.tm.mapper.TMDispatchMapper">
+	<select id="selectTmDispatchList" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectTmDispatchList */
+		select concat(TL.COMPKEY, TL.VHPLNKY) as ROWKEY
+			 , TL.COMPKEY
+			 , TL.VHPLNKY
+			 , TT.VHPLNIT
+			 , TL.VEHICKY
+			 , TL.WAREKEY
+			 , TO_CHAR(TL.POSTDAT,'yyyy-mm-dd') as POSTDAT
+         	 , TO_CHAR(TL.VHPDATE,'yyyy-mm-dd') as VHPDATE
+          	 , CONCAT(SUBSTRING(TL.VHPTIME, 1, 2), ':', SUBSTRING(TL.VHPTIME, 3, 2), ':', SUBSTRING(TL.VHPTIME, 5, 2)) as VHPTIME  
+          	 , IF(IFNULL( TL.STPITDT,'')='', ' ', TO_CHAR( TL.STPITDT,'yyyy-mm-dd') ) as STPITDT
+          	 , CONCAT(SUBSTRING(TL.STPITTM, 1, 2), ':', SUBSTRING(TL.STPITTM, 3, 2), ':', SUBSTRING(TL.STPITTM, 5, 2)) as STPITTM       
+          	 , IF(IFNULL( TL.TRFINDT,'')='', ' ', TO_CHAR( TL.TRFINDT,'yyyy-mm-dd') ) as TRFINDT
+			 , CONCAT(SUBSTRING(TL.TRFINTM, 1, 2), ':', SUBSTRING(TL.TRFINTM, 3, 2), ':', SUBSTRING(TL.TRFINTM, 5, 2)) as TRFINTM
+			 , TH.VHCSNAM
+			 , TH.VHCFNAM
+			 , max((SELECT USERNAM FROM V_SUSRMA WHERE COMPKEY = #{userData.compkey} and USERACT = TL.USERACT )) as USERNAM
+			 , MA.WHNAMLC
+			 , ME.DENAMLC
+			 , min(TT.SAATC05) as SAATC05
+			 , min(TT.SAATC10) as SAATC10MIN
+			 , max(TT.SAATC10) as SAATC10MAX
+			 , min(TT.SAATC08) as SAATC08
+			 , min(TT.SKUMKEY) as SKUMKEY
+			 , count(distinct TT.SAATC06) as PLTCNTS
+			 , max(TT.RETODYN) as RETODYN
+			 , TL.TRNMEMO
+			 , THD.SHTGRNM
+			 , THD.SHTRTNM
+			 , (select MC.COMCDTX  from V_MCODEM MC where MC.COMPKEY = OO.COMPKEY AND MC.COMCDKY = 'SALSTAT'  AND  MC.COMCDVL = OO.SALSTAT  ) AS SALSTAT
+			 , (select MC.COMCDTX  from V_MCODEM MC where MC.COMPKEY = OO.COMPKEY AND MC.COMCDKY = 'OUBSTAT'  AND  MC.COMCDVL = OO.OUBSTAT  ) AS OUBSTAT
+			 , (select MC.COMCDTX  from V_MCODEM MC where MC.COMPKEY = TL.COMPKEY AND MC.COMCDKY = 'PLNSTAT'  AND  MC.COMCDVL = TL.PLNSTAT  ) AS PLNSTAT
+			 , TL.PLNSTAT as plnstatOrigin
+			 , TL.UPDTCHK
+			 , IF(IFNULL( TL.PCADATE,'')='', ' ', TO_CHAR( TL.PCADATE,'yyyy-mm-dd') ) as PCADATE
+          	 , CONCAT(SUBSTRING(TL.PCATIME, 1, 2), ':', SUBSTRING(TL.PCATIME, 3, 2), ':', SUBSTRING(TL.PCATIME, 5, 2)) as PCATIME
+			 , TL.PBILPAY
+			 , MDO.DOCTYNM
+			 , TL.DOCCATE
+			 , TL.EMERSCD
+			 , TL.EMERDNM
+			 , TL.PCARSCD
+			 , TL.PCARSNM
+			 , TL.PCAUSER
+			 , TL.PBILLYN
+			 , TL.TRAREKY
+			 , TL.TCLOSYN
+			 , max(IF(NULLIF(TL.CREDATE,''), DATE_FORMAT(TL.CREDATE, '%Y-%m-%d'), ' ')) as CREDATE
+          	 , max(CONCAT(SUBSTRING(TL.CRETIME, 1, 2), ':', SUBSTRING(TL.CRETIME, 3, 2), ':', SUBSTRING(TL.CRETIME, 5, 2))) as CRETIME 
+          	 , max((SELECT USERNAM FROM V_SUSRMA WHERE COMPKEY = #{userData.compkey} and USERACT = TL.CREUSER )) as CREUSER
+          	 , max(IF(NULLIF(TL.LMODATE,''), DATE_FORMAT(TL.LMODATE, '%Y-%m-%d'), ' ')) as LMODATE
+          	 , max(CONCAT(SUBSTRING(TL.LMOTIME, 1, 2), ':', SUBSTRING(TL.LMOTIME, 3, 2), ':', SUBSTRING(TL.LMOTIME, 5, 2))) as LMOTIME 
+          	 , max((SELECT USERNAM FROM V_SUSRMA WHERE COMPKEY = #{userData.compkey} and USERACT = TL.LMOUSER )) as LMOUSER
+		     , OC.MCATENM
+		from TPLNHD TL
+		FORCE INDEX(IX_TPLNHD01)
+		inner join TPLNIT TT
+			on TT.COMPKEY = TL.COMPKEY
+			and TT.VHPLNKY = TL.VHPLNKY
+		inner join TVHCMA TH
+			on TH.COMPKEY = TL.COMPKEY
+			and TH.VEHICKY = TL.VEHICKY
+		inner join OCOSAL OO
+			on OO.COMPKEY = TT.COMPKEY
+			and OO.COOUTKY = TT.COOUTKY
+			and OO.COOUTIT = TT.COOUTIT
+		inner join MWARMA MA
+			on MA.COMPKEY = TL.COMPKEY
+			and MA.WAREKEY = TL.WAREKEY
+		inner join MDESMA ME
+			on ME.COMPKEY = TT.COMPKEY
+			and ME.DESTKEY = TT.DESTKEY
+		left outer join TSHRHD THD
+			on THD.COMPKEY = TL.COMPKEY
+			and THD.WAREKEY = TL.WAREKEY
+			and THD.SHTRTKY = TL.SHTRTKY
+		 inner join MDOCMA MDO
+			on MDO.COMPKEY = TL.COMPKEY
+			and MDO.WAREKEY = TL.WAREKEY
+			and MDO.DOCTYPE = TL.DOCTYPE
+			and MDO.DOCCATE = TL.DOCCATE
+		 left outer join OCATMA OC
+		 	on OC.COMPKEY = TT.COMPKEY
+		 	and OC.WAREKEY = TT.WAREKEY
+		 	and OC.DOCCATE = '200'
+		 	and OC.DOCTYPE = '213'
+		 	and OC.SCATECD = TT.SAATC07
+		where TL.COMPKEY = #{userData.compkey}
+			<if test="warekey != null and warekey !=''">
+			and TL.WAREKEY = #{warekey}
+			</if>
+			<if test="destkey != null and destkey !=''">
+			and TT.DESTKEY = #{destkey}
+			</if>
+			<if test="vhcsnam != null and vhcsnam !=''">
+			and replace(TH.VHCSNAM, ' ', '') like concat('%', #{vhcsnam}, '%')
+			</if>
+			<if test="usernam != null and usernam !=''">
+			and replace(fn_sy_usernam(TL.COMPKEY, TL.USERACT), ' ', '') like concat('%', #{usernam}, '%')
+			</if>
+			<if test="vhplnky != null and vhplnky !=''">
+			and replace(TL.VHPLNKY, ' ', '') like concat('%', #{vhplnky}, '%')
+			</if>
+			<if test="skumkey != null and skumkey !=''">
+			and replace(TT.SKUMKEY, ' ', '') like concat('%', #{skumkey}, '%')
+			</if>
+			<if test="saatc08 != null and saatc08 !=''">
+			and replace(upper(OC.MCATENM), ' ', '') like concat('%', upper(#{saatc08}), '%')
+			</if>
+			<if test="saatc10 != null and saatc10 !=''">
+			and TT.VHPLNKY in (select VHPLNKY from TPLNIT where COMPKEY = #{userData.compkey} and SAATC10 like concat(#{saatc10}, '%'))
+			</if>
+			<if test="doctype != null and doctype !=''">
+			and TL.DOCTYPE = #{doctype}
+			</if>
+			<if test="retodyn != null and retodyn !=''">
+			and replace(RETODYN, ' ', '') like concat('%', #{retodyn}, '%')
+			</if>
+			<choose>
+			<when test='postdatFrom != null and postdatFrom != "" and postdatTo == ""'>
+				<![CDATA[ and TL.POSTDAT >= #{postdatFrom} ]]>
+			</when>
+			<when test='postdatTo != null and postdatTo != "" and postdatFrom == ""'>
+				<![CDATA[ and TL.POSTDAT <= #{postdatTo} ]]>
+			</when>
+			<when test='postdatFrom != null and postdatFrom != "" and postdatTo != null and postdatTo != ""'>
+				and TL.POSTDAT between #{postdatFrom} and #{postdatTo}
+			</when>
+			</choose>
+			<if test="tclosyn != null and tclosyn !=''">
+			and TL.TCLOSYN = #{tclosyn}
+			</if>
+			<if test='plnstatList != null and plnstatList.size > 0'>
+			and TL.PLNSTAT in
+				<foreach collection="plnstatList" item="plnstat" index="index" open="(" close=")" separator=",">
+		   	 		#{plnstat}
+				</foreach>
+			</if>
+			<if test="progrid != null and progrid !=''">
+			and TL.DOCTYPE != '830'
+			</if>
+		group by TL.COMPKEY
+			   , TL.VHPLNKY
+			   , TL.VEHICKY
+			   , TL.WAREKEY
+			   , TL.PLNSTAT
+			   , TL.POSTDAT
+			   , TL.DOCTYPE
+			   , TL.DOCCATE
+			   , TL.USERACT
+			   , TL.TRNMEMO
+			   , TL.PBILPAY
+			   , TL.EMERSCD
+			   , TL.EMERDNM
+			   , TL.PCARSCD
+			   , TL.PCARSNM
+			   , TL.PCAUSER
+			   , TL.PBILLYN
+			   , TL.TRAREKY
+			   , TL.TCLOSYN
+	</select>
+	<select id="selectTmDispatchItem" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectTmDispatchItem */
+		select concat(TP.COMPKEY, TL.VHPLNKY, TP.VHPLNIT, TP.COOUTKY, TP.COOUTIT) as ROWKEY,
+			   concat(TL.POSTDAT, TP.DESTKEY, TP.SAATC06) as PLTKEY,
+			   TL.VHPLNKY,
+			   TL.POSTDAT,
+			   TP.VHPLNIT,
+			   TP.DESTKEY,
+			   MP.PTNAMLC,
+			   MW.WHNAMLC,
+			   MD.DENAMLC,
+			   TP.RETODYN,
+			   TP.SAATC05,
+			   min(ifnull(TP.SAATC10, '')) as SAATC10,
+			   TP.SAATC06,
+			   TP.SAATC07,
+			   TP.SAATC08,
+			   MS.SKUMKEY,
+			   MS.SKUDESC,
+			   TP.SAATC01,
+			   TP.SAATC03,
+			   TP.SAATC04,
+			   MO.OWNAMLC,
+			   TP.COOUTKY,
+			   TP.COOUTIT,
+			   TP.SOITQTY,
+			   TP.TRITQTY,
+			   TP.SUOMKEY,
+			   SHT.COMCDTX as SHTRSTS,
+			   TP.SHTRSTS as shtrstsOrigin,
+			   (select case when REPITDT = ' ' then ''
+			 	when REPITDT is NULL then ''
+			 	else date_format(str_to_date(TP.REPITDT, '%Y%m%d'), '%Y-%m-%d')
+			 	end) as REPITDT,
+			   (select case when REPITTM = ' ' then ''
+			 	when REPITTM is NULL then ''
+			 	else date_format(str_to_date(TP.REPITTM, '%H%i%s'), '%H:%i:%s')
+			 	end) as REPITTM,
+			   TP.RSNCODE,
+			   TP.RSNREMK,
+			   OC.UPDTCHK,
+			   TP.COMPKEY,
+			   TP.SHTRPTY,
+			   TP.DESTORD,
+			   TP.CUSTKEY,
+			   TP.SKUSKEY,
+			   TP.TRUNTYP,
+			   TP.TRUNPID,
+			   TP.SAATN01,
+			   TP.SAATN02,
+			   TP.SAATN03,
+			   TP.SAATN04,
+			   TP.SAATN05,
+			   TP.SAATC02,
+			   TP.SAATC09,
+			   TP.COPODKY,
+			   TP.COPODIT,
+			   TP.OERETKY,
+			   TP.OERETIT,
+			   TP.EOASNKY,
+			   TP.EOASNIT,
+			   TP.RCVDCKY,
+			   TP.RCVDCIT,
+			   TP.REFSODC,
+			   TP.REFSOIT,
+			   TP.REFDNDC,
+			   TP.REFDNIT,
+			   TP.REFSDDC,
+			   TP.REFSDIT,
+			   fn_sy_usernam(#{userData.compkey}, TP.CREUSER) as CREUSER,
+			   date_format(str_to_date(TP.CREDATE, '%Y%m%d'), '%Y-%m-%d') as CREDATE,
+			   date_format(str_to_date(TP.CRETIME, '%H%i%s'), '%H:%i:%s') as CRETIME,
+			   date_format(str_to_date(TP.LMODATE, '%Y%m%d'), '%Y-%m-%d') as LMODATE,
+			   date_format(str_to_date(TP.LMOTIME, '%H%i%s'), '%H:%i:%s') as LMOTIME,
+			   fn_sy_usernam(#{userData.compkey}, TP.LMOUSER) as LMOUSER,
+			   min(TP.SAATC10) as SAATC10MIN,
+			   max(TP.SAATC10) as SAATC10MAX,
+			   min(TP.SAATC01) as SAATC01MIN,
+			   min(TP.SAATC03) as SAATC03MIN,
+			   min(TP.SAATC05) as SAATC05MIN,
+			   min(TP.SAATC08) as SAATC08MIN
+		from TPLNIT TP
+		left outer join TPLNHD TL
+			on TL.COMPKEY = TP.COMPKEY
+			and TL.VHPLNKY = TP.VHPLNKY
+		left outer join MPTNMA MP
+			on MP.COMPKEY = TP.COMPKEY
+			and MP.PTNRKEY = TP.CUSTKEY
+		left outer join MWARMA MW
+			on MW.COMPKEY = TP.COMPKEY
+			and MW.WAREKEY = TP.WAREKEY
+		left outer join MDESMA MD
+			on MD.COMPKEY = TP.COMPKEY
+			and MD.PTNRKEY = TP.CUSTKEY
+			and MD.DESTKEY = TP.DESTKEY
+		left outer join MSKUWC MS
+			on MS.COMPKEY = TP.COMPKEY
+			and MS.WAREKEY = TP.WAREKEY
+			and MS.OWNERKY = TP.OWNERKY
+			and MS.SKUMKEY = TP.SKUMKEY
+		left outer join MOWRMA MO
+			on MO.COMPKEY = TP.COMPKEY
+			and MO.OWNERKY = TP.OWNERKY
+		left outer join (
+			select MC.COMPKEY
+				 , MC.COMCDVL
+				 , MC.COMCDTX
+				 from V_MCODEM MC
+				 where MC.COMPKEY = #{userData.compkey}
+				   and MC.COMCDKY = 'SHTRSTS') as SHT
+			   on SHT.COMPKEY = TP.COMPKEY
+			   and SHT.COMCDVL = TP.SHTRSTS
+		left outer join OCOSAL OC
+			on OC.COMPKEY = TP.COMPKEY
+			and OC.COOUTKY = TP.COOUTKY
+			and OC.COOUTIT = TP.COOUTIT
+		where TP.COMPKEY = #{userData.compkey}
+		  and TP.VHPLNKY = #{vhplnky}
+		<if test="pageId != 'tma10'">
+		group by TL.POSTDAT, TP.DESTKEY, TP.SAATC06
+		</if>
+		<if test="pageId == 'tma10'">
+		group by TP.COMPKEY, TP.VHPLNKY, TP.VHPLNIT, TP.WAREKEY
+		       , TP.CUSTKEY, TP.DESTKEY, TP.SHTRSTS, TP.OWNERKY
+		       , TP.SAATN01, TP.SAATN02, TP.SAATN03, TP.SAATN04, TP.SAATN05
+		       , TP.SAATC01, TP.SAATC02, TP.SAATC03, TP.SAATC04, TP.SAATC05
+		       , TP.SAATC06, TP.SAATC07, TP.SAATC08, TP.SAATC09, TP.SAATC10
+		       , TP.COOUTKY, TP.COOUTIT
+		       , TP.CREDATE, TP.CRETIME, TP.CREUSER
+		       , TP.LMODATE, TP.LMOTIME, TP.LMOUSER
+		</if>
+		order by case
+					when TP.SAATC10 is not null and TP.SAATC10 != '' then TP.SAATC10
+					else TP.VHPLNKY
+	 			 end, TP.VHPLNIT, TP.SAATC10, TP.SAATC06
+	</select>
+	<select id ="selectTmDispatchDestList" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectTmDispatchDestList */
+		select concat(TT.CUSTKEY, TT.DESTKEY, TT.SAATC06) as ROWKEY
+		     , concat(TF.SIGFLPH, TF.SIGFLNM) as SIGNITURE
+			 , concat(TF.PICFLPH, TF.PICFLNM) as PICTURE
+		 	 , MT.PTNAMLC
+			 , ME.DENAMLC
+			 , TT.COMPKEY
+			 , TT.VHPLNKY
+			 , TT.VHPLNIT
+			 , TT.CUSTKEY
+			 , TT.DESTKEY
+			 , MW.WHNAMLC
+			 , TT.DESTORD
+			 , TT.SHTRSTS
+			 , TT.RETODYN
+			 , MO.OWNAMLC
+			 , TT.SKUMKEY
+			 , TT.SKUDESC
+			 , TT.SKUSKEY
+			 , TT.SOITQTY
+			 , TT.TRITQTY
+			 , TT.SUOMKEY
+			 , TT.TRUNTYP
+			 , TT.TRUNPID
+			 , TT.SAATN01
+			 , TT.SAATN02
+			 , TT.SAATN03
+			 , TT.SAATN04
+			 , TT.SAATN05
+			 , TT.SAATC01
+			 , TT.SAATC02
+			 , TT.SAATC03
+			 , TT.SAATC04
+			 , TT.SAATC05
+			 , TT.SAATC06
+			 , TT.SAATC07
+			 , TT.SAATC08
+			 , TT.SAATC09
+			 , TT.SAATC10
+			 , TT.SHTRPTY
+			 , (select case when REPITDT = ' ' then ''
+			 	when REPITDT is NULL then ''
+			 	else Fn_com_todate(TT.REPITDT)
+			 	end) as REPITDT
+			 , (select case when REPITTM = ' ' then ''
+			 	when REPITTM is NULL then ''
+			 	else Fn_com_totime(TT.REPITTM)
+			 	end) as REPITTM
+			 , TT.RSNCODE
+			 , TT.RSNREMK
+			 , TT.COPODKY
+			 , TT.COPODIT
+			 , TT.COOUTKY
+			 , TT.COOUTIT
+			 , TT.OERETKY
+			 , TT.OERETIT
+			 , TT.EOASNKY
+			 , TT.EOASNIT
+			 , TT.RCVDCKY
+			 , TT.RCVDCIT
+			 , TT.REFSODC
+			 , TT.REFDNDC
+			 , TT.REFDNIT
+			 , TT.REFSDDC
+			 , TT.REFSDIT
+			 , Fn_com_todate(TT.CREDATE) as CREDATE
+			 , Fn_com_totime(TT.CRETIME) as CRETIME
+			 , fn_sy_usernam(TT.COMPKEY, TT.CREUSER) as CREUSER
+			 , Fn_com_todate(TT.LMODATE) as LMODATE
+			 , Fn_com_totime(TT.LMOTIME) as LMOTIME
+			 , fn_sy_usernam(TT.COMPKEY, TT.LMOUSER) as LMOUSER
+			 , TT.INDIBZL
+			 , TT.INDIARC
+			 , TT.UPDTCHK
+			 , Fn_com_totime(TF.CRETIME) as TFCRETM
+			 , TF.TRNMEMO
+			 , TF.FTFTKNO
+			 , if(TF.SIGSVIP = ' ', '', TF.SIGSVIP) as SIGSVIP
+			 , if(TF.SIGFLPH = ' ', '', TF.SIGFLPH) as SIGFLPH
+			 , if(TF.SIGFLNM = ' ', '', TF.SIGFLNM) as SIGFLNM
+			 , if(TF.PICSVIP = ' ', '', TF.PICSVIP) as PICSVIP
+			 , if(TF.PICFLPH = ' ', '', TF.PICFLPH) as PICFLPH
+			 , if(TF.PICFLNM = ' ', '', TF.PICFLNM) as PICFLNM
+		from TPLNIT TT
+		left outer join TPLFIT TF
+			on TF.COMPKEY = TT.COMPKEY
+		   and TF.VHPLNKY = TT.VHPLNKY
+		   and TF.CUSTKEY = TT.CUSTKEY
+		   and TF.DESTKEY = TT.DESTKEY
+		inner join MPTNMA MT
+			on MT.COMPKEY = TT.COMPKEY
+		   and MT.PTNRKEY = TT.CUSTKEY
+		inner join MDESMA ME
+			on ME.COMPKEY = TT.COMPKEY
+		   and ME.DESTKEY = TT.DESTKEY
+		inner join MWARMA MW
+			on MW.COMPKEY = TT.COMPKEY
+		   and MW.WAREKEY = TT.WAREKEY
+		inner join MOWRMA MO
+			on MO.COMPKEY = TT.COMPKEY
+		   and MO.OWNERKY = TT.OWNERKY
+		where TT.COMPKEY = #{userData.compkey}
+		  and TT.VHPLNKY = #{vhplnky}
+		  and TT.VHPLNIT is not null
+		order by TT.DESTORD
+	</select>
+	<select id="selectTplnitWithDestkey" resultType="com.logistics.tm.domain.TMDispatchDTO">
+	   	 /* selectTplnit */
+		select TT.VHPLNKY
+			 , TT.VHPLNIT
+			 , TT.DESTKEY
+			 , TT.UPDTCHK
+			 , TT.SHTRSTS
+			 , TT.COOUTKY
+			 , TT.COOUTIT
+			 from TPLNIT TT
+			 where TT.COMPKEY = #{userData.compkey}
+			   and TT.VHPLNKY = #{vhplnky}
+		   <if test="destkey != null and destkey !=''">
+			   and TT.DESTKEY = #{destkey}
+		   </if>
+		   <if test="saatc06 != null and saatc06 !=''">
+			   and TT.SAATC06 = #{saatc06}
+		   </if>
+	</select>
+	<select id="selectOcosal" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectOcosal */
+		select UPDTCHK
+			from OCOSAL
+			where COMPKEY = #{userData.compkey}
+				and COOUTKY = #{cooutky}
+				and COOUTIT = #{cooutit}
+	</select>
+    <select id="selectTplnitWithOcosal" resultType="com.logistics.tm.domain.TMDispatchDTO">
+   	 	/* selectTplnitWithOcosal */
+    	select TT.VHPLNKY
+    		 , TT.VHPLNIT
+    		 , OO.COOUTKY
+    		 , OO.COOUTIT
+    		 , OO.UPDTCHK
+    		from TPLNIT TT
+    		inner join TPLNHD TL
+    		 	on TL.COMPKEY = TT.COMPKEY
+    		 	and TL.VHPLNKY = TL.VHPLNKY
+    		left outer join OCOSAL OO
+    			on OO.COMPKEY = TT.COMPKEY
+    			and OO.COOUTKY = TT.COOUTKY
+    			and OO.COOUTIT = TT.COOUTIT
+    		where TL.COMPKEY = #{userData.compkey}
+    		  and TL.VHPLNKY = #{vhplnky}
+    		  and TL.POSTDAT = #{postdat}
+    		  and TT.DESTKEY = #{destkey}
+    		  and TT.SAATC06 = #{saatc06}
+    </select>
+ 
+    <!-- ocatmaList -->
+	<select id="selectTmDispatchOcatmaList" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectTmDispatchOcatmaList */
+		select SCATECD
+			 , SCATENM
+			 , MCATECD
+			 , MCATENM
+		  from OCATMA
+		 where COMPKEY = #{userData.compkey}
+		   and WAREKEY = #{warekey}
+		   and CAUSEYN = 'Y'
+		   <if test='scatecd != null and scatecd != ""'>
+		       and SCATECD = #{scatecd}
+		   </if>
+		   <if test='mcatecd != null and mcatecd != ""'>
+		       and MCATECD = #{mcatecd}
+		   </if>
+	</select>
+	<!-- tma12 : Mptnma carrier 조회 -->
+		<select id="selectCarrierList" resultType="com.logistics.md.domain.MptnmaDTO">
+	/* selectCarrierList */
+		select PTNRKEY
+			 , PTNAMLC
+		  from MPTNMA
+		 where COMPKEY = #{userData.compkey}
+		   and PTNRTYP in ('CARRIER')
+		   and PTUSEYN = 'Y'
+	     group by PTNRKEY, PTNAMLC
+	     order by PTNRORD
+	</select>
+    <select id="selectTmDispatchStatics" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectTmDispatchStatics */
+		select concat(TL.COMPKEY, TL.VHPLNKY, TL.POSTDAT) as ROWKEY
+			   , TL.COMPKEY
+			   , TL.WAREKEY
+			   , TL.VHPLNKY
+			   , TL.VEHICKY
+			   , TT.DESTKEY
+			   , ME.PTNRKEY
+			   , ME.DENAMLC
+			   , MT.PTNAMLC
+			   , TH.VHCSNAM
+			   , (select MC.COMCDTX
+				from V_MCODEM MC
+				where MC.COMPKEY = #{userData.compkey}
+					and MC.COMCDKY = 'VHCTNCD'
+					and MC.COMCDVL = TH.VHCTNCD
+					and MC.COUSEYN = 'Y'
+				) as VHCTNCD
+			   , fn_sy_usernam(#{userData.compkey}, TL.USERACT) as USERNAM
+			   , max(if(a.POSTDAY = '01', CNT, 0)) as POSTDAY01
+			   , max(if(a.POSTDAY = '02', CNT, 0)) as POSTDAY02
+			   , max(if(a.POSTDAY = '03', CNT, 0)) as POSTDAY03
+  			   , max(if(a.POSTDAY = '04', CNT, 0)) as POSTDAY04
+			   , max(if(a.POSTDAY = '05', CNT, 0)) as POSTDAY05
+			   , max(if(a.POSTDAY = '06', CNT, 0)) as POSTDAY06
+			   , max(if(a.POSTDAY = '07', CNT, 0)) as POSTDAY07
+			   , max(if(a.POSTDAY = '08', CNT, 0)) as POSTDAY08
+			   , max(if(a.POSTDAY = '09', CNT, 0)) as POSTDAY09
+			   , max(if(a.POSTDAY = '10', CNT, 0)) as POSTDAY10
+			   , max(if(a.POSTDAY = '11', CNT, 0)) as POSTDAY11
+			   , max(if(a.POSTDAY = '12', CNT, 0)) as POSTDAY12
+			   , max(if(a.POSTDAY = '13', CNT, 0)) as POSTDAY13
+			   , max(if(a.POSTDAY = '14', CNT, 0)) as POSTDAY14
+			   , max(if(a.POSTDAY = '15', CNT, 0)) as POSTDAY15
+			   , max(if(a.POSTDAY = '16', CNT, 0)) as POSTDAY16
+			   , max(if(a.POSTDAY = '17', CNT, 0)) as POSTDAY17
+			   , max(if(a.POSTDAY = '18', CNT, 0)) as POSTDAY18
+			   , max(if(a.POSTDAY = '19', CNT, 0)) as POSTDAY19
+			   , max(if(a.POSTDAY = '20', CNT, 0)) as POSTDAY20
+			   , max(if(a.POSTDAY = '21', CNT, 0)) as POSTDAY21
+			   , max(if(a.POSTDAY = '22', CNT, 0)) as POSTDAY22
+			   , max(if(a.POSTDAY = '23', CNT, 0)) as POSTDAY23
+			   , max(if(a.POSTDAY = '24', CNT, 0)) as POSTDAY24
+			   , max(if(a.POSTDAY = '25', CNT, 0)) as POSTDAY25
+			   , max(if(a.POSTDAY = '26', CNT, 0)) as POSTDAY26
+			   , max(if(a.POSTDAY = '27', CNT, 0)) as POSTDAY27
+			   , max(if(a.POSTDAY = '28', CNT, 0)) as POSTDAY28
+			   , max(if(a.POSTDAY = '29', CNT, 0)) as POSTDAY29
+			   , max(if(a.POSTDAY = '30', CNT, 0)) as POSTDAY30
+			   , max(if(a.POSTDAY = '31', CNT, 0)) as POSTDAY31
+			   , (
+			     max(if(a.POSTDAY = '01', CNT, 0))
+			   + max(if(a.POSTDAY = '02', CNT, 0))
+			   + max(if(a.POSTDAY = '03', CNT, 0))
+			   + max(if(a.POSTDAY = '04', CNT, 0))
+			   + max(if(a.POSTDAY = '05', CNT, 0))
+			   + max(if(a.POSTDAY = '06', CNT, 0))
+			   + max(if(a.POSTDAY = '07', CNT, 0))
+			   + max(if(a.POSTDAY = '08', CNT, 0))
+			   + max(if(a.POSTDAY = '09', CNT, 0))
+			   + max(if(a.POSTDAY = '10', CNT, 0))
+			   + max(if(a.POSTDAY = '11', CNT, 0))
+			   + max(if(a.POSTDAY = '12', CNT, 0))
+			   + max(if(a.POSTDAY = '13', CNT, 0))
+			   + max(if(a.POSTDAY = '14', CNT, 0))
+			   + max(if(a.POSTDAY = '15', CNT, 0))
+			   + max(if(a.POSTDAY = '16', CNT, 0))
+			   + max(if(a.POSTDAY = '17', CNT, 0))
+			   + max(if(a.POSTDAY = '18', CNT, 0))
+			   + max(if(a.POSTDAY = '19', CNT, 0))
+			   + max(if(a.POSTDAY = '20', CNT, 0))
+			   + max(if(a.POSTDAY = '21', CNT, 0))
+			   + max(if(a.POSTDAY = '22', CNT, 0))
+			   + max(if(a.POSTDAY = '23', CNT, 0))
+			   + max(if(a.POSTDAY = '24', CNT, 0))
+			   + max(if(a.POSTDAY = '25', CNT, 0))
+			   + max(if(a.POSTDAY = '26', CNT, 0))
+			   + max(if(a.POSTDAY = '27', CNT, 0))
+			   + max(if(a.POSTDAY = '28', CNT, 0))
+			   + max(if(a.POSTDAY = '29', CNT, 0))
+			   + max(if(a.POSTDAY = '30', CNT, 0))
+			   + max(if(a.POSTDAY = '31', CNT, 0))
+			   ) as TOTALCOUNT
+		from (
+			select VHPLNKY
+				 , COMPKEY
+				 , VEHICKY
+				 , POSTDAT
+				 , date_format(POSTDAT, '%d') as POSTDAY
+				 , count(*) as CNT
+				 , DOCTYPE
+				from TPLNHD
+			where PLNSTAT = 'FINISH'
+				and COMPKEY = #{userData.compkey}
+			group by VEHICKY
+				   , POSTDAT
+			) a
+			, TPLNHD TL
+		inner join TPLNIT TT
+			on TT.COMPKEY = TL.COMPKEY
+			and TT.VHPLNKY = TL.VHPLNKY
+		left outer join MDESMA ME
+			on ME.COMPKEY = TT.COMPKEY
+			and ME.DESTKEY = TT.DESTKEY
+		left outer join TVHCMA TH
+			on TH.VEHICKY = TL.VEHICKY
+			and TH.COMPKEY = TL.COMPKEY
+		left outer join MPTNMA MT
+			on MT.PTNRKEY = TH.CARRIER
+			and MT.COMPKEY = TH.COMPKEY
+		where TL.PLNSTAT = 'FINISH'
+			and a.VHPLNKY = TL.VHPLNKY
+			and a.VEHICKY = TL.VEHICKY
+			and a.POSTDAT = TL.POSTDAT
+			and TL.COMPKEY = #{userData.compkey}
+			<if test='warekey != null and warekey != ""'>
+				and TL.WAREKEY = #{warekey}
+			</if>
+			<if test='carrier != null and carrier != ""'>
+				and TH.CARRIER = #{carrier}
+			</if>
+			<if test="destkey != null and destkey !=''">
+				and TT.DESTKEY = #{destkey}
+			</if>
+			<if test="vhcsnam != null and vhcsnam !=''">
+			and replace(TH.VHCSNAM, ' ', '') like concat('%', #{vhcsnam}, '%')
+			</if>
+			<if test='postdat != null and postdat != ""'>
+				and TL.POSTDAT like concat(#{postdat}, '%')
+			</if>
+			<if test='doctype != null and doctype != ""'>
+				and TL.DOCTYPE = #{doctype}
+			</if>
+		group by TL.COMPKEY, TL.VEHICKY, TT.DESTKEY
+		order by TH.VHCSNAM, TT.DESTKEY, TL.POSTDAT
+	</select>
+	<select id="selectTplfitUpdtchk" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		select UPDTCHK
+			from TPLFIT
+			where COMPKEY = #{userData.compkey}
+			  and VHPLNKY = #{vhplnky}
+			  and CUSTKEY = #{custkey}
+			  and DESTKEY = #{destkey}
+			  and FTFTKNO = #{ftftkno}
+	</select>
+	<select id="selectDoctypeListWithout830" resultType="com.logistics.tm.domain.TMDispatchDTO">
+		/* selectMdocmaDoctypeList */
+		select DOCTYPE as COMBOVL
+		, DOCTYNM as COMBONM
+		, DOCCATE as DOCCATE
+		, DOCCTNM as DOCCTNM
+		from MDOCMA
+		where COMPKEY = #{userData.compkey}
+		  and DOCTYPE != '830'
+		  and DOUSEYN = 'Y'
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='doccate != null and doccate != ""'>
+			and DOCCATE = #{doccate}
+		</if>
+		group by DOCTYPE, DOCTYNM
+		order by DOCTYPE, DOCTYNM
+	</select>
+	<update id="updateOcosal" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+		/* updateOcosal */
+		update OCOSAL
+			set TRNSTAT = #{trnstat}
+			  , LMODATE = date_format(now(), '%Y%m%d')
+			  , LMOTIME = date_format(now(), '%H%i%s')
+			  , LMOUSER = #{userData.useract}
+		where COMPKEY = #{userData.compkey}
+		  and COOUTKY = #{cooutky}
+			and SAATC06 = #{saatc06}
+		  <!-- and COOUTIT = #{cooutit}
+		  and UPDTCHK = #{updtchk} -->
+	</update>
+	<update id="updateTplnhd" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+			/* updateTplnhd */
+			update TPLNHD
+			set VEHICKY = #{vhcsnam},
+				<if test='pbilpay != null and pbilpay != ""'>
+				PBILLYN = 'Y',
+				PBILPAY = #{pbilpay},
+				</if>
+				<if test='pbilpay == null or pbilpay == ""'>
+				PBILLYN = 'N',
+				PBILPAY = #{pbilpay},
+				</if>
+				TRNMEMO = #{trnmemo},
+				PLNSTAT = #{plnstat},
+				STPITDT = if(#{stpitdt} = ' ', '', date_format(#{stpitdt}, '%Y%m%d')),
+				STPITTM = if(#{stpittm} = ' ', '', replace(#{stpittm},':','')),
+				TRFINDT = if(#{trfindt} = ' ', '', date_format(#{trfindt}, '%Y%m%d')),
+				TRFINTM = if(#{trfintm} = ' ', '', replace(#{trfintm},':','')),
+			    LMODATE = date_format(now(), '%Y%m%d')
+			  , LMOTIME = date_format(now(), '%H%i%s')
+			  , LMOUSER = #{userData.useract}
+		      , UPDTCHK = #{updtchk}+1
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+	</update>
+	<update id="updateTplnhdAll" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+			/* updateTplnhdAll */
+			update TPLNHD
+			set <if test='plnstat != null and plnstat != ""'>
+				PLNSTAT = #{plnstat},
+				</if>
+				<if test='stpitdt != null and stpitdt != ""'>
+				STPITDT = if(#{stpitdt} = ' ', '', date_format(#{stpitdt}, '%Y%m%d')),
+				</if>
+				<if test='stpittm != null and stpittm != ""'>
+				STPITTM = if(#{stpittm} = ' ', '', replace(#{stpittm},':','')),
+				</if>
+				<if test='trfindt != null and trfindt != ""'>
+				TRFINDT = if(#{trfindt} = ' ', '', date_format(#{trfindt}, '%Y%m%d')),
+				</if>
+				<if test='trfintm != null and trfintm != ""'>
+				TRFINTM = if(#{trfintm} = ' ', '', replace(#{trfintm},':','')),
+				</if>
+			    LMODATE = date_format(now(), '%Y%m%d')
+			  , LMOTIME = date_format(now(), '%H%i%s')
+			  , LMOUSER = #{userData.useract}
+		      , UPDTCHK = #{updtchk}+1
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+	</update>
+	<update id="updateTplnhdMemo" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+			/* updateTplnhdMemo */
+			update TPLNHD
+				set TRNMEMO = #{trnmemo}
+				  , LMODATE = date_format(now(), '%Y%m%d')
+				  , LMOTIME = date_format(now(), '%H%i%s')
+				  , LMOUSER = #{userData.useract}
+			      , UPDTCHK = #{updtchk}+1
+		      where COMPKEY = #{userData.compkey}
+		      	and VHPLNKY = #{vhplnky}
+	</update>
+	<update id="updateTplnitTime" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+			/* updateTplnitTime */
+			update TPLNIT
+			set SHTRSTS = #{shtrsts}
+		  <if test='repitdt != null and repitdt != ""'>
+			  , REPITDT = if(#{repitdt} = ' ', '', date_format(#{repitdt}, '%Y%m%d'))
+		  </if>
+		  <if test='repittm != null and repittm != ""'>
+		      , REPITTM = if(#{repittm} = ' ', '', replace(#{repittm},':',''))
+		  </if>
+		  <if test="rsnremk != null and rsnremk != ''">
+		  	  , RSNREMK = #{rsnremk}
+		  </if>
+			  , LMODATE = date_format(now(), '%Y%m%d')
+			  , LMOTIME = date_format(now(), '%H%i%s')
+			  , LMOUSER = #{userData.useract}
+		      , UPDTCHK = #{updtchk}+1
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+	  	  and VHPLNIT = #{vhplnit}
+	</update>
+	<update id="updateTplfit" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+			/* updateTplfit */
+			update TPLFIT
+			set CRETIME = replace(#{cretime},':','')
+			  , TRNMEMO = #{trnmemo}
+			  , SIGSVIP = #{sigsvip}
+			  , SIGFLPH = #{sigflph}
+			  , SIGFLNM = #{sigflnm}
+			  , PICSVIP = #{picsvip}
+			  , PICFLPH = #{picflph}
+			  , PICFLNM = #{picflnm}
+			  , LMODATE = date_format(now(), '%Y%m%d')
+			  , LMOTIME = date_format(now(), '%H%i%s')
+			  , LMOUSER = #{userData.useract}
+		      , UPDTCHK = #{updtchk}+1
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+		  and CUSTKEY = #{custkey}
+		  and DESTKEY = #{destkey}
+		  and FTFTKNO = #{ftftkno}
+	</update>
+	<insert id="insertTplfit" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+		/* insertTplfit */
+		insert into TPLFIT (
+      		COMPKEY
+      	  , VHPLNKY
+      	  , CUSTKEY
+      	  , DESTKEY
+      	  , FTFTKNO
+      	  <if test = 'sigsvip != null and sigsvip != ""'>
+      	  , SIGSVIP
+      	  </if>
+      	  <if test = 'sigflph != null and sigflph != ""'>
+      	  , SIGFLPH
+      	  </if>
+      	  <if test = 'sigflnm != null and sigflnm != ""'>
+      	  , SIGFLNM
+      	  </if>
+      	  <if test = 'picsvip != null and picsvip != ""'>
+      	  , PICSVIP
+      	  </if>
+      	  <if test = 'picflph != null and picflph != ""'>
+      	  , PICFLPH
+      	  </if>
+      	  <if test = 'picflnm != null and picflnm != ""'>
+      	  , PICFLNM
+      	  </if>
+      	  , TRNMEMO
+		  , CREDATE
+		  , CRETIME
+          , CREUSER
+    	) values (
+          #{userData.compkey}
+        , #{vhplnky}
+        , #{custkey}
+        , #{destkey}
+        , FN_TM_FTFTKNO()
+        <if test = 'sigsvip != null and sigsvip != ""'>
+      	, #{sigsvip}
+    	</if>
+    	<if test = 'sigflph != null and sigflph != ""'>
+      	, #{sigflph}
+    	</if>
+    	<if test = 'sigflnm != null and sigflnm != ""'>
+      	, #{sigflph}
+    	</if>
+    	<if test = 'picsvip != null and picsvip != ""'>
+      	, #{picsvip}
+    	</if>
+    	<if test = 'picflph != null and picflph != ""'>
+      	, #{picflph}
+    	</if>
+    	<if test = 'picflnm != null and picflnm != ""'>
+      	, #{picflnm}
+    	</if>
+        , #{trnmemo}
+        , date_format(now(), '%Y%m%d')
+        , date_format(now(), '%H%i%s')
+        , #{userData.useract}
+      )
+	</insert>
+	<delete id="deleteTplnit" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+		/* deleteTplnit */
+		delete from TPLNIT
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+	      <!-- and VHPLNIT = #{vhplnit} -->
+			and SAATC06 = #{saatc06}
+	</delete>
+	<delete id="deleteTplnhd" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+		/* deleteTplnhd */
+		delete from TPLNHD
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+	</delete>
+	<delete id="deleteTplnitAll" parameterType="com.logistics.tm.domain.TMDispatchDTO">
+		/* deleteTplnitAll */
+		delete from TPLNIT
+		where COMPKEY = #{userData.compkey}
+		  and VHPLNKY = #{vhplnky}
+	</delete>
+</mapper>

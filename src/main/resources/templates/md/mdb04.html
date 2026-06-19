@@ -1,0 +1,1681 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 1row  -->
+				<label for="mdb04_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<!-- 창고  -->
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_warekey"></select>
+					</div>
+				</div>
+				<label for="mdb04_vhcsnam" class="setting-grid-title">[[#{md.bvtrma.vehicky}]]</label>
+				<!-- 차량명칭  -->
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_vhcsnam">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<!-- 2row  -->
+				<label for="mdb04_btrpmgb" class="setting-grid-title">[[#{md.bvtrma.btrpmgb}]]</label>
+				<!-- 대금구분  -->
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_btrpmgb">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="mdb04_ptnrkey" class="setting-grid-title">[[#{md.bvtrma.ptnrkey}]]</label>
+				<!-- 대금구분업체  -->
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_ptnrkey">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="mdb04_btrcsgb" class="setting-grid-title">[[#{md.bvtrma.btrcsgb}]]</label>
+				<!-- 계정  -->
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_btrcsgb">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<!-- 3row  -->
+				<label for="mdb04_btrtkgb" class="setting-grid-title">[[#{md.bvtrma.btrtkgb}]]</label>
+				<!-- sub계정  -->
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_btrtkgb"></select>
+					</div>
+				</div>
+				<label for="mdb04_btrunit" class="setting-grid-title">[[#{md.bvtrma.btrunit}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdb04_btrunit">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<!-- 조회형태 : 적용위주, 내역위주 -->
+				<label class="setting-grid-title">[[#{md.mdb04.selectionPoint}]]</label>
+				<div class="setting-grid-content">
+					<div class="radio-group" id="mdb04PointDom">
+						<input type="radio" id="mdb04Applicate" name="mdb04Point"
+							value="APP" checked="checked"> <label
+							for="mdb04Applicate">[[#{md.mdb04.applicate}]]</label> <input
+							type="radio" id="mdb04History" name="mdb04Point" value="HIS">
+						<label for="mdb04History">[[#{md.mdb04.history}]]</label>
+					</div>
+				</div>
+				<!-- 적용시작년월 -->
+				<label for="mdb04_btrdate" class="setting-grid-title">[[#{md.bvtrma.btrdate}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input style="width: 100%;" type="month" id="mdb04_btrdate"
+							onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button"
+					class="btn-search btn-navy btn-green btn-green" id="mdb04_search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdb04Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green btn-green" id="mdb04_save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdb04_grid"></div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+
+	/*  mdb04 - 변동운송비
+	*   최초 생성일시   : 2023-12-12 10:30
+	*   최초 생성자      : 고은별
+	*   설명      	: 변동운송비 요율을 등록, 수정, 조회하는 화면
+	*   수정 내역  	:
+	*   수정일시		:
+	*   수정자		:
+	*   변경 사항		:
+	*/
+	
+$(function() {
+	
+	const nullifyActionWhenChanged = (ui, idx, columnName, targetColList = []) => {
+		if (!ui.updateList[idx].oldRow[columnName]) return;
+		if (ui.updateList[idx].newRow[columnName] !== ui.updateList[idx].oldRow[columnName]) {
+			targetColList.forEach(targetCol =>
+				ui.updateList[idx].rowData[targetCol] = null)
+		}
+	}
+	
+    // 라디오 버튼 요소와 날짜 선택 박스 요소 가져오기
+    const radioApplicate = $('#mdb04Applicate');
+    const radioHistory = $('#mdb04History');
+    const inputBtrdate = $('#mdb04_btrdate');
+
+    // 라디오 버튼 변경 이벤트 핸들러 추가
+    radioApplicate.change(handleRadioChange);
+    radioHistory.change(handleRadioChange);
+
+    // 라디오 버튼 변경 이벤트 핸들러
+    function handleRadioChange() {
+        if (radioHistory.prop('checked')) {
+            // HIS 라디오 버튼이 선택된 경우
+            inputBtrdate.val(''); // 날짜 선택 박스 비우기
+            inputBtrdate.prop('disabled', true); // 날짜 선택 박스 비활성화 (attr 사용하면 문자열써야함)
+        } else {
+            // HIS 라디오 버튼이 선택되지 않은 경우
+            $('#mdb04_btrdate').val(moment().format('YYYY-MM')); 
+            inputBtrdate.prop('disabled', false); // 날짜 선택 박스 활성화
+        }
+    }
+
+    // 초기 상태 설정
+    if (radioHistory.prop('checked')) {
+        // 페이지 로드 시 HIS 라디오 버튼이 선택된 경우
+        inputBtrdate.val(''); // 날짜 선택 박스 비우기
+        inputBtrdate.prop('disabled', true); // 날짜 선택 박스 비활성화
+    }
+
+	const mdb04Init = initMdb04();
+
+    $('#mdb04_btrdate').val(moment().format('YYYY-MM'));
+
+	
+	//검색
+	$('#mdb04_search').click(async function(){
+		await mdb04List();
+	});
+	
+	$('#mdb04Reset').click(function(){
+		resetSearchConditions();
+		
+		const resetWarekey = $('#mdb04_warekey').val();
+		
+        let foundVehicky= mdb04Init.vehickyList.filter(element => 
+    	element['warekey'] === resetWarekey
+	    );
+	    
+		if(foundVehicky.length > 0){
+			$("#mdb04_vhcsnam option").not("[value='']").remove();
+			foundVehicky.forEach(function(option){
+	             $('#mdb04_vhcsnam').append($("<option></option>").attr("value", option.vehicky).text(option.vhcsnam)); 
+	        });
+			$("#mdb04_vhcsnam").pqSelect('refreshData');
+		}
+
+        
+        // radio 버튼 초기화
+        $("#mdb04Applicate").prop("checked", true);
+        $('#mdb04_btrdate').val(moment().format('YYYY-MM'));
+        $('#mdb04_btrdate').prop('disabled', false);
+        
+        const grid = pq.grid('#mdb04_grid');
+        
+        if(grid.pdata.length > 0){
+        	const result = confirm('[[#{ms.listViewRollback}]]');
+        	if(result){
+        		grid.option('dataModel', {data: []});
+        		grid.refreshDataAndView();
+        		grid.refreshDataAndView();
+                grid.hideLoading();
+        	}
+        }
+		
+	});
+	
+	
+	$('#mdb04_save').click(function(){
+		const grid = pq.grid('#mdb04_grid'), 
+			  gridCheck = grid.Checkbox('state').getCheckedNodes();
+		const gridChange = grid.getChanges({all:true});
+			  gridChange.addList = gridChange.addList.filter(function(item) {
+		            return item.state !== false;
+		       });//state가 true인 값만 가져오기
+		      gridChange.updateList = gridChange.updateList.filter(function(item) {
+		            return item.state !== false;
+		       });//state가 true인 값만 가져오기
+			if(gridCheck.length>0){
+			//============================================================	 
+	    	//체크 데이터 중 필수 값 체크
+	    	//============================================================
+			for(let i=0; i<gridCheck.length; i++){
+				//btrdtgb의 value가 Y 일때 btrmfgb, btrcfdt, btrmtgb, btrctdt는 필수값
+				
+			    if(gridCheck[i].btrdtgb === 'Y'){
+			        if(!gridCheck[i].btrmfgb){
+			          alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{bm.userselectdayThenNeedData}]]'); // 필수입력 값을 입력해주세요.
+			          grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrmfgb' });
+			          return false;
+			        }
+			        if(!gridCheck[i].btrcfdt){
+			          alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]'); // 필수입력 값을 입력해주세요.
+			          grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrcfdt' });
+			          return false;
+			        }
+			        if(!gridCheck[i].btrmtgb){
+			          alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]'); // 필수입력 값을 입력해주세요.
+			          grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrmtgb' });
+			          return false;
+			        }
+			        if(!gridCheck[i].btrctdt){
+			          alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]'); // 필수입력 값을 입력해주세요.
+			          grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrctdt' });
+			          return false;
+			        }
+			      }
+				
+			    if(gridCheck[i].doctype === '829'){ //문서타입이 셔틀정산일 경우 셔늘노선키는 필수입력 값입니다.
+			        if(!gridCheck[i].shtrtky){
+			          alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{md.mdb04.requiredShtrtky}]]');
+			          grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'shtrtky' });
+			          return false;
+			        }
+			      }
+				
+	    	  	if(!gridCheck[i].warekey){
+					alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'warekey' });
+	    	  		return false;
+	    	  	}
+
+	    	  	if(!gridCheck[i].vehicky){
+	    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'vehicky'});
+	    	  		return false;
+	    	  	}
+	    	  	if(!gridCheck[i].btrpmgb){
+	    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrpmgb'});
+	    	  		return false;
+	    	  	}
+	    	  	if(!gridCheck[i].btrcsgb){
+	    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrcsgb'});
+	    	  		return false;
+	    	  	}
+	    	  	if(!gridCheck[i].btrtkgb){
+	    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrtkgb'});
+	    	  		return false;
+	    	  	}
+	    	  	if(!gridCheck[i].btrcost){
+	    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrcost'});
+	    	  		return false;
+	    	  	}
+	    	  	if(!gridCheck[i].btrdate){
+	    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+					grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'btrdate'});
+	    	  		return false;
+	    	  	}
+	    	}	
+	    	
+			
+			//===============================================================	
+			// 체크된 데이터 중복 체크
+			//===============================================================
+				let gridData = grid.getData();
+				let checkedGridData = gridData.filter(item => item['state'] === true);
+			for (let i = 0; i < gridCheck.length; i++) {
+			  for (let j = 0; j < gridData.length; j++) {
+			    if (gridCheck[i].pq_ri !== gridData[j].pq_ri) {
+			      const isWH01 = gridCheck[i].warekey === 'WH01';
+			      if (
+			        gridCheck[i].compkey === gridData[j].compkey &&
+			        gridCheck[i].warekey === gridData[j].warekey &&
+			        gridCheck[i].vehicky === gridData[j].vehicky &&
+			        gridCheck[i].btrpmgb === gridData[j].btrpmgb &&
+			        gridCheck[i].ptnrkey === gridData[j].ptnrkey &&
+			        gridCheck[i].btrcsgb === gridData[j].btrcsgb &&
+			        gridCheck[i].btrtkgb === gridData[j].btrtkgb &&
+			        gridCheck[i].doctype === gridData[j].doctype &&
+			        gridCheck[i].btrunit === gridData[j].btrunit &&
+			        gridCheck[i].btrdate === gridData[j].btrdate &&
+			        (!isWH01 || (isWH01 && gridCheck[i].shtrtky === gridData[j].shtrtky)) //wh01창고만 노선키 중복 체크
+			      ) {
+			        alert(
+			          (gridCheck[i].pq_ri + 1) + '[[#{bm.rownum}]] ' +
+			          (gridData[j].pq_ri + 1) + '[[#{bm.duplication}]]\n' +
+			          '[[#{grid.whnamlc}]]' + ', ' +
+			          '[[#{md.bvtrma.vehicky}]]' + ', ' +
+			          '[[#{md.bvtrma.btrpmgb}]]' + ', ' +
+			          '[[#{md.bvtrma.ptnrkey}]]' + ', ' +
+			          '[[#{md.bvtrma.btrcsgb}]]' + ', ' +
+			          '[[#{md.bvtrma.btrtkgb}]]' + ', ' +
+			          '[[#{md.bvtrma.doctype}]]' + ', ' +
+			          '[[#{md.bvtrma.btrunit}]]' + ', ' +
+			          '[[#{md.bvtrma.btrdate}]]' + 
+			          (isWH01 ? ', ' + '[[#{md.bvtrma.shtrtky}]]' : '') +
+			          ' [[#{ms.DuplicateKeyErr}]]'
+			        );
+			        grid.editCell({ rowIndx: gridCheck[i].pq_ri, dataIndx: "warekey" });
+			        return false;
+			      }
+			    }
+			  }
+			}
+
+
+
+			//updateList 체크 데이터 정제
+			for(let z=0; z<gridChange.updateList.length; z++){
+				if(gridChange.updateList[z].state !== true){
+					gridChange.updateList.splice(z, 1);
+					gridChange.oldList.splice(z, 1);
+				}
+			}
+			
+			//addList 체크 데이터 정제
+			for(let x=0; x<gridChange.addList.length; x++){
+				if(gridChange.addList[x].state !== true){
+					gridChange.addList.splice(x, 1);
+				}
+			}
+		
+			let result = confirm('[[#{ms.checksave}]]');
+			if(result === true){
+				const data = gridChange;
+				savemdb04List(data);
+			}
+		} else {
+			alert('[[#{ms.choiceRowZero}]]');
+		} 
+	});
+	
+	
+	function initMdb04(){
+		
+		let mdb04Init = callAjax("data", "GET" , "/md/billingMaster/mdb04/init", {});
+		
+		// 창고 리스트
+		if(mdb04Init.warekeyList){
+			$("#mdb04_warekey option").not("[value='']").remove();
+			$.each(mdb04Init.warekeyList, function(key, value) {
+				$('#mdb04_warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+
+		// 차량코드
+		if(mdb04Init.vehickyList){
+			function findVehicky(obj){
+				return obj['warekey'] === mdb04Init.warekeyList[0]?.combovl
+			}
+			
+			let findList = mdb04Init.vehickyList.filter(findVehicky);
+			
+			$.each(findList, function(key, value) {
+				$('#mdb04_vhcsnam').append($("<option></option>").attr("value",value.vehicky).text(value.vhcsnam)); 
+			});
+		}
+		
+        $('#mdb04_vhcsnam').pqSelect({
+            deselect: false
+        });
+        
+    	
+        $('#mdb04_warekey').change(function(){
+            let selectedWarekey = $(this).val(); // 선택된 창고
+            
+            let foundVehicky= mdb04Init.vehickyList.filter(element => 
+            	element['warekey'] === selectedWarekey
+            );
+            
+    		if(foundVehicky.length > 0){
+    			$("#mdb04_vhcsnam option").not("[value='']").remove();
+    			foundVehicky.forEach(function(option){
+                     $('#mdb04_vhcsnam').append($("<option></option>").attr("value", option.vehicky).text(option.vhcsnam)); 
+                });
+    			$("#mdb04_vhcsnam").pqSelect('refreshData');
+    		}
+
+        });
+
+        
+		// 대금구분
+		if(mdb04Init.btrpmgbList){
+			$.each(mdb04Init.btrpmgbList, function(key, value) {
+				$('#mdb04_btrpmgb').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+		
+		// 대금구분업체 
+		if(mdb04Init.ptnrkeyList){
+			$.each(mdb04Init.ptnrkeyList, function(key, value) {
+				$('#mdb04_ptnrkey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+		
+        $('#mdb04_ptnrkey').pqSelect({
+            deselect: false
+        });
+		
+		// 단위
+		if(mdb04Init.btrunitList){
+			$.each(mdb04Init.btrunitList, function(key, value) {
+				$('#mdb04_btrunit').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+		
+		// 계정
+		if (mdb04Init.btrvsgbList) {
+		  $.each(mdb04Init.btrvsgbList, function(key, value) {
+		      $('#mdb04_btrcsgb').append($("<option></option>").attr("value", value.combovl).text(value.combonm));
+		   });
+	    }
+		
+
+		// sub계정
+		if(mdb04Init.btrtkgbList){
+			$("#mdb04_btrtkgb option").not("[value='']").remove();
+			$.each(mdb04Init.btrtkgbList, function(key, value) {
+				$('#mdb04_btrtkgb').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+		return mdb04Init;
+	}
+
+	//그리드컬럼모델 정의
+	const mdb04GridCM = [
+		{ title: "[[#{common.grid.recIndx}]]", dataType: "string", dataIndx: "rowkey", hidden: true, editable: false },
+		{ title: "", dataType: 'bool', dataIndx: "state", align: "center",
+            type: 'checkbox', sortable: false, editor: false,
+            cb: { all: false, header: true }
+        },
+        { title: "[[#{md.bvtrma.compkey}]]", dataType: "string", dataIndx: "compkey", hidden: true, editable: false,
+        	styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },	
+        },
+        { title: "[[#{md.bvtrma.bvtcode}]]", dataType: "string", dataIndx: "bvtcode", editable: false },
+		{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+          		let option = ui.column.editor.options.find(function (obj) {
+                   return (obj[ui.cellData] != null);
+               	});
+              	return option ? option[ui.cellData] : "";
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //창고
+		{ title: "[[#{md.bvtrma.vehicky}]]", dataType: "string", dataIndx: "vehicky" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : true, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+				let combonm;
+				mdb04Init.vehickyList.forEach(function (element, index){
+					if(ui.rowData.vehicky === element.vehicky){
+						combonm = element.vhcsnam
+					}
+				})
+				return combonm;
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //차량코드
+		{ title: "[[#{md.bvtrma.btrcsgb}]]", dataType: "string", dataIndx: "btrcsgb" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+          		let option = ui.column.editor.options.find(function (obj) {
+                   return (obj[ui.cellData] != null);
+               	});
+              	return option ? option[ui.cellData] : "";
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //계정
+		{ title: "[[#{md.bvtrma.btrtkgb}]]", dataType: "string", dataIndx: "btrtkgb" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+          		let option = ui.column.editor.options.find(function (obj) {
+                   return (obj[ui.cellData] != null);
+               	});
+              	return option ? option[ui.cellData] : "";
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //sub계정
+		{ title: "[[#{md.bvtrma.btrpmgb}]]", dataType: "string", dataIndx: "btrpmgb" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+          		let option = ui.column.editor.options.find(function (obj) {
+                   return (obj[ui.cellData] != null);
+               	});
+              	return option ? option[ui.cellData] : "";
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //대금구분
+		{ title: "[[#{md.bvtrma.ptnrkey}]]", dataType: "string", dataIndx: "ptnrkey" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : true, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+				let combonm;
+				mdb04Init.ptnrkeyList.forEach(function (element, index){
+					if(ui.rowData.ptnrkey === element.combovl){
+						combonm = element.combonm
+					}
+				})
+				return combonm;
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //대금구분업체
+		{ title: '[[#{md.bvtrma.btrunit}]]', dataType: 'string', dataIndx: 'btrunit',
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: 'select',
+				init: function (ui) {
+					ui.$cell.find('select').pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find('select').pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		},//단위
+		{ title: '[[#{md.bvtrma.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable : false,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: 'select',
+				init: function (ui) {
+					ui.$cell.find('select').pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find('select').pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			}
+		},//문서유형
+		{ title: '[[#{md.bvtrma.doctype}]]', dataType: 'string', dataIndx: 'doctype',	//문서타입
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: 'select',
+				init: function (ui) {
+					ui.$cell.find('select').pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find('select').pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+				let combonm;
+				mdb04Init.doctypeList.forEach(function (element, index){
+					if(ui.rowData.doctype === element.combovl){
+						combonm = element.combonm
+					}
+				})
+				return combonm;
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		},//문서타입
+		{ title: '[[#{md.bvtrma.shtrtky}]]', dataType: 'string', dataIndx: 'shtrtky',	//셔틀노선키
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editor: {
+				type: 'select',
+				init: function (ui) {
+					ui.$cell.find('select').pqSelect({ search : true, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find('select').pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y' || ui.rowData.doctype !== '829'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+ 				let combonm;
+				mdb04Init.shtrtkyList.forEach(function(element, index){
+					if(ui.rowData.shtrtky === element.combovl){
+						combonm = element.combonm
+					}
+				});
+				return combonm; 
+			},
+			editable: function (ui) {
+				if(ui.rowData.doctype !== '829' || ui.rowData.doctype === 'undefined' || ui.rowData.doctype === null){
+					return false;
+				}
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N'  ? true : false;
+			    }
+			}
+		},//셔틀노선키
+		{ title: "[[#{md.bvtrma.btrcost}]]", dataType: "integer", dataIndx: "btrcost", format: '#,###',
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+ 			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //단가
+		{ title: "[[#{md.bvtrma.btrsutx}]]", dataType: "integer", dataIndx: "btrsutx",
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			}
+		}, //부가세
+		{ title: "[[#{md.bvtrma.btuseyn}]]", dataType: "string", dataIndx: "btuseyn", 
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			align: "center", type : "checkbox", editor : false,
+			cb: { all: false, header: false, check: "Y", uncheck: "N" },
+			render : function(ui){
+				var cb = ui.column.cb, cellData = ui.cellData, checked = cb.check === cellData ? 'checked' : '';
+			}
+		}, //사용여부
+		{ title: "[[#{md.bvtrma.btrdate}]]", dataType: "date", format:"yy-mm", dataIndx: "btrdate",
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			cls: 'pq-calendar pq-side-icon',
+			editor: {
+				type: 'textbox',
+				init: monthEditor,
+				getData: function (ui) {
+					return ui.$cell.find("input").val();
+				}
+			},
+ 			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push('background:#e4e4eb;');
+					ui.cls.push('pq-cell-disable');
+				}
+			},
+			editable: function (ui) {
+			    if (typeof ui.rowData.bilgcnt === 'undefined') {
+			        return true;
+			    } else {
+			        return ui.rowData.bilgcnt === 'N' ? true : false;
+			    }
+			},
+			validations: [ { type: 'regexp', value: '^[0-9]{4}-[0-9]{2}$', msg: 'Not in date format' } ]
+		}, //적용시작년월
+		{ title: "[[#{md.bvtrma.btrdtgb}]]", dataType: "string", dataIndx: "btrdtgb" ,
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+	            init: function (ui) { 
+	            	ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+	            	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+	            },
+				options: []
+			},
+	        render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y'){
+					ui.style.push("background:#e4e4eb;");
+					ui.cls.push('pq-cell-disable');
+				}
+          		let option = ui.column.editor.options.find(function (obj) {
+                   return (obj[ui.cellData] != null);
+               	});
+              	return option ? option[ui.cellData] : "";
+			},
+			editable: function (ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? false : true;
+			},
+		}, //기준일구분
+		{ title: "[[#{md.bvtrma.btrmfgb}]]", dataType: "string", dataIndx: "btrmfgb",	//월구분From
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editor: {
+				type: "select",
+				init: function (ui) {
+					ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find("select").pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y' || ui.rowData.btrdtgb != 'Y'){
+					ui.style.push("background:#e4e4eb;");
+					ui.cls.push('pq-cell-disable');
+				}
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			},
+			editable: function(ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? false : (ui.rowData.btrdtgb === 'Y' ? true : false);
+			}
+		},
+		{ title: "[[#{md.bvtrma.btrcfdt}]]", dataType: "string", dataIndx: "btrcfdt",	//기준일From
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editor: {
+				type: "select",
+				init: function (ui) {
+					ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find("select").pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y' || ui.rowData.btrdtgb != 'Y'){
+					ui.style.push("background:#e4e4eb;");
+					ui.cls.push('pq-cell-disable');
+				}
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			},
+			editable: function(ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? false : (ui.rowData.btrdtgb === 'Y' ? true : false);
+			}
+		},
+		{ title: "[[#{md.bvtrma.btrmtgb}]]", dataType: "string", dataIndx: "btrmtgb",	//월구분To
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editor: {
+				type: "select",
+				init: function (ui) {
+					ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find("select").pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y' || ui.rowData.btrdtgb != 'Y'){
+					ui.style.push("background:#e4e4eb;");
+					ui.cls.push('pq-cell-disable');
+				}
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			},
+			editable: function(ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? false : (ui.rowData.btrdtgb === 'Y' ? true : false);
+			}
+		},
+		
+		{ title: "[[#{md.bvtrma.btrctdt}]]", dataType: "string", dataIndx: "btrctdt",	//기준일To
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editor: {
+				type: "select",
+				init: function (ui) {
+					ui.$cell.find("select").pqSelect({ search : false, singlePlaceholder: '' });
+					setTimeout(function () {
+						ui.$cell.find("select").pqSelect('open');
+					}, 250);
+				},
+				options: []
+			},
+			render: function (ui) {
+				if(ui.rowData.bilgcnt === 'Y' || ui.rowData.btrdtgb != 'Y'){
+					ui.style.push("background:#e4e4eb;");
+					ui.cls.push('pq-cell-disable');
+				}
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			},
+			editable: function(ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? false : (ui.rowData.btrdtgb === 'Y' ? true : false);
+			}
+		},
+		{ title: "[[#{md.bvtrma.btrtknm}]]", dataType: "string", dataIndx: "btrtknm",
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			render: function (ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? {style: 'background-color:#e4e4eb;', cls: 'pq-cell-disable'} : {};
+			},
+			editable: function (ui) {
+				return (ui.rowData.bilgcnt === 'Y') ? false : true;
+			},
+			validations : [{ type: 'minLen', value: 0, warn: true }, { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]' }]
+			}, //명세표구분명
+		{ title: "[[#{md.bvtrma.credate}]]", dataType: "string", dataIndx: "credate", editable:false }, //생성일자
+		{ title: "[[#{md.bvtrma.cretime}]]", dataType: "string", dataIndx: "cretime", editable:false }, //생성시간
+		{ title: "[[#{md.bvtrma.creuser}]]", dataType: "string", dataIndx: "creuser", editable:false }, //생성자
+		{ title: "[[#{md.bvtrma.lmodate}]]", dataType: "string", dataIndx: "lmodate", editable:false }, //수정일자
+		{ title: "[[#{md.bvtrma.lmotime}]]", dataType: "string", dataIndx: "lmotime", editable:false }, //수정시간
+		{ title: "[[#{md.bvtrma.lmouser}]]", dataType: "string", dataIndx: "lmouser", editable:false }, //수정자
+		{ title: "[[#{md.bvtrma.indibzl}]]", dataType: "string", dataIndx: "indibzl" , editable: false, hidden: true }, //Busifness logic indicator
+		{ title: "[[#{md.bvtrma.indiarc}]]", dataType: "string", dataIndx: "indiarc" , editable: false, hidden: true }, //Archive indicator
+		{ title: "[[#{md.bvtrma.updtchk}]]", dataType: "integer", dataIndx: "updtchk" , editable: false, hidden: true }, //Update check
+
+	];
+	
+	//GridUtil(colModel, progrId, gridId) mdb04_grid 변수에 GridUtil할당
+	const mdb04Grid = new GridUtil(mdb04GridCM, '[[${gprogrid}]]', 'mdb04_grid');
+	
+	mdb04Grid.setCellSave(function(evt, ui){
+
+		const grid = pq.grid('#mdb04_grid'), 
+			  gridCheck = grid.Checkbox('state').getCheckedNodes();
+		
+		this.refreshRow({ rowIndx: ui.rowIndx });
+		
+		if(ui.dataIndx === 'btrcost'){
+			if(ui.rowData.btrcost===0){
+				alert('[[#{bm.zerocost}]]');
+				this.updateRow({ rowIndx: ui.rowIndx, newRow: { btrcost:'' }, checkEditable:false });
+			}else if(ui.rowData.btrcost < 0){
+				alert('[[#{bm.minuscost}]]');
+				this.updateRow({ rowIndx: ui.rowIndx, newRow: { btrcost:'' }, checkEditable:false });
+			}
+		}
+		
+		if(ui.dataIndx === 'btrsutx'){
+			if(ui.rowData.btrsutx < 0){
+				alert('[[#{bm.minusvat}]]');
+				this.updateRow({ rowIndx: ui.rowIndx, newRow: { btrsutx:'' }, checkEditable:false });
+			}
+		}
+		
+	});
+	
+	
+	//그리드에 값들 넣어주기
+	mdb04Grid.setCreate(function (evt, ui) {
+		if(mdb04Init.warekeyList){
+    		var column = this.getColumn({ dataIndx: "warekey" });
+        	var options = mdb04Init.warekeyList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.vehickyList){
+    		var column = this.getColumn({ dataIndx: "vehicky" });
+        	var options = mdb04Init.vehickyList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.vehicky] = obj.vhcsnam;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrpmgbList){ //대금구분
+    		var column = this.getColumn({ dataIndx: "btrpmgb" });
+        	var options = mdb04Init.btrpmgbList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.ptnrkeyList){ //대금구분업체 ptnrkeyList
+    		var column = this.getColumn({ dataIndx: "ptnrkey" });
+        	var options = mdb04Init.ptnrkeyList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrvsgbList){ //계정
+    		var column = this.getColumn({ dataIndx: "btrcsgb" });
+        	var options = mdb04Init.btrvsgbList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrtkgbList){ //서브계정
+    		var column = this.getColumn({ dataIndx: "btrtkgb" });
+        	var options = mdb04Init.btrtkgbList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrunitList){ //유닛
+    		var column = this.getColumn({ dataIndx: "btrunit" });
+        	var options = mdb04Init.btrunitList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.doccateList){ //문서유형
+    		var column = this.getColumn({ dataIndx: "doccate" });
+        	var options = mdb04Init.doccateList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.doctypeList){ //문서타입
+    		var column = this.getColumn({ dataIndx: "doctype" });
+        	var options = mdb04Init.doctypeList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.shtrtkyList){ //셔틀노선 
+    		var column = this.getColumn({ dataIndx: "shtrtky" });
+        	var options = mdb04Init.shtrtkyList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrdtgbList){ //기준일구분
+    		var column = this.getColumn({ dataIndx: "btrdtgb" });
+        	var options = mdb04Init.btrdtgbList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrmfgbList){ //월구분from
+    		var column = this.getColumn({ dataIndx: "btrmfgb" });
+        	var options = mdb04Init.btrmfgbList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrmtgbList){ //월구분to
+    		var column = this.getColumn({ dataIndx: "btrmtgb" });
+        	var options = mdb04Init.btrmtgbList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrcfdtList){ //기준일from
+    		var column = this.getColumn({ dataIndx: "btrcfdt" });
+        	var options = mdb04Init.btrcfdtList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(mdb04Init.btrctdtList){ //기준일to
+    		var column = this.getColumn({ dataIndx: "btrctdt" });
+        	var options = mdb04Init.btrctdtList.map(function(obj){
+            	var rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		
+	});
+	
+	
+	mdb04Grid.setCellClick(function(evt, ui){
+	    // 창고값 가져오기
+	    const warekeyValue = ui.rowData.warekey;
+	    const vehickyValue = ui.rowData.vehicky;
+
+	    // 데이터 존재 여부 확인
+	    if (mdb04Init.doctypeList) {
+	        // 창고와 고려하여 문서 타입을 찾음
+		    const foundDoctype = mdb04Init.doctypeList.filter(element => {
+		        if (warekeyValue) {
+		        	return element.warekey === warekeyValue;
+		        } 
+		        return false;
+	        });
+	        const foundShtrtky = mdb04Init.shtrtkyList.filter(element => {
+	        	if (warekeyValue && vehickyValue) {
+	        		return element.warekey === warekeyValue && element.vehicky === vehickyValue;
+	        	}
+	        	return false;
+	        })
+
+	        // 문서 타입 컬럼에 옵션 설정
+	        const doctypeColumn = this.getColumn({ dataIndx: "doctype" });
+	        const doctypeOptions = foundDoctype.map(function(obj){
+	            return {[obj.combovl]: obj.combonm};
+	        });
+	        doctypeColumn.editor.options = doctypeOptions;
+	        
+	        const shtrtkyColumn = this.getColumn({ dataIndx: "shtrtky" });
+	        const shtrtkyOptions = foundShtrtky.map(function(obj){
+	            return {[obj.combovl]: obj.combonm};
+	        });
+	        shtrtkyColumn.editor.options = shtrtkyOptions;
+	    }
+	    
+	    if (mdb04Init.vehickyList) {
+	        // 창고 고려하여 차량코드
+		    const foundVehicky = mdb04Init.vehickyList.filter(element => {
+		        if (warekeyValue) {
+		        	return element.warekey === warekeyValue;
+		        } 
+		        return false;
+	        });
+	        // 문서 타입 컬럼에 옵션 설정
+	        const vehickyColumn = this.getColumn({ dataIndx: "vehicky" });
+	        const vehickyOptions = foundVehicky.map(function(obj){
+	            return {[obj.vehicky]: obj.vhcsnam};
+	        });
+	        vehickyColumn.editor.options = vehickyOptions;
+	    }
+	    
+	});
+
+	
+	mdb04Grid.setAdd(function(evt, ui){
+		let rowData = { state : true, compkey : "[[${userattr.compkey}]]" , 
+					  btrdtgb : "N",  btuseyn : "Y", 
+					  btrsutx : 10,   doccate : "800",
+					  btrdate:moment().format('YYYY-MM')
+		};
+		let rowIndx = this.addRow({ rowData : rowData , checkEditable : false });
+		this.goToPage({ rowIndx : rowIndx });
+		this.editCell({ rowIndx : rowIndx , dataIndx : "warekey"});
+	});
+	
+	mdb04Grid.setFind();
+	
+	//요율코드에 값이 있다면 삭제 x
+	mdb04Grid.setDelete(function(evt, ui){
+		const grid = this;
+		const checkList = this.Checkbox('state').getCheckedNodes();
+		const rows = [];
+		
+		if (checkList.length > 0) {
+		  const rowdelete = window.confirm("[[#{ms.choiceRowDelete}]]");
+		
+		    if (rowdelete) {
+		      for (let i = 0; i < checkList.length; i++) {
+		        if (!checkList[i].bvtcode) { //bvtcode값이 없다면 
+		          rows.push({ rowIndx: checkList[i].pq_ri });
+		        } 
+		      }
+		      grid.deleteRow({ rowList: rows }); //삭제
+		    }
+		  } 
+	});
+	
+	mdb04Grid.setChange(function(evt, ui){
+		if('edit' === ui.source){
+			for(let ind=0; ind<ui.updateList.length; ind++){
+				const newRow = {state : true};
+				
+				nullifyActionWhenChanged(ui, ind, 'warekey', ['vehicky', 'doctype','shtrtky']);
+				
+				nullifyActionWhenChanged(ui, ind, 'doctype', ['shtrtky']);
+				
+				// 월구분From 바뀌면 기준일from, 월구분to, 기준일to 초기화
+				nullifyActionWhenChanged(ui, ind, 'btrmfgb', ['btrcfdt','btrmtgb','btrctdt']);
+				
+    			//rowData에 차량코드와 거래처가 있을때 대금구분 지급이라면 && 차량 있고 거래처 없을때 대금구분 지급.
+    			if(ui.updateList[ind].rowData.vehicky && ui.updateList[ind].rowData.ptnrkey ||
+    					ui.updateList[ind].rowData.vehicky && !ui.updateList[ind].rowData.ptnrkey){
+    				if(ui.updateList[ind].newRow.btrpmgb === 'PAYMENT' || //지급으로 바뀌거나
+    						//차량이 변경되고 대금구분이 이미 지급일때
+    						(ui.updateList[ind].newRow.vehicky !== ui.updateList[ind].oldRow.vehicky &&  ui.updateList[ind].rowData.btrpmgb === 'PAYMENT')){
+    					const findPtnrkey = mdb04Init.vehickyList.find(function(element){
+    						return ui.updateList[ind].rowData.vehicky === element.vehicky;
+    					});
+    					if(findPtnrkey){
+    						ui.updateList[ind].rowData.ptnrkey = findPtnrkey.carrier;
+    					}
+    				}
+    			} //대유창고도 적용 되지만 현재 대유는 파트너 테이블에 운송사carrier 데이터없음
+    			
+				
+				
+				//rowData에 문서타입 있을때 창고확인=> 문서타입이 들고있는 warekey와 비교
+				if (ui.updateList[ind].rowData.doctype) {
+					if(ui.updateList[ind].newRow.warekey){
+						let wareValue = ui.updateList[ind].newRow.warekey;
+						let docValue = ui.updateList[ind].rowData.doctype;
+						let doubleValue = wareValue + docValue;
+						let findWDoctype;
+						mdb04Init.doctypeList.forEach(function(element, index){
+							if(doubleValue === element.warekey + element.combovl){
+								findWDoctype = element.combovl;
+							}
+						})
+						if(docValue !== findWDoctype){
+							newRow.warekey='';
+						}
+					}
+				}
+				
+				//rowData에 창고가 있을때 문서타입확인 => 창고가 들고 있는 combovl(문서타입)과 비교
+				if (ui.updateList[ind].rowData.warekey) {
+					if(ui.updateList[ind].newRow.doctype){
+						let doctypeValue = ui.updateList[ind].newRow.doctype;
+						let warekeyValue = ui.updateList[ind].rowData.warekey;
+						let dwValue = doctypeValue + warekeyValue;
+						let findWare;
+						mdb04Init.doctypeList.forEach(function(element, index){
+							if(dwValue === element.combovl + element.warekey){
+								findWare = element.warekey;
+							}
+						})
+						if(warekeyValue !== findWare){
+							newRow.doctype='';
+						}
+					}
+				}
+				
+				//rowData에 차량코드 있을때 창고확인 => 새창고입력값과 vehickyList의 warekey 비교
+				if(ui.updateList[ind].rowData.vehicky){
+					if(ui.updateList[ind].newRow.warekey){
+						let whValue = ui.updateList[ind].newRow.warekey; //입력하는창고값
+						let vehickyValue = ui.updateList[ind].rowData.vehicky; //이미입력되어있는차량코드
+						let dbValue = whValue + vehickyValue;
+						let findVehicky;
+						mdb04Init.vehickyList.forEach(function(element, index){
+							if(dbValue === element.warekey + element.vehicky){
+								findVehicky = element.vehicky;
+							}
+						})
+						if(vehickyValue !== findVehicky){
+							newRow.warekey='';
+						}
+					}
+				}
+				
+				//창고가 있을때 차량코드 확인 => 새차량코드와 vehickyList의 vehicky확인
+				if(ui.updateList[ind].rowData.warekey){
+					if(ui.updateList[ind].newRow.vehicky){
+						let vhValue = ui.updateList[ind].newRow.vehicky; //입력하는차량코드
+						let wkValue = ui.updateList[ind].rowData.warekey; //이미입력되어있는창고키
+						let dblValue = vhValue + wkValue;
+						let findWky;
+						mdb04Init.vehickyList.forEach(function(element, index){
+							if(dblValue === element.vehicky + element.warekey){
+								findWky = element.warekey;
+							}
+						})
+						if(wkValue !== findWky){
+							newRow.vehicky='';
+						}
+					}
+				}
+				
+				
+				// 월구분From
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrmfgb') && ui.updateList[ind].oldRow.hasOwnProperty('btrmfgb')){
+					if(ui.updateList[ind].newRow.btrmfgb !== ui.updateList[ind].oldRow.btrmfgb){
+						newRow.btrmtgb = '';	//월구분To
+					}
+				}			
+				
+				
+				// 기준일구분
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrdtgb') && ui.updateList[ind].oldRow.hasOwnProperty('btrdtgb')){
+					if(ui.updateList[ind].newRow.btrdtgb !== 'Y'){
+						newRow.btrmfgb = '';	//월구분From
+						newRow.btrcfdt = '';	//기준일From
+						newRow.btrmtgb = '';	//월구분To
+						newRow.btrctdt = '';	//기준일To
+					}
+				}
+				// 월구분from
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrmfgb')){
+					if(ui.updateList[ind].newRow.btrmfgb === 'TM' && ui.updateList[ind].rowData.btrmtgb === 'PM'){
+						alert('[[#{bm.lastMonthNotThisMonth}]]');	//월구분to가 [전월]이면 월구분from이 [당월]일 수 없습니다.
+						newRow.btrmfgb = ui.updateList[ind].oldRow.btrmfgb;	//전 값으로 초기화
+					}
+					// 월구분To 와 값이 같다면 기준일이 있는지 체크하고, 있다면 크기도 체크
+					else if(typeof ui.updateList[ind].rowData.btrmtgb === 'string' && ui.updateList[ind].newRow.btrmfgb === ui.updateList[ind].rowData.btrmtgb){
+						if(typeof ui.updateList[ind].rowData.btrcfdt === 'string' && typeof ui.updateList[ind].rowData.btrctdt === 'string' &&
+								(ui.updateList[ind].rowData.btrcfdt === ui.updateList[ind].rowData.btrctdt || ui.updateList[ind].rowData.btrcfdt > ui.updateList[ind].rowData.btrctdt)
+						){
+							alert('[[#{bm.equalmonthNotAllowHigh}]]');
+							newRow.btrmfgb = ui.updateList[ind].oldRow.btrmfgb;	//전 값으로 초기화
+						}
+					}
+				}
+				// 월구분to
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrmtgb')){
+					if(ui.updateList[ind].newRow.btrmtgb === 'PM' && ui.updateList[ind].rowData.btrmfgb === 'TM'){
+						alert('[[#{bm.thisMonthNotLastMonth}]]');	//월구분from이 [당월]이면 월구분to가 [전월]일 수 없습니다.
+						newRow.btrmtgb = ui.updateList[ind].oldRow.btrmtgb;	//전 값으로 초기화
+					}
+					// 월구분From 와 값이 같다면 기준일이 있는지 체크하고, 있다면 크기도 체크
+					else if(typeof ui.updateList[ind].rowData.btrmfgb === 'string' && ui.updateList[ind].newRow.btrmtgb === ui.updateList[ind].rowData.btrmfgb){
+						if(typeof ui.updateList[ind].rowData.btrcfdt === 'string' && typeof ui.updateList[ind].rowData.btrctdt === 'string' &&
+								(ui.updateList[ind].rowData.btrcfdt === ui.updateList[ind].rowData.btrctdt || ui.updateList[ind].rowData.btrcfdt > ui.updateList[ind].rowData.btrctdt)
+						){
+							alert('[[#{bm.equalmonthNotAllowHigh}]]');
+							newRow.btrmtgb = ui.updateList[ind].oldRow.btrmtgb;	//전 값으로 초기화
+						}
+					}
+				}
+				// 기준일from
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrcfdt')){
+					if(typeof ui.updateList[ind].rowData.btrmfgb === 'string' && typeof ui.updateList[ind].rowData.btrmtgb === 'string' &&
+							ui.updateList[ind].rowData.btrmtgb === ui.updateList[ind].rowData.btrmfgb &&
+							(ui.updateList[ind].newRow.btrctdt === ui.updateList[ind].rowData.btrcfdt || ui.updateList[ind].newRow.btrctdt < ui.updateList[ind].rowData.btrcfdt)
+					) {
+						alert('[[#{bm.equalmonthNotAllowHigh}]]');
+						newRow.btrcfdt = ui.updateList[ind].oldRow.btrcfdt;	//전 값으로 초기화
+					}
+				}
+				// 기준일To
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrctdt')){
+					if(typeof ui.updateList[ind].rowData.btrmfgb === 'string' && typeof ui.updateList[ind].rowData.btrmtgb === 'string' &&
+							ui.updateList[ind].rowData.btrmfgb === ui.updateList[ind].rowData.btrmtgb &&
+							(ui.updateList[ind].newRow.btrctdt === ui.updateList[ind].rowData.btrcfdt || ui.updateList[ind].newRow.btrctdt < ui.updateList[ind].rowData.btrcfdt)
+					){
+						alert('[[#{bm.equalmonthNotAllowRow}]]');
+						newRow.btrctdt = ui.updateList[ind].oldRow.btrctdt;	//전 값으로 초기화
+					}
+				}
+				this.updateRow( {
+					rowIndx : ui.updateList[ind].rowIndx,
+					newRow : newRow,
+					checkEditable: false
+				});
+			}
+		} else if('paste' === ui.source){
+			for(let ind=0; ind<ui.updateList.length; ind++){
+				const newRow = {state : true};
+				
+				nullifyActionWhenChanged(ui, ind, 'warekey', ['vehicky','doctype','shtrtky']);
+				
+				
+				nullifyActionWhenChanged(ui, ind, 'doctype', ['shtrtky']);
+				
+				// 월구분From 바뀌면 기준일from, 월구분to, 기준일to 초기화
+				nullifyActionWhenChanged(ui, ind, 'btrmfgb', ['btrcfdt','btrmtgb','btrctdt']);
+				
+    			//rowData에 차량코드와 거래처가 있을때 대금구분 지급이라면 && 차량 있고 거래처 없을때 대금구분 지급.
+    			if(ui.updateList[ind].rowData.vehicky && ui.updateList[ind].rowData.ptnrkey ||
+    					ui.updateList[ind].rowData.vehicky && !ui.updateList[ind].rowData.ptnrkey){
+    				if(ui.updateList[ind].newRow.btrpmgb === 'PAYMENT' || 
+    						(ui.updateList[ind].newRow.vehicky !== ui.updateList[ind].oldRow.vehicky &&  ui.updateList[ind].rowData.btrpmgb === 'PAYMENT')){ //지급을 새로 입력함
+    					const findPtnrkey = mdb04Init.vehickyList.find(function(element){
+    						return ui.updateList[ind].rowData.vehicky === element.vehicky;
+    					});
+    					if(findPtnrkey){
+    						ui.updateList[ind].rowData.ptnrkey = findPtnrkey.carrier;
+    					}
+    				}
+    			}
+    			
+				
+				//rowData에 문서타입 있을때 창고확인=> 문서타입이 들고있는 warekey와 비교
+				if (ui.updateList[ind].rowData.doctype) {
+					if(ui.updateList[ind].newRow.warekey){
+						let wareValue = ui.updateList[ind].newRow.warekey;
+						let docValue = ui.updateList[ind].rowData.doctype;
+						let doubleValue = wareValue + docValue;
+						let findWDoctype;
+						mdb04Init.doctypeList.forEach(function(element, index){
+							if(doubleValue === element.warekey + element.combovl){
+								findWDoctype = element.combovl;
+							}
+						})
+						if(docValue !== findWDoctype){
+							newRow.warekey='';
+						}
+					}
+				}
+				
+				//rowData에 창고가 있을때 문서타입확인 => 창고가 들고 있는 combovl(문서타입)과 비교
+				if (ui.updateList[ind].rowData.warekey) {
+					if(ui.updateList[ind].newRow.doctype){
+						let doctypeValue = ui.updateList[ind].newRow.doctype;
+						let warekeyValue = ui.updateList[ind].rowData.warekey;
+						let dwValue = doctypeValue + warekeyValue;
+						let findWare;
+						mdb04Init.doctypeList.forEach(function(element, index){
+							if(dwValue === element.combovl + element.warekey){
+								findWare = element.warekey;
+							}
+						})
+						if(warekeyValue !== findWare){
+							newRow.doctype='';
+						}
+					}
+				}
+				
+				//rowData에 차량코드 있을때 창고확인 => 새창고입력값과 vehickyList의 warekey 비교
+				if(ui.updateList[ind].rowData.vehicky){
+					if(ui.updateList[ind].newRow.warekey){
+						let whValue = ui.updateList[ind].newRow.warekey; //입력하는창고값
+						let vehickyValue = ui.updateList[ind].rowData.vehicky; //이미입력되어있는차량코드
+						let dbValue = whValue + vehickyValue;
+						let findVehicky;
+						mdb04Init.vehickyList.forEach(function(element, index){
+							if(dbValue === element.warekey + element.vehicky){
+								findVehicky = element.vehicky;
+							}
+						})
+						if(vehickyValue !== findVehicky){
+							newRow.warekey='';
+						}
+					}
+				}
+				
+				//창고가 있을때 차량코드 확인 => 새차량코드와 vehickyList의 vehicky확인
+				if(ui.updateList[ind].rowData.warekey){
+					if(ui.updateList[ind].newRow.vehicky){
+						let vhValue = ui.updateList[ind].newRow.vehicky; //입력하는차량코드
+						let wkValue = ui.updateList[ind].rowData.warekey; //이미입력되어있는창고키
+						let dblValue = vhValue + wkValue;
+						let findWky;
+						mdb04Init.vehickyList.forEach(function(element, index){
+							if(dblValue === element.vehicky + element.warekey){
+								findWky = element.warekey;
+							}
+						})
+						if(wkValue !== findWky){
+							newRow.vehicky='';
+						}
+					}
+				}
+				
+				
+				
+				// 월구분From
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrmfgb') && ui.updateList[ind].oldRow.hasOwnProperty('btrmfgb')){
+					if(ui.updateList[ind].newRow.btrmfgb !== ui.updateList[ind].oldRow.btrmfgb){
+						newRow.btrmtgb = '';	//월구분To
+					}
+				}
+
+				// 기준일구분
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrdtgb') && ui.updateList[ind].oldRow.hasOwnProperty('btrdtgb')){
+					if(ui.updateList[ind].newRow.btrdtgb !== 'Y'){
+						newRow.btrmfgb = '';	//월구분From
+						newRow.btrcfdt = '';	//기준일From
+						newRow.btrmtgb = '';	//월구분To
+						newRow.btrctdt = '';	//기준일To
+					}
+				}
+				// 월구분from
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrmfgb')){
+					if(ui.updateList[ind].newRow.btrmfgb === 'TM' && ui.updateList[ind].rowData.btrmtgb === 'PM'){
+						alert('[[#{bm.lastMonthNotThisMonth}]]');	//월구분to가 [전월]이면 월구분from이 [당월]일 수 없습니다.
+						newRow.btrmfgb = ui.updateList[ind].oldRow.btrmfgb;	//전 값으로 초기화
+					}
+					// 월구분To 와 값이 같다면 기준일이 있는지 체크하고, 있다면 크기도 체크
+					else if(typeof ui.updateList[ind].rowData.btrmtgb === 'string' && ui.updateList[ind].newRow.btrmfgb === ui.updateList[ind].rowData.btrmtgb){
+						if(typeof ui.updateList[ind].rowData.btrcfdt === 'string' && typeof ui.updateList[ind].rowData.btrctdt === 'string' &&
+								(ui.updateList[ind].rowData.btrcfdt === ui.updateList[ind].rowData.btrctdt || ui.updateList[ind].rowData.btrcfdt > ui.updateList[ind].rowData.btrctdt)
+						){
+							alert('[[#{bm.equalmonthNotAllowHigh}]]');
+							newRow.btrmfgb = ui.updateList[ind].oldRow.btrmfgb;	//전 값으로 초기화
+						}
+					}
+				}
+				// 월구분to
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrmtgb')){
+					if(ui.updateList[ind].newRow.btrmtgb === 'PM' && ui.updateList[ind].rowData.btrmfgb === 'TM'){
+						alert('[[#{bm.thisMonthNotLastMonth}]]');	//월구분from이 [당월]이면 월구분to가 [전월]일 수 없습니다.
+						newRow.btrmtgb = ui.updateList[ind].oldRow.btrmtgb;	//전 값으로 초기화
+					}
+					// 월구분From 와 값이 같다면 기준일이 있는지 체크하고, 있다면 크기도 체크
+					else if(typeof ui.updateList[ind].rowData.btrmfgb === 'string' && ui.updateList[ind].newRow.btrmtgb === ui.updateList[ind].rowData.btrmfgb){
+						if(typeof ui.updateList[ind].rowData.btrcfdt === 'string' && typeof ui.updateList[ind].rowData.btrctdt === 'string' &&
+								(ui.updateList[ind].rowData.btrcfdt === ui.updateList[ind].rowData.btrctdt || ui.updateList[ind].rowData.btrcfdt > ui.updateList[ind].rowData.btrctdt)
+						){
+							alert('[[#{bm.equalmonthNotAllowHigh}]]');
+							newRow.btrmtgb = ui.updateList[ind].oldRow.btrmtgb;	//전 값으로 초기화
+						}
+					}
+				}
+				// 기준일from
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrcfdt')){
+					if(typeof ui.updateList[ind].rowData.btrmfgb === 'string' && typeof ui.updateList[ind].rowData.btrmtgb === 'string' &&
+							ui.updateList[ind].rowData.btrmtgb === ui.updateList[ind].rowData.btrmfgb &&
+							(ui.updateList[ind].newRow.btrctdt === ui.updateList[ind].rowData.btrcfdt || ui.updateList[ind].newRow.btrctdt < ui.updateList[ind].rowData.btrcfdt)
+					) {
+						alert('[[#{bm.equalmonthNotAllowHigh}]]');
+						newRow.btrcfdt = ui.updateList[ind].oldRow.btrcfdt;	//전 값으로 초기화
+					}
+				}
+				// 기준일To
+				if(ui.updateList[ind].newRow.hasOwnProperty('btrctdt')){
+					if(typeof ui.updateList[ind].rowData.btrmfgb === 'string' && typeof ui.updateList[ind].rowData.btrmtgb === 'string' &&
+							ui.updateList[ind].rowData.btrmfgb === ui.updateList[ind].rowData.btrmtgb &&
+							(ui.updateList[ind].newRow.btrctdt === ui.updateList[ind].rowData.btrcfdt || ui.updateList[ind].newRow.btrctdt < ui.updateList[ind].rowData.btrcfdt)
+					){
+						alert('[[#{bm.equalmonthNotAllowRow}]]');
+						newRow.btrctdt = ui.updateList[ind].oldRow.btrctdt;	//전 값으로 초기화
+					}
+				}
+				this.updateRow({
+					rowIndx : ui.updateList[ind].rowIndx,
+					newRow : newRow,
+					checkEditable: false
+				});
+			}
+			for(let ind=0; ind<ui.addList.length; ind++){
+				ui.addList[ind].newRow.state = true;
+				ui.addList[ind].newRow.compkey = '[[${userattr.compkey}]]';
+				ui.addList[ind].newRow.doccate = '800';
+				ui.addList[ind].newRow.btrdate = moment().format('YYYY-MM');
+				ui.addList[ind].newRow.btrdtgb = 'N';
+				ui.addList[ind].newRow.btuseyn = 'Y';
+			}
+		} else if('checkbox' === ui.source){
+			for(let ind=0; ind<ui.updateList.length; ind++){
+				const newRow = {state : true};
+				if(ui.updateList[ind].newRow.hasOwnProperty('btuseyn')){
+					this.updateRow( {
+						rowIndx : ui.updateList[ind].rowIndx,
+						newRow : { state : true },
+						checkEditable: false
+					});
+				}
+			}
+		}
+	});
+	
+	mdb04Grid.open();
+
+  async function savemdb04List(saveData){
+		if(!saveData){
+			return false;
+		}
+		const grid = pq.grid('#mdb04_grid');
+		grid.showLoading();
+		const savemdb04Response = await fetchUtil('POST', '/md/billingMaster/mdb04/grids/1', saveData);
+		if(savemdb04Response.status===200){
+			await mdb04List();
+			//alert('[[#{ms.saveSuccess}]]');
+		}
+		grid.hideLoading();
+	}
+	
+});
+
+ async function mdb04List(){
+     // 검색 영역 필수값 확인
+     if ($('#mdb04PointDom input:checked').val() === 'APP' && $('#mdb04_btrdate').val() === '') {
+         alert('[[#{bm.btrdate}]]'); //적용시작년월을 선택해주세요.
+         return false;
+     }
+
+	const grid = pq.grid('#mdb04_grid');
+	grid.showLoading();
+
+	const data = {
+        warekey : $('#mdb04_warekey').val(),
+        vehicky : $('#mdb04_vhcsnam').val(), btrpmgb : $('#mdb04_btrpmgb').val(),
+        btrcsgb : $('#mdb04_btrcsgb').val(), btrtkgb : $('#mdb04_btrtkgb').val(),
+        ptnrkey : $('#mdb04_ptnrkey').val(), btrunit : $('#mdb04_btrunit').val(),
+        btrdate: $('#mdb04_btrdate').val().replace(/-/g, ''),
+        selectpoint:$('#mdb04PointDom input:checked').val()
+    };
+
+ 	const response = await fetchUtil('GET', '/md/billingMaster/mdb04/grids/1', data);
+ 	if(response.status===200){
+ 		resContent = await response.json();
+
+ 		grid.option( 'dataModel', { data: resContent, recIndx: 'rowkey' } );
+ 		grid.refreshDataAndView();
+ 	}
+		grid.hideLoading();
+};
+
+	</script>
+</div>
+</html>

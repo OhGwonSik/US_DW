@@ -1,0 +1,592 @@
+<!-- 	/*  OMR05 - OMR05 반출취소등록
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 안성민 
+	*   설명			: OMR05 반출등록된 상품의 취소 등록
+	*/
+ -->
+ 
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="omr05_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omr05_warekey" name="omr05_warekey"
+							data-cb-variable="warekey" data-cb-val="combovl"
+							data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"></select>
+					</div>
+				</div>
+				<label for="omr05_ownerkey" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omr05_ownerky" name="omr05_ownerky"
+							data-cb-variable="ownerky" data-cb-val="combovl"
+							data-cb-name="combonm" data-cb-url="/md/common/partner/owner">
+						</select>
+					</div>
+				</div>
+
+				<label for="omr05_oeinsdt" class="setting-grid-title ic-title-nece">[[#{om.omr.oeinsdt}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="date" max="2999-12-31" id="omr05_oeinsdt_from"
+							onkeyup="setInputDateDel(this)" /> <span>~</span>
+						<input type="date" max="2999-12-31" id="omr05_oeinsdt_to"
+							onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+				<label for="omr05_skumkey" class="setting-grid-title">[[#{om.omr.skumkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('om.omr.skumkey')}" id="omr05_skumkey" name="omr05_skumkey" />
+					</div>
+				</div>
+				<label for="omr05_skudesc" class="setting-grid-title">[[#{om.omr.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('om.omr.skudesc')}" id="omr05_skudesc" name="omr05_skudesc" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="omr05_btnSearch">
+					<img />조회
+				</button>
+				<button type="button" class="btn-clear btn-white"
+					id="omr05_btnReset">
+					<img />초기화
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="omr05_btnSave">
+						<img class="ic-bt-save" />저장
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="omr05_pqgrid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+      $(function () {
+        var pageId = "omr05";
+
+        const omr05OeinsdtFrom = document.querySelector("#omr05_oeinsdt_from");
+        const omr05OeinsdtTo = document.querySelector("#omr05_oeinsdt_to");
+        //영업일자 세팅
+        omr05OeinsdtFrom.value = moment().subtract(1, "M").format("YYYY-MM-DD"); //한달전
+        omr05OeinsdtTo.value = moment().add(0, "d").format("YYYY-MM-DD"); //오늘 + 1일
+
+        //pqGrid ColModel Object
+        let omr05GridColModel;
+
+        //pqGrid Grid Object
+        let omr05GridObject;
+        let initData;
+        let omr05Warekey;
+        let omr05Ownerky;
+
+        $("#" + pageId + "_btnSearch").click(function () {
+          searchOmr05List();
+        });
+
+        $("#" + pageId + "_btnSave").click(function () {
+          saveOmr05Change();
+        });
+
+        $("#" + pageId + "_btnReset").click(function () {
+          refreshOmr05List();
+        });
+
+        //pqGrid ColModel 객체
+        omr05GridColModel = [
+          {
+            title: "",
+            dataType: "String",
+            dataIndx: "state",
+            type: "checkBoxSelection",
+            align : "center",
+            maxWidth: "30",
+            maxHeight: "30",
+            menuIcon: false,
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          },
+          {
+            title: "[[#{om.omr.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            hidden : true,
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.ownerkey}]]",
+            dataType: "string",
+            dataIndx: "ownerky1",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.oeretky}]]",
+            dataType: "string",
+            dataIndx: "oeretky",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.skudesc}]]",
+            dataType: "string",
+            dataIndx: "skudesc",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.skumkey}]]",
+            dataType: "string",
+            dataIndx: "skumkey",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.stotqty}]]",
+            dataType: "integer",
+            dataIndx: "stotqty",
+            editable: false,
+            format: "#,###",
+            summary: { type: "sum" },
+          },
+          {
+            title: "[[#{om.omr.stkstat}]]",
+            dataType: "string",
+            dataIndx: "comcdtx",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.rsncode}]]",
+            dataType: "string",
+            dataIndx: "rsncode",
+            width: "100",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.rsndesc}]]",
+            dataType: "string",
+            dataIndx: "rsndesc",
+            editable: false,
+          },/* 
+          {
+            title: "[[#{om.omr.cancode}]]",
+            dataType: "string",
+            dataIndx: "cancode",
+            //styleHead: { background: '[[#{grid.styleHead01}]]' },
+            editable: false,
+          }, */
+          {
+            title: "[[#{om.omr.cancode}]]",
+            dataType: "string",
+            dataIndx: "rsncdnm",
+            styleHead: { background: "[[#{grid.styleHead01}]]" },
+            dataTarget: "",
+            editor: {
+				type: 'select',
+				init: function (ui) {
+					ui.$cell.find('select').pqSelect();
+					setTimeout(function () {
+						ui.$cell.find('select').pqSelect('open');
+					}, 250);
+				},
+				options: [],      
+			},
+			render: function (ui) {
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				ui.rowData.rsncdnm = option ? ui.cellData : '';
+				return option ? option[ui.cellData] : '';
+			},	
+          },
+          {
+        	  title: "[[#{om.oereti.recrsnm}]]",
+              dataType: "string",
+              dataIndx: "recrsnm",
+              width: '100',
+			  styleHead: { background: '[[#{grid.styleHead02}]]' },
+			  dataTarget: ''
+          },
+          {
+            title: "[[#{om.omr.suomkey}]]",
+            dataType: "string",
+            dataIndx: "suomkey",
+            editable: false,
+          } /* 
+            {
+              title: '[[#{wm.wrcvit.rcvdcdt}]]',
+              dataType: 'string',
+              dataIndx: 'rcvdcdt',
+              width: '150',
+              align: 'center',
+              editable: false,
+            }, */,
+          {
+            title: "[[#{om.omr.oeinsdt}]]",
+            dataType: "date",
+            dataIndx: "oeinsdt",
+            editable: false,
+            format: "yy-mm-dd",
+          },
+          {
+            title: "[[#{om.oereti.oeinstm}]]",
+            dataType: "string",
+            dataIndx: "oeinstm",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.rtodqty}]]",
+            dataType: "integer",
+            dataIndx: "rtodqty",
+            editable: false,
+            format: "#,###",
+          },
+          {
+            title: "[[#{om.omr.areakey}]]",
+            dataType: "string",
+            dataIndx: "areanam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.zonekey}]]",
+            dataType: "string",
+            dataIndx: "zonenam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.locakey}]]",
+            dataType: "string",
+            dataIndx: "locanam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          },
+        ];
+
+        //pqGrid 객체
+        omr05GridObject = new GridUtil(
+          omr05GridColModel,
+          "[[${gprogrid}]]",
+          pageId + "_pqgrid"
+        );
+
+        omr05GridObject.setFind();
+        //omr05GridObject.setReset();
+
+        // 같은 OERETKY묶어서 체크해주는기능
+        omr05GridObject.setCheck(function (event, ui) {
+          const findSameOeretky = omr05GridObject
+            .getGrid()
+            .getData()
+            .filter(function (obj) {
+              return (
+                obj.oeretky === ui.rowData.oeretky && obj.asnstat !== "NEW"
+              );
+            });
+          for (const sameOeretky of findSameOeretky) {
+            this.updateRow({
+              rowIndx: sameOeretky.pq_ri,
+              newRow: {
+                state: ui.check ? "Y" : "N",
+              },
+              checkEditable: false,
+            });
+          }
+        });
+
+        omr05GridObject.setCreate(async function(event, ui){
+        	await _commonInit();
+        	
+            omr05Warekey = document.querySelector('#omr05_warekey').value;
+    		omr05Ownerky = document.querySelector('#omr05_ownerky').value;
+    		
+    		// 20231018 화주로그인=화주 고정 옵션 수정
+    		if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+				const html = '<option value="" selected>[[#{om.omr.all}]]</option>';
+				document.querySelector('#omr05_ownerky').insertAdjacentHTML('afterbegin', html); 
+				$('#omr05_ownerky').pqSelect({ deselect : false }); 
+			}
+    		
+    		
+/*     		 $('#omr05_ownerky').pqSelect().on('change', async function(){ 
+    			const grid = omr05GridObject.getGrid();	
+    			if(grid.pdata.length) {
+    				if(!confirm('[[#{ms.listViewRollback}]]')){
+    					document.querySelector('#omr05_ownerky').value = omr05Ownerky;
+    					$('#omr05_ownerky').pqSelect('refreshData');
+    					return;
+    				}
+    				grid.option('dataModel', { data: [] });
+    				grid.refreshDataAndView();
+    			}
+    			omr05Ownerky = document.querySelector('#omr05_ownerky').value;
+    			//initList.skuwcList = await getSkuwcList();
+    		 }); */
+    		
+        });
+        
+        //pqGrid 이벤트발생시 validate 함수
+        omr05GridObject.setBeforeValidate(function (event, ui) {
+          if (
+            ui.source != "undo" &&
+            (ui.source == "edit" ||
+              ui.source == "paste" ||
+              ui.source == "checkbox")
+          ) {
+            let rownum = ui.updateList[0].rowIndx;
+
+            if (ui.updateList[0].newRow.rsncdnm !== null) {
+              this.updateRow({
+                rowIndx: rownum,
+                newRow: {
+                  state: "Y",
+                },
+                checkEditable: false,
+              });
+            }
+          }
+
+          // 반출취소사유를 선택하면 반출취소코드를 자동으로 대입함
+          if (
+            ui.source === "edit" ||
+            ui.source == "paste" ||
+            ui.source == "update"
+          ) {
+            let selectedRowNum = ui.updateList.map(
+              (updatedRow) => updatedRow.rowIndx
+            );
+            // 반출 사유를 선택하면
+            if (ui.updateList[0].newRow.rsncdnm) {
+              let rsncdnm = ui.updateList[0].newRow.rsncdnm;
+              let rsncode = initData.cancelList.find(
+                (row) => row.rsncdnm === rsncdnm
+              );
+              let newRsncode = rsncode.rsncode;
+              
+              if (rsncode) {
+            	  for (const rowNum of selectedRowNum) {
+            		  this.updateRow({
+            		    rowIndx: rowNum,
+            		    newRow: {
+            		      //cancode: newRsncode, ()
+            		      state: "Y",
+            		    },
+            		    checkEditable: false,
+            		  });
+            		}
+              } else {
+                console.error("[[#{om.omr.nocancode}]]", rsncdnm);
+              }
+            }
+          }
+        });
+
+        //pqGrid 랜더링
+        omr05GridObject.open();
+
+        //============================================================
+        //그리드 초기화 버튼 이벤트
+        //============================================================
+        async function refreshOmr05List() {
+          const selectedWarekey = $("#" + pageId + "_warekey").prop(
+            "selectedIndex",
+            0
+          );
+          const selectedOwnerky = $("#" + pageId + "_ownerky").prop(
+            "selectedIndex",
+            0
+          );
+          $('#' + pageId + '_ownerky').pqSelect('refreshData');
+          document.getElementById("omr05_skudesc").value = "";
+          document.getElementById("omr05_skumkey").value = "";
+
+          //영업일자 세팅
+          omr05OeinsdtFrom.value = moment()
+            .subtract(1, "M")
+            .format("YYYY-MM-DD"); //한달전
+          omr05OeinsdtTo.value = moment().add(0, "d").format("YYYY-MM-DD"); //오늘 + 1일
+
+          omr05GridObject.searchList([]);
+
+          omr05GridObject.searchList([]);
+        }
+
+        //============================================================
+        //그리드 세이브 버튼 이벤트
+        //============================================================
+        async function saveOmr05Change() {
+          let grid = omr05GridObject.getGrid();
+          let gridAllData = grid.getChanges({ all: true });
+          let gridDataList = grid.getData();
+          
+          let checkList = gridDataList.filter(function (e) {
+            return e.state == "Y";
+          });"src/main/resources/message/messages_gj.properties"
+
+          // 231211 추가 여기서 checkList에 대한 반복문을 시작합니다.
+          for (const item of checkList) {
+              // 'rsncdnm' 값에 따라 'newRsncode' 설정
+              if (item.rsncdnm) {
+            	let rsncode = initData.cancelList.find(row => row.rsncdnm === item.rsncdnm);
+                item.cancode = rsncode ? rsncode.rsncode : null;
+              }
+            }
+          
+          // 231208 1115 체크박스 선택된 row만 진행 추가
+          if (checkList.length !== 0) {
+        	  for (const checkData of checkList){
+            	  let rowIndex = 0;
+            	  for (const item of checkList) {
+            	    if (!item.rsncdnm) {
+            	      alert(
+            	        `${item.pq_ri + 1} Row [[#{ms.requiredValue}]] ([[#{om.omr.candesc}]])`
+            	      );
+            	      grid.editCell({
+            	        rowIndx: item.pq_ri,
+            	        dataIndx: "rsncdnm",
+            	      });
+            	      return false;
+            	    }
+            	    rowIndex++;
+            	  }
+        	  }
+          } else {
+            alert("[[#{ms.choiceRowZero}]]");
+            return;
+          }
+
+          if (checkList.length > 0) {
+            if (confirm("[[#{ms.checksave}]]")) {
+              let list = new Object();
+              let addList = [];
+              let updateList = [];
+
+              for (const item of checkList) {
+            	  if (item.recindx === undefined) {
+            	    addList.push(item);
+            	  } else {
+            	    updateList.push(item);
+            	  }
+            	}
+              
+              list.addList = addList;
+              list.updateList = updateList;
+
+              if (gridAllData.deleteList.length > 0) {
+                list.deleteList = gridAllData.deleteList;
+              }
+
+              let data = {
+                list: list,
+              };
+
+              omr05GridObject.getGrid().showLoading();
+              let rData = callAjax(
+                "data",
+                "POST",
+                "/om/omr05/omr5Save.do",
+                data
+              );
+              omr05GridObject.getGrid().hideLoading();
+
+              if (rData != 0 && rData != undefined) {
+                //alert("[[#{ms.saveSuccess}]]");
+                searchOmr05List();
+              } else {
+                //alert("[[#{ms.saveErr}]]");
+              }
+            }
+          } /* else {
+            if (rData != 0 && rData != undefined) {
+              //alert("[[#{ms.saveSuccess}]]");
+              searchOmr05List();
+            } else {
+              alert("[[#{ms.saveErr}]]");
+            }
+          } */
+        }
+        //검색조건 수주일자 input 클릭시 일자 선택 제한
+        $("#omr05_oeinsdt_from , #omr05_oeinsdt_to").on("click", function () {
+          //수주일자 from 최대 일자 선택
+          $("#omr05_oeinsdt_from").attr("max", omr05OeinsdtTo.value);
+
+          //수주일자 to 최소 일자 선택
+          $("#omr05_oeinsdt_to").attr("min", omr05OeinsdtFrom.value);
+        });
+
+        async function initOMRData(param) {
+          const grid = pq.grid('#omr05_pqgrid');
+          grid.showLoading();
+          
+          let rData = await fetchUtil("", "/om/omr05/omr05Select.do", param);
+          initData = await rData.json();
+
+          if (initData.omr05List.length == 0) {
+            //alert("[[#{ms.getDataZero}]]");
+          }
+
+       	  // 231211 1750 추가 rsncode를 combonm으로 매핑하는 로직
+
+          comboCreateData("omr05_pqgrid", "rsncdnm", initData.cancelList, {
+            combovl: "rsncdnm",
+            combonm: "rsncdnm",
+          });
+
+          initData.omr05List.forEach((item, index) => {
+         	    let matchingRsncdnm = initData.commonList.find(rsncdnm => rsncdnm.rsncode === item.rsncode);
+         	    if (matchingRsncdnm) {
+         	        initData.omr05List[index].rsncode = matchingRsncdnm.rsncdnm;
+         	    } else {
+         	        // rsncode에 대응하는 rsnsdnm이 없는 경우
+         	        // 예를 들어, rsncode를 유지하거나 기본값으로 설정할 수 있습니다.
+         	        //initData.omr05List[index].rsncode = '기본값 또는 원래의 rsncode';
+         	    }
+         	});
+        	  
+          grid.hideLoading();
+          omr05GridObject.searchList(initData.omr05List, initData.commonList);
+        }
+        //============================================================
+        //영역 검색 버튼 이벤트
+        //============================================================
+        async function searchOmr05List() {
+          let param = {
+            warekey: $("#omr05_warekey").val(),
+            ownerky: $("#omr05_ownerky").val(),
+            skudesc: $("#omr05_skudesc").val(),
+            skumkey: $("#omr05_skumkey").val(),
+            oeinsdtFrom: $("#omr05_oeinsdt_from").val(),
+            oeinsdtTo: $("#omr05_oeinsdt_to").val(),
+          };
+          initOMRData(param);
+        }
+      });
+    </script>
+	<!--  mainConten 종료 -->
+</div>
+</html>

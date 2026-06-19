@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.md.mapper.CodeMapper">
+	<!-- *********************************************** -->
+	<!-- 사유코드 : MRSCMA -->
+	<!-- *********************************************** -->
+	<!-- mdc06 : 사유코드 조회 -->
+	<select id="selectMrscmaList" resultType="com.logistics.md.domain.MrscmaDTO">
+		/* selectMrscmaList */
+		select
+		CONCAT(A.COMPKEY, A.WAREKEY, A.DOCCATE, A.DOCTYPE, A.RSNCODE) AS ROWKEY
+		, A.COMPKEY
+		, A.WAREKEY, (select C.WHNAMLC from MWARMA C where A.COMPKEY = C.COMPKEY and A.WAREKEY = C.WAREKEY ) as COMCDTX
+		, A.DOCCATE, B.DOCCTNM
+		, A.DOCCATE as DOCCTCD
+		, A.DOCTYPE, B.DOCTYNM
+		, A.DOCTYPE as DOCTYCD
+		, A.RSNCODE, A.RSNCDNM
+		, A.RSNCDOD
+		, A.RSCATE1, A.RSCATE2, A.RSCATE3
+		, A.RSATTR1, A.RSATTR2, A.RSATTR3
+		, A.RSUSEYN
+		, FN_COM_TODATE(A.CREDATE) as CREDATE, FN_COM_TOTIME(A.CRETIME) as CRETIME, fn_sy_usernam(A.COMPKEY, A.CREUSER) as CREUSER
+		, FN_COM_TODATE(A.LMODATE) as LMODATE, FN_COM_TOTIME(A.LMOTIME) as LMOTIME, fn_sy_usernam(A.COMPKEY, A.LMOUSER) as LMOUSER
+		from MRSCMA A
+		inner join MDOCMA B on A.COMPKEY = B.COMPKEY
+		and A.WAREKEY = B.WAREKEY
+		and A.DOCCATE = B.DOCCATE
+		and A.DOCTYPE = B.DOCTYPE
+		<where>
+				A.COMPKEY = #{userData.compkey}
+			<if test='warekey != null and warekey != " "'>
+				and UPPER(A.WAREKEY) = UPPER(#{warekey})
+			</if>
+			<if test='docctnm != null and docctnm != ""'>
+				and UPPER(B.DOCCTNM) like concat('%',#{docctnm},'%')
+			</if>
+			<if test='doctynm != null and doctynm != ""'>
+				and UPPER(B.DOCTYNM) like concat('%',#{doctynm},'%')
+			</if>
+		</where>
+			order by A.COMPKEY, A.WAREKEY, A.DOCCATE, A.DOCTYPE, A.RSNCDOD
+	</select>
+
+	<!-- wms10 : 사유코드 selectbox -->
+	<select id="selectReasonCodeRelations" resultType="com.logistics.md.domain.MrscmaDTO">
+		/* selectReasonCodeRelations */
+		select
+		-- A.COMPKEY,
+		A.WAREKEY, A.DOCCATE, B.DOCCTNM, A.DOCTYPE, B.DOCTYNM, A.RSNCODE, A.RSNCDNM
+		from MRSCMA A
+		inner join MDOCMA B on A.COMPKEY = B.COMPKEY
+		and A.WAREKEY = B.WAREKEY
+		and A.DOCCATE = B.DOCCATE
+		and A.DOCTYPE = B.DOCTYPE
+		where A.COMPKEY = #{userData.compkey}
+		order by A.COMPKEY, A.WAREKEY, A.DOCCATE, A.DOCTYPE, A.RSNCDOD
+	</select>
+
+	<!-- mdc06 : 사유코드 INSERT -->
+	<insert id="insertMrscma" parameterType="com.logistics.md.domain.MrscmaDTO">
+		/* insertMrscma */
+		insert into MRSCMA
+		(
+		COMPKEY, WAREKEY, DOCCATE, DOCTYPE
+		, RSNCODE, RSNCDNM, RSNMLKY, RSNCDOD
+		, RSCATE1, RSCATE2, RSCATE3
+		, RSATTR1, RSATTR2, RSATTR3
+		, RSUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME
+		)
+		values
+		(
+		#{userData.compkey}, #{warekey}, #{doccate}, #{doctype}
+		, #{rsncode}, #{rsncdnm}, #{rsnmlky}, #{rsncdod}
+		, #{rscate1}, #{rscate2}, #{rscate3}
+		, #{rsattr1}, #{rsattr2}, #{rsattr3}
+		, #{rsuseyn}
+		, DATE_FORMAT(SYSDATE(), '%Y%m%d'), DATE_FORMAT(SYSDATE(), '%H%i%s'), #{userData.useract}
+		, DATE_FORMAT(SYSDATE(), '%Y%m%d'), DATE_FORMAT(SYSDATE(), '%H%i%s')
+		)
+	</insert>
+
+	<!-- mdc06 : 사유코드 UPDATE -->
+	<update id="updateMrscma" parameterType="com.logistics.md.domain.MrscmaDTO">
+		/* updateMrscma */
+		update MRSCMA
+		set
+		WAREKEY = #{warekey}
+		, DOCCATE = #{doccate}
+		, DOCTYPE = #{doctype}
+		, RSNCODE = #{rsncode}
+		, RSNCDNM = #{rsncdnm}
+		, RSNMLKY = #{rsnmlky}
+		, RSNCDOD = #{rsncdod}
+		, RSCATE1 = #{rscate1}
+		, RSCATE2 = #{rscate2}
+		, RSCATE3 = #{rscate3}
+		, RSATTR1 = #{rsattr1}
+		, RSATTR2 = #{rsattr2}
+		, RSATTR3 = #{rsattr3}
+		, RSUSEYN = #{rsuseyn}
+		, LMODATE = DATE_FORMAT(SYSDATE(), '%Y%m%d')
+		, LMOTIME = DATE_FORMAT(SYSDATE(), '%H%i%s')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and DOCCATE = #{doccate}
+		and DOCTYPE = #{doctype}
+		<choose>
+			<when test='oldWarekey != null and oldWarekey != ""'>
+				and WAREKEY = #{oldWarekey}
+			</when>
+			<otherwise>
+				and WAREKEY = #{warekey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test='oldRsncode != null and oldRsncode != ""'>
+				and RSNCODE = #{oldRsncode}
+			</when>
+			<otherwise>
+				and RSNCODE = #{rsncode}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- *********************************************** -->
+	<!-- 공통코드 : MCODEM -->
+	<!-- *********************************************** -->
+	<!-- 공통코드 조회 -->
+	<select id="selectMcodem" resultType="com.logistics.md.domain.McodemDTO">
+		/* selectMcodem */
+		select COMCDVL as COMBOVL
+		, COMCDTX as COMBONM
+		, COMCDKY
+		, CDCATE1
+		, CDCATE2
+		from V_MCODEM
+		where COMPKEY = #{userData.compkey}
+		and ACTYN = 'Y'
+		<choose>
+			<when test='couseyn != null and couseyn != ""'>
+				and COUSEYN = #{couseyn}
+			</when>
+			<otherwise>
+				and COUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		<!-- comcdky 하나만 필요할 때 -->
+		<if test="comcdky != null and comcdky !=''">
+			and COMCDKY = #{comcdky}
+		</if>
+		<if test="comcdkys != null and comcdkys.size != 0">
+			and COMCDKY in
+			<foreach collection="comcdkys" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<!-- comcdvl 하나만 필요할 때 -->
+		<if test="comcdvl != null and comcdvl !=''">
+			and COMCDVL = #{comcdvl}
+		</if>
+		<if test="comcdvls != null and comcdvls.size != 0">
+			and COMCDVL in
+			<foreach collection="comcdvls" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test="cdcate1 != null">
+			and IFNULL(CDCATE1,'') = #{cdcate1}
+		</if>
+		<if test="cdcate2 != null and cdcate2 !=''">
+			and CDCATE2 = #{cdcate2}
+		</if>
+		<if test="cdcate2s != null and cdcate2s !=''">
+			and CDCATE2 in
+			<foreach collection="cdcate2s" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test="mdp3Comcdvl != null and mdp3Comcdvl !=''">
+			and COMCDVL != #{mdp3Comcdvl}
+		</if>
+		order by COMCDOR asc
+	</select>
+
+	<!-- mdc07 : 공통코드 조회 -->
+	<select id="selectMcodemList" resultType="com.logistics.md.domain.McodemDTO">
+		/* selectMcodemList */
+		select concat(COMPKEY,COMCDKY,COMCDVL) as ROWKEY
+		, COMPKEY , COMCDKY , COMCDVL , WAREKEY , COMKYTX
+		, COMCDTX , COMCDOR , COMCDSY , CDCATE1 , CDCATE2
+		, CDCATE3 , CDATTR1 , CDATTR2 , CDATTR3 , COUSEYN
+		, FN_COM_TODATE(CREDATE) as CREDATE , FN_COM_TOTIME(CRETIME) as CRETIME , fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE , FN_COM_TOTIME(LMOTIME) as LMOTIME , fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, UPDTCHK
+		from V_MCODEM
+		where COMPKEY = #{userData.compkey}
+		and ACTYN = 'Y'
+		<if test='comcdky != null and comcdky != ""'>
+			and UPPER(COMCDKY) like UPPER(concat('%',#{comcdky},'%'))
+		</if>
+		<if test='comcdvl != null and comcdvl != ""'>
+			and UPPER(COMCDVL) like UPPER(concat('%',#{comcdvl},'%'))
+		</if>
+		<if test='comkytx != null and comkytx != ""'>
+			and UPPER(COMKYTX) like UPPER(concat('%',#{comkytx},'%'))
+		</if>
+		<if test='comcdtx != null and comcdtx != ""'>
+			and UPPER(COMCDTX) like UPPER(concat('%',#{comcdtx},'%'))
+		</if>
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		order by COMCDKY, COMCDOR asc
+	</select>
+
+	<!-- mdc07 : 공통코드 INSERT -->
+	<insert id="insertMcodem" parameterType="com.logistics.md.domain.McodemDTO">
+		/* insertMcodem */
+		insert into MCODEM
+		( COMPKEY, COMCDKY, COMCDVL, COMKYTX, WAREKEY
+		, COMCDTX, COMCDOR, COMCDSY, CDCATE1, CDCATE2
+		, CDCATE3, CDATTR1, CDATTR2, CDATTR3, COUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER )
+		values
+		( #{compkey}, UPPER(#{comcdky}), UPPER(#{comcdvl}), #{comkytx}, #{warekey}
+		, #{comcdtx}, #{comcdor}, #{comcdsy}, #{cdcate1}, #{cdcate2}
+		, #{cdcate3}, #{cdattr1}, #{cdattr2}, #{cdattr3}, #{couseyn}
+		, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+		, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdc07 : 공통코드 UPDATE -->
+	<update id="updateMcodem" parameterType="com.logistics.md.domain.McodemDTO">
+		/* updateMcodem */
+		update MCODEM
+		set COMCDKY = #{comcdky}
+		, COMCDVL = #{comcdvl}
+		, WAREKEY = #{warekey}
+		, COMKYTX = #{comkytx}
+		, COMKYTX = #{comkytx}
+		, COMCDTX = #{comcdtx}
+		, COMCDOR = #{comcdor}
+		, COMCDSY = #{comcdsy}
+		, CDCATE1 = #{cdcate1}
+		, CDCATE2 = #{cdcate2}
+		, CDCATE3 = #{cdcate3}
+		, CDATTR1 = #{cdattr1}
+		, CDATTR2 = #{cdattr2}
+		, CDATTR3 = #{cdattr3}
+		, COUSEYN = #{couseyn}
+		, LMODATE = to_char(NOW() ,'YYYYMMDD')
+		, LMOTIME = to_char(NOW() ,'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test="oldComcdky != null and oldComcdky !=''">
+				and COMCDKY = #{oldComcdky}
+			</when>
+			<otherwise>
+				and COMCDKY = #{comcdky}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="oldComcdvl != null and oldComcdvl !=''">
+				and COMCDVL = #{oldComcdvl}
+			</when>
+			<otherwise>
+				and COMCDVL = #{comcdvl}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdc10 : 물류달력 조회 -->
+	<select id="selectMlscalList" resultType="com.logistics.md.domain.MlscalDTO">
+		/* selectMlscalList */
+		select concat(ML.COMPKEY, ML.WAREKEY, ML.STDDATE) as ROWKEY
+		, ML.COMPKEY, ML.WAREKEY, ML.STDDATE
+		, MW.WHNAMLC, ML.LOGYEAR, ML.LOGMONT, ML.LOGDATE, ML.LOGWEEK
+		, ML.WEKNUM7, ML.WEKNUM0, ML.NATHOLI
+		, FN_COM_TODATE(ML.CREDATE) as CREDATE , FN_COM_TOTIME(ML.CRETIME) as CRETIME , fn_sy_usernam(ML.COMPKEY, ML.CREUSER) as CREUSER
+		, FN_COM_TODATE(ML.LMODATE) as LMODATE , FN_COM_TOTIME(ML.LMOTIME) as LMOTIME , fn_sy_usernam(ML.COMPKEY, ML.LMOUSER) as LMOUSER
+		, ML.UPDTCHK
+		from MLSCAL ML
+		inner join MWARMA MW
+		on( ML.COMPKEY = MW.COMPKEY and ML.WAREKEY = MW.WAREKEY)
+		where ML.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and MW.WAREKEY = #{warekey}
+		</if>
+		<if test='startStddate != null and startStddate !=""'>
+			and date_format(ML.STDDATE, '%Y-%m-%d') <![CDATA[>=]]>
+			#{startStddate}
+		</if>
+		<if test='endStddate != null and endStddate !=""'>
+			and date_format(ML.STDDATE, '%Y-%m-%d') <![CDATA[<=]]>
+			#{endStddate}
+		</if>
+		order by ML.COMPKEY asc, ML.WAREKEY asc, ML.STDDATE desc, MW.WHNAMLC asc
+	</select>
+
+	<!-- mdc10 : 물류달력 UPDATE -->
+	<update id="updateMlscal" parameterType="com.logistics.md.domain.MlscalDTO">
+		/* updateMlscal */
+		update MLSCAL
+		set
+		NATHOLI = #{natholi}
+		, LMODATE = to_char(NOW() ,'YYYYMMDD')
+		, LMOTIME = to_char(NOW() ,'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and WAREKEY = #{warekey}
+		and STDDATE = #{stddate}
+		and UPDTCHK = #{updtchk}
+	</update>
+</mapper>

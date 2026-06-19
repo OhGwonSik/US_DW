@@ -1,0 +1,647 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.md.mapper.BillingMasterMapper">
+
+	
+	<!-- mdb01 : 그리드 조회 -->
+	<select id="selectMdb01List" resultType="com.logistics.md.domain.BvlrmaDTO">
+		/* selectMdb01List */
+		SELECT CONCAT(A.COMPKEY, A.WAREKEY, A.BVLCODE) as ROWKEY
+			 , A.COMPKEY, A.WAREKEY, A.BVLCODE
+		     , IF((SELECT COUNT(*) FROM BLGTIT WHERE COMPKEY=A.COMPKEY AND WAREKEY=A.WAREKEY AND BVLCODE=A.BVLCODE)>0,'Y','N') AS BILGCNT
+			 , A.OWNERKY, A.PTNRKEY, A.BLRPMGB
+			 , A.BLRCSGB, A.BLRTKGB, A.BLRUNIT
+			 , A.DOCCATE, A.DOCTYPE, A.BLRCOST, A.BLRSUTX
+			 , CONCAT(SUBSTR(A.BLRDATE, 1, 4),'-',SUBSTR(A.BLRDATE, 5, 2)) as BLRDATE, A.BLRDTGB, A.BLRMFGB, A.BLRCFDT
+			 , A.BLRMTGB, A.BLRCTDT, A.BLRTKNM, A.BLUSEYN
+			 , fn_com_todate(A.CREDATE) as CREDATE , fn_com_totime(A.CRETIME) as CRETIME , fn_sy_usernam(A.COMPKEY, A.CREUSER) as CREUSER
+			 , fn_com_todate(A.LMODATE) as LMODATE , fn_com_totime(A.LMOTIME) as LMOTIME , fn_sy_usernam(A.COMPKEY, A.LMOUSER) as LMOUSER
+			 , UPDTCHK, INDIBZL, INDIARC
+		  FROM BVLRMA A
+		<if test='selectpoint == "APP"'>
+		/* 해당 월 적용될 단가 마스터 위주 */
+		 INNER JOIN (
+					SELECT COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE, MAX(BLRDATE) AS BLRDATE
+					  FROM BVLRMA
+					 WHERE COMPKEY = #{userData.compkey}
+					   AND WAREKEY = #{warekey}
+			<![CDATA[  AND BLRDATE <= #{blrdate} ]]>
+					   AND BLUSEYN = 'Y'
+					 GROUP BY COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE
+		     ) C
+		    ON A.COMPKEY = C.COMPKEY
+		   AND A.WAREKEY = C.WAREKEY
+		   AND A.OWNERKY = C.OWNERKY
+		   AND A.PTNRKEY = C.PTNRKEY
+		   AND A.BLRPMGB = C.BLRPMGB
+		   AND A.BLRCSGB = C.BLRCSGB
+		   AND A.BLRTKGB = C.BLRTKGB
+		   AND A.BLRUNIT = C.BLRUNIT
+		   AND A.DOCCATE = C.DOCCATE
+		   AND A.DOCTYPE = C.DOCTYPE
+		   AND A.BLRDATE = C.BLRDATE
+		</if>
+		 WHERE 1=1
+		   AND A.COMPKEY= #{userData.compkey}
+		   AND A.WAREKEY = #{warekey}
+		<if test='ownerky != null and ownerky != ""'>
+			AND A.OWNERKY = #{ownerky}
+		</if>
+		<if test='ptnrkey != null and ptnrkey != ""'>
+			AND A.PTNRKEY = #{ptnrkey}
+		</if>
+		<if test='blrpmgb != null and blrpmgb != ""'>
+			AND A.BLRPMGB = #{blrpmgb}
+		</if>
+		<if test='blrcsgb != null and blrcsgb != ""'>
+			AND A.BLRCSGB = #{blrcsgb}
+		</if>
+		<if test='blrtkgb != null and blrtkgb != ""'>
+			AND A.BLRTKGB = #{blrtkgb}
+		</if>
+		<if test='blrunit != null and blrunit != ""'>
+			AND A.BLRUNIT = #{blrunit}
+		</if>
+		ORDER BY
+		<if test='selectpoint == "APP"'>
+			A.COMPKEY, A.WAREKEY, A.OWNERKY, A.PTNRKEY, A.BLRPMGB
+		</if>
+		<if test='selectpoint == "HIS"'>
+			A.BLRDATE, A.BVLCODE
+		</if>
+	</select>
+
+	<!-- mdb01 : 변동물류비요율 등록 -->
+	<insert id="insertMdb01" parameterType="com.logistics.md.domain.BvlrmaDTO">
+		/* insertMdb01 */
+		insert
+		into BVLRMA (
+		COMPKEY, WAREKEY, BVLCODE
+		, OWNERKY, PTNRKEY, BLRPMGB
+		, BLRCSGB, BLRTKGB, BLRUNIT
+		, DOCCATE, DOCTYPE, BLRCOST, BLRSUTX
+		, BLRDATE, BLRDTGB, BLRMFGB, BLRCFDT
+		, BLRMTGB, BLRCTDT, BLRTKNM, BLUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		<foreach collection="list" item="item" separator=",">
+			( #{item.compkey} , #{item.warekey} , #{item.bvlcode}
+			, #{item.ownerky} , #{item.ptnrkey} , #{item.blrpmgb}
+			, #{item.blrcsgb} , #{item.blrtkgb} , #{item.blrunit}
+			, #{item.doccate} , #{item.doctype} , #{item.blrcost} , #{item.blrsutx}
+			, REPLACE(#{item.blrdate},'-','') , #{item.blrdtgb} , #{item.blrmfgb} , #{item.blrcfdt}
+			, #{item.blrmtgb} , #{item.blrctdt} , #{item.blrtknm} , #{item.bluseyn}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			)
+		</foreach>
+	</insert>
+
+
+	<!-- mdb01 : 요율코드BVLCODE 채번 -->
+	<select id="selectBvlcode" resultType="String">
+		/* selectBvlcode */
+		select fn_bm_bvlcode() as bvlcode from dual
+	</select>
+
+
+	<!-- mdb01 : 변동물류비요율 수정 -->
+	<update id="updateMdb01" parameterType="HashMap">
+		/* updateMdb01 */
+		<foreach item="item" collection="list" separator=";">
+			update BVLRMA
+			set WAREKEY = #{item.warekey}
+			, OWNERKY = #{item.ownerky}
+			, PTNRKEY = #{item.ptnrkey}
+			, BLRPMGB = #{item.blrpmgb}
+			, BLRCSGB = #{item.blrcsgb}
+			, BLRTKGB = #{item.blrtkgb}
+			, BLRUNIT = #{item.blrunit}
+			, DOCCATE = #{item.doccate}
+			, DOCTYPE = #{item.doctype}
+			, BLRCOST = #{item.blrcost}
+			, BLRSUTX = #{item.blrsutx}
+			, BLRDATE = REPLACE(#{item.blrdate},'-','')
+			, BLRDTGB = #{item.blrdtgb}
+			, BLRMFGB = #{item.blrmfgb}
+			, BLRCFDT = #{item.blrcfdt}
+			, BLRMTGB = #{item.blrmtgb}
+			, BLRCTDT = #{item.blrctdt}
+			, BLRTKNM = #{item.blrtknm}
+			, BLUSEYN = #{item.bluseyn}
+			, LMODATE = to_char(now(),'YYYYMMDD')
+			, LMOTIME = to_char(now(),'hh24miss')
+			, LMOUSER = #{item.userData.useract}
+			where COMPKEY = #{item.compkey}
+			and BVLCODE = #{item.bvlcode}
+			and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>
+
+	<!-- mdb02 : 그리드 조회 -->
+	<select id="selectMdb02List" resultType="com.logistics.md.domain.BflrmaDTO">
+		/* selectMdb02List */
+		SELECT CONCAT(A.COMPKEY, A.WAREKEY, A.BFLCODE) as ROWKEY
+			 , A.COMPKEY, A.WAREKEY, A.BFLCODE
+			 , IF((SELECT COUNT(*) FROM BLGTIT WHERE COMPKEY=A.COMPKEY AND WAREKEY=A.WAREKEY AND BFLCODE=A.BFLCODE)>0,'Y','N') AS BILGCNT
+			 , A.OWNERKY, A.PTNRKEY, A.BLRPMGB
+			 , A.BLRCSGB, A.BLRTKGB, A.BLRCOST, A.BLRSUTX
+			 , CONCAT(SUBSTR(A.BLRDATE, 1, 4),'-',SUBSTR(A.BLRDATE, 5, 2)) as BLRDATE, A.BLRTKNM, A.BLUSEYN
+			 , fn_com_todate(A.CREDATE) as CREDATE , fn_com_totime(A.CRETIME) as CRETIME , fn_sy_usernam(A.COMPKEY, A.CREUSER) as CREUSER
+			 , fn_com_todate(A.LMODATE) as LMODATE , fn_com_totime(A.LMOTIME) as LMOTIME , fn_sy_usernam(A.COMPKEY, A.LMOUSER) as LMOUSER
+			 , A.UPDTCHK, A.INDIBZL, A.INDIARC
+		  FROM BFLRMA A
+		<if test='selectpoint == "APP"'>
+		/* 해당 월 적용될 단가 마스터 위주 */
+		INNER JOIN (
+					SELECT COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, MAX(BLRDATE) AS BLRDATE
+					  FROM BFLRMA
+					 WHERE COMPKEY = #{userData.compkey}
+					   AND WAREKEY = #{warekey}
+		   <![CDATA[   AND BLRDATE <= #{blrdate} ]]>
+					   AND BLUSEYN = 'Y'
+					 GROUP BY COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB
+			) C
+		ON A.COMPKEY = C.COMPKEY
+		AND A.WAREKEY = C.WAREKEY
+		AND A.OWNERKY = C.OWNERKY
+		AND A.PTNRKEY = C.PTNRKEY
+		AND A.BLRPMGB = C.BLRPMGB
+		AND A.BLRCSGB = C.BLRCSGB
+		AND A.BLRTKGB = C.BLRTKGB
+		AND A.BLRDATE = C.BLRDATE
+		</if>
+		WHERE 1=1
+		AND A.COMPKEY= #{userData.compkey}
+		AND A.WAREKEY = #{warekey}
+		<if test='ownerky != null and ownerky != ""'>
+			AND A.OWNERKY = #{ownerky}
+		</if>
+		<if test='ptnrkey != null and ptnrkey != ""'>
+			AND A.PTNRKEY = #{ptnrkey}
+		</if>
+		<if test='blrpmgb != null and blrpmgb != ""'>
+			AND A.BLRPMGB = #{blrpmgb}
+		</if>
+		<if test='blrcsgb != null and blrcsgb != ""'>
+			AND A.BLRCSGB = #{blrcsgb}
+		</if>
+		<if test='blrtkgb != null and blrtkgb != ""'>
+			AND A.BLRTKGB = #{blrtkgb}
+		</if>
+		ORDER BY
+		<if test='selectpoint == "APP"'>
+			A.COMPKEY, A.WAREKEY, A.OWNERKY, A.PTNRKEY, A.BLRPMGB
+		</if>
+		<if test='selectpoint == "HIS"'>
+			A.BLRDATE, A.BFLCODE
+		</if>
+	</select>
+
+	<!-- mdb02 : 고정물류비요율 등록 -->
+	<insert id="insertMdb02" parameterType="com.logistics.md.domain.BflrmaDTO">
+		/* insertMdb02 */
+		insert
+		into BFLRMA (
+		COMPKEY, WAREKEY, BFLCODE, OWNERKY, PTNRKEY
+		, BLRPMGB, BLRCSGB, BLRTKGB, BLRCOST, BLRSUTX
+		, BLRDATE, BLRTKNM, BLUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		<foreach collection="list" item="item" separator=",">
+			( #{item.compkey} , #{item.warekey} , #{item.bflcode} , #{item.ownerky} , #{item.ptnrkey}
+			, #{item.blrpmgb} , #{item.blrcsgb} , #{item.blrtkgb} , #{item.blrcost} , #{item.blrsutx}
+			, REPLACE(#{item.blrdate},'-','') , #{item.blrtknm} , #{item.bluseyn}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract} )
+		</foreach>
+	</insert>
+
+
+	<!-- mdb02 : 요율코드BFLCODE 채번 -->
+	<select id="selectBflcode" resultType="String">
+		/* selectBflcode */
+		select fn_bm_bflcode() as bflcode from dual
+	</select>
+
+
+	<!-- mdb02 : 고정물류비요율 수정 -->
+	<update id="updateMdb02" parameterType="HashMap">
+		/* updateMdb02 */
+		<foreach item="item" collection="list" separator=";">
+			update BFLRMA
+			set WAREKEY = #{item.warekey}
+			, OWNERKY = #{item.ownerky}
+			, PTNRKEY = #{item.ptnrkey}
+			, BLRPMGB = #{item.blrpmgb}
+			, BLRCSGB = #{item.blrcsgb}
+			, BLRTKGB = #{item.blrtkgb}
+			, BLRCOST = #{item.blrcost}
+			, BLRSUTX = #{item.blrsutx}
+			, BLRDATE = REPLACE(#{item.blrdate},'-','')
+			, BLRTKNM = #{item.blrtknm}
+			, BLUSEYN = #{item.bluseyn}
+			, LMODATE = to_char(now(),'YYYYMMDD')
+			, LMOTIME = to_char(now(),'hh24miss')
+			, LMOUSER = #{item.userData.useract}
+			where COMPKEY = #{item.compkey}
+			and BFLCODE = #{item.bflcode}
+			and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>
+
+	<!-- mdb03 : 그리드 조회 -->
+	<select id="selectMdb03List" resultType="com.logistics.md.domain.BplrmaDTO">
+		/* selectMdb03List */
+		SELECT CONCAT(A.COMPKEY, A.WAREKEY, A.BPLCODE) as ROWKEY
+			 , A.COMPKEY, A.WAREKEY, A.BPLCODE
+			 , IF((SELECT COUNT(*) FROM BLGTIT WHERE COMPKEY=A.COMPKEY AND WAREKEY=A.WAREKEY AND BPLCODE=A.BPLCODE)>0,'Y','N') AS BILGCNT
+			, A.OWNERKY, A.PTNRKEY, A.BLRPMGB
+			, A.BLRCSGB, A.BLRTKGB, A.BLRUNIT
+			, A.DOCCATE, A.DOCTYPE, A.BLRTQTY
+			, A.BLRCOST, A.BLRSUTX
+			, CONCAT(SUBSTR(A.BLRDATE, 1, 4),'-',SUBSTR(A.BLRDATE, 5, 2)) as BLRDATE
+			, A.BLRDTGB, A.BLRMFGB, A.BLRCFDT, A.BLRMTGB, A.BLRCTDT, A.BLRTKNM, A.BLUSEYN
+			, fn_com_todate(A.CREDATE) as CREDATE , fn_com_totime(A.CRETIME) as CRETIME , fn_sy_usernam(A.COMPKEY, A.CREUSER) as CREUSER
+			, fn_com_todate(A.LMODATE) as LMODATE , fn_com_totime(A.LMOTIME) as LMOTIME , fn_sy_usernam(A.COMPKEY, A.LMOUSER) as LMOUSER
+			, A.UPDTCHK, A.INDIBZL, A.INDIARC
+		FROM BPLRMA A
+		<if test='selectpoint == "APP"'>
+		/* 해당 월 적용될 단가 마스터 위주 */
+		INNER JOIN (
+					SELECT COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE, BLRTQTY, MAX(BLRDATE) AS BLRDATE
+					  FROM BPLRMA
+					 WHERE COMPKEY = #{userData.compkey}
+					   AND WAREKEY = #{warekey}
+		   <![CDATA[   AND BLRDATE <= #{blrdate} ]]>
+					   AND BLUSEYN = 'Y'
+					 GROUP BY COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE, BLRTQTY
+			) C
+		ON A.COMPKEY = C.COMPKEY
+		AND A.WAREKEY = C.WAREKEY
+		AND A.OWNERKY = C.OWNERKY
+		AND A.PTNRKEY = C.PTNRKEY
+		AND A.BLRPMGB = C.BLRPMGB
+		AND A.BLRCSGB = C.BLRCSGB
+		AND A.BLRTKGB = C.BLRTKGB
+		AND A.BLRUNIT = C.BLRUNIT
+		AND A.DOCCATE = C.DOCCATE
+		AND A.DOCTYPE = C.DOCTYPE
+		AND A.BLRTQTY = C.BLRTQTY
+		AND A.BLRDATE = C.BLRDATE
+		</if>
+		WHERE 1=1
+		AND A.COMPKEY= #{userData.compkey}
+			AND A.WAREKEY = #{warekey}
+		<if test='ownerky != null and ownerky != ""'>
+			AND A.OWNERKY = #{ownerky}
+		</if>
+		<if test='ptnrkey != null and ptnrkey != ""'>
+			AND A.PTNRKEY = #{ptnrkey}
+		</if>
+		<if test='blrpmgb != null and blrpmgb != ""'>
+			AND A.BLRPMGB = #{blrpmgb}
+		</if>
+		<if test='blrcsgb != null and blrcsgb != ""'>
+			AND A.BLRCSGB = #{blrcsgb}
+		</if>
+		<if test='blrtkgb != null and blrtkgb != ""'>
+			AND A.BLRTKGB = #{blrtkgb}
+		</if>
+		<if test='blrunit != null and blrunit != ""'>
+			AND A.BLRUNIT = #{blrunit}
+		</if>
+		ORDER BY
+		<if test='selectpoint == "APP"'>
+			A.COMPKEY, A.WAREKEY, A.OWNERKY, A.PTNRKEY, A.BLRPMGB
+		</if>
+		<if test='selectpoint == "HIS"'>
+			A.BLRDATE, A.BPLCODE
+		</if>
+	</select>
+
+	<!-- mdb03 : 요율코드 BPLCODE 채번 -->
+	<select id="selectBplcode" resultType="String">
+		/* selectBplcode */
+		select fn_bm_bplcode() as bplcode from dual
+	</select>
+
+	<!-- mdb03 : 택배비요율 등록 -->
+	<insert id="insertMdb03" parameterType="com.logistics.md.domain.BplrmaDTO">
+		/* insertMdb03 */
+		insert
+		into BPLRMA (
+		COMPKEY, WAREKEY, BPLCODE, OWNERKY, PTNRKEY
+		, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE
+		, BLRTQTY, BLRCOST, BLRSUTX
+		, BLRDATE, BLRDTGB, BLRMFGB, BLRCFDT, BLRMTGB, BLRCTDT
+		, BLRTKNM, BLUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		<foreach collection="list" item="item" separator=",">
+			( #{item.compkey} , #{item.warekey} , #{item.bplcode} , #{item.ownerky} , #{item.ptnrkey}
+			, #{item.blrpmgb} , #{item.blrcsgb} , #{item.blrtkgb} , #{item.blrunit} , #{item.doccate} , #{item.doctype}
+			, #{item.blrtqty} , #{item.blrcost} , #{item.blrsutx}
+			, REPLACE(#{item.blrdate},'-','') , #{item.blrdtgb} , #{item.blrmfgb} , #{item.blrcfdt} , #{item.blrmtgb} , #{item.blrctdt}
+			, #{item.blrtknm} , #{item.bluseyn}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract} )
+		</foreach>
+	</insert>
+
+	<!-- mdb03 : 택배비요율 수정 -->
+	<update id="updateMdb03" parameterType="com.logistics.md.domain.BplrmaDTO">
+		/* updateMdb03 */
+		<foreach item="item" collection="list" separator=";">
+			update BPLRMA
+			set WAREKEY = #{item.warekey}
+			, OWNERKY = #{item.ownerky}
+			, PTNRKEY = #{item.ptnrkey}
+			, BLRPMGB = #{item.blrpmgb}
+			, BLRCSGB = #{item.blrcsgb}
+			, BLRTKGB = #{item.blrtkgb}
+			, BLRUNIT = #{item.blrunit}
+			, DOCCATE = #{item.doccate}
+			, DOCTYPE = #{item.doctype}
+			, BLRTQTY = #{item.blrtqty}
+			, BLRCOST = #{item.blrcost}
+			, BLRSUTX = #{item.blrsutx}
+			, BLRDATE = REPLACE(#{item.blrdate},'-','')
+			, BLRDTGB = #{item.blrdtgb}
+			, BLRMFGB = #{item.blrmfgb}
+			, BLRCFDT = #{item.blrcfdt}
+			, BLRMTGB = #{item.blrmtgb}
+			, BLRCTDT = #{item.blrctdt}
+			, BLRTKNM = #{item.blrtknm}
+			, BLUSEYN = #{item.bluseyn}
+			, LMODATE = to_char(now(),'YYYYMMDD')
+			, LMOTIME = to_char(now(),'hh24miss')
+			, LMOUSER = #{item.userData.useract}
+			where COMPKEY = #{item.compkey}
+			and BPLCODE = #{item.bplcode}
+			and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>
+	
+		<!-- mdb04 : 그리드 조회 -->
+	<select id="selectMdb04List" resultType="com.logistics.md.domain.BvtrmaDTO">
+		/* selectMdb04List */
+		SELECT CONCAT(A.COMPKEY, A.WAREKEY, A.BVTCODE) as ROWKEY
+			 , A.COMPKEY, A.WAREKEY, A.BVTCODE
+			 , IF((SELECT COUNT(*) FROM BTGTIT WHERE COMPKEY=A.COMPKEY AND WAREKEY=A.WAREKEY AND BVTCODE=A.BVTCODE)>0,'Y','N') AS BILGCNT
+			 , A.PTNRKEY, A.BTRPMGB, A.BTRCSGB, A.BTRTKGB, A.VEHICKY, A.BTRUNIT
+			 , A.DOCCATE, A.DOCTYPE, A.SHTRTKY, A.BTRCOST, A.BTRSUTX
+			 , CONCAT(SUBSTR(A.BTRDATE, 1, 4),'-',SUBSTR(A.BTRDATE, 5, 2)) as BTRDATE, A.BTRDTGB, A.BTRMFGB, A.BTRCFDT
+			 , A.BTRMTGB, A.BTRCTDT, A.BTRTKNM, A.BTUSEYN
+			 , fn_com_todate(A.CREDATE) as CREDATE , fn_com_totime(A.CRETIME) as CRETIME , fn_sy_usernam(A.COMPKEY, A.CREUSER) as CREUSER
+			 , fn_com_todate(A.LMODATE) as LMODATE , fn_com_totime(A.LMOTIME) as LMOTIME , fn_sy_usernam(A.COMPKEY, A.LMOUSER) as LMOUSER
+			 , A.UPDTCHK, A.INDIBZL, A.INDIARC
+		  FROM BVTRMA A
+		<if test='selectpoint == "APP"'>
+			/* 해당 월 적용될 단가 마스터 위주 */
+		 INNER JOIN (
+					SELECT COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, SHTRTKY, VEHICKY, BTRUNIT, DOCCATE, DOCTYPE, MAX(BTRDATE) AS BTRDATE
+					  FROM BVTRMA
+					 WHERE COMPKEY = #{userData.compkey}
+					   AND WAREKEY = #{warekey}
+			<![CDATA[  AND BTRDATE <= #{btrdate} ]]>
+					   AND BTUSEYN = 'Y'
+					 GROUP BY COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, SHTRTKY, VEHICKY, BTRUNIT, DOCCATE, DOCTYPE
+			 ) C
+			ON A.COMPKEY = C.COMPKEY
+			AND A.WAREKEY = C.WAREKEY
+			AND A.PTNRKEY = C.PTNRKEY
+			AND A.BTRPMGB = C.BTRPMGB
+			AND A.BTRCSGB = C.BTRCSGB
+			AND A.BTRTKGB = C.BTRTKGB
+			AND IFNULL(A.SHTRTKY, '') = IFNULL(C.SHTRTKY, '')
+			AND A.VEHICKY = C.VEHICKY
+			AND A.BTRUNIT = C.BTRUNIT
+			AND A.DOCCATE = C.DOCCATE
+			AND A.DOCTYPE = C.DOCTYPE
+			AND A.BTRDATE = C.BTRDATE
+		</if>
+		 WHERE A.COMPKEY= #{userData.compkey}
+		   AND A.WAREKEY = #{warekey}
+		<if test='vehicky != null and vehicky != ""'>
+			AND A.VEHICKY = #{vehicky}
+		</if>
+		<if test='btrpmgb != null and btrpmgb != ""'>
+			AND A.BTRPMGB = #{btrpmgb}
+		</if>
+		<if test='ptnrkey != null and ptnrkey != ""'>
+			AND A.PTNRKEY = #{ptnrkey}
+		</if>
+		<if test='btrcsgb != null and btrcsgb != ""'>
+			AND A.BTRCSGB = #{btrcsgb}
+		</if>
+		<if test='btrtkgb != null and btrtkgb != ""'>
+			AND A.BTRTKGB = #{btrtkgb}
+		</if>
+		<if test='btrunit != null and btrunit != ""'>
+			AND A.BTRUNIT = #{btrunit}
+		</if>
+		ORDER BY
+		<if test='selectpoint == "APP"'>
+			A.COMPKEY, A.WAREKEY, A.PTNRKEY, A.BTRPMGB
+		</if>
+		<if test='selectpoint == "HIS"'>
+			A.BTRDATE, A.BVTCODE
+		</if>
+	</select>
+	
+
+	<!-- mdb04 : 변동물류비요율 등록 -->
+	<insert id="insertMdb04" parameterType="com.logistics.md.domain.BvtrmaDTO">
+		/* insertMdb04 */
+		insert
+		into BVTRMA (
+					COMPKEY, WAREKEY, BVTCODE
+					, VEHICKY, BTRPMGB, PTNRKEY
+					, BTRCSGB, BTRTKGB, BTRUNIT, SHTRTKY
+					, DOCCATE, DOCTYPE, BTRCOST, BTRSUTX
+					, BTRDATE, BTRDTGB, BTRMFGB, BTRCFDT
+					, BTRMTGB, BTRCTDT, BTRTKNM, BTUSEYN
+					, CREDATE, CRETIME, CREUSER
+					, LMODATE, LMOTIME, LMOUSER
+					)
+		values
+		<foreach collection="list" item="item" separator=",">
+			( #{item.compkey} , #{item.warekey} , #{item.bvtcode}
+			, #{item.vehicky} , #{item.btrpmgb} , #{item.ptnrkey}
+			, #{item.btrcsgb} , #{item.btrtkgb} , #{item.btrunit} , #{item.shtrtky}
+			, #{item.doccate} , #{item.doctype} , #{item.btrcost} , #{item.btrsutx}
+			, REPLACE(#{item.btrdate},'-','') , #{item.btrdtgb} , #{item.btrmfgb} , #{item.btrcfdt}
+			, #{item.btrmtgb} , #{item.btrctdt} , #{item.btrtknm} , #{item.btuseyn}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			)
+		</foreach>
+	</insert>
+
+
+	<!-- mdb04 : 요율코드BVTCODE 채번 -->
+	<select id="selectBvtcode" resultType="String">
+		/* selectBvtcode */
+		select fn_bm_bvtcode() as bvtcode from dual
+	</select>
+
+
+	<!-- mdb04 : 변동물류비요율 수정 -->
+	<update id="updateMdb04" parameterType="HashMap">
+		/* updateMdb04 */
+		<foreach item="item" collection="list" separator=";">
+			update BVTRMA
+			set WAREKEY = #{item.warekey}
+			, VEHICKY = #{item.vehicky}
+			, BTRPMGB = #{item.btrpmgb}
+			, PTNRKEY = #{item.ptnrkey}
+			, BTRCSGB = #{item.btrcsgb}
+			, BTRTKGB = #{item.btrtkgb}
+			, BTRUNIT = #{item.btrunit}
+			, DOCCATE = #{item.doccate}
+			, DOCTYPE = #{item.doctype}
+			, SHTRTKY = #{item.shtrtky}
+			, BTRCOST = #{item.btrcost}
+			, BTRSUTX = #{item.btrsutx}
+			, BTRDATE = REPLACE(#{item.btrdate},'-','')
+			, BTRDTGB = #{item.btrdtgb}
+			, BTRMFGB = #{item.btrmfgb}
+			, BTRCFDT = #{item.btrcfdt}
+			, BTRMTGB = #{item.btrmtgb}
+			, BTRCTDT = #{item.btrctdt}
+			, BTRTKNM = #{item.btrtknm}
+			, BTUSEYN = #{item.btuseyn}
+			, LMODATE = to_char(now(),'YYYYMMDD')
+			, LMOTIME = to_char(now(),'hh24miss')
+			, LMOUSER = #{item.userData.useract}
+			where COMPKEY = #{item.compkey}
+			and BVTCODE = #{item.bvtcode}
+			and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>
+	
+	
+	<!-- mdb05 : 그리드 조회 -->
+	<select id="selectMdb05List" resultType="com.logistics.md.domain.BftrmaDTO">
+		/* selectMdb05List */
+		SELECT CONCAT(A.COMPKEY, A.WAREKEY, A.BFTCODE) as ROWKEY
+			 , A.COMPKEY, A.WAREKEY, A.BFTCODE
+			 , IF((SELECT COUNT(*) FROM BTGTIT WHERE COMPKEY=A.COMPKEY AND WAREKEY=A.WAREKEY AND BFTCODE=A.BFTCODE)>0,'Y','N') AS BILGCNT
+			 , A.VEHICKY, A.BTRPMGB, A.PTNRKEY
+			 , A.BTRCSGB, A.BTRTKGB, A.BTRCOST, A.BTRSUTX
+			 , CONCAT(SUBSTR(A.BTRDATE, 1, 4),'-',SUBSTR(A.BTRDATE, 5, 2)) as BTRDATE, A.BTRTKNM, A.BTUSEYN
+			 , fn_com_todate(A.CREDATE) as CREDATE , fn_com_totime(A.CRETIME) as CRETIME , fn_sy_usernam(A.COMPKEY, A.CREUSER) as CREUSER
+			 , fn_com_todate(A.LMODATE) as LMODATE , fn_com_totime(A.LMOTIME) as LMOTIME , fn_sy_usernam(A.COMPKEY, A.LMOUSER) as LMOUSER
+			 , A.UPDTCHK, A.INDIBZL, A.INDIARC
+		  FROM BFTRMA A
+		<if test='selectpoint == "APP"'>
+		/* 해당 월 적용될 단가 마스터 위주 */
+		 INNER JOIN (
+					SELECT COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, VEHICKY, MAX(BTRDATE) AS BTRDATE
+					  FROM BFTRMA
+					 WHERE COMPKEY = #{userData.compkey}
+					   AND WAREKEY = #{warekey}
+			<![CDATA[  AND BTRDATE <= #{btrdate} ]]>
+					   AND BTUSEYN = 'Y'
+					 GROUP BY COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, VEHICKY
+			) C
+			ON A.COMPKEY = C.COMPKEY
+			AND A.WAREKEY = C.WAREKEY
+			AND A.PTNRKEY = C.PTNRKEY
+			AND A.BTRPMGB = C.BTRPMGB
+			AND A.BTRCSGB = C.BTRCSGB
+			AND A.BTRTKGB = C.BTRTKGB
+			AND A.VEHICKY = C.VEHICKY
+			AND A.BTRDATE = C.BTRDATE
+		</if>
+		 WHERE A.COMPKEY= #{userData.compkey}
+		   AND A.WAREKEY = #{warekey}
+		<if test='vehicky != null and vehicky != ""'>
+			AND A.VEHICKY = #{vehicky}
+		</if>
+		<if test='btrpmgb != null and btrpmgb != ""'>
+			AND A.BTRPMGB = #{btrpmgb}
+		</if>
+		<if test='ptnrkey != null and ptnrkey != ""'>
+			AND A.PTNRKEY = #{ptnrkey}
+		</if>
+		<if test='btrcsgb != null and btrcsgb != ""'>
+			AND A.BTRCSGB = #{btrcsgb}
+		</if>
+		<if test='btrtkgb != null and btrtkgb != ""'>
+			AND A.BTRTKGB = #{btrtkgb}
+		</if>
+		ORDER BY
+		<if test='selectpoint == "APP"'>
+			A.COMPKEY, A.WAREKEY, A.PTNRKEY, A.BTRPMGB
+		</if>
+		<if test='selectpoint == "HIS"'>
+			A.BTRDATE, A.BFTCODE
+		</if>
+	</select>
+
+	<!-- mdb05 : 고정운송비요율 등록 -->
+	<insert id="insertMdb05" parameterType="com.logistics.md.domain.BftrmaDTO">
+		/* insertMdb05 */
+		insert
+		into BFTRMA (
+		COMPKEY, WAREKEY, BFTCODE, VEHICKY
+		, BTRPMGB, BTRCSGB, BTRTKGB, BTRCOST, BTRSUTX
+		, BTRDATE, BTRTKNM, BTUSEYN, PTNRKEY
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		<foreach collection="list" item="item" separator=",">
+			( #{item.compkey} , #{item.warekey} , #{item.bftcode} , #{item.vehicky}
+			, #{item.btrpmgb} , #{item.btrcsgb} , #{item.btrtkgb} , #{item.btrcost} , #{item.btrsutx}
+			, REPLACE(#{item.btrdate},'-','') , #{item.btrtknm} , #{item.btuseyn} , #{item.ptnrkey}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{item.userData.useract} )
+		</foreach>
+	</insert>
+
+
+	<!-- mdb05 : 요율코드BFTCODE 채번 -->
+	<select id="selectBftcode" resultType="String">
+		/* selectBftcode */
+		select fn_bm_bftcode() as bftcode from dual
+	</select>
+
+
+	<!-- mdb05 : 고정물류비요율 수정 -->
+	<update id="updateMdb05" parameterType="HashMap">
+		/* updateMdb05 */
+		<foreach item="item" collection="list" separator=";">
+			update BFTRMA
+			set WAREKEY = #{item.warekey}
+			, VEHICKY = #{item.vehicky}
+			, BTRPMGB = #{item.btrpmgb}
+			, PTNRKEY = #{item.ptnrkey}
+			, BTRCSGB = #{item.btrcsgb}
+			, BTRTKGB = #{item.btrtkgb}
+			, BTRCOST = #{item.btrcost}
+			, BTRSUTX = #{item.btrsutx}
+			, BTRDATE = REPLACE(#{item.btrdate},'-','')
+			, BTRTKNM = #{item.btrtknm}
+			, BTUSEYN = #{item.btuseyn}
+			, LMODATE = to_char(now(),'YYYYMMDD')
+			, LMOTIME = to_char(now(),'hh24miss')
+			, LMOUSER = #{item.userData.useract}
+			where COMPKEY = #{item.compkey}
+			and BFTCODE = #{item.bftcode}
+			and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>	
+	
+	
+	
+
+</mapper>

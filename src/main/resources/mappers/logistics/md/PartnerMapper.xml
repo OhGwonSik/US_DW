@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.md.mapper.PartnerMapper">
+	<!-- *********************************************** -->
+	<!-- MDM - MOWRMA 화주 수신 -->
+	<!-- *********************************************** -->
+	<!-- mdp10 / mdp20 : MDM 어카운트 업체 조회 -->
+	<select id="selectMdmAccuontCustomerList" resultType="com.logistics.md.domain.MdmAccountCustomerDTO">
+		/* selectMdmAccuontCustomerList */
+		select concat(ACTCD, CUSTCD) as ROWKEY, ACTCD, CUSTCD
+				, CUSTNM, REGNO, NATCD, ADR, ZIPCD
+				, RPNM, PCHG, PHNM, PREML
+		from V_ATCCUS
+		where ACTCD = #{userData.compkey}
+		<if test='custnm !=null and custnm !="" '>
+			and upper(CUSTNM) like concat('%' , upper(#{custnm}), '%')
+		</if>
+		<if test='regno !=null and regno !="" '>
+			and upper(REGNO) like concat('%' , upper(#{regno}), '%')
+		</if>
+		order by CUSTCD, CUSTNM, REGNO
+	</select>
+
+	<!-- mdp10 : MDM data -> Owner 생성 -->
+	<insert id="insertMdmOwnerDataToMowrma" parameterType="com.logistics.md.domain.MowrmaDTO">
+		/* insertMdmOwnerDataToMowrma */
+		insert
+		into MOWRMA(
+		COMPKEY, OWNERKY
+		, OWNAMLC, OWADDR1, OWBLCTC, OWMANNM, OWMANTL
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER )
+		values (
+		#{compkey}, #{ownerky}
+		, #{ownamlc}, #{owaddr1}, #{owblctc}, #{owmannm}, #{owmantl}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- *********************************************** -->
+	<!-- Owner : mowrma -->
+	<!-- *********************************************** -->
+	<!-- mdp11 : Owner 조회 -->
+	<select id="selectMowrmaList" resultType="com.logistics.md.domain.MowrmaDTO">
+		/* selectMowrmaList */
+		select concat(COMPKEY, OWNERKY) as ROWKEY
+		, COMPKEY, OWNERKY
+		, OWNATCD, OWNAMLC, OWNAMKO, OWNAMEN, OWADDR1
+		, OWADDR2, OWADDR3, OWNELAT, OWNELON, OWCIYNM
+		, OWREGNM, OWTELN1, OWTELN2, OWTELN3, OWTAXCD
+		, OWPOSBX, OWPOSCD, OWREPNM, OWREPTL, OWREPEM
+		, OWMANNM, OWMANTL, OWMANEM, OWBLCTC, SPUTZON
+		, SPUTLOC, SPIKLOC, OWNEORD, OWUSEYN
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, UPDTCHK
+		from MOWRMA
+		where COMPKEY = #{userData.compkey}
+		<if test='ownamlc !=null and ownamlc !="" '>
+			and upper(OWNAMLC) like concat('%' , upper(#{ownamlc}), '%')
+		</if>
+		<if test='owblctc !=null and owblctc !="" '>
+			and upper(OWBLCTC) like concat('%' , upper(#{owblctc}), '%')
+		</if>
+		order by COMPKEY, OWNERKY
+	</select>
+
+	<!-- mdp11 : Owner 생성 -->
+	<insert id="insertMowrma" parameterType="com.logistics.md.domain.MowrmaDTO">
+		/* insertMowrma */
+		insert
+		into MOWRMA( COMPKEY, OWNERKY
+		, OWNATCD, OWNAMLC, OWNAMKO, OWNAMEN, OWADDR1
+		, OWADDR2, OWADDR3, OWNELAT, OWNELON, OWCIYNM
+		, OWREGNM, OWTELN1, OWTELN2, OWTELN3, OWTAXCD
+		, OWPOSBX, OWPOSCD, OWREPNM, OWREPTL, OWREPEM
+		, OWMANNM, OWMANTL, OWMANEM, OWBLCTC, SPUTZON
+		, SPUTLOC, SPIKLOC, OWNEORD, OWUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER )
+		values
+		( #{compkey}, #{ownerky}
+		, #{ownatcd}, #{ownamlc}, #{ownamko}, #{ownamen}, #{owaddr1}
+		, #{owaddr2}, #{owaddr3}, #{ownelat}, #{ownelon}, #{owciynm}
+		, #{owregnm}, #{owteln1}, #{owteln2}, #{owteln3}, #{owtaxcd}
+		, #{owposbx}, #{owposcd}, #{owrepnm}, #{owreptl}, #{owrepem}
+		, #{owmannm}, #{owmantl}, #{owmanem}, #{owblctc}, #{sputzon}
+		, #{sputloc}, #{spikloc}, #{owneord}, #{owuseyn}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdp11 : Owner 수정 -->
+	<update id="updateMowrma" parameterType="com.logistics.md.domain.MowrmaDTO">
+		/* updateMowrma */
+		update MOWRMA
+		set OWNERKY = #{ownerky}
+		, OWNATCD = #{ownatcd}
+		, OWNAMLC = #{ownamlc}
+		, OWNAMKO = #{ownamko}
+		, OWNAMEN = #{ownamen}
+		, OWADDR1 = #{owaddr1}
+		, OWADDR2 = #{owaddr2}
+		, OWADDR3 = #{owaddr3}
+		, OWNELAT = #{ownelat}
+		, OWNELON = #{ownelon}
+		, OWCIYNM = #{owciynm}
+		, OWREGNM = #{owregnm}
+		, OWTELN1 = #{owteln1}
+		, OWTELN2 = #{owteln2}
+		, OWTELN3 = #{owteln3}
+		, OWTAXCD = #{owtaxcd}
+		, OWPOSBX = #{owposbx}
+		, OWPOSCD = #{owposcd}
+		, OWREPNM = #{owrepnm}
+		, OWREPTL = #{owreptl}
+		, OWREPEM = #{owrepem}
+		, OWMANNM = #{owmannm}
+		, OWMANTL = #{owmantl}
+		, OWMANEM = #{owmanem}
+		, OWBLCTC = #{owblctc}
+		, SPUTZON = #{sputzon}
+		, SPUTLOC = #{sputloc}
+		, SPIKLOC = #{spikloc}
+		, OWNEORD = #{owneord}
+		, OWUSEYN = #{owuseyn}
+		, LMODATE = to_char(now(),'YYYYMMDD')
+		, LMOTIME = to_char(now(),'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test='oldOwnerky != null and oldOwnerky !="" '>
+				and OWNERKY = #{oldOwnerky}
+			</when>
+			<otherwise>
+				and OWNERKY = #{ownerky}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdp11 : Owner Select Box -->
+	<select id="selectOwnerSelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* selectOwnerSelectBox */
+		select OWNERKY as COMBOVL
+		, OWNAMLC as COMBONM
+		from MOWRMA
+		where COMPKEY = #{userData.compkey}
+		<if test='ownerky != null and ownerky != ""'>
+			and OWNERKY = #{ownerky}
+		</if>
+		<if test='userData!=null and userData.ownerky != null and userData.ownerky != ""'>	<!-- 07.31 한지수 추가 -->
+			and OWNERKY = #{userData.ownerky}
+		</if>
+		<choose>
+			<when test='owuseyn != null and owuseyn != ""'>
+				and OWUSEYN = #{owuseyn}
+			</when>
+			<otherwise>
+				and OWUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by OWNERKY, OWNAMLC
+		order by OWNEORD, OWNERKY, OWNAMLC
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- Logist Partner : mptnma -->
+	<!-- *********************************************** -->
+	<!-- mdp20 : Logist Partner 조회 -->
+	<select id="selectMptnmaList" resultType="com.logistics.md.domain.MptnmaDTO">
+		/* selectMptnmaList */
+		select concat(COMPKEY, PTNRKEY) as ROWKEY
+		, COMPKEY, PTNRKEY, OWNERKY
+		, PTNATCD, PTSTPKY, PTNRTYP, PTNAMLC, PTNAMKO
+		, PTNAMEN, PTADDR1, PTADDR2, PTADDR3, PTNRLAT
+		, PTNRLON, PTCIYNM, PTREGNM, PTTELN1, PTTELN2
+		, PTTELN3, PTTAXCD, PTPOSBX, PTPOSCD, PTREPNM
+		, PTREPTL, PTREPEM, PTMANNM, PTMANTL, PTMANEM
+		, PTNGRO1, PTNGRO2, PTNGRO3, PTINMAG, POSTSTM
+		, PTBLCTC, PTNRORD, PTUSEYN
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, INDIBZL, INDIARC, UPDTCHK
+		from MPTNMA
+		where COMPKEY = #{userData.compkey}
+		<if test='ptnrkey != null and ptnrkey !=""'>
+			and PTNRKEY = #{ptnrkey}
+		</if>
+		<if test='ownerky != null and ownerky !=""'>
+			and OWNERKY = #{ownerky}
+		</if>
+		<if test='ptnrtyp != null and ptnrtyp !=""'>
+			and PTNRTYP = #{ptnrtyp}
+		</if>
+		<if test='ptnamlc != null and ptnamlc !=""'>
+			and upper(PTNAMLC) like concat('%' , upper(#{ptnamlc}) , '%' )
+		</if>
+		<if test='ptuseyn != null and ptuseyn !=""'>
+			and PTUSEYN = #{ptuseyn}
+		</if>
+		order by COMPKEY, PTNRKEY
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- MDM - MPTNMA 거래처 수신 -->
+	<!-- *********************************************** -->
+	<!-- mdp20 : MDM data - MPTNMA 생성 -->
+	<insert id="insertMdmPartnerDataToMptnma" parameterType="com.logistics.md.domain.MptnmaDTO">
+		/* insertMdmPartnerDataToMptnma */
+		insert
+		into MPTNMA
+		(
+		COMPKEY, PTNRKEY, OWNERKY
+		, PTNAMLC, PTNRTYP, PTADDR1, PTBLCTC, PTMANNM
+		, PTMANTL
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		(
+		#{compkey}, #{ptnrkey}, #{ownerky}
+		, #{ptnamlc}, #{ptnrtyp}, #{ptaddr1}, #{ptblctc}, #{ptmannm}
+		, #{ptmantl}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		)
+	</insert>
+
+	<!-- mdp21 : Logist Partner 키 채번 -->
+	<select id="getPtnrkey" resultType="string">
+		/* getPtnrkey */
+		select
+		fn_md_ptnrkey()
+		from dual
+	</select>
+
+	<!-- mdp21 : Logist Partner 생성 -->
+	<insert id="insertMptnma" parameterType="com.logistics.md.domain.MptnmaDTO">
+		/* insertMptnma */
+		insert
+		into MPTNMA(
+		COMPKEY, PTNRKEY, OWNERKY
+		, PTNATCD, PTSTPKY, PTNRTYP, PTNAMLC, PTNAMKO
+		, PTNAMEN, PTADDR1, PTADDR2, PTADDR3, PTNRLAT
+		, PTNRLON, PTCIYNM, PTREGNM, PTTELN1, PTTELN2
+		, PTTELN3, PTTAXCD, PTPOSBX, PTPOSCD, PTREPNM
+		, PTREPTL, PTREPEM, PTMANNM, PTMANTL, PTMANEM
+		, PTNGRO1, PTNGRO2, PTNGRO3, PTINMAG, POSTSTM
+		, PTBLCTC, PTNRORD, PTUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER )
+		values
+		( #{compkey}, #{ptnrkey}, IFNULL(#{ownerky}, " ")
+		, #{ptnatcd}, #{ptstpky}, #{ptnrtyp}, #{ptnamlc}, #{ptnamko}
+		, #{ptnamen}, #{ptaddr1}, #{ptaddr2}, #{ptaddr3}, #{ptnrlat}
+		, #{ptnrlon}, #{ptciynm}, #{ptregnm}, #{ptteln1}, #{ptteln2}
+		, #{ptteln3}, #{pttaxcd}, #{ptposbx}, #{ptposcd}, #{ptrepnm}
+		, #{ptreptl}, #{ptrepem}, #{ptmannm}, #{ptmantl}, #{ptmanem}
+		, #{ptngro1}, #{ptngro2}, #{ptngro3}, #{ptinmag}, #{poststm}
+		, #{ptblctc}, #{ptnrord}, #{ptuseyn}
+		, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+		, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdp21 : Logist Partner 수정 -->
+	<update id="updateMptnma" parameterType="com.logistics.md.domain.MptnmaDTO">
+		/* updateMptnma */
+		update MPTNMA
+		set
+		COMPKEY = #{compkey}
+		, PTNRKEY = #{ptnrkey}
+		, OWNERKY =  IFNULL(#{ownerky}, " ")
+		, PTNATCD = #{ptnatcd}
+		, PTSTPKY = #{ptstpky}
+		, PTNRTYP = #{ptnrtyp}
+		, PTNAMLC = #{ptnamlc}
+		, PTNAMKO = #{ptnamko}
+		, PTNAMEN = #{ptnamen}
+		, PTADDR1 = #{ptaddr1}
+		, PTADDR2 = #{ptaddr2}
+		, PTADDR3 = #{ptaddr3}
+		, PTNRLAT = #{ptnrlat}
+		, PTNRLON = #{ptnrlon}
+		, PTCIYNM = #{ptciynm}
+		, PTREGNM = #{ptregnm}
+		, PTTELN1 = #{ptteln1}
+		, PTTELN2 = #{ptteln2}
+		, PTTELN3 = #{ptteln3}
+		, PTTAXCD = #{pttaxcd}
+		, PTPOSBX = #{ptposbx}
+		, PTPOSCD = #{ptposcd}
+		, PTREPNM = #{ptrepnm}
+		, PTREPTL = #{ptreptl}
+		, PTREPEM = #{ptrepem}
+		, PTMANNM = #{ptmannm}
+		, PTMANTL = #{ptmantl}
+		, PTMANEM = #{ptmanem}
+		, PTNGRO1 = #{ptngro1}
+		, PTNGRO2 = #{ptngro2}
+		, PTNGRO3 = #{ptngro3}
+		, PTINMAG = #{ptinmag}
+		, POSTSTM = #{poststm}
+		, PTBLCTC = #{ptblctc}
+		, PTNRORD = #{ptnrord}
+		, PTUSEYN = #{ptuseyn}
+		, LMODATE = to_char(NOW() ,'YYYYMMDD')
+		, LMOTIME = to_char(NOW() ,'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and PTNRKEY =	#{ptnrkey}
+	</update>
+
+	<!-- vendkey selectBox -->
+	<select id="getMdp02SelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* getMdp02SelectBox */
+		select PTNRKEY as COMBOVL
+		, PTNAMLC as COMBONM
+		from MPTNMA
+		where COMPKEY = #{userData.compkey}
+		<if test='ownerky != null and ownerky != ""'>
+			and OWNERKY = #{ownerky}
+		</if>
+		<choose>
+			<when test='ptuseyn != null and ptuseyn != ""'>
+				and PTUSEYN = #{ptuseyn}
+			</when>
+			<otherwise>
+				and PTUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		and PTNRTYP= 'VENDER'
+		group by PTNRKEY, PTNAMLC
+	</select>
+
+	<select id="getMdp02SelectBoxByAll" resultType="com.logistics.common.dto.CommonDTO">
+		/* getMdp02SelectBoxByAll */
+		select PTNRKEY as COMBOVL
+		, PTNAMLC as COMBONM
+		from MPTNMA
+		where COMPKEY = #{userData.compkey}
+		<if test='ownerky != null and ownerky != ""'>
+			and OWNERKY = #{ownerky}
+		</if>
+		<if test='ptnrtyp != null and ptnrtyp != ""'>
+			and PTNRTYP = #{ptnrtyp}
+		</if>
+		<if test='ptnrtyp2 != null and ptnrtyp2 != ""'>
+			and PTNRTYP != #{ptnrtyp2}
+		</if>
+		<if test="ptnrtyps != null and ptnrtyps.size != 0">
+			and PTNRTYP in
+			<foreach collection="ptnrtyps" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+
+		<choose>
+			<when test='ptuseyn != null and ptuseyn != ""'>
+				and PTUSEYN = #{ptuseyn}
+			</when>
+			<otherwise>
+				and PTUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by PTNRKEY, PTNAMLC
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- Destination : mdesma -->
+	<!-- *********************************************** -->
+	<!-- mdp30 : 도착지 조회 -->
+	<select id="selectMdesmaList" resultType="com.logistics.md.domain.MdesmaDTO">
+		/* selectMdesmaList */
+		select concat(MDE.COMPKEY, MDE.PTNRKEY, MDE.DESTKEY) as ROWKEY
+		, MDE.COMPKEY, MDE.PTNRKEY, MDE.DESTKEY
+		, MDE.DENAMLC, MDE.DENATCD, MDE.DENAMKO, MDE.DENAMEN, MDE.DEADDR1
+		, MDE.DEADDR2, MDE.DEADDR3, MDE.DEPOSCD, MDE.DESTLAT, MDE.DESTLON
+		, MDE.UNAVAT1, MDE.UNAVAT2, MDE.UNAVAT3, MDE.CUSGRO1, MDE.CUSGRO2
+		, MDE.CUSGRO3, MDE.SUNDAVL, MDE.MONDAVL, MDE.TUEDAVL, MDE.WEDDAVL
+		, MDE.THUDAVL, MDE.FRIDAVL, MDE.SATDAVL, MDE.NATHAVL, MDE.DLVRQTM
+		, MDE.ROUTEKY, MDE.UNLODMO, MDE.CUSPECD, MDE.CUSPERM, MDE.DEUSEYN
+		, MPT.PTNAMLC
+		, FN_COM_TODATE(MDE.CREDATE) as CREDATE, FN_COM_TOTIME(MDE.CRETIME) as CRETIME, fn_sy_usernam(MDE.COMPKEY, MDE.CREUSER) as CREUSER
+		, FN_COM_TODATE(MDE.LMODATE) as LMODATE, FN_COM_TOTIME(MDE.LMOTIME) as LMOTIME, fn_sy_usernam(MDE.COMPKEY, MDE.LMOUSER) as LMOUSER
+		, MDE.UPDTCHK
+		from MDESMA MDE
+		inner join MPTNMA MPT
+		on (MDE.COMPKEY = MPT.COMPKEY and MDE.PTNRKEY = MPT.PTNRKEY)
+		where MDE.COMPKEY = #{userData.compkey}
+		<if test='ptnamlc !=null and ptnamlc !="" '>
+			and upper(MPT.PTNAMLC) like concat('%' , upper(#{ptnamlc}), '%')
+		</if>
+		<if test='denamlc !=null and denamlc !="" '>
+			and upper(MDE.DENAMLC) like concat('%' , upper(#{denamlc}), '%')
+		</if>
+		order by MDE.COMPKEY, MDE.PTNRKEY, MDE.DESTKEY, MPT.PTNAMLC, MDE.DENAMLC
+	</select>
+
+	<!-- mdp30 : 도착지 생성 -->
+	<insert id="insertMdesma" parameterType="com.logistics.md.domain.MdesmaDTO">
+		/* insertMdesma */
+		insert
+		into MDESMA(
+		COMPKEY, PTNRKEY, DESTKEY
+		, DENAMLC, DENATCD, DENAMKO, DENAMEN, DEADDR1
+		, DEADDR2, DEADDR3, DEPOSCD, DESTLAT, DESTLON
+		, UNAVAT1, UNAVAT2, UNAVAT3, CUSGRO1, CUSGRO2
+		, CUSGRO3, SUNDAVL, MONDAVL, TUEDAVL, WEDDAVL
+		, THUDAVL, FRIDAVL, SATDAVL, NATHAVL, DLVRQTM
+		, ROUTEKY, UNLODMO, CUSPECD, CUSPERM, DEUSEYN
+		, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		( #{compkey}, #{ptnrkey}, #{destkey}
+		, #{denamlc}, #{denatcd}, #{denamko}, #{denamen}, #{deaddr1}
+		, #{deaddr2}, #{deaddr3}, #{deposcd}, #{destlat}, #{destlon}
+		, #{unavat1}, #{unavat2}, #{unavat3}, #{cusgro1}, #{cusgro2}
+		, #{cusgro3}, #{sundavl}, #{mondavl}, #{tuedavl}, #{weddavl}
+		, #{thudavl}, #{fridavl}, #{satdavl}, #{nathavl}, #{dlvrqtm}
+		, #{routeky}, #{unlodmo}, #{cuspecd}, #{cusperm}, #{deuseyn}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdp30 : 도착지 수정 -->
+	<update id="updateMdesma" parameterType="com.logistics.md.domain.MdesmaDTO">
+		/* updateMdesma */
+		update MDESMA
+		set
+		PTNRKEY = #{ptnrkey}
+		, DESTKEY = #{destkey}
+		, DENAMLC = #{denamlc}
+		, DENATCD = #{denatcd}
+		, DENAMKO = #{denamko}
+		, DENAMEN = #{denamen}
+		, DEADDR1 = #{deaddr1}
+		, DEADDR2 = #{deaddr2}
+		, DEADDR3 = #{deaddr3}
+		, DEPOSCD = #{deposcd}
+		, DESTLAT = #{destlat}
+		, DESTLON = #{destlon}
+		, UNAVAT1 = #{unavat1}
+		, UNAVAT2 = #{unavat2}
+		, UNAVAT3 = #{unavat3}
+		, CUSGRO1 = #{cusgro1}
+		, CUSGRO2 = #{cusgro2}
+		, CUSGRO3 = #{cusgro3}
+		, SUNDAVL = #{sundavl}
+		, MONDAVL = #{mondavl}
+		, TUEDAVL = #{tuedavl}
+		, WEDDAVL = #{weddavl}
+		, THUDAVL = #{thudavl}
+		, FRIDAVL = #{fridavl}
+		, SATDAVL = #{satdavl}
+		, NATHAVL = #{nathavl}
+		, DLVRQTM = #{dlvrqtm}
+		, ROUTEKY = #{routeky}
+		, UNLODMO = #{unlodmo}
+		, CUSPECD = #{cuspecd}
+		, CUSPERM = #{cusperm}
+		, DEUSEYN = #{deuseyn}
+		, LMODATE = to_char(now(),'YYYYMMDD')
+		, LMOTIME = to_char(now(),'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test='oldPtnrkey != null and oldPtnrkey !=""'>
+				and PTNRKEY = #{oldPtnrkey}
+			</when>
+			<otherwise>
+				and PTNRKEY = #{ptnrkey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test='oldDestkey != null and oldDestkey !=""'>
+				and DESTKEY = #{oldDestkey}
+			</when>
+			<otherwise>
+				and DESTKEY = #{destkey}
+			</otherwise>
+		</choose>
+	</update>
+
+	<select id="getMdp30SelectBoxByAll" resultType="com.logistics.md.domain.MdesmaDTO">
+		/* getMdp30SelectBoxByAll */
+		select
+			  DESTKEY as combovl
+			, DENAMLC as combonm
+			, PTNRKEY as ptnrkey
+		 from MDESMA
+		<where>
+			and COMPKEY = #{userData.compkey}
+			and DEUSEYN = 'Y'
+			<if test='ptnrkey != null and ptnrkey != ""'>
+				and PTNRKEY = #{ptnrkey}
+			</if>
+			group by DESTKEY, DENAMLC, PTNRKEY
+		</where>
+	</select>
+
+	<!-- destkey selectBox 2023.10.11최강호 -->
+	<select id="getDestKeySelectBox" resultType="com.logistics.md.domain.MdesmaDTO">
+		/* getDestKeySelectBox */
+		select
+			  DESTKEY as combovl
+			, DENAMLC as combonm
+			, PTNRKEY as ptnrkey
+		 from MDESMA
+		<where>
+			and COMPKEY = #{userData.compkey}
+			<if test='destkey != null and destkey != ""'>
+				and DESTKEY = #{destkey}
+			</if>
+			group by DESTKEY, DENAMLC, PTNRKEY
+		</where>
+	</select>
+</mapper>

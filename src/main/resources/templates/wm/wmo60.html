@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+                 <label class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                 <div class="setting-grid-content">
+                     <div class="input-group">
+                        <select id="wmo60Warekey"
+								data-cb-val="combovl"
+								data-cb-name="combonm"
+								data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList"
+								data-cb-select=""
+						></select>
+                     </div>
+                 </div>
+                 <label class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                 <div class="setting-grid-content">
+                     <div class="input-group">
+                         <select id="wmo60Ownerky"
+                         	data-cb-val="combovl"
+							data-cb-name="combonm"
+							data-cb-url="/md/common/partner/owner" data-cb-variable="ownerkyList"
+							data-cb-select="">
+							 <option value="">[[#{wm.wmi40.all}]]</option>
+                         </select>
+                     </div>
+                 </div>
+                 <label class="setting-grid-title">[[#{wm.wmo60.speidat}]]</label>
+				 <div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmo60DateFrom"
+							th:value="${#dates.format(#dates.createToday(), 'yyyy-MM-dd')}" onkeyup="setInputDateDel(this)" /> <span>~</span> 
+						<input type="date" max="2999-12-31" id="wmo60DateTo"
+							th:value="${#dates.format(#dates.createToday(), 'yyyy-MM-dd')}" onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+				<label class="setting-grid-title" for="wmo60Skuat01">[[#{md.mskuwc.skuat01}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="wmo60Skuat01" th:placeholder="${#messages.msg('md.mskuwc.skuat01')}" name="wmo60Skuat01" />
+					</div>
+				</div>
+				<label class="setting-grid-title" for="wmo60Skumkey">[[#{md.mskuwc.skumkey}]]</label>
+                <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmo60Skumkey" th:placeholder="${#messages.msg('md.mskuma.skumkey')}" name="wmo60Skumkey" />
+                    </div>
+                </div>
+				<label class="setting-grid-title" for="wmo60Skudesc">[[#{md.mskuwc.skudesc}]]</label>
+                <div class="setting-grid-content">
+                    <div class="input-wrapper">
+                        <input type="text" id="wmo60Skudesc" th:placeholder="${#messages.msg('md.mskuma.skudesc')}" name="wmo60Skudesc" />
+                    </div>
+                </div>
+				<label class="setting-grid-title" for="wmo60Skuat03">[[#{md.mskuwc.skuat03}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="wmo60Skuat03" th:placeholder="${#messages.msg('md.mskuwc.skuat03')}" name="wmo60Skuat03" />
+					</div>
+				</div>
+				<label class="setting-grid-title" for="wmo60Saatc06">[[#{wm.wmo60.saatc12}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="wmo60Saatc06" th:placeholder="${#messages.msg('wm.wmo60.saatc12')}" name="wmo60Saatc06" />
+					</div>
+				</div>
+				<label class="setting-grid-title" for="wmo60Saatc10">[[#{wm.wmo60.saatc10}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="wmo60Saatc10" th:placeholder="${#messages.msg('wm.wmo60.saatc10')}" name="wmo60Saatc10" />
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{md.mdocma.doccate}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="wmo60DoctypeCheckbox" >
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wmo60.shpitst}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="wmo60ShpitstCheckbox" >
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+                <button type="button" class="btn-search btn-navy btn-green" id="wmo60Search"><img>[[#{bt.search}]]</button>
+                <button type="button" class="btn-clear btn-white" id="wmo60Reset"><img>[[#{bt.reset}]]</button>
+            </div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<!-- div class="edit-btn-wrapper">
+				<button class="btn-white" id="wmo60ShipoutCancel">
+					<img class="ic-bt-cancel">
+					[[#{bt.shipcancel}]]
+				</button>
+			</div -->
+			<div class="list-grid-wrapper con-box">
+				<div id="wmo60Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+      $(function(){
+         const pageId = "[[${gprogrid}]]";
+         const list = "List";
+         let wmo60Grid;
+		 wmo60Init();
+
+      	// 조회 이벤트
+		$('#' + pageId + 'Search').click(async function(){
+			await wmo60List();
+		});
+      	
+		$('#' + pageId + 'Reset').click(function(){
+			resetSearchConditions(0,0,0);
+			$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+			$('#' + pageId + 'DoctypeAllCheck').prop("checked", true);
+			$('#' + pageId + 'ShpitstAllCheck').prop("checked", true);
+            wmo60Grid.searchList([]);
+		});
+
+	  	$('#' + pageId + 'ShipoutCancel').click(async function(){
+		  	await wmo60ShipoutCancel();
+	  	});
+     
+         const wmo60GridCM = [
+			 	{ title: '', dataType: 'string',  dataIndx: 'state', type: 'checkBoxSelection'
+				 , align: 'center'
+				 , maxWidth:'30', maxHeight:'30'
+				 , menuIcon: false
+				 , sortable: false, editor: false
+				 , cb: {all: false, header: true, check:'Y', uncheck:'N'}
+			 	},
+			 	{ title: "rowkey", width: 100, dataType: "string", dataIndx: "rowkey", hidden: true , editable: false },
+				{ title: "[[#{wm.wtrhis.compkey}]]", width: 100, dataType: "string", dataIndx: "compkey" , hidden: true , editable: false },
+				{ title: "[[#{grid.whnamlc}]]", width: 100, dataType: "string", dataIndx: "warekey" , editable: false },
+			 	{ title: "[[#{wm.wmo60.speidat}]]", width: 100, dataType: "string", dataIndx: "speidat" , editable: false },
+			 	{ title: "[[#{md.mdocma.doccate}]]", width: 100, dataType: "string", dataIndx: "doccate" , editable: false },
+				{ title: "[[#{md.mdocma.doctype}]]", width: 100, dataType: "string", dataIndx: "doctype" , editable: false },
+				{ title: "[[#{md.mdocma.doctynm}]]", width: 100, dataType: "string", dataIndx: "doctynm" , editable: false },
+			 	{ title: "[[#{wm.wmo60.shpitst}]]", width: 100, dataType: "string", dataIndx: "shpitst" , editable: false },
+			 	{ title: "[[#{wm.wshpit.shpdcky}]]", dataType: "string",  dataIndx:"shpdcky", hidden: true, editable:false },
+			 	{ title: "[[#{wm.wshpit.shpdcit}]]", dataType: "string",  dataIndx:"shpdcit", hidden: true, editable:false },
+			 	{ title: "[[#{wm.wmo60.cooutky}]]", width: 100, dataType: "string", dataIndx: "cooutky" , hidden: true, editable: false },
+			 	{ title: "[[#{wm.wmo60.cooutit}]]", width: 100, dataType: "string", dataIndx: "cooutit" , hidden: true, editable: false },
+			 	{ title: "[[#{wm.wshpit.oeretky}]]", dataType: "string",  dataIndx:"oeretky", hidden: true, editable:false },
+			 	{ title: "[[#{wm.wshpit.oeretit}]]", dataType: "string",  dataIndx:"oeretit", hidden: true, editable:false },
+				{ title: "[[#{grid.ownamlc}]]", width: 100, dataType: "string", dataIndx: "ownerky" , editable: false },
+				{ title: "[[#{grid.skuCode}]]", width: 100, dataType: "string", dataIndx: "skumkey" , editable: false },
+				{ title: "[[#{grid.skunm}]]", width: 100, dataType: "string", dataIndx: "skudesc" , editable: false },
+			 	{ title: "[[#{md.mskuwc.skuat01}]]", width: 100, dataType: "string", dataIndx: "skuat01" , editable: false },
+			 	{ title: "[[#{md.mskuwc.skuat03}]]", width: 100, dataType: "string", dataIndx: "skuat03" , editable: false },
+			 	{ title: "[[#{wm.wmo60.saatc10}]]", width: 100, dataType: "string", dataIndx: "saatc10" , editable: false },
+			 	{ title: "[[#{wm.wmo60.saatc12}]]", width: 100, dataType: "string", dataIndx: "saatc06" , editable: false },
+				{ title: "[[#{wm.wtakit.fordqty}]]", width: 100, dataType: "integer", dataIndx: "fordqty" , format: '###,###,###' , editable: false, summary: { type: "sum" } },
+			 	{ title: "[[#{wm.wtakit.tcmpqty}]]", width: 100, dataType: "integer", dataIndx: "tcmpqty" , format: '###,###,###' , editable: false, summary: { type: "sum" } },
+				{ title: "[[#{wm.wtrhis.credate}]]", width: 100, dataType: "string", dataIndx: "credate" , editable: false },
+				{ title: "[[#{wm.wtrhis.cretime}]]", width: 100, dataType: "string", dataIndx: "cretime" , editable: false },
+				{ title: "[[#{wm.wtrhis.creuser}]]", width: 100, dataType: "string", dataIndx: "creuser" , editable: false },
+				{ title: "[[#{wm.wtrhis.lmodate}]]", width: 100, dataType: "string", dataIndx: "lmodate" , editable: false },
+				{ title: "[[#{wm.wtrhis.lmotime}]]", width: 100, dataType: "string", dataIndx: "lmotime" , editable: false },
+				{ title: "[[#{wm.wtrhis.lmouser}]]", width: 100, dataType: "string", dataIndx: "lmouser" , editable: false },
+         ];
+
+         wmo60Grid = new GridUtil(wmo60GridCM, pageId , pageId + 'Grid');
+
+         wmo60Grid.setFind();
+
+         wmo60Grid.setCreate(async function(evt , ui){
+        	 await _commonInit();	 
+        	 $('#' + pageId + 'Ownerky').pqSelect({
+				deselect : false
+			 });
+			 await getDoctypeList();
+			 await getShpitstList();
+         });
+
+         wmo60Grid.open();
+       
+       	 async function wmo60List(){
+ 			let grid = pq.grid('#' + pageId + 'Grid');
+       		let param = {
+     			warekey  : $('#' + pageId + 'Warekey option:selected').val() ,
+       			ownerky  : $('#' + pageId + 'Ownerky option:selected').val() ,
+       			datefrom : $('#' + pageId + 'DateFrom').val(),
+       			dateto   : $('#' + pageId + 'DateTo').val(),
+       			skumkey  : $('#' + pageId + 'Skumkey').val(),
+       			skudesc  : $('#' + pageId + 'Skudesc').val(),
+				skuat01  : $('#' + pageId + 'Skuat01').val(),
+				skuat03  : $('#' + pageId + 'Skuat03').val(),
+				saatc10  : $('#' + pageId + 'Saatc10').val(),
+				saatc06  : $('#' + pageId + 'Saatc06').val(),
+				doctypes : [],
+				shpitsts : []
+       		};
+
+			const doctypeObjs = $('input[name="'+pageId+'Doctype"]:checked');
+			for(const checkObj of doctypeObjs) {
+				param.doctypes.push(checkObj.value);
+			}
+
+			const shitypeObjs = $('input[name="'+pageId+'Shpitst"]:checked');
+			for(const checkObj of shitypeObjs) {
+				 param.shpitsts.push(checkObj.value);
+			}
+
+ 			grid.showLoading();
+			const wmo60Res = await fetchUtil('GET' , '/wm/outbound/' + pageId + '/grids/1' , param);
+			try{
+			    if(wmo60Res.status !== 200){
+			       throw new Error("[[#{ms.saveErr}]]");
+			    }
+			    const rData = await wmo60Res.json();
+				wmo60Grid.searchList(rData);
+				grid.hideLoading();
+			    
+			}catch(err){
+				alert('code : ' + wmo60Res.status + '\n' + err + '\n' + wmo60Res.statusText); // get method 통신의 경우
+				grid.hideLoading();
+			}
+		 }
+
+
+		 async function getDoctypeList(){
+			 const data = {
+				 warekey : $('#' + pageId + 'Warekey option:selected').val(),
+				 doccate : '700'
+			 };
+
+			 const doctypeData = await fetchUtil('GET', '/md/common/code/doctype', data);
+			 const doctypeList = await doctypeData.json();
+
+			 document.querySelector('#'+pageId+'DoctypeCheckbox').innerHTML = '';
+			 setCheckboxInSearchArea('Doctype', doctypeList, pageId);
+		 }
+		 async function getShpitstList(){
+			  const data = {
+				  comcdky : 'SHPITST',
+				  mdp3Comcdvl : 'ERR'
+			  };
+
+			  const shpitstData = await fetchUtil('GET', '/md/common/code/common-code', data);
+			  const shpitstList = await shpitstData.json();
+
+			  document.querySelector('#'+pageId+'ShpitstCheckbox').innerHTML = '';
+			  setCheckboxInSearchArea('Shpitst', shpitstList, pageId);
+		 }
+		  function setCheckboxInSearchArea(columnName, dataList, pageId) {
+
+			  const selector = pageId + columnName;
+
+			  if(document.querySelector('input[name="'+ selector +'"]')) {
+				  return;
+			  }
+
+			  let html = '';
+			  for(const column of dataList) {
+				  html += '<label class="check-box">';
+				  html += '<input type="checkbox" name="' + selector +'" value="' + column.combovl +'">';
+				  html +=  '<span>' + column.combonm + '</span></label>';
+			  }
+			  document.querySelector('#' + selector + 'Checkbox').insertAdjacentHTML('beforeend', html);
+
+			  // 문서타입이 존재하지 않을 시에 임시로 전체 체크박스 추가되도록.
+			  if(dataList.length !== 1) {
+				  let allCheckHTML = '<label class="check-box">';
+				  allCheckHTML += '<input type="checkbox" id="' + selector +'AllCheck" value="">';
+				  allCheckHTML += '<span>[[#{ms.chooseAll}]]</span></label>';
+				  document.querySelector('#' + selector +'Checkbox').insertAdjacentHTML('afterBegin', allCheckHTML);
+				  document.querySelector('#' + selector +'AllCheck').checked = true;
+			  }
+
+			  const checkboxObjs = document.querySelectorAll('#' + selector + 'Checkbox input');
+			  // 검색조건 체크박스의 개수가 하나일 시 체크 해제 못하고 체크 유지되도록.
+			  if(checkboxObjs.length === 1) {
+				  checkboxObjs[0].disabled = true;
+				  checkboxObjs[0].checked = true;
+				  checkboxObjs[0].addEventListener('click', function(event){
+					  event.preventDefault();
+				  });
+				  return;
+			  }
+
+			  checkboxEvent(columnName, pageId);
+		  }
+
+		  function checkboxEvent(columnName, pageId) {
+
+			  const selector = pageId + columnName;
+			  const checkboxSelector = '#' + selector + 'Checkbox input';
+			  const allCheckObj = document.querySelector('#' + selector + 'AllCheck');
+			  const notAllCheckObjs = document.querySelectorAll('input[name="' + selector + '"]');
+
+			  document.querySelectorAll(checkboxSelector).forEach(function(element) {
+				  element.addEventListener('change', function() {
+					  allCheckObj.checked = false;
+					  const checkedObjs = document.querySelectorAll('input[name="' + selector + '"]' + ':checked');
+					  if(notAllCheckObjs.length === checkedObjs.length || !checkedObjs.length || element.id === selector + 'AllCheck') {
+						  allCheckObj.checked = true;
+						  for(const checkedObj of checkedObjs) {
+							  checkedObj.checked = false;
+						  }
+					  }
+				  });
+			  });
+		  }
+
+		  function wmo60Init(){
+			  const wmo60Url = new URL(document.location.href);
+			  const wmo60UrlParams = wmo60Url.searchParams;
+
+			  let wmo60ParamSpeidat = wmo60UrlParams.get('speidat');
+
+			  if(wmo60ParamSpeidat != null && wmo60ParamSpeidat.length == 8){
+				  $('#'+pageId+'DateFrom').val(dateFormat(wmo60ParamSpeidat, '####-##-##'));
+				  $('#'+pageId+'DateTo').val(dateFormat(wmo60ParamSpeidat, '####-##-##'));
+			  }
+
+		  }
+
+		  async function wmo60ShipoutCancel(){
+			  let grid = pq.grid('#' + pageId + 'Grid');
+			  let gridData      = grid.getData();
+			  let gridList		= grid.getChanges({all:true});
+
+			  let checkList = gridData.filter(function(e){
+				  return e.state == "Y";
+			  });
+
+			  if(checkList.length) {
+
+				  if(confirm('[[#{ms.wmo60.shipoutconfirm}]]')){
+					  grid.showLoading();
+					  gridList.updateList = checkList;
+					  const wmo60Res = await fetchUtil('POST' , '/wm/outbound/' + pageId + '/shipoutCancel' , gridList);
+
+					  try{
+						  if(wmo60Res.status !== 200){
+							  throw new Error("[[#{ms.saveErr}]]");
+						  }
+						  const rData = await wmo60Res.json();
+						  if(rData && rData.result != 0){
+							  await wmo60List();
+						  }
+						  grid.hideLoading();
+					  }catch(err){
+						  alert('code : ' + wmo60Res.status + '\n' + err + '\n' + wmo60Res.statusText); // get method 통신의 경우
+						  grid.hideLoading();
+					  }
+				  }
+			  } else{
+				  alert("[[#{ms.choiceRowZero}]]");
+				  return;
+			  }
+		  }
+
+		  function dateFormat(value, pattern) {
+			  let idx = 0;
+			  let date = value != null ? value.toString() : '';
+			  return pattern.replace(/#/g, _ => date[idx++]);
+		  }
+      });
+      </script>
+	</div>
+</html>

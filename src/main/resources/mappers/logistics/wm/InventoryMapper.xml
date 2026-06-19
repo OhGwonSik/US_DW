@@ -1,0 +1,2245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.InventoryMapper">
+	<!-- wmi10: 재고조회(SKU) -->
+	<select id="selectWmi10SKUList" resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi10SKUList */
+		
+		select
+		  A.COMPKEY as compkey
+		, A.WAREKEY as warekey
+		, A.OWNERKY as ownerky
+		, A.SKUMKEY as skumkey 
+		, C.SKUDESC as skudesc
+		, A.STKSTAT as stkstat
+		, C.UPCCODE as upccode
+		, SUM(A.STOTQTY) as stotqty
+		, SUM( case when (A.STOTQTY != 0 and A.SALLQTY = 0 and A.SINBQTY = 0
+				and A.SOUBQTY = 0) then A.STOTQTY - A.SBLOQTY
+				else 0 end) as avalqty
+		, SUM(A.SALLQTY) as sallqty
+		, SUM(A.SINBQTY) as sinbqty
+		, SUM(A.SOUBQTY) as soubqty
+		, SUM(A.SBLOQTY) as sbloqty
+		, (
+		   SELECT SUM(STOTQTY) FROM WSTKKY 
+		   WHERE COMPKEY = A.COMPKEY 
+		   AND WAREKEY = A.WAREKEY 
+		   AND OWNERKY = A.OWNERKY 
+		   AND SKUMKEY = A.SKUMKEY 
+		   AND AREAKEY = 'RCV' 
+		   AND (A.STOTQTY != 0 OR A.SALLQTY != 0 OR A.SINBQTY != 0 OR A.SOUBQTY != 0 OR A.SBLOQTY != 0) 
+		 ) AS rcvsqty
+		,(
+		   SELECT SUM(STOTQTY) FROM WSTKKY 
+		   WHERE COMPKEY = A.COMPKEY 
+		   AND WAREKEY = A.WAREKEY 
+		   AND OWNERKY = A.OWNERKY 
+		   AND SKUMKEY = A.SKUMKEY 
+		   AND AREAKEY = 'STG' 
+		   AND (A.STOTQTY != 0 OR A.SALLQTY != 0 OR A.SINBQTY != 0 OR A.SOUBQTY != 0 OR A.SBLOQTY != 0) 
+		  ) AS stgsqty
+		, 
+		 (
+		   SELECT SUM(STOTQTY) FROM WSTKKY 
+		   WHERE COMPKEY = A.COMPKEY 
+		   AND WAREKEY = A.WAREKEY 
+		   AND OWNERKY = A.OWNERKY 
+		   AND SKUMKEY = A.SKUMKEY 
+		   AND AREAKEY = 'TAK' 
+		   AND (A.STOTQTY != 0 OR A.SALLQTY != 0 OR A.SINBQTY != 0 OR A.SOUBQTY != 0 OR A.SBLOQTY != 0) 
+		 ) AS taksqty
+		from WSTKKY A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+			and A.WAREKEY = C.WAREKEY
+			and A.OWNERKY = C.OWNERKY
+			and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA E on A.COMPKEY = E.COMPKEY
+			and C.SKUAT01 = E.USERACT   <!-- usernam 기타 데이터 존재 -->
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, LOCANAM FROM MLOCMA) ML 
+			on A.COMPKEY = ML.COMPKEY
+			and A.WAREKEY = ML.WAREKEY
+			and A.AREAKEY = ML.AREAKEY
+			and A.ZONEKEY = ML.ZONEKEY
+			and A.LOCAKEY = ML.LOCAKEY
+		where 1=1
+		and A.COMPKEY = #{userData.compkey}
+		and (A.STOTQTY != 0 or A.SALLQTY != 0 or A.SINBQTY != 0 or A.SOUBQTY != 0
+		or A.SBLOQTY != 0)
+		<if test="ownerky != null and ownerky !='' ">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey !='' ">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="areakey == null or areakey == ''">
+			and A.AREAKEY not in ('SYS', 'SHP')
+		</if>
+		<if test="areakey != null and areakey !='' ">
+			and A.AREAKEY = #{areakey}
+		</if>
+		<if test="zonekey != null and zonekey !='' ">
+			and A.ZONEKEY = #{zonekey}
+		</if>
+		<if test="locanam != null and locanam !='' ">
+			and ML.LOCANAM like concat( '%' , #{locanam} , '%')
+		</if>
+		<if test="skumkey != null and skumkey !='' ">
+			and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+		</if>
+		<if test="skudesc != null and skudesc !='' ">
+			and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+		</if>
+		<if test="stkstat != null and stkstat !='' ">
+			and A.STKSTAT = #{stkstat}
+		</if>
+		<if test="upccode != null and upccode !='' ">
+			and C.UPCCODE like concat( '%' , #{upccode} , '%')
+		</if>
+		group by A.COMPKEY, A.OWNERKY, A.WAREKEY, A.SKUMKEY, C.SKUDESC, A.STKSTAT, C.UPCCODE, RCVSQTY, STGSQTY, TAKSQTY
+	</select>
+	
+	<!-- wmi10: 재고조회(LOCA) -->
+	<select id="selectWmi10LOCAList" resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi10LOCAList */
+		
+		select
+		  A.COMPKEY as compkey
+		, A.WAREKEY as warekey
+		, A.OWNERKY as ownerky 
+		, A.SKUMKEY as skumkey 
+		, C.SKUDESC as skudesc
+		, A.STKSTAT as stkstat
+		, C.UPCCODE as upccode
+		, A.AREAKEY as areakey
+		, A.ZONEKEY as zonekey
+		, A.LOCAKEY as locakey
+		, MA.AREANAM as areanam
+		, MZ.ZONENAM as zonenam
+		, ML.LOCANAM as locanam
+		, SUM(A.STOTQTY) as stotqty
+		, SUM( case when (A.STOTQTY != 0 and A.SALLQTY = 0 and A.SINBQTY = 0
+				and A.SOUBQTY = 0) then A.STOTQTY - A.SBLOQTY
+				else 0 end) as avalqty
+		, SUM(A.SALLQTY) as sallqty
+		, SUM(A.SINBQTY) as sinbqty
+		, SUM(A.SOUBQTY) as soubqty
+		, SUM(A.SBLOQTY) as sbloqty
+		from WSTKKY A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+			and A.WAREKEY = C.WAREKEY
+			and A.OWNERKY = C.OWNERKY
+			and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA E on A.COMPKEY = E.COMPKEY
+			and C.SKUAT01 = E.USERACT   <!-- usernam 기타 데이터 존재 -->
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, AREANAM FROM MAREMA) MA 
+			on A.COMPKEY = MA.COMPKEY
+			and A.WAREKEY = MA.WAREKEY
+			and A.AREAKEY = MA.AREAKEY
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, ZONEKEY, ZONENAM FROM MZONMA) MZ 
+			on A.COMPKEY = MZ.COMPKEY
+			and A.WAREKEY = MZ.WAREKEY
+			and A.AREAKEY = MZ.AREAKEY
+			and A.ZONEKEY = MZ.ZONEKEY
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, LOCANAM FROM MLOCMA) ML 
+			on A.COMPKEY = ML.COMPKEY
+			and A.WAREKEY = ML.WAREKEY
+			and A.AREAKEY = ML.AREAKEY
+			and A.ZONEKEY = ML.ZONEKEY
+			and A.LOCAKEY = ML.LOCAKEY
+		where 1=1
+		and A.COMPKEY = #{userData.compkey}
+		and (A.STOTQTY != 0 or A.SALLQTY != 0 or A.SINBQTY != 0 or A.SOUBQTY != 0
+		or A.SBLOQTY != 0)
+		<if test="ownerky != null and ownerky !='' ">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey !='' ">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="areakey == null or areakey == ''">
+			and A.AREAKEY not in ('SYS', 'SHP')
+		</if>
+		<if test="areakey != null and areakey !='' ">
+			and A.AREAKEY = #{areakey}
+		</if>
+		<if test="zonekey != null and zonekey !='' ">
+			and A.ZONEKEY = #{zonekey}
+		</if>
+		<if test="locanam != null and locanam !='' ">
+			and ML.LOCANAM like concat( '%' , #{locanam} , '%')
+		</if>
+		<if test="skumkey != null and skumkey !='' ">
+			and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+		</if>
+		<if test="skudesc != null and skudesc !='' ">
+			and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+		</if>
+		<if test="stkstat != null and stkstat !='' ">
+			and A.STKSTAT = #{stkstat}
+		</if>
+		<if test="upccode != null and upccode !='' ">
+			and C.UPCCODE like concat( '%' , #{upccode} , '%')
+		</if>
+		group by A.COMPKEY, A.OWNERKY, A.WAREKEY, A.SKUMKEY, C.SKUDESC, A.STKSTAT, C.UPCCODE, A.AREAKEY, A.ZONEKEY , A.LOCAKEY, MA.AREANAM, MZ.ZONENAM, ML.LOCANAM
+	</select>
+
+	<!-- wmi10: 재고조회(LOT) -->
+	<select id="selectWmi10LOTList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi10LOTList */
+
+		select
+		  A.COMPKEY as compkey
+		, A.OWNERKY as ownerky
+		, A.SKUMKEY as skumkey 
+		, C.SKUDESC as skudesc 
+		, A.WAREKEY as warekey
+		, A.AREAKEY as areakey 
+		, A.ZONEKEY as zonekey 
+		, A.LOCAKEY as locakey
+		, SUM(A.STOTQTY) as stotqty
+		, SUM( case when (A.STOTQTY != 0 and A.SALLQTY = 0 and A.SINBQTY = 0
+		and A.SOUBQTY = 0) then A.STOTQTY - A.SBLOQTY
+		else 0 end) as avalqty
+		, SUM(A.SALLQTY) as sallqty
+		, SUM(A.SINBQTY) as sinbqty
+		, SUM(A.SOUBQTY) as soubqty
+		, SUM(A.SBLOQTY) as sbloqty
+		, A.STKSTAT as stkstat
+		, A.LOTAT01 as lotat01
+		, A.LOTAT02 as lotat02
+		, A.LOTAT03 as lotat03
+		, A.LOTAT04 as lotat04
+		, A.LOTAT05 as lotat05
+		, A.LOTAT06 as lotat06
+		, A.LOTAT07 as lotat07
+		, A.LOTAT08 as lotat08
+		, A.LOTAT09 as lotat09
+		, A.LOTAT10 as lotat10
+		, A.LOTAT11 as lotat11
+		, A.LOTAT12 as lotat12
+		, A.LOTAT13 as lotat13
+		, A.LOTAT14 as lotat14
+		, A.LOTAT15 as lotat15
+		, A.LOTAT16 as lotat16
+		, A.LOTAT17 as lotat17
+		, A.LOTAT18 as lotat18
+		, A.LOTAT19 as lotat19
+		, A.LOTAT20 as lotat20
+		, A.LOTNMKY as lotnmky
+		, MA.AREANAM as areanam
+		, MZ.ZONENAM as zonenam
+		, ML.LOCANAM as locanam
+		, C.UPCCODE as upccode
+		, A.SHELIFE as shelife
+		, fn_com_todate(A.EXPIDAT) as expidat
+		from WSTKKY A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+			and A.WAREKEY = C.WAREKEY
+			and A.OWNERKY = C.OWNERKY
+			and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA E on A.COMPKEY = E.COMPKEY
+			and C.SKUAT01 = E.USERACT   <!-- usernam 기타 데이터 존재 -->
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, AREANAM FROM MAREMA) MA 
+			on A.COMPKEY = MA.COMPKEY
+			and A.WAREKEY = MA.WAREKEY
+			and A.AREAKEY = MA.AREAKEY
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, ZONEKEY, ZONENAM FROM MZONMA) MZ 
+			on A.COMPKEY = MZ.COMPKEY
+			and A.WAREKEY = MZ.WAREKEY
+			and A.AREAKEY = MZ.AREAKEY
+			and A.ZONEKEY = MZ.ZONEKEY
+		inner join(SELECT COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, LOCANAM FROM MLOCMA) ML 
+			on A.COMPKEY = ML.COMPKEY
+			and A.WAREKEY = ML.WAREKEY
+			and A.AREAKEY = ML.AREAKEY
+			and A.ZONEKEY = ML.ZONEKEY
+			and A.LOCAKEY = ML.LOCAKEY
+		where 1=1
+		and A.COMPKEY = #{userData.compkey}
+		and (A.STOTQTY != 0 or A.SALLQTY != 0 or A.SINBQTY != 0 or A.SOUBQTY != 0
+		or A.SBLOQTY != 0)
+		<if test="ownerky != null and ownerky !='' ">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey !='' ">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="areakey == null or areakey == ''">
+			and A.AREAKEY not in ('SYS', 'SHP')
+		</if>
+		<if test="areakey != null and areakey !='' ">
+			and A.AREAKEY = #{areakey}
+		</if>
+		<if test="zonekey != null and zonekey !='' ">
+			and A.ZONEKEY = #{zonekey}
+		</if>
+		<if test="locanam != null and locanam !='' ">
+			and ML.LOCANAM like concat( '%' , #{locanam} , '%')
+		</if>
+		<if test="skumkey != null and skumkey !='' ">
+			and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+		</if>
+		<if test="skudesc != null and skudesc !='' ">
+			and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+		</if>
+		<if test="stkstat != null and stkstat !='' ">
+			and A.STKSTAT = #{stkstat}
+		</if>
+		<if test="upccode != null and upccode !='' ">
+			and C.UPCCODE like concat( '%' , #{upccode} , '%')
+		</if>
+		group by A.COMPKEY,
+				 A.OWNERKY, 
+				 A.WAREKEY, 
+				 A.SKUMKEY, 
+				 C.SKUDESC, 
+				 A.LOTNMKY,
+				 A.AREAKEY, 
+				 A.ZONEKEY, 
+				 A.LOCAKEY, 
+				 A.STKSTAT, 
+				 A.SHELIFE,
+				 COALESCE(A.EXPIDAT, ' '), 
+				 A.LOTAT01,
+				 A.LOTAT02,
+				 A.LOTAT03,
+				 A.LOTAT04,
+				 A.LOTAT05,
+				 A.LOTAT06,
+				 A.LOTAT07,
+				 A.LOTAT08,
+				 A.LOTAT09,
+				 A.LOTAT10,
+				 A.LOTAT11,
+				 A.LOTAT12,
+				 A.LOTAT13,
+				 A.LOTAT14,
+				 A.LOTAT15,
+				 A.LOTAT16,
+				 A.LOTAT17,
+				 A.LOTAT18,
+				 A.LOTAT19,
+				 A.LOTAT20,
+				 MA.AREANAM,
+			 	 MZ.ZONENAM,
+				 ML.LOCANAM,
+				 C.UPCCODE
+	</select>
+
+	<!-- wmi12: 재고상태변경처리 List -->
+	<select id="selectWmi12WstkkyList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi12WstkkyList */
+		select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey , 
+			A.COMPKEY as compkey , 
+			' ' as adjsoky ,
+			A.WAREKEY as warekey , 
+			'600' as doccate , 
+			'620' as doctype , 
+			'BEFORE' as adjmode ,
+			' ' as adjgrky , 
+			' ' as rsncode , 
+			' ' as adjsrmk , 
+			A.STKSTAT as stkstat,
+			L.LOCANAM as locanam ,
+			A.STOCKKY as stockky , 
+			A.AREAKEY as areakey , 
+			A.ZONEKEY as zonekey , 
+			A.LOCAKEY as locakey ,
+			A.SUBSECT as subsect , 
+			A.TRUNTYP as truntyp , 
+			A.TRUNPID as trunpid ,
+			A.LOTNMKY as lotnmky , 
+			A.OWNERKY as ownerky ,
+			A.SKUMKEY as skumkey , 
+			C.SKUDESC as skudesc ,
+			A.SIRBCOD as sirbcod , 
+			A.STOTQTY as stotqty , 
+			A.SALLQTY as sallqty , 
+			A.SINBQTY as sinbqty ,
+			A.SOUBQTY as soubqty ,
+			A.SBLOQTY as sbloqty , 
+			0 as schnqty , 
+			A.SUOMKEY as suomkey ,
+			date_format(A.PRODDAT , '%Y-%m-%d') as proddat , 
+			A.SHELIFE as shelife ,
+			fn_com_todate(A.EXPIDAT) as expidat ,
+			date_format(A.RCVDCDT , '%Y-%m-%d') as rcvdcdt , 
+			date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt ,
+			A.LOTFRKY as lotfrky , A.BLOCKID as blockid ,
+			A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo ,
+			A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit , A.TASKOKY as taskoky , A.TASKOIT
+			as taskoit ,
+			A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit , A.PHYSOKY as physoky , A.PHYSOIT
+			as physoit ,
+			A.STORFKY as storfky ,
+			fn_com_todate(A.CREDATE) as credate , fn_com_totime(A.CRETIME) as cretime ,
+			fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser ,
+			fn_com_todate(A.LMODATE) as lmodate , fn_com_totime(A.LMOTIME) as
+			lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser ,
+			' ' as indibzl , ' ' as indiarc , 0 as updtchk
+		from WSTKKY A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		inner join MLOCMA L on A.COMPKEY = L.COMPKEY
+							and A.WAREKEY = L.WAREKEY
+							and A.AREAKEY = L.AREAKEY
+							and A.ZONEKEY = L.ZONEKEY
+							and A.LOCAKEY = L.LOCAKEY
+		<where>
+			and A.COMPKEY = #{userData.compkey}
+			and A.STOTQTY != 0
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.AREAKEY = 'STG'
+			<if test="ownerky != null and ownerky != ''">
+				and A.OWNERKY = #{ownerky}
+			</if>
+			<if test="warekey != null and warekey != ''">
+				and A.WAREKEY = #{warekey}
+			</if>
+			<if test="locanam != null and locanam != ''">
+				and L.LOCANAM like concat( '%' , #{locanam} , '%')
+			</if>
+			<if test="skumkey != null and skumkey != ''">
+				and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+			</if>
+			<if test="skudesc != null and skudesc != ''">
+				and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+			</if>
+			<if test="stkstat != null and stkstat != ''">
+				and A.STKSTAT = #{stkstat}
+			</if>
+			<if test="stockky != null and stockky != ''">
+				and A.STOCKKY = #{stockky}
+			</if>
+		</where>
+		order by A.STOCKKY, A.AREAKEY , A.ZONEKEY, A.LOCAKEY , A.SKUMKEY , C.SKUDESC
+	</select>
+
+	<!-- wmi12: 재고상태변경처리 저장용 beforeList -->
+	<select id="selectWmi12BeforeData" resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi12BeforeData */
+		select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey , A.COMPKEY as compkey , ' ' as adjsoky ,
+			A.WAREKEY as warekey , '600' as doccate , '630' as doctype , 'BEFORE'
+			as adjmode ,
+			' ' as adjgrky , ' ' as rsncode , ' ' as adjsrmk , A.STOCKKY as stockky, A.VENDKEY as vendkey,
+			A.AREAKEY as areakey , A.ZONEKEY as zonekey , A.LOCAKEY as locakey ,
+			A.LOTNMKY as lotnmky , A.OWNERKY as ownerky , A.SKUMKEY as skumkey , C.SKUDESC
+			as skudesc ,
+			A.STOTQTY as stotqty , A.SALLQTY as sallqty , A.SINBQTY as sinbqty ,
+			A.SOUBQTY as soubqty , A.SBLOQTY as sbloqty , 0 as schnqty , A.SUOMKEY as
+			suomkey ,
+			A.LOTFRKY as lotfrky , A.STKSTAT as stkstat , A.RCVDCDT as rcvdcdt,
+			A.BLOCKID as blockid ,
+			A.STORFKY as storfky ,
+			fn_com_todate(A.CREDATE) as credate , fn_com_totime(A.CRETIME) as cretime ,
+			fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser ,
+			fn_com_todate(A.LMODATE) as lmodate , fn_com_totime(A.LMOTIME) as
+			lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser ,
+			' ' as indibzl , ' ' as indiarc , 0 as updtchk
+		from WSTKKY A
+		inner join MOWRMA B on A.COMPKEY = B.COMPKEY
+							and A.OWNERKY = B.OWNERKY
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		inner join MWARMA D on A.COMPKEY = D.COMPKEY
+							and A.WAREKEY = D.WAREKEY
+		<where>
+			and A.COMPKEY = #{userData.compkey}
+			<choose>
+				<when test='stotqty.equals("true")'>
+					and A.STOTQTY = 0
+				</when>
+				<otherwise>
+					and A.STOTQTY != 0
+				</otherwise>
+			</choose>
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.AREAKEY = 'STG'
+			and A.STOCKKY = #{stockky}
+		</where>
+	</select>
+
+	<!-- wmi12: 재고상태변경처리 beforeList insert -->
+	<insert id="saveWmi12WadjitBeforeList"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		/* saveWmi12WadjitBeforeList */
+
+		insert into WADJIT
+		(
+		COMPKEY , ADJSOKY, ADJSOIT
+		, WAREKEY , DOCCATE , DOCTYPE
+		, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+		, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+		, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+		, SKUMKEY , SKUDESC
+		, VENDKEY , SIRBCOD
+		, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+		, SUOMKEY , PRODDAT , SHELIFE
+		, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+		, STKSTAT , BLOCKID , PHYSROW , PHYSSEC , PHYSFLO
+		, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT , SHPDCKY , SHPDCIT
+		, PHYSOKY , PHYSOIT , STORFKY
+		, CREDATE , CRETIME , CREUSER
+		, LMODATE , LMOTIME , LMOUSER
+		)
+		values(
+		#{userData.compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+		, #{warekey} , #{doccate} , #{doctype}
+		, "BEFORE", #{adjgrky} , #{rsncode} , #{adjsrmk}
+		, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+		, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+		, #{skumkey} , #{skudesc}
+		, #{vendkey} , #{sirbcod}
+		, #{stotqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+		, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+		, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') ,
+		replace(#{rcvfrdt}, '-', '') , #{lotnmky}
+		, #{stkstat} , #{blockid} , #{physrow} , #{physsec}, #{physflo}
+		, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit}, #{shpdcky} ,
+		#{shpdcit}
+		, #{physoky} , #{physoit} , #{storfky}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		)
+	</insert>
+
+	<!-- wmi12: 재고상태변경처리 after insert -->
+	<insert id="saveWmi12WadjitAfterList"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		/* saveWmi12WadjitAfterList */
+
+		insert into WADJIT
+		(
+		COMPKEY , ADJSOKY, ADJSOIT
+		, WAREKEY , DOCCATE , DOCTYPE
+		, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+		, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+		, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+		, SKUMKEY , SKUDESC
+		, VENDKEY , SIRBCOD
+		, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+		, SUOMKEY , PRODDAT , SHELIFE
+		, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+		, STKSTAT , BLOCKID , PHYSROW , PHYSSEC, PHYSFLO
+		, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT , SHPDCKY , SHPDCIT
+		, PHYSOKY , PHYSOIT , STORFKY
+		, CREDATE , CRETIME , CREUSER
+		, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+		#{userData.compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+		, #{warekey} , #{doccate} , #{doctype}
+		, "AFTER" , #{adjgrky} , #{rsncode} , #{adjsrmk}
+		, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+		, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+		, #{skumkey} , #{skudesc}
+		, #{vendkey} , #{sirbcod}
+		, #{schnqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+		, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+		, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') ,
+		replace(#{rcvfrdt}, '-', '') , #{lotnmky}
+		, #{stkstat} , #{blockid} , #{physrow} , #{physsec} , #{physflo}
+		, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit} , #{shpdcky} ,
+		#{shpdcit}
+		, #{physoky} , #{physoit} , #{storfky}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		)
+	</insert>
+
+	<!-- wmi20: 재고실사지시등록 List -->
+	<select id="selectWmi20WstkkyList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi20WstkkyList */
+		select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey
+			, A.COMPKEY as compkey , A.WAREKEY as warekey
+			, '600' as doccate , '630' as doctype
+			, A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey ,
+			A.LOCAKEY as locakey
+			, ML.LOCANAM as locanam
+			, A.SBLOQTY as sbloqty
+			, A.LOTNMKY as lotnmky , A.OWNERKY as ownerky
+			, A.SKUMKEY as skumkey , C.SKUDESC as skudesc
+			, A.STOTQTY as stotqty
+			, A.STKSTAT as stkstat
+			, A.SUOMKEY as suomkey
+			, fn_com_todate(A.EXPIDAT) as EXPIDAT
+			, fn_com_todate(A.CREDATE) as credate , fn_com_totime(A.CRETIME) as
+			cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, fn_com_todate(A.LMODATE) as lmodate , fn_com_totime(A.LMOTIME) as
+			lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, ' ' as indibzl , ' ' as indiarc , 0 as updtchk
+		from WSTKKY A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA U on U.COMPKEY = A.COMPKEY
+								and U.USERACT = C.SKUAT01
+		inner join MLOCMA ML on ML.COMPKEY = A.COMPKEY
+							and ML.WAREKEY = A.WAREKEY and ML.LOCAKEY = A.LOCAKEY
+		where 1=1
+		and A.STOTQTY != 0
+		and A.SALLQTY = 0
+		and A.SINBQTY = 0
+		and A.SOUBQTY = 0
+		and A.AREAKEY = 'STG'
+		and A.COMPKEY = #{userData.compkey}
+		<if test="ownerky != null and ownerky != ''">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey != ''">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="locanam != null and locanam != ''">
+			and ML.LOCANAM like concat('%' , #{locanam} , '%')
+		</if>
+		<if test="skumkey != null and skumkey != ''">
+			and A.SKUMKEY like concat('%' , #{skumkey} , '%')
+		</if>
+		<if test="skudesc != null and skudesc != ''">
+			and C.SKUDESC like concat('%' , #{skudesc} , '%')
+		</if>
+		<if test="stkstat != null and stkstat != ''">
+			and A.STKSTAT = #{stkstat}
+		</if>
+		order by A.WAREKEY , A.AREAKEY , A.ZONEKEY
+		, A.LOCAKEY , A.SKUMKEY , C.SKUDESC
+		, A.COMPKEY , A.OWNERKY
+	</select>
+
+	<select id="getPhysoky" resultType="string">
+		/* getPhysoky */
+		select
+		fn_wm_physoky() from dual
+	</select>
+
+	<!-- wmi20: 재고실사지시등록 저장 -->
+	<insert id="saveWphyList"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		/* saveWphyList */
+		insert into WPHYIT
+		( COMPKEY , PHYSOKY , PHYSOIT ,
+		WAREKEY , DOCCATE , DOCTYPE , SUOMKEY ,
+		PHYNAME , PHYMODE ,
+		STOCKKY , AREAKEY , ZONEKEY , LOCAKEY ,
+		LOTNMKY , OWNERKY ,
+		SKUMKEY , SKUDESC ,
+		SYSTQTY , PHYSQTY , COMPQTY ,
+		STKSTAT , BLOCKID ,
+		CREDATE , CRETIME , CREUSER ,
+		LMODATE , LMOTIME , LMOUSER ,
+		INDIBZL , INDIARC , UPDTCHK )
+		values
+		(
+		#{userData.compkey} , #{physoky} , fn_wm_physoit( #{userData.compkey}, #{physoky} ),
+		#{warekey} , #{doccate} , #{doctype} , #{suomkey} ,
+		#{phyname} , #{phymode} ,
+		#{stockky} , #{areakey} , #{zonekey} , #{locakey} ,
+		#{lotnmky} , #{ownerky} ,
+		#{skumkey} , #{skudesc} ,
+		#{stotqty} , #{physqty} , #{compqty} ,
+		#{stkstat} , #{blockid} ,
+		to_char(now(), 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract} ,
+		to_char(now(), 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract} ,
+		#{indibzl} , #{indiarc} , #{updtchk}
+		)
+	</insert>
+
+
+	<!-- wmi21: 재고실사등록 Head List -->
+	<select id="selectWmi21HeaderList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi21HeaderList */
+		select
+			concat(A.COMPKEY , A.PHYSOKY) as rowkey
+			, A.COMPKEY as compkey
+			, A.PHYSOKY as physoky
+			, A.WAREKEY as warekey
+			, A.DOCCATE as doccate 
+			, A.DOCTYPE as doctype
+			, A.PHYNAME as phyname 
+			, A.PHYMODE as phymode
+			, A.OWNERKY as ownerky
+			, fn_com_todate(A.CREDATE) as credate 
+			, fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, fn_com_todate(A.LMODATE) as lmodate 
+			, fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+		from WPHYIT A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA U on U.COMPKEY = A.COMPKEY
+								and U.USERACT = C.SKUAT01
+		where 1=1
+		and A.COMPKEY = #{userData.compkey}
+		and A.AREAKEY = 'STG'
+		and A.PHYMODE in ('READY', 'WORKING')
+		<if test="warekey != null and warekey != ''">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="skumkey != null and skumkey != ''">
+			and A.SKUMKEY like concat('%' , #{skumkey} , '%')
+		</if>
+		<if test="skudesc != null and skudesc != ''">
+			and A.SKUDESC like concat('%' , #{skudesc} , '%')
+		</if>
+		<if test="slctsku != null and slctsku != ''">
+			and A.SKUMKEY = #{slctsku}
+		</if>
+		<if test="physoky != null and physoky != ''">
+			and A.PHYSOKY like concat('%' , #{physoky} , '%')
+		</if>
+		group by  A.COMPKEY
+				, A.PHYSOKY
+				, A.WAREKEY
+				, A.DOCCATE
+				, A.DOCTYPE
+				, A.PHYNAME
+				, A.PHYMODE
+				, A.OWNERKY
+		order by A.PHYSOKY , A.PHYSOIT , A.WAREKEY , A.AREAKEY , A.ZONEKEY, A.LOCAKEY , A.SKUMKEY , C.SKUDESC , A.COMPKEY , A.OWNERKY
+	</select>
+
+	<!-- wmi21 재고실사등록 item List -->
+	<select id="selectWmi21ItemList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi21ItemList */
+		select
+			concat(A.COMPKEY , A.PHYSOKY) as rowkey
+			, A.COMPKEY as compkey
+			, A.PHYSOKY as physoky , A.PHYSOIT as physoit
+			, A.WAREKEY as warekey
+			, A.DOCCATE as doccate , A.DOCTYPE as doctype
+			, A.PHYMODE as phymode , A.PHYGRKY as phygrky
+			, A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey ,
+			A.LOCAKEY as locakey
+			, A.SUBSECT as subsect
+			, A.TRUNTYP as truntyp , A.TRUNPID as trunpid
+			, A.LOTNMKY as lotnmky , A.OWNERKY as ownerky
+			, A.SKUMKEY as skumkey , C.SKUDESC as skudesc
+			, A.SIRBCOD as sirbcod
+			, A.SYSTQTY as systqty , A.PHYSQTY as physqty , A.COMPQTY as compqty
+			, A.SUOMKEY as suomkey , A.RSNCODE as rsncode
+			, A.PHYSRMK as physrmk , A.STKSTAT as stkstat , A.BLOCKID as blockid
+			, A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo
+			, fn_com_todate(A.CREDATE) as credate , fn_com_totime(A.CRETIME) as
+			cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, fn_com_todate(A.LMODATE) as lmodate , fn_com_totime(A.LMOTIME) as
+			lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk
+		from WPHYIT A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA U on U.COMPKEY = A.COMPKEY
+								and U.USERACT = C.SKUAT01
+		where 1=1
+		and A.COMPKEY = #{compkey}
+		and A.AREAKEY = 'STG'
+		<if test="physoky != null and physoky != ''">
+			and A.PHYSOKY =#{physoky}
+		</if>
+		<if test="phymode != null and phymode != ''">
+			and A.phymode = #{phymode}
+		</if>
+		order by A.PHYSOKY , A.PHYSOIT , A.WAREKEY , A.AREAKEY , A.ZONEKEY , A.LOCAKEY , A.SKUMKEY , C.SKUDESC , A.COMPKEY , A.OWNERKY , A.VENDKEY
+	</select>
+
+	<!-- wmi21: 재고실사실시 sqty 저장 -->
+	<update id="saveWmi21Physqty" parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set PHYSQTY = #{physqty}
+		, LMODATE = to_char(now() , 'YYYYMMDD')
+		, LMOTIME = to_char(now() , 'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where 1=1
+		and COMPKEY = #{userData.compkey}
+		and PHYSOKY = #{physoky}
+		and PHYSOIT = #{physoit}
+	</update>
+
+	<!-- wmi21: 재고실사실시 phyMode 저장 -->
+	<update id="saveWmi21PhyMode"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set PHYMODE = 'WORKING'
+		, LMODATE = to_char(now() , 'YYYYMMDD')
+		, LMOTIME = to_char(now() , 'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where 1=1
+		and COMPKEY = #{userData.compkey}
+		and PHYSOKY = #{physoky}
+	</update>
+
+	<!-- wmi22: 재고실사조정확정: Header List -->
+	<select id="selectWmi22HeaderList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		select
+			concat(A.COMPKEY , A.PHYSOKY) as rowkey
+			, A.COMPKEY as compkey , A.WAREKEY as warekey , A.DOCCATE as doccate ,
+			A.DOCTYPE as doctype
+			, A.OWNERKY as ownerky
+			, A.PHYSOKY as physoky
+			, A.PHYNAME as phyname , A.PHYMODE as phymode
+			, A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk
+		from WPHYIT A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		left outer join SUSRMA U on U.COMPKEY = A.COMPKEY
+								and U.USERACT = C.SKUAT01
+		where 1=1
+		and A.COMPKEY = #{userData.compkey}
+		and PHYMODE in ('READY', 'WORKING')
+		<if test="ownerky != null and ownerky != ''">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey != ''">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="physoky != null and physoky != ''">
+			and A.PHYSOKY Like concat('%' , #{physoky} '%')
+		</if>
+		group by A.COMPKEY, 
+				 A.PHYSOKY, 
+				 A.WAREKEY, 
+				 A.DOCCATE, 
+				 A.DOCTYPE, 
+				 A.OWNERKY, 
+				 A.PHYNAME, 
+				 A.PHYMODE, 
+				 A.INDIBZL, 
+				 A.INDIARC, 
+				 A.UPDTCHK
+		order by A.PHYSOKY , A.PHYSOIT , A.WAREKEY , A.SKUMKEY , C.SKUDESC, A.COMPKEY , A.OWNERKY
+	</select>
+
+	<!-- wmi22: 재고실사조정확정 Item List -->
+	<select id="selectWmi22ItemList"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		select
+			concat(A.COMPKEY , A.PHYSOKY) as rowkey
+			, A.COMPKEY as compkey , A.PHYSOKY as physoky , A.PHYSOIT as physoit
+			, A.WAREKEY as warekey , A.DOCCATE as doccate , A.DOCTYPE as doctype
+			, A.PHYMODE as phymode , A.PHYGRKY as phygrky
+			, A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey ,
+			A.LOCAKEY as locakey
+			, A.TRUNTYP as truntyp , A.TRUNPID as trunpid
+			, A.OWNERKY as ownerky
+			, A.SKUMKEY as skumkey , C.SKUDESC as skudesc
+			, A.SYSTQTY as systqty , A.PHYSQTY as physqty , A.PHYSQTY as compqty
+			, A.SYSTQTY-A.PHYSQTY as diffqty
+			, A.RSNCODE as rsncode , A.PHYSRMK as physrmk
+			, A.STKSTAT as stkstat , A.BLOCKID as blockid
+			, fn_com_todate(A.CREDATE) as credate , fn_com_totime(A.CRETIME) as
+			cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, fn_com_todate(A.LMODATE) as lmodate , fn_com_totime(A.LMOTIME) as
+			lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, A.INDIBZL as indibzl , A.INDIARC as indiarc , A.UPDTCHK as updtchk
+		from WPHYIT A
+		inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+							and A.WAREKEY = C.WAREKEY
+							and A.OWNERKY = C.OWNERKY
+							and A.SKUMKEY = C.SKUMKEY
+		where 1=1
+		and A.COMPKEY = #{userData.compkey}
+		and A.PHYMODE in ('READY', 'WORKING')
+		<if test="ownerky != null and ownerky != ''">
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey != ''">
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test="physoky != null and physoky != ''">
+			and A.PHYSOKY = #{physoky}
+		</if>
+		<if test="physoit != null and physoit != '' ">
+			and A.PHYSOIT = #{physoit}
+		</if>
+		order by A.PHYSOKY , A.PHYSOIT
+		,A.WAREKEY , A.AREAKEY , A.ZONEKEY , A.LOCAKEY
+		,A.SKUMKEY , C.SKUDESC
+		,A.COMPKEY , A.OWNERKY , A.VENDKEY
+	</select>
+
+	<!-- 조정 문서번호 헤더 키 채번 -->
+	<select id="selectAdjsoky" resultType="string">
+		/* selectAdjsoky */
+		select
+		fn_wm_adjsoky()
+		from dual
+	</select>
+
+	<!-- 조정 그룹 키 채번 -->
+	<select id="selectAdjgrky" resultType="string">
+		/* selectAdjgrky */
+		select
+		fn_wm_adjgrky()
+		from dual
+	</select>
+
+	<!-- wmi22: 재고조정확정 완료 -->
+	<update id="updateWmi22Comqty"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set COMPQTY = #{compqty}
+		, RSNCODE = #{rsncode}
+		, PHYSRMK = #{physrmk}
+		, LMODATE = to_char(now() , 'YYYYMMDD')
+		, LMOTIME = to_char(now() , 'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where 1=1
+		and COMPKEY = #{userData.compkey}
+		and PHYSOKY = #{physoky}
+		and PHYSOIT = #{physoit}
+	</update>
+
+	<!-- wmi22: wadjit BeforeList -->
+	<insert id="saveWmi22WadjitBeforeList"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		insert into WADJIT
+		(
+		COMPKEY , ADJSOKY, ADJSOIT
+		, WAREKEY , DOCCATE , DOCTYPE
+		, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+		, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+		, LOTNMKY , OWNERKY
+		, SKUMKEY , SKUDESC
+		, STOTQTY
+		<!-- , LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 , LOTAT05 -->
+		<!-- , LOTAT06 , LOTAT07 , LOTAT08 , LOTAT09 , LOTAT10 -->
+		<!-- , LOTAT11 , LOTAT12 , LOTAT13 , LOTAT14 , LOTAT15 -->
+		<!-- , LOTAT16 , LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 -->
+		, STKSTAT
+		, PHYSOKY , PHYSOIT
+		, CREDATE , CRETIME , CREUSER
+		, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+		#{userData.compkey} , #{adjsoky} , fn_wm_adjsoit(#{userData.compkey} , #{adjsoky})
+		, #{warekey} , #{doccate} , #{doctype}
+		, "BEFORE" , #{adjgrky} , #{rsncode} , #{adjsrmk}
+		, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+		, #{lotnmky} , #{ownerky}
+		, #{skumkey} , #{skudesc}
+		, #{systqty}
+		<!-- , #{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} , #{lotat05} -->
+		<!-- , #{lotat06} , #{lotat07} , #{lotat08} , #{lotat09} , #{lotat10} -->
+		<!-- , #{lotat11} , #{lotat12} , #{lotat13} , #{lotat14} , #{lotat15} -->
+		<!-- , #{lotat16} , #{lotat17} , #{lotat18} , #{lotat19} , #{lotat20} -->
+		, #{stkstat}
+		, #{physoky} , #{physoit}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		)
+	</insert>
+
+	<!-- wmi22: wadjit After List -->
+	<insert id="saveWmi22WadjitAfterList"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		insert into WADJIT
+		(
+		COMPKEY , ADJSOKY, ADJSOIT
+		, WAREKEY , DOCCATE , DOCTYPE
+		, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+		, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+		, LOTNMKY , OWNERKY
+		, SKUMKEY , SKUDESC
+		, STOTQTY
+		<!-- , LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 , LOTAT05 -->
+		<!-- , LOTAT06 , LOTAT07 , LOTAT08 , LOTAT09 , LOTAT10 -->
+		<!-- , LOTAT11 , LOTAT12 , LOTAT13 , LOTAT14 , LOTAT15 -->
+		<!-- , LOTAT16 , LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 -->
+		, STKSTAT
+		, PHYSOKY , PHYSOIT
+		, CREDATE , CRETIME , CREUSER
+		, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+		#{userData.compkey} , #{adjsoky} , fn_wm_adjsoit(#{userData.compkey} , #{adjsoky})
+		, #{warekey} , #{doccate} , #{doctype}
+		, "AFTER" , #{adjgrky} , #{rsncode} , #{physrmk}
+		, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+		, #{lotnmky} , #{ownerky}
+		, #{skumkey} , #{skudesc}
+		, #{compqty}
+		<!-- , #{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} , #{lotat05} -->
+		<!-- , #{lotat06} , #{lotat07} , #{lotat08} , #{lotat09} , #{lotat10} -->
+		<!-- , #{lotat11} , #{lotat12} , #{lotat13} , #{lotat14} , #{lotat15} -->
+		<!-- , #{lotat16} , #{lotat17} , #{lotat18} , #{lotat19} , #{lotat20} -->
+		, #{stkstat}
+		, #{physoky} , #{physoit}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') ,
+		#{userData.useract}
+		)
+	</insert>
+
+	<!-- wmi22: 데이터가 존재하나 재고가 없는경우 -->
+	<update id="updateWmi22NotHaveStockky"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set physrmk = #{physrmk}
+		, phymode = 'COMPLETED'
+		, lmodate = to_char(now() , 'YYYYMMDD')
+		, lmotime = to_char(now() , 'hh24miss')
+		, lmouser = #{userData.useract}
+		where 1=1
+		and compkey = #{userData.compkey}
+		and physoky = #{physoky}
+		and stockky = #{stockky}
+	</update>
+
+	<!-- wmi22/wmi12 재고 조정 프로시저 -->
+	<select id="updateWmi22ToWstkkyList" statementType="CALLABLE"
+		parameterType="com.logistics.wm.domain.InventoryDTO"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		/* updateWmi22ToWstkkyList */
+		CALL sp_wm_ctrstokky_adj(#{userData.compkey}, #{warekey}, #{doccate},
+		#{doctype} , #{adjsoky} , #{adjsoit} , #{adjgrky} ,
+		#{userData.useract} ,
+		#{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER} )
+	</select>
+
+	<!-- wmi22: 재고조정 마지막 -->
+	<update id="updateWmi22Completed"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set PHYMODE = 'COMPLETED'
+		, LMODATE = to_char(now() , 'YYYYMMDD')
+		, LMOTIME = to_char(now() , 'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where 1=1
+		and COMPKEY = #{userData.compkey}
+		and PHYSOKY = #{physoky}
+		and PHYSOIT = #{physoit}
+	</update>
+
+	<!-- wmi22: 헤더 클로징 -->
+	<update id="updateWmi22HeaderClosing"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set PHYMODE = #{phymode}
+		, RSNCODE = (SELECT RSNCODE FROM MRSCMA WHERE DOCTYPE = '610' AND
+		RSCATE1 = 'CANCEL')
+		, PHYSRMK = #{physrmk} <!-- confirm에서 받아옴 -->
+		, LMODATE = to_char(now() , 'YYYYMMDD')
+		, LMOTIME = to_char(now() , 'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where 1=1
+		and COMPKEY = #{userData.compkey}
+		and PHYSOKY = #{physoky}
+	</update>
+
+	<!-- wmi22: 아이템 클로징 -->
+	<update id="updateWmi22ItemClosing"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		update WPHYIT
+		set PHYMODE = #{phymode}
+		, RSNCODE = (SELECT RSNCODE FROM MRSCMA WHERE DOCTYPE = '610' AND
+		RSCATE1 = 'CANCEL')
+		, PHYSRMK = #{physrmk}
+		, LMODATE = to_char(now() , 'YYYYMMDD')
+		, LMOTIME = to_char(now() , 'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where 1=1
+		and COMPKEY = #{userData.compkey}
+		and PHYSOKY = #{physoky}
+		and PHYSOIT = #{physoit}
+	</update>
+
+	<!-- 조정 문서번호 헤더 키 채번 -->
+	<select id="getAdjsoky" resultType="string">
+		select
+		fn_wm_adjsoky()
+		from dual
+	</select>
+
+	<!-- 조정 그룹 키 채번 -->
+	<select id="getAdjgrky" resultType="string">
+		select
+		fn_wm_adjgrky()
+		from dual
+	</select>
+
+	<insert id="saveWadjitBEFORELIST"
+		parameterType="com.logistics.wm.domain.InventoryDTO">
+		insert into WADJIT
+		(
+			  COMPKEY , ADJSOKY, ADJSOIT
+			, WAREKEY , DOCCATE , DOCTYPE
+			, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+			, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+			, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+			, SKUMKEY , SKUDESC
+			, VENDKEY , SIRBCOD
+			, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+			, SUOMKEY , PRODDAT , SHELIFE
+			, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+			, LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 , LOTAT05 , LOTAT06 , LOTAT07 
+			, LOTAT08 , LOTAT09 , LOTAT10 , LOTAT11 , LOTAT12 , LOTAT13 , LOTAT14 , LOTAT15 
+			, LOTAT16 , LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 
+			, STKSTAT , BLOCKID , PHYSROW , PHYSSEC , PHYSFLO
+			, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT , SHPDCKY , SHPDCIT
+			, PHYSOKY , PHYSOIT , STORFKY
+			, CREDATE , CRETIME , CREUSER
+			, LMODATE , LMOTIME , LMOUSER
+		) values(
+			  #{compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+			, #{warekey} , #{doccate} , #{doctype}
+			, "BEFORE", #{adjgrky} , #{rsncode} , #{adjsrmk}
+			, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+			, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+			, #{skumkey} , #{skudesc}
+			, #{vendkey} , #{sirbcod}
+			, #{stotqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+			, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+			, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') 
+			, replace(#{rcvfrdt}, '-', '') , #{lotnmky}
+			, #{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} , #{lotat05}  
+			, #{lotat06} , #{lotat07} , #{lotat08} , #{lotat09} , #{lotat10} , #{lotat11} 
+			, #{lotat12} , #{lotat13} , #{lotat14} , #{lotat15} , #{lotat16} , #{lotat17} 
+			, #{lotat18} , #{lotat19} , #{lotat20}
+			, #{stkstat} , #{blockid} , #{physrow} , #{physsec}, #{physflo}
+			, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit}, #{shpdcky} 
+			, #{shpdcit}
+			, #{physoky} , #{physoit} , #{storfky}
+			, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') 
+			, #{creuser}
+			, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') 
+			, #{lmouser}
+		)
+	</insert>
+
+	<insert id="saveWadjitAFTERLIST" parameterType="hashMap">
+		insert into
+		WADJIT
+		(
+			COMPKEY , ADJSOKY, ADJSOIT
+			, WAREKEY , DOCCATE , DOCTYPE
+			, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+			, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+			, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+			, SKUMKEY , SKUDESC
+			, VENDKEY , SIRBCOD
+			, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+			, SUOMKEY , PRODDAT , SHELIFE
+			, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+			, LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 , LOTAT05
+			, LOTAT06 , LOTAT07 , LOTAT08 , LOTAT09 , LOTAT10
+			, LOTAT11 , LOTAT12 , LOTAT13 , LOTAT14 , LOTAT15
+			, LOTAT16 , LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+			, STKSTAT , BLOCKID , PHYSROW , PHYSSEC, PHYSFLO
+			, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT 
+			, SHPDCKY , SHPDCIT
+			, PHYSOKY , PHYSOIT , STORFKY
+			, CREDATE , CRETIME , CREUSER
+			, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+			#{compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+			, #{warekey} , #{doccate} , #{doctype}
+			, "AFTER" , #{adjgrky} , #{rsncode} , #{adjsrmk}
+			, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+			, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+			, #{skumkey} , #{skudesc}
+			, #{vendkey} , #{sirbcod}
+			, #{schnqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+			, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+			, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') 
+			, replace(#{rcvfrdt}, '-', '') , #{lotnmky}
+			, #{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} , #{lotat05}
+			, #{lotat06} , #{lotat07} , #{lotat08} , #{lotat09} , #{lotat10}
+			, #{lotat11} , #{lotat12} , #{lotat13} , #{lotat14} , #{lotat15}
+			, #{lotat16} , #{lotat17} , #{lotat18} , #{lotat19} , #{lotat20}
+			, #{stkstat} , #{blockid} , #{physrow} , #{physsec} , #{physflo}
+			, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit} 
+			, #{shpdcky} , #{shpdcit}
+			, #{physoky} , #{physoit} , #{storfky}
+			, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') 
+			, #{creuser}
+			, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') 
+			, #{lmouser}
+		)
+	</insert>
+
+	<insert id="saveWmi30WadjitAFTERLIST" parameterType="hashMap">
+		insert into
+		WADJIT
+		(
+		COMPKEY , ADJSOKY, ADJSOIT
+		, WAREKEY , DOCCATE , DOCTYPE
+		, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+		, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+		, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+		, SKUMKEY , SKUDESC
+		, VENDKEY , SIRBCOD
+		, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+		, SUOMKEY , PRODDAT , SHELIFE
+		, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+		, LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 , LOTAT05
+		, LOTAT06 , LOTAT07 , LOTAT08 , LOTAT09 , LOTAT10
+		, LOTAT11 , LOTAT12 , LOTAT13 , LOTAT14 , LOTAT15
+		, LOTAT16 , LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+		, STKSTAT , BLOCKID , PHYSROW , PHYSSEC, PHYSFLO
+		, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT , SHPDCKY , SHPDCIT
+		, PHYSOKY , PHYSOIT , STORFKY
+		, CREDATE , CRETIME , CREUSER
+		, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+		#{compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+		, #{warekey} , #{doccate} , #{doctype}
+		, "AFTER" , #{adjgrky} , #{rsncode} , #{adjsrmk}
+		, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+		, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+		, #{skumkey} , #{skudesc}
+		, #{vendkey} , #{sirbcod}
+		, #{stotqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+		, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+		, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') ,
+		replace(#{rcvfrdt}, '-', '') , #{lotfrky}
+		, #{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} , #{lotat05}
+		, #{lotat06} , #{lotat07} , #{lotat08} , #{lotat09} , #{lotat10}
+		, #{lotat11} , #{lotat12} , #{lotat13} , #{lotat14} , #{lotat15}
+		, #{lotat16} , #{lotat17} , #{lotat18} , #{lotat19} , #{lotat20}
+		, #{stkstat} , #{blockid} , #{physrow} , #{physsec} , #{physflo}
+		, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit} , #{shpdcky} 
+		, #{shpdcit}
+		, #{physoky} , #{physoit} , #{storfky}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{creuser}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{lmouser}
+		)
+	</insert>
+
+	<insert id="saveWmi31WadjitAFTERLIST" parameterType="hashMap">
+		insert into
+		WADJIT
+		(
+		COMPKEY , ADJSOKY, ADJSOIT
+		, WAREKEY , DOCCATE , DOCTYPE
+		, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+		, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+		, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+		, SKUMKEY , SKUDESC
+		, VENDKEY , SIRBCOD
+		, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+		, SUOMKEY , PRODDAT , SHELIFE
+		, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+		, LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 , LOTAT05
+		, LOTAT06 , LOTAT07 , LOTAT08 , LOTAT09 , LOTAT10
+		, LOTAT11 , LOTAT12 , LOTAT13 , LOTAT14 , LOTAT15
+		, LOTAT16 , LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+		, STKSTAT , BLOCKID , PHYSROW , PHYSSEC , PHYSFLO
+		, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT , SHPDCKY , SHPDCIT
+		, PHYSOKY , PHYSOIT , STORFKY
+		, CREDATE , CRETIME , CREUSER
+		, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+		#{compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+		, #{warekey} , #{doccate} , #{doctype}
+		, "AFTER" , #{adjgrky} , #{rsncode} , #{adjsrmk}
+		, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+		, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+		, #{skumkey} , #{skudesc}
+		, #{vendkey} , #{sirbcod}
+		, #{stotqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+		, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+		, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') ,
+		replace(#{rcvfrdt}, '-', '') , #{lotfrky}
+		, #{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} , #{lotat05}
+		, #{lotat06} , #{lotat07} , #{lotat08} , #{lotat09} , #{lotat10}
+		, #{lotat11} , #{lotat12} , #{lotat13} , #{lotat14} , #{lotat15}
+		, #{lotat16} , #{lotat17} , #{lotat18} , #{lotat19} , #{lotat20}
+		, #{stkstat} , #{blockid} , #{physrow} , #{physsec} , #{physflo}
+		, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit} , #{shpdcky} 
+		, #{shpdcit}
+		, #{physoky} , #{physoit} , #{storfky}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{creuser}
+		, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{lmouser}
+		)
+	</insert>
+
+
+	<select id="getWmi30WstkkyList" resultType="hashMap">
+		select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey ,
+			A.COMPKEY as compkey , ' ' as adjsoky , A.WAREKEY as warekey ,
+			'600' as doccate , '640' as doctype , 'BEFORE' as adjmode ,
+			' ' as adjgrky ,
+			A.STOCKKY as stockky , 
+			A.AREAKEY as areakey ,
+			( select AREANAM
+				from MAREMA
+			   where COMPKEY = A.COMPKEY
+				 and WAREKEY = A.WAREKEY
+				 and AREAKEY = A.AREAKEY
+			) as areanam , 
+			A.ZONEKEY as zonekey ,
+			( select ZONENAM
+				from MZONMA
+			   where COMPKEY = A.COMPKEY
+				 and WAREKEY = A.WAREKEY
+				 and AREAKEY = A.AREAKEY
+				 and ZONEKEY = A.ZONEKEY
+			) as zonenam, 
+			A.LOCAKEY as locakey ,
+			( select LOCANAM
+				from MLOCMA
+				where COMPKEY = A.COMPKEY
+				 and WAREKEY = A.WAREKEY
+				 and AREAKEY = A.AREAKEY
+				 and ZONEKEY = A.ZONEKEY
+				 and LOCAKEY = A.LOCAKEY
+			) as locanam , 
+			A.VENDKEY as vendkey ,
+			A.SUBSECT as subsect , A.TRUNTYP as truntyp , A.TRUNPID as trunpid ,
+			A.LOTNMKY as lotnmky , A.OWNERKY as ownerky , A.SKUMKEY as skumkey ,
+			C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04 ,
+			C.SKUGR05 as skugr05 ,
+			C.SKUDESC as skudesc , A.SIRBCOD as sirbcod ,
+			A.STOTQTY as stotqty , A.SALLQTY as sallqty , A.SINBQTY as sinbqty ,
+			A.SOUBQTY as soubqty , A.SBLOQTY as sbloqty , 0 as scbloqty , A.SUOMKEY as
+			suomkey ,
+			date_format(A.RCVDCDT , '%Y-%m-%d') as rcvdcdt , date_format(A.RCVFRDT , '%Y-%m-%d') as
+			rcvfrdt ,
+			A.LOTFRKY as lotfrky , A.STKSTAT as stkstat , A.BLOCKID as blockid ,
+			A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo ,
+			A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit , A.TASKOKY as taskoky , A.TASKOIT
+			as taskoit ,
+			A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit , A.PHYSOKY as physoky , A.PHYSOIT
+			as physoit ,
+			A.STORFKY as storfky ,
+			A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 , A.LOTAT04
+			as lotat04 ,
+			A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 , A.LOTAT08
+			as lotat08 ,
+			A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 , A.LOTAT12
+			as lotat12 ,
+			A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 , A.LOTAT16
+			as lotat16 ,
+			A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 , A.LOTAT20
+			as lotat20 ,
+			date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H:%i:%s') as
+			cretime ,
+			fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser ,
+			date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H:%i:%s') as
+			lmotime ,
+			fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser ,
+			' ' as indibzl , ' ' as indiarc , 0 as updtchk
+		from WSTKKY A
+	   inner join MOWRMA B 
+	   	 	   on A.COMPKEY = B.COMPKEY
+			  and A.OWNERKY = B.OWNERKY
+	   inner join MSKUWC C 
+	   		   on A.COMPKEY = C.COMPKEY
+		 	  and A.WAREKEY = C.WAREKEY
+			  and A.OWNERKY = C.OWNERKY
+			  and A.SKUMKEY = C.SKUMKEY
+	   inner join MWARMA D 
+	   		   on A.COMPKEY = D.COMPKEY
+			  and A.WAREKEY = D.WAREKEY
+		<where>
+			and A.COMPKEY = #{userData.compkey}
+			and A.STOTQTY != 0
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.AREAKEY = 'STG'
+			<if test="ownerky != null and ownerky != ''">
+				and A.OWNERKY = #{ownerky}
+			</if>
+			<if test="warekey != null and warekey != ''">
+				and A.WAREKEY = #{warekey}
+			</if>
+			<if test="locakey != null and locakey != ''">
+				and A.LOCAKEY like concat( '%' , #{locakey} , '%')
+			</if>
+			<if test="skumkey != null and skumkey != ''">
+				and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+			</if>
+			<if test="skudesc != null and skudesc != ''">
+				and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+			</if>
+			<if test="stkstat != null and stkstat != ''">
+				and A.STKSTAT = #{stkstat}
+			</if>
+		</where>
+	</select>
+	
+		<select id="getWmi30BeforeData"
+			resultType="com.logistics.wm.domain.InventoryDTO">
+			select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey
+			, A.COMPKEY as compkey , ' ' as adjsoky , A.WAREKEY as warekey
+			, 'BEFORE' as adjmode
+			, ' ' as adjgrky , ' ' as rsncode , ' ' as adjsrmk
+			, A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey
+			, A.LOCAKEY as locakey
+			, A.SUBSECT as subsect , A.TRUNTYP as truntyp , A.TRUNPID as trunpid
+			, A.LOTNMKY as lotnmky , A.OWNERKY as ownerky , A.SKUMKEY as skumkey
+			, C.SKUDESC as skudesc
+			, C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04
+			, C.SKUGR05 as skugr05
+			, A.VENDKEY as vendkey , A.SIRBCOD as sirbcod
+			, A.STOTQTY as stotqty
+			, A.SALLQTY as sallqty , A.SINBQTY as sinbqty , A.SOUBQTY as soubqty
+			, A.SBLOQTY as sbloqty , 0 as scbloqty
+			, A.SUOMKEY as suomkey
+			, date_format(A.PRODDAT, '%Y-%m-%d') as proddat , A.SHELIFE as shelife
+			, date_format(A.EXPIDAT, '%Y-%m-%d') as expidat
+			, date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt ,
+			date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt
+			, A.LOTFRKY as lotfrky
+			, A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 ,
+			A.LOTAT04 as lotat04
+			, A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 ,
+			A.LOTAT08 as lotat08
+			, A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 ,
+			A.LOTAT12 as lotat12
+			, A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 ,
+			A.LOTAT16 as lotat16
+			, A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 ,
+			A.LOTAT20 as lotat20
+			, A.STKSTAT as stkstat
+			, A.BLOCKID as blockid
+			, A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo
+			, A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit
+			, A.TASKOKY as taskoky , A.TASKOIT as taskoit
+			, A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit
+			, A.PHYSOKY as physoky , A.PHYSOIT as physoit
+			, A.STORFKY as storfky
+			, date_format(A.CREDATE, '%Y-%m-%d') as credate ,
+			date_format(A.CRETIME, '%H-%i-%s') as cretime
+			, fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, date_format(A.LMODATE, '%Y-%m-%d') as lmodate ,
+			date_format(A.LMOTIME, '%H-%i-%s') as lmotime
+			, fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, ' ' as indibzl , ' ' as indiarc , 0 as updtchk
+			from WSTKKY A
+			inner join MOWRMA B on A.COMPKEY = B.COMPKEY
+			and A.OWNERKY = B.OWNERKY
+			inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+			and A.WAREKEY = C.WAREKEY
+			and A.OWNERKY = C.OWNERKY
+			and A.SKUMKEY = C.SKUMKEY
+			inner join MWARMA D on A.COMPKEY = D.COMPKEY and A.WAREKEY = D.WAREKEY
+			where 1=1
+			and A.COMPKEY = #{compkey}
+			and A.STOTQTY != 0
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.AREAKEY = 'STG'
+			and A.STOCKKY =
+			#{stockky}
+			and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+		</select>
+	
+		<select id="getWmi31WstkkyList" resultType="com.logistics.wm.domain.InventoryDTO">
+			select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey
+			, A.COMPKEY as compkey , ' ' as adjsoky , A.WAREKEY as warekey
+			, '600' as doccate , '641' as doctype
+			, 'BEFORE' as adjmode
+			, ' ' as adjgrky 
+			, A.STOCKKY as stockky 
+			, A.AREAKEY as areakey 
+			,( select AREANAM
+				 from MAREMA
+			    where COMPKEY = A.COMPKEY
+				  and WAREKEY = A.WAREKEY
+				  and AREAKEY = A.AREAKEY
+			  ) as areanam 
+			, A.ZONEKEY as zonekey 
+			, ( select ZONENAM
+				  from MZONMA
+			     where COMPKEY = A.COMPKEY
+				   and WAREKEY = A.WAREKEY
+				   and AREAKEY = A.AREAKEY
+				   and ZONEKEY = A.ZONEKEY
+			  ) as zonenam
+			, A.LOCAKEY as locakey
+			, ( select LOCANAM
+				  from MLOCMA
+				 where COMPKEY = A.COMPKEY
+				   and WAREKEY = A.WAREKEY
+				   and AREAKEY = A.AREAKEY
+				   and ZONEKEY = A.ZONEKEY
+				   and LOCAKEY = A.LOCAKEY
+			   ) as locanam
+			, A.SUBSECT as subsect , A.TRUNTYP as truntyp , A.TRUNPID as trunpid
+			, A.LOTNMKY as lotnmky , A.OWNERKY as ownerky
+			, A.SKUMKEY as skumkey , C.SKUDESC as skudesc
+			, C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04
+			, C.VENDKEY as vendkey , C.SKUGR05 as skugr05
+			, A.VENDKEY as vendkey , A.SIRBCOD as sirbcod
+			, A.STOTQTY as stotqty
+			, A.SALLQTY as sallqty , A.SINBQTY as sinbqty , A.SOUBQTY as soubqty
+			, A.SBLOQTY as sbloqty , 0 as scbloqty
+			, A.SUOMKEY as suomkey
+			, date_format(A.PRODDAT, '%Y-%m-%d') as proddat , A.SHELIFE as shelife
+			, date_format(A.EXPIDAT, '%Y-%m-%d') as expidat
+			, date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt ,
+			date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt
+			, A.LOTFRKY as lotfrky
+			, A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 ,
+			A.LOTAT04 as lotat04
+			, A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 ,
+			A.LOTAT08 as lotat08
+			, A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 ,
+			A.LOTAT12 as lotat12
+			, A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 ,
+			A.LOTAT16 as lotat16
+			, A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 ,
+			A.LOTAT20 as lotat20
+			, A.STKSTAT as stkstat
+			, A.BLOCKID as blockid
+			, A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo
+			, A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit
+			, A.TASKOKY as taskoky , A.TASKOIT as taskoit
+			, A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit
+			, A.PHYSOKY as physoky , A.PHYSOIT as physoit
+			, A.STORFKY as storfky
+			, date_format(A.CREDATE, '%Y-%m-%d') as credate ,
+			date_format(A.CRETIME, '%H-%i-%s') as cretime
+			, fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, date_format(A.LMODATE, '%Y-%m-%d') as lmodate ,
+			date_format(A.LMOTIME, '%H-%i-%s') as lmotime
+			, fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, ' ' as indibzl , ' ' as indiarc , 0 as updtchk
+			from WSTKKY A
+			inner join MOWRMA B on A.COMPKEY = B.COMPKEY
+			and A.OWNERKY = B.OWNERKY
+			inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+			and A.WAREKEY = C.WAREKEY
+			and A.OWNERKY = C.OWNERKY
+			and A.SKUMKEY = C.SKUMKEY
+			inner join MWARMA D on A.COMPKEY = D.COMPKEY
+			and A.WAREKEY = D.WAREKEY
+			left outer join SUSRMA U on U.COMPKEY = A.COMPKEY
+			and U.USERACT = C.SKUAT01
+			where 1=1
+			and A.COMPKEY = #{userData.compkey}
+			and A.STOTQTY != 0
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.SBLOQTY != 0
+			and A.AREAKEY = 'STG'
+			<if test="ownerky != null and ownerky != ''">
+				and A.OWNERKY = #{ownerky}
+			</if>
+			<if test="warekey != null and warekey != ''">
+				and A.WAREKEY = #{warekey}
+			</if>
+			<if test="locakey != null and locakey != ''">
+				and A.LOCAKEY like concat( '%' , #{locakey} , '%')
+			</if>
+			<if test="skumkey != null and skumkey != ''">
+				and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+			</if>
+			<if test="skudesc != null and skudesc != ''">
+				and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+			</if>
+			<if test="stkstat != null and stkstat != ''">
+				and A.STKSTAT = #{stkstat}
+			</if>
+			<if test="stockky != null and stockky != ''">
+				and A.STOCKKY = #{stockky}
+			</if>
+		</select>
+	
+		<select id="getWmi31BeforeData"
+			resultType="com.logistics.wm.domain.InventoryDTO">
+			select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey
+			, A.COMPKEY as compkey , ' ' as adjsoky , A.WAREKEY as warekey
+			, 'BEFORE' as adjmode
+			, ' ' as adjgrky , ' ' as rsncode , ' ' as adjsrmk
+			, A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey ,
+			A.LOCAKEY as locakey
+			, A.SUBSECT as subsect , A.TRUNTYP as truntyp , A.TRUNPID as trunpid
+			, A.LOTNMKY as lotnmky , A.OWNERKY as ownerky
+			, A.SKUMKEY as skumkey , C.SKUDESC as skudesc
+			, C.SKUGR02 as skugr02 , C.SKUGR03 as skugr03 , C.SKUGR04 as skugr04
+			, C.SKUGR05 as skugr05
+			, A.VENDKEY as vendkey , A.SIRBCOD as sirbcod
+			, A.STOTQTY as stotqty
+			, A.SALLQTY as sallqty , A.SINBQTY as sinbqty , A.SOUBQTY as soubqty
+			, A.SBLOQTY as sbloqty , 0 as scbloqty
+			, A.SUOMKEY as suomkey
+			, date_format(A.PRODDAT, '%Y-%m-%d') as proddat , A.SHELIFE as shelife
+			, date_format(A.EXPIDAT, '%Y-%m-%d') as expidat
+			, date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt ,
+			date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt
+			, A.LOTFRKY as lotfrky
+			, A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 ,
+			A.LOTAT04 as lotat04
+			, A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 ,
+			A.LOTAT08 as lotat08
+			, A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 ,
+			A.LOTAT12 as lotat12
+			, A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 ,
+			A.LOTAT16 as lotat16
+			, A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 ,
+			A.LOTAT20 as lotat20
+			, A.STKSTAT as stkstat
+			, A.BLOCKID as blockid
+			, A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo
+			, A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit
+			, A.TASKOKY as taskoky , A.TASKOIT as taskoit
+			, A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit
+			, A.PHYSOKY as physoky , A.PHYSOIT as physoit
+			, A.STORFKY as storfky
+			, date_format(A.CREDATE, '%Y-%m-%d') as credate ,
+			date_format(A.CRETIME, '%H-%i-%s') as cretime
+			, fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, date_format(A.LMODATE, '%Y-%m-%d') as lmodate ,
+			date_format(A.LMOTIME, '%H-%i-%s') as lmotime
+			, fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, ' ' as indibzl , ' ' as indiarc , 0 as updtchk
+			from WSTKKY A
+			inner join MOWRMA B on A.COMPKEY = B.COMPKEY
+			and A.OWNERKY = B.OWNERKY
+			inner join MSKUWC C on A.COMPKEY = C.COMPKEY
+			and A.WAREKEY = C.WAREKEY
+			and A.OWNERKY = C.OWNERKY
+			and A.SKUMKEY = C.SKUMKEY
+			inner join MWARMA D on A.COMPKEY = D.COMPKEY
+			and A.WAREKEY = D.WAREKEY
+			left outer join SUSRMA U on U.COMPKEY = A.COMPKEY
+			and U.USERACT = C.SKUAT01
+			where 1=1
+			and A.COMPKEY = #{compkey}
+			and A.STOTQTY != 0
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.SBLOQTY != 0
+			and A.AREAKEY = 'STG'
+			and A.STOCKKY = #{stockky}
+		</select>
+	
+	
+		<select id="getWmi11WstkkyList" resultType="com.logistics.wm.domain.InventoryDTO">
+			select
+				concat(A.COMPKEY , A.STOCKKY) as rowkey , A.COMPKEY ,
+				A.WAREKEY , D.WHNAMLC , B.OWNAMLC, '600' as doccate , '630' as doctype ,'BEFORE' as adjmode ,
+				A.STOCKKY , 
+				A.AREAKEY ,
+				( select AREANAM
+				    from MAREMA
+				   where COMPKEY = A.COMPKEY
+				     and WAREKEY = A.WAREKEY
+				     and AREAKEY = A.AREAKEY
+				) as areanam , 
+				A.ZONEKEY ,
+				( select ZONENAM
+				    from MZONMA
+				   where COMPKEY = A.COMPKEY
+			      	 and WAREKEY = A.WAREKEY
+			      	 and AREAKEY = A.AREAKEY
+				  	 and ZONEKEY = A.ZONEKEY
+				) as ZONENAM, 
+				A.LOCAKEY ,
+				( select LOCANAM
+					from MLOCMA
+					where COMPKEY = A.COMPKEY
+					 and WAREKEY = A.WAREKEY
+			      	 and AREAKEY = A.AREAKEY
+				  	 and ZONEKEY = A.ZONEKEY
+				  	 and LOCAKEY = A.LOCAKEY
+				) as LOCANAM,
+				A.SUBSECT , A.TRUNTYP , A.TRUNPID ,
+				A.LOTNMKY , A.OWNERKY , A.SKUMKEY , A.SKUDESC ,
+				A.SIRBCOD , A.STOTQTY , A.SALLQTY , A.SINBQTY , A.SOUBQTY , A.SBLOQTY ,
+				0 as schnqty , A.SUOMKEY ,
+				date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt , date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt ,
+				A.LOTAT01 , A.LOTAT02 , A.LOTAT03 , A.LOTAT04 ,
+				A.LOTAT05 , A.LOTAT06 , A.LOTAT07 , A.LOTAT08 ,
+				A.LOTAT09 , A.LOTAT10 , A.LOTAT11 , A.LOTAT12 ,
+				A.LOTAT13 , A.LOTAT14 , A.LOTAT15 , A.LOTAT16 ,
+				A.LOTAT17 , A.LOTAT18 , A.LOTAT19 , A.LOTAT20 ,
+				A.LOTFRKY , A.STKSTAT , A.BLOCKID ,
+				A.PHYSROW , A.PHYSSEC , A.PHYSFLO ,
+				A.RCVDCKY , A.RCVDCIT , A.TASKOKY ,
+				A.TASKOIT , A.SHPDCKY , A.SHPDCIT ,
+				A.PHYSOKY , A.PHYSOIT , A.STORFKY ,
+				date_format(A.CREDATE, '%Y-%m-%d') as credate   , date_format(A.CRETIME, '%H:%i:%s') as cretime ,
+				fn_sy_usernam(A.COMPKEY , A.CREUSER) as	creuser , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , 
+				date_format(A.LMOTIME, '%H:%i:%s') as lmotime   , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser ,
+				' ' as indibzl , ' ' as indiarc , 0 as updtchk
+		   from WSTKKY A
+		  inner join MOWRMA B 
+		  		  on A.COMPKEY = B.COMPKEY
+				 and A.OWNERKY = B.OWNERKY
+		  inner join MWARMA D 
+		  		  on A.COMPKEY = D.COMPKEY
+				 and A.WAREKEY = D.WAREKEY
+		  inner join MSKUWC C 
+				  on A.COMPKEY = C.COMPKEY
+				 and A.WAREKEY = C.WAREKEY
+				 and A.OWNERKY = C.OWNERKY
+				 and A.SKUMKEY = C.SKUMKEY
+		<where>
+			and A.COMPKEY = #{userData.compkey}
+		  <choose>
+		  <when test="zeroqty == true">
+			and A.STOTQTY = 0
+		  </when>
+		  <otherwise>
+			and A.STOTQTY != 0
+		  </otherwise>
+		  </choose>	
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.AREAKEY = 'STG'
+			<if test="ownerky != null and ownerky != ''">
+				and A.OWNERKY = #{ownerky}
+			</if>
+			<if test="warekey != null and warekey != ''">
+				and A.WAREKEY = #{warekey}
+			</if>
+			<if test="locakey != null and locakey != ''">
+				and A.LOCAKEY like concat( '%' , #{locakey} , '%')
+			</if>
+			<if test="skumkey != null and skumkey != ''">
+				and A.SKUMKEY like concat( '%' , #{skumkey} , '%')
+			</if>
+			<if test="skudesc != null and skudesc != ''">
+				and C.SKUDESC like concat( '%' , #{skudesc} , '%')
+			</if>
+			<if test="stkstat != null and stkstat != ''">
+				and A.STKSTAT = #{stkstat}
+			</if>
+			<if test="stockky != null and stockky != ''">
+				and A.STOCKKY = #{stockky}
+			</if>
+		</where>
+	</select>
+
+	<select id="getWmi11BeforeData"
+		resultType="com.logistics.wm.domain.InventoryDTO">
+		select
+		concat(A.COMPKEY , A.STOCKKY) as rowkey , A.COMPKEY as compkey , ' ' as adjsoky ,
+		A.WAREKEY as warekey , 'BEFORE'	as adjmode ,
+		' ' as adjgrky , ' ' as rsncode , ' ' as adjsrmk ,
+		A.STOCKKY as stockky , A.AREAKEY as areakey , A.ZONEKEY as zonekey , A.LOCAKEY
+		as locakey ,
+		A.VENDKEY as vendkey ,
+		A.SUBSECT as subsect , A.TRUNTYP as truntyp , A.TRUNPID as trunpid ,
+		A.LOTNMKY as lotnmky , A.OWNERKY as ownerky ,
+		A.SKUMKEY as skumkey , C.SKUDESC as skudesc ,
+		A.SIRBCOD as sirbcod , A.STOTQTY as stotqty , A.SALLQTY as sallqty , A.SINBQTY
+		as sinbqty ,
+		A.SOUBQTY as soubqty , A.SBLOQTY as sbloqty , 0 as schnqty , A.SUOMKEY as
+		suomkey ,
+		date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt , date_format(A.RCVFRDT, '%Y-%m-%d') as
+		rcvfrdt ,
+		A.LOTAT01 as lotat01 , A.LOTAT02 as lotat02 , A.LOTAT03 as lotat03 , A.LOTAT04
+		as lotat04 ,
+		A.LOTAT05 as lotat05 , A.LOTAT06 as lotat06 , A.LOTAT07 as lotat07 , A.LOTAT08
+		as lotat08 ,
+		A.LOTAT09 as lotat09 , A.LOTAT10 as lotat10 , A.LOTAT11 as lotat11 , A.LOTAT12
+		as lotat12 ,
+		A.LOTAT13 as lotat13 , A.LOTAT14 as lotat14 , A.LOTAT15 as lotat15 , A.LOTAT16
+		as lotat16 ,
+		A.LOTAT17 as lotat17 , A.LOTAT18 as lotat18 , A.LOTAT19 as lotat19 , A.LOTAT20
+		as lotat20 ,
+		A.LOTFRKY as lotfrky , A.STKSTAT as stkstat , A.BLOCKID as blockid ,
+		A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo ,
+		A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit , A.TASKOKY as taskoky , A.TASKOIT
+		as taskoit ,
+		A.SHPDCKY as shpdcky , A.SHPDCIT as shpdcit , A.PHYSOKY as physoky , A.PHYSOIT
+		as physoit ,
+		A.STORFKY as storfky ,
+		date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as
+		cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser ,
+		date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME,
+		'%H-%i-%s') as lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as
+		lmouser ,
+		' ' as indibzl , ' ' as indiarc , 0 as updtchk
+		from WSTKKY A
+		inner join MOWRMA B on
+		A.COMPKEY = B.COMPKEY
+		and A.OWNERKY = B.OWNERKY
+		inner join MSKUWC C on
+		A.COMPKEY = C.COMPKEY
+		and A.WAREKEY = C.WAREKEY
+		and A.OWNERKY = C.OWNERKY
+		and A.SKUMKEY = C.SKUMKEY
+		inner join MWARMA D on
+		A.COMPKEY = D.COMPKEY
+		and A.WAREKEY = D.WAREKEY
+		left outer join SUSRMA U on
+		U.COMPKEY = A.COMPKEY
+		and U.USERACT = C.SKUAT01
+		<where>
+			and A.COMPKEY = #{compkey}
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.AREAKEY = 'STG'
+			and A.STOCKKY = #{stockky}
+		</where>
+	</select>
+
+
+	<!-- wmi11, wmi30 , wmi31  재고 조정 프로시저 -->
+	<select id="updateWstkkyList" statementType="CALLABLE" parameterType="hashMap">
+		{ CALL sp_wm_ctrstokky_adj(#{compkey}, #{warekey}, #{doccate},
+		#{doctype} , #{adjsoky} , #{adjsoit} , #{adjgrky} , #{lmouser} ,
+		#{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT,
+		jdbcType=INTEGER} ) }
+	</select>
+	
+	<!-- wmi32: 재고조정 오더처리 리스트 -->
+	<select id="selectWmi32List" resultType="com.logistics.wm.domain.InventoryDTO">
+		/* selectWmi32List  */
+		select concat(OE.COMPKEY , OE.OEADJKY) as rowkey, OE.COMPKEY AS compkey, 
+			  OE.OEADJKY AS oeadjky, WJ.ADJSOKY AS adjsoky, OE.OEADJIT AS oeadjit,
+			  WJ.ADJSOIT AS adjsoit, WJ.ADJGRKY AS adjgrky, 
+			  OE.WAREKEY AS warekey,
+			  OE.OWNERKY AS ownerky, 
+			  CASE WHEN OE.DOCCATE = '300' THEN '600' END AS doccate,
+			  CASE WHEN OE.DOCTYPE = '310' THEN '610' WHEN OE.DOCTYPE = '320' THEN '620' END AS doctype, 
+			  OE.STOCKKY AS stockky, fn_com_todate(WS.EXPIDAT) as EXPIDAT,
+			  OE.OEINSST AS oeinsst,  
+			  WS.AREAKEY AS areakey, WS.ZONEKEY AS zonekey, WS.LOCAKEY AS locakey, 
+			  WS.SKUMKEY AS skumkey, WS.SKUDESC AS skudesc, WS.STOTQTY AS stotqty,
+			  WS.SALLQTY as sallqty, WS.SINBQTY as sinbqty,
+			  WS.SOUBQTY as soubqty, WS.SBLOQTY as sbloqty,
+			  OE.RTODQTY AS rtodqty, OE.RTCFQTY AS rtcfqty,
+			  OE.RSNCODE AS rsncode, OE.ADJSRMK AS adjsrmk, OE.ATKSTAT AS atkstat,
+			  fn_com_todate(OE.CREDATE) as credate , fn_com_totime(OE.CRETIME) as cretime , fn_sy_usernam(OE.COMPKEY , OE.CREUSER) as creuser,
+			  fn_com_todate(OE.LMODATE) as lmodate , fn_com_totime(OE.LMOTIME) as lmotime , fn_sy_usernam(OE.COMPKEY , OE.LMOUSER) as lmouser,
+			  OE.INDIBZL as indibzl , OE.INDIARC as indiarc , OE.UPDTCHK as updtchk
+		 from OEADJI OE
+		inner join (select ADJSOKY, ADJSOIT, ADJGRKY, COMPKEY, WAREKEY, OWNERKY, SKUMKEY, STOCKKY, OEADJKY, OEADJIT 
+					  from WADJIT 
+					  where COMPKEY = #{userData.compkey}
+					    and DOCCATE = '600' 
+					    and DOCTYPE IN('610', '620') 
+					  group by COMPKEY, WAREKEY, OWNERKY, STOCKKY, SKUMKEY, ADJSOKY, ADJGRKY, OEADJKY, OEADJIT) WJ 
+				  on WJ.COMPKEY = OE.COMPKEY 
+				 and WJ.WAREKEY = OE.WAREKEY 
+				 and WJ.OWNERKY = OE.OWNERKY 
+				 and WJ.SKUMKEY = OE.SKUMKEY 
+				 and WJ.OEADJKY = OE.OEADJKY
+				 and WJ.OEADJIT = OE.OEADJIT
+		left outer join (select COMPKEY, WAREKEY, OWNERKY, STOCKKY, SKUMKEY, LOTNMKY
+						  ,AREAKEY, ZONEKEY, LOCAKEY, SKUDESC, EXPIDAT, STKSTAT
+						  ,SUM(STOTQTY) AS STOTQTY
+						  ,SUM(SALLQTY) AS SALLQTY
+						  ,SUM(SINBQTY) as SINBQTY
+						  ,SUM(SOUBQTY) AS SOUBQTY
+						  ,SUM(SBLOQTY) AS SBLOQTY
+					  from WSTKKY
+					  where COMPKEY = #{userData.compkey}
+					    and WAREKEY = #{warekey} 
+				     group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY, LOTNMKY, AREAKEY, ZONEKEY, LOCAKEY, SKUDESC, EXPIDAT, STKSTAT) WS 
+				  on WS.COMPKEY = OE.COMPKEY
+				 and WS.OWNERKY = OE.OWNERKY 
+				 and WS.WAREKEY = OE.WAREKEY 
+				 and WS.SKUMKEY = OE.SKUMKEY
+				 and WS.AREAKEY = OE.AREAKEY 
+				 and WS.ZONEKEY = OE.ZONEKEY 
+				 and WS.LOCAKEY = OE.LOCAKEY
+				 and WS.LOTNMKY	= OE.LOTNMKY
+				 and WS.STOCKKY = OE.STOCKKY
+		where OE.COMPKEY = #{userData.compkey}
+		  and OE.OEINSST = 'NEW'
+		  <if test="warekey != null and warekey != ''">
+		  	 and OE.WAREKEY = #{warekey}
+		  </if>
+		  <if test="ownerky != null and ownerky != ''">
+		  	 and OE.OWNERKY = #{ownerky}
+		  </if>
+		  <if test="oeinsst != null and oeinsst != ''">
+		  	 and OE.OEINSST = #{oeinsst}
+		  </if>
+		  <if test="oeadjky != null and oeadjky != ''">
+		  	 and OE.OEADJKY like concat('%' , #{oeadjky} , '%')
+		  </if>
+		  <if test="skumkey != null and skumkey != ''">
+		  	 and WS.SKUMKEY like concat('%' , #{skumkey} , '%')
+		  </if>
+		  <if test="skudesc != null and skudesc != ''">
+		  	 and WS.SKUDESC like concat('%' , #{skudesc} , '%')
+		  </if>
+		order by OE.OEADJKY, OE.OEADJIT
+	</select>
+	
+	<update id="updateWmi32List" parameterType="com.logistics.wm.domain.InventoryDTO">
+		UPDATE OEADJI
+		   SET OEADJKY = #{oeadjky}
+		   	, OEINSST = #{oeinsst}
+		   	, LMODATE = to_char(now() , 'YYYYMMDD')
+			, LMOTIME = to_char(now() , 'hh24miss')
+			, LMOUSER = #{userData.useract}
+		 WHERE 1=1
+			AND COMPKEY = #{userData.compkey}
+			AND OEADJKY = #{oeadjky}
+			AND OEADJIT = #{oeadjit}
+	</update>
+	
+	<select id="getWmi40WstkdyList" resultType="com.logistics.wm.domain.WstkdyDTO">
+		select		
+			   concat(A.COMPKEY , A.STKDATE , A.STKTIME , A.STKTIME) as rowkey											
+			 , A.COMPKEY as compkey					
+			 , date_format(A.STKDATE, '%Y-%m-%d') as stkdate 						
+			 , date_format(A.STKTIME, '%H-%i-%s') as stktime
+			 , A.STOCKKY as stockky 
+			 , (select OWNAMLC from MOWRMA O where O.COMPKEY = A.COMPKEY and O.OWNERKY = A.OWNERKY) as ownerky						
+			 , (select WHNAMLC from MWARMA W where W.COMPKEY = A.COMPKEY and W.WAREKEY = A.WAREKEY) as warekey 
+			 , (select AREANAM from MAREMA R where R.COMPKEY = A.COMPKEY and R.WAREKEY = A.WAREKEY and R.AREAKEY = A.AREAKEY) as areakey 
+			 , (select ZONENAM from MZONMA Z where Z.COMPKEY = A.COMPKEY and Z.WAREKEY = A.WAREKEY and Z.AREAKEY = A.AREAKEY and Z.ZONEKEY = A.ZONEKEY) as zonekey 
+			 , (select LOCANAM from MLOCMA L where L.COMPKEY = A.COMPKEY and L.WAREKEY = A.WAREKEY and L.AREAKEY = A.AREAKEY and L.ZONEKEY = A.ZONEKEY and L.LOCAKEY = A.LOCAKEY) as locakey 						
+			 , A.LOTNMKY as lotnmky  			 			
+			 , A.SKUMKEY as skumkey , A.SKUDESC as skudesc 						
+			 , A.STOTQTY as stotqty 						
+			 , case 								
+			 	when (A.STOTQTY != 0 and A.SALLQTY = 0 and A.SINBQTY = 0 and A.SOUBQTY = 0) then							
+			 			  A.STOTQTY - A.SBLOQTY					
+			   else							
+			 			0					
+			   end as avalqty 		, A.SALLQTY as sallqty 					
+			 , A.SINBQTY as sinbqty , A.SOUBQTY as soubqty , A.SBLOQTY as sbloqty 					
+			 , A.SUOMKEY as suomkey , date_format(A.PRODDAT, '%Y-%m-%d') as proddat 
+			 , (select COMCDTX from V_MCODEM C where C.COMPKEY = A.COMPKEY and C.COMCDKY = 'STKSTAT' and C.COMCDVL = A.STKSTAT) as stkstat
+			 , A.PHYSROW as physrow , A.PHYSSEC as physsec , A.PHYSFLO as physflo					
+			 , A.RCVDCKY as rcvdcky , A.RCVDCIT as rcvdcit							
+			 , A.TASKOKY as taskoky , A.TASKOIT as taskoit							
+			 , A.ADJSOKY as adjsoky , A.ADJSOIT as adjsoit							
+			 , A.PHYSOKY as physoky , A.PHYSOIT as physoit							
+			 , A.STORFKY as storfky							
+			 , date_format(A.CREDATE, '%Y-%m-%d') as credate , date_format(A.CRETIME, '%H-%i-%s') as cretime 
+			 , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser 	
+			 , date_format(A.LMODATE, '%Y-%m-%d') as lmodate , date_format(A.LMOTIME, '%H-%i-%s') as lmotime 
+			 , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+		  from WSTKDY A   			
+		 <where> 
+		 	   A.COMPKEY = #{userData.compkey}				
+		  <if test="warekey != null and warekey != ''">				
+		   and A.WAREKEY = #{warekey}			
+		  </if>
+		  <if test="ownerky != null and ownerky != ''">				
+		   and A.OWNERKY = #{ownerky}			
+		  </if>	
+		  <if test="skumkey != null and skumkey != ''">
+		   and A.SKUMKEY = #{skumkey}					
+		  </if>	
+		  <if test="skudesc != null and skudesc != ''">
+		   and A.SKUDESC like concat('%' , #{skudesc} , '%')					
+		  </if>	
+		  <if test="taskoky != null and taskoky != ''">
+		   and A.TASKOKY like concat('%' , #{taskoky} , '%')					
+		  </if>
+		  <if test="dateto != null and dateto != ''">	
+		   and A.STKDATE between replace(#{datefrom}, '-' , '') and replace(#{dateto}, '-' , '')
+		  </if> 	
+		 </where> 
+	</select>
+	
+	<select id="getWmi41WtrhisList" resultType="com.logistics.wm.domain.WtrhisDTO">
+		 select                
+	           concat(A.COMPKEY , A.WHTRHKY) as rowkey               
+	          , A.COMPKEY , A.WHTRHKY                         
+	          , A.DOCCATE , A.DOCTYPE
+	          , (select DOCTYNM from MDOCMA D where D.COMPKEY = A.COMPKEY and D.WAREKEY = A.WAREKEY and D.DOCTYPE = A.DOCTYPE and D.DOCCATE = A.DOCCATE) as doctynm                      
+	          , (select OWNAMLC from MOWRMA O where O.COMPKEY = A.COMPKEY and O.OWNERKY = A.OWNERKY) as ownerky						
+			  , (select WHNAMLC from MWARMA W where W.COMPKEY = A.COMPKEY and W.WAREKEY = A.WAREKEY) as warekey 
+			  , (select AREANAM from MAREMA R where R.COMPKEY = A.COMPKEY and R.WAREKEY = A.WAREKEY and R.AREAKEY = A.AREAKEY) as areakey 
+			  , (select ZONENAM from MZONMA Z where Z.COMPKEY = A.COMPKEY and Z.WAREKEY = A.WAREKEY and Z.AREAKEY = A.AREAKEY and Z.ZONEKEY = A.ZONEKEY) as zonekey 
+			  , (select LOCANAM from MLOCMA L where L.COMPKEY = A.COMPKEY and L.WAREKEY = A.WAREKEY and L.AREAKEY = A.AREAKEY and L.ZONEKEY = A.ZONEKEY and L.LOCAKEY = A.LOCAKEY) as locakey 					                      
+	          , A.LOTNMKY , A.SKUMKEY , A.SKUDESC                   
+	          , A.STOTQTY       
+	          , A.SALLQTY , A.SINBQTY , A.SOUBQTY , A.SBLOQTY                
+	          , A.SUOMKEY , fn_com_todate(A.PRODDAT) as proddat                
+	          , A.LOTAT01 , A.LOTAT02 , A.LOTAT03 , A.LOTAT04                
+	          , A.LOTAT05 , A.LOTAT06 , A.LOTAT07 , A.LOTAT08                
+	          , A.LOTAT09 , A.LOTAT10 , A.LOTAT11 , A.LOTAT12                
+	          , A.LOTAT13 , A.LOTAT14 , A.LOTAT15 , A.LOTAT16                
+	          , A.LOTAT17 , A.LOTAT18 , A.LOTAT19 , A.LOTAT20                
+	          , (select COMCDTX from V_MCODEM C where C.COMPKEY = A.COMPKEY and C.COMCDKY = 'STKSTAT' and C.COMCDVL = A.STKSTAT) as stkstat
+			  , A.BLOCKID 
+	          , A.PHYSROW , A.PHYSSEC , A.PHYSFLO                 
+	          , A.RCVDCKY , A.RCVDCIT , A.TASKOKY , A.TASKOIT                      
+	          , A.ADJSOKY , A.ADJSOIT , A.PHYSOKY , A.PHYSOIT , A.SHPDCKY , A.SHPDCIT , A.STORFKY                      
+	          , fn_com_todate(A.CREDATE) as credate 
+	          , fn_com_totime(A.CRETIME) as cretime 
+	          , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+	          , fn_com_todate(A.LMODATE) as lmodate 
+	          , fn_com_totime(A.LMOTIME) as lmotime 
+	          , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser   
+       	   from WTRHIS A                     
+       <where> 
+       		A.COMPKEY = #{userData.compkey}      
+        <if test="ownerky != null and ownerky !='' ">                
+         and A.OWNERKY = #{ownerky}   
+        </if>
+        <if test="areakey != null and areakey !='' ">                         
+         and A.AREAKEY = #{areakey}         
+        </if>
+        <if test="warekey != null and warekey !='' ">                            
+         and A.WAREKEY = #{warekey}                      
+        </if>
+        <if test="locakey != null and locakey !='' ">                            
+         and A.LOCAKEY like concat( '%' , #{locakey} , '%')                        
+        </if>
+        <if test="skumkey != null and skumkey !='' ">    
+         and A.SKUMKEY = #{skumkey}                      
+        </if>
+        <if test="skudesc != null and skudesc !='' ">             
+         and A.SKUDESC like concat( '%' , #{skudesc} , '%')         
+        </if>
+        <if test="taskoky != null and taskoky !='' ">             
+         and A.TASKOKY like concat( '%' , #{taskoky} , '%')         
+        </if>
+        <if test="adjsoky != null and adjsoky !='' ">             
+         and A.ADJSOKY like concat( '%' , #{adjsoky} , '%')         
+        </if>
+        <if test="physoky != null and physoky !='' ">             
+         and A.PHYSOKY like concat( '%' , #{physoky} , '%')         
+        </if>
+        <if test="shpdcky != null and shpdcky !='' ">             
+         and A.SHPDCKY like concat( '%' , #{shpdcky} , '%')         
+        </if>
+        <if test="dateto != null and dateto != ''">	
+	    and A.CREDATE between replace(#{datefrom}, '-' , '') and replace(#{dateto}, '-' , '')
+	   </if> 
+       </where> 
+	</select>
+	
+	<select id="getWmi42List" resultType="com.logistics.wm.domain.InventoryDTO">
+		  select						
+				  concat(A.COMPKEY , A.STOCKKY) as rowkey 					
+			   	, A.COMPKEY , A.WAREKEY 
+				, ( select WHNAMLC from MWARMA M where M.COMPKEY = A.COMPKEY and M.WAREKEY = A.WAREKEY ) as whnamlc
+				, ( select OWNAMLC from MOWRMA M where M.COMPKEY = A.COMPKEY and M.OWNERKY = A.OWNERKY ) as ownamlc					  						
+			    , A.STOCKKY 
+			    , A.AREAKEY
+			    , ( select AREANAM from MAREMA M where M.COMPKEY = A.COMPKEY and M.WAREKEY = A.WAREKEY and M.AREAKEY = A.AREAKEY ) as areanam		 
+			    , A.ZONEKEY
+			    , ( select ZONENAM from MZONMA M where M.COMPKEY = A.COMPKEY and M.WAREKEY = A.WAREKEY and M.AREAKEY = A.AREAKEY and M.ZONEKEY = A.ZONEKEY ) as zonenam 
+			    , A.LOCAKEY  					
+			    , ( select LOCANAM from MLOCMA M where M.COMPKEY = A.COMPKEY and M.WAREKEY = A.WAREKEY and M.AREAKEY = A.AREAKEY and M.ZONEKEY = A.ZONEKEY and M.LOCAKEY = A.LOCAKEY ) as locanam
+			    , 'BEFORE' as adjmode 		
+			    , A.SUBSECT 						
+			    , A.TRUNTYP , A.TRUNPID 					
+			    , A.LOTNMKY , A.OWNERKY 					
+			    , A.SKUMKEY , C.SKUDESC 				
+			    , C.SKUGR02 , C.SKUGR03 , C.SKUGR04 , C.SKUGR05		   	
+			    , C.SKUAT01 		
+			    , A.VENDKEY , A.SIRBCOD 					
+			    , A.STOTQTY , A.SALLQTY , 0 as schnqty 
+			    , A.SINBQTY , A.SOUBQTY , A.SBLOQTY  		
+			    , A.SUOMKEY 					
+			    , fn_com_todate(A.PRODDAT) as proddat 
+			    , A.SHELIFE , fn_com_todate(A.EXPIDAT) as expidat 					
+			    , fn_com_todate(A.RCVDCDT) as rcvdcdt , fn_com_todate(A.RCVFRDT) as rcvfrdt 						
+			    , A.LOTFRKY 					
+			    , A.LOTAT01 , A.LOTAT02 , A.LOTAT03 , A.LOTAT04  					
+			    , A.LOTAT05 , A.LOTAT06 , A.LOTAT07 , A.LOTAT08  					
+			    , A.LOTAT09 , A.LOTAT10 , A.LOTAT11 , A.LOTAT12  					
+			    , A.LOTAT13 , A.LOTAT14 , A.LOTAT15 , A.LOTAT16  						
+			    , A.LOTAT17 , A.LOTAT18 , A.LOTAT19 , A.LOTAT20
+			    , A.STKSTAT  						
+			    , (select COMCDTX from V_MCODEM M where M.COMPKEY = A.COMPKEY and M.COMCDKY = 'STKSTAT' and M.COMCDVL = A.STKSTAT) as STATNAM
+			    , A.BLOCKID 					
+			    , A.PHYSROW , A.PHYSSEC , A.PHYSFLO  				
+			    , A.RCVDCKY , A.RCVDCIT 				
+			    , A.TASKOKY , A.TASKOIT					
+			    , A.SHPDCKY , A.SHPDCIT 				
+			    , A.PHYSOKY , A.PHYSOIT 				
+			    , A.STORFKY 					
+			    , fn_com_todate(A.CREDATE) as credate , fn_com_totime(A.CRETIME) as cretime , fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			    , fn_com_todate(A.LMODATE) as lmodate , fn_com_totime(A.LMOTIME) as lmotime , fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser			
+			    , A.INDIBZL , A.INDIARC , A.UPDTCHK 	
+	      from WSTKKY A											
+		 inner join MOWRMA B on A.COMPKEY = B.COMPKEY 						
+		                    and A.OWNERKY = B.OWNERKY						
+		 inner join MSKUWC C on A.COMPKEY = C.COMPKEY						
+		                    and A.WAREKEY = C.WAREKEY 						
+		                    and A.OWNERKY = C.OWNERKY						
+		                    and A.SKUMKEY = C.SKUMKEY                   						
+		 inner join MWARMA D on A.COMPKEY = D.COMPKEY						
+		                    and A.WAREKEY = D.WAREKEY 	            	 				
+		<where>
+				 A.COMPKEY = #{userData.compkey}
+			 and A.WAREKEY = #{warekey} 	
+			 and A.STOTQTY != 0	
+			 and A.SALLQTY = 0	
+			 and A.SINBQTY = 0	
+			 and A.SOUBQTY = 0	
+			 and A.AREAKEY = 'STG'
+			<if test="ownerky != null and ownerky != ''">				
+			 and A.OWNERKY = #{ownerky}			
+			</if>		
+			<if test="locakey != null and locakey != ''">
+			 and A.LOCAKEY like concat( '%' , #{locakey} , '%')					
+			</if>	
+			<if test="skumkey != null and skumkey != ''">
+			 and A.SKUMKEY like concat( '%' , #{skumkey} , '%')					
+			</if>	
+			<if test="skudesc != null and skudesc != ''">
+			 and C.SKUDESC like concat( '%' , #{skudesc} , '%')					
+			</if>		
+			<if test="stkstat != null and stkstat != ''">	ㅈ
+			 and A.STKSTAT = #{stkstat} 		
+			 </if>	
+		 </where>
+	</select>
+	
+	<select id="getWmi42BeforeData" resultType="com.logistics.wm.domain.InventoryDTO">
+		select
+			concat(A.COMPKEY , A.STOCKKY) as rowkey
+			, A.COMPKEY 
+			, ' ' as adjsoky 
+			, A.WAREKEY
+			, ( select WHNAMLC from MWARMA M where M.COMPKEY = A.COMPKEY AND M.WAREKEY = A.WAREKEY ) as whnamlc 
+			, 'BEFORE' 
+			, ' ' as adjgrky , ' ' as rsncode , ' ' as adjsrmk
+			, A.STOCKKY , A.AREAKEY , A.ZONEKEY 
+			, A.LOCAKEY
+			, A.SUBSECT , A.TRUNTYP , A.TRUNPID
+			, A.LOTNMKY , A.OWNERKY 
+			, A.SKUMKEY , C.SKUDESC 
+			, C.SKUGR02 , C.SKUGR03 , C.SKUGR04
+			, C.SKUGR05 
+			, A.VENDKEY , A.SIRBCOD
+			, A.STOTQTY 
+			, A.SALLQTY , A.SINBQTY , A.SOUBQTY
+			, A.SBLOQTY , 0 as scbloqty
+			, A.SUOMKEY 
+			, date_format(A.PRODDAT, '%Y-%m-%d') as proddat , A.SHELIFE as shelife
+			, date_format(A.EXPIDAT, '%Y-%m-%d') as expidat
+			, date_format(A.RCVDCDT, '%Y-%m-%d') as rcvdcdt 
+			, date_format(A.RCVFRDT, '%Y-%m-%d') as rcvfrdt
+			, A.LOTFRKY 
+			, A.LOTAT01 , A.LOTAT02 , A.LOTAT03 , A.LOTAT04
+			, A.LOTAT05 , A.LOTAT06 , A.LOTAT07 , A.LOTAT08
+			, A.LOTAT09 , A.LOTAT10 , A.LOTAT11 , A.LOTAT12 
+			, A.LOTAT13 , A.LOTAT14 , A.LOTAT15 , A.LOTAT16
+			, A.LOTAT17 , A.LOTAT18 , A.LOTAT19 , A.LOTAT20
+			, A.STKSTAT , A.BLOCKID , A.PHYSROW 
+			, A.PHYSSEC , A.PHYSFLO
+			, A.RCVDCKY , A.RCVDCIT
+			, A.TASKOKY , A.TASKOIT
+			, A.SHPDCKY , A.SHPDCIT
+			, A.PHYSOKY , A.PHYSOIT , A.STORFKY
+			, date_format(A.CREDATE, '%Y-%m-%d') as credate 
+			, date_format(A.CRETIME, '%H-%i-%s') as cretime
+			, fn_sy_usernam(A.COMPKEY , A.CREUSER) as creuser
+			, date_format(A.LMODATE, '%Y-%m-%d') as lmodate 
+			, date_format(A.LMOTIME, '%H-%i-%s') as lmotime
+			, fn_sy_usernam(A.COMPKEY , A.LMOUSER) as lmouser
+			, A.INDIBZL , A.INDIARC , A.UPDTCHK
+		  from WSTKKY A
+		 inner join MOWRMA B 
+		    on A.COMPKEY = B.COMPKEY
+		   and A.OWNERKY = B.OWNERKY
+		 inner join MSKUWC C 
+		    on A.COMPKEY = C.COMPKEY
+		   and A.WAREKEY = C.WAREKEY
+		   and A.OWNERKY = C.OWNERKY
+		   and A.SKUMKEY = C.SKUMKEY
+		 inner join MWARMA D 
+		    on A.COMPKEY = D.COMPKEY
+		   and A.WAREKEY = D.WAREKEY
+		<where>
+				A.COMPKEY = #{userData.compkey}
+			and A.SALLQTY = 0
+			and A.SINBQTY = 0
+			and A.SOUBQTY = 0
+			and A.STOTQTY != 0
+			and A.SBLOQTY = 0
+			and A.AREAKEY = 'STG'
+			and A.STOCKKY = #{stockky}
+		</where>
+	</select>
+	
+	<insert id="saveWmi42WadjitAFTERLIST" parameterType="com.logistics.wm.domain.InventoryDTO">
+		/* saveWmi42WadjitAfterList */
+
+		insert into WADJIT
+		(
+			  COMPKEY , ADJSOKY, ADJSOIT
+			, WAREKEY , DOCCATE , DOCTYPE
+			, ADJMODE , ADJGRKY , RSNCODE , ADJSRMK
+			, STOCKKY , AREAKEY , ZONEKEY , LOCAKEY
+			, SUBSECT , TRUNTYP , TRUNPID , LOTNMKY , OWNERKY
+			, SKUMKEY , SKUDESC
+			, VENDKEY , SIRBCOD
+			, STOTQTY , SALLQTY , SINBQTY , SOUBQTY , SBLOQTY
+			, SUOMKEY , PRODDAT , SHELIFE
+			, EXPIDAT , RCVDCDT , RCVFRDT , LOTFRKY
+			, STKSTAT , BLOCKID , PHYSROW , PHYSSEC, PHYSFLO
+			, RCVDCKY , RCVDCIT , TASKOKY, TASKOIT 
+			, SHPDCKY , SHPDCIT
+			, PHYSOKY , PHYSOIT , STORFKY
+			, CREDATE , CRETIME , CREUSER
+			, LMODATE , LMOTIME , LMOUSER
+		)
+		values
+		(
+			#{userData.compkey} , #{adjsoky} , fn_wm_adjsoit(#{compkey} , #{adjsoky})
+			, #{warekey} , #{doccate} , #{doctype}
+			, "AFTER" , #{adjgrky} , #{rsncode} , #{adjsrmk}
+			, #{stockky} , #{areakey} , #{zonekey} , #{locakey}
+			, #{subsect} , #{truntyp} , #{trunpid} , #{lotnmky} , #{ownerky}
+			, #{chskuky} , #{chskunm}
+			, #{vendkey} , #{sirbcod}
+			, #{schnqty} , #{sallqty} , #{sinbqty} , #{soubqty} , #{sbloqty}
+			, #{suomkey} , replace(#{proddat}, '-', '') , #{shelife}
+			, replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') 
+			, replace(#{rcvfrdt}, '-', '') , #{lotnmky}
+			, #{stkstat} , #{blockid} , #{physrow} , #{physsec} , #{physflo}
+			, #{rcvdcky} , #{rcvdcit} , #{taskoky} , #{taskoit} 
+			, #{shpdcky} , #{shpdcit}
+			, #{physoky} , #{physoit} , #{storfky}
+			, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') 
+			, #{userData.useract}
+			, to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') 
+			, #{userData.useract}
+		)
+	</insert>
+</mapper>

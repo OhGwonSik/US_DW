@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.9.0.final using JasperReports Library version 6.9.0-cb8f9004be492ccc537180b49c026951f4220bf3  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="test2" pageWidth="216" pageHeight="802" columnWidth="216" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="76ee19d1-fcd3-4a15-87d9-39bb061b69b9">
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="btrcsnm" class="java.lang.String"/>
+	<field name="btramot" class="java.lang.Integer"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="30" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			<printWhenExpression><![CDATA[$V{REPORT_COUNT} % 14 > 0]]></printWhenExpression>
+			<textField>
+				<reportElement x="4" y="0" width="103" height="30" uuid="111777d1-f4da-4203-a793-0a9adc6d5da5">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font fontName="JasperNanumFont"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{btrcsnm} == null ? " " : $F{btrcsnm}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.###">
+				<reportElement x="107" y="0" width="103" height="30" uuid="a285c4c4-d53a-4eec-975a-ee961a72ccf9">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="JasperNanumFont"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{btramot} == null ? "" : $F{btramot}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

@@ -1,0 +1,67 @@
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.common.mapper.GeneratorMapper">
+	<select id="selectColumnListWithForeign" resultType="com.logistics.common.vo.GeneratorVO">
+		SELECT
+		c.TABLE_NAME,c.COLUMN_NAME, c.DATA_TYPE, c.IS_NULLABLE,
+		c.COLUMN_DEFAULT,c.column_key,c.column_comment
+		,kc.CONSTRAINT_NAME, kc.REFERENCED_TABLE_NAME,kc.REFERENCED_COLUMN_NAME
+		FROM
+		INFORMATION_SCHEMA.COLUMNS c left outer join
+		INFORMATION_SCHEMA.KEY_COLUMN_USAGE kc
+		on kc.TABLE_NAME = c.table_name and kc.column_name = c.COLUMN_NAMe and
+		kc.TABLE_SCHEMA = c.table_schema
+		WHERE
+		c.table_schema = #{tableSchema} 
+		AND	c.table_name =#{tableName};
+	</select>
+	
+	<select id="selecTableList" resultType="map">
+		SELECT
+		c.TABLE_NAME
+		FROM
+		INFORMATION_SCHEMA.tables c
+		WHERE
+		c.table_schema = #{tableSchema}
+	</select>
+	
+	<select id="selectColumnList" resultType="com.logistics.common.vo.GeneratorVO">
+		SELECT
+		c.TABLE_NAME,c.COLUMN_NAME, c.DATA_TYPE, c.IS_NULLABLE,
+		c.COLUMN_DEFAULT,c.column_key,c.column_comment
+		FROM
+		INFORMATION_SCHEMA.COLUMNS c
+		WHERE
+		c.table_schema = #{tableSchema} 
+		AND c.table_name =#{tableName};
+	</select>
+	
+	<select id="selectColumn" resultType="com.logistics.common.vo.GeneratorVO">
+		SELECT 
+		  c.TABLE_NAME,c.COLUMN_NAME, c.DATA_TYPE, c.IS_NULLABLE, c.COLUMN_DEFAULT,c.column_key,c.column_comment
+		FROM
+		  INFORMATION_SCHEMA.COLUMNS c 
+		WHERE
+		  c.table_schema = #{tableSchema} 
+		  AND c.table_name =#{tableName}
+		  AND c.column_name = #{columnName}
+	</select>
+	
+	<select id="selectForeignKey">
+		SELECT
+		TABLE_NAME,COLUMN_NAME,CONSTRAINT_NAME, REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME
+		FROM
+		INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+		WHERE
+		REFERENCED_TABLE_SCHEMA = #{tableSchema} 
+		AND	REFERENCED_TABLE_NAME = #{tableName}
+	</select>
+	
+	<select id="selectTableName" resultType="String">
+		SELECT table_comment
+		FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_SCHEMA=#{tableSchema}
+		AND TABLE_NAME=#{tableName}
+	</select>
+</mapper>

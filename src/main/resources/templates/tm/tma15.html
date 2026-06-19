@@ -1,0 +1,680 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+    <div th:fragment="fragments-mainContent">
+        <div class="tab-contents">
+            <div class="search-conditions con-box">
+        		<div class="setting-grid">
+                    <label for="tma15_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tma15_towarky" name="tma15_towarky"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList">
+							</select>
+                        </div>
+                    </div>
+                    <label for="tma15_ownamlc" class="setting-grid-title">[[#{search.ownamlc}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper tma15">
+							<input type="text" id="tma15_ownamlc" th:placeholder="${#messages.msg('search.ownamlc')}">
+						</div>
+					</div>
+					<label for="tma15_skumkey" class="setting-grid-title">[[#{search.skuCode}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper tma15">
+							<input type="text" id="tma15_skumkey" th:placeholder="${#messages.msg('search.skuCode')}">
+						</div>
+					</div>
+					<label for="tma15_destkey" class="setting-grid-title">[[#{om.ocosal.destkey}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-group">
+                            <select id="tma15_destkey" name="tma15_destkey"
+							data-cb-val="destkey" data-cb-name="denamlc" data-cb-url="/tm/area/common/destlist"
+							data-cb-variable="destkeyList">
+							<option value="">[[#{tm.common.all}]]</option>
+							</select>
+                        </div>
+					</div>
+					<label for="tma15_ptnamlc" class="setting-grid-title">[[#{tm.tma15.ptnamlc}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper tma15">
+							<input type="text" id="tma15_ptnamlc" th:placeholder="${#messages.msg('tm.tma15.ptnamlc')}">
+						</div>
+					</div>
+					<label for="tma15_postdat" class="setting-grid-title">[[#{tm.tma15.postdat}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-date-group">
+							<input type="date" id="tma15_postdatFrom" onkeyup="setInputDateDel(this)">
+							<span>~</span>
+							<input type="date" id="tma15_postdatTo" onkeyup="setInputDateDel(this)">
+						</div>
+					</div>
+        		</div>
+                <div class="search-btn-group">
+                    <button id="tma15_search" class="btn-search btn-navy btn-green"><img>[[#{bt.search}]]</button>
+                    <button id="tma15_reset" class="btn-clear btn-white"><img>[[#{bt.reset}]]</button>
+                </div>
+        	</div>
+        	<div class="search-list">
+	        	<div class="list-top">
+	                <div class="list-title ic-title-mark">
+	                    <span th:text="${gnatitle}"></span>
+	                </div>
+	                <div class="edit-btn-wrapper">
+	                	<button class="btn-navy btn-green" id="tma15_add">[[#{menu.tm.tma15}]]</button>
+        			</div>
+	            </div>
+	        	<div class="search-list">
+					<div class="list-grid-wrapper con-box">
+						<div id="tma15_pqgrid"></div>
+					</div>
+	        	</div>
+	        </div>
+	        <!-- 권역배차 모달 -->
+			<div class="modal fade modalTm" id="tma15AreaModal" tabindex="-1" role="dialog" aria-labelledby="tma15AreaModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+	            <div class="modal-dialog modal-lg" role="document">
+	                <div class="modal-content">
+	                    <div class="modal-top">
+	                        <button type="button" class="close" id="tma15AreaMdClose" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+	                    </div>
+	                    <div class="modal-body">
+	                        <div class="search-conditions con-box">
+								<div class="setting-grid" id="tma15ModalGrid_search">
+								<label for="tma15_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				                    <div class="setting-grid-content">
+				                        <div class="input-group">
+				                            <select id="tma15_m_towarky" name="tma15_towarky"
+											data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user"
+											data-cb-variable="warekeyList">
+											</select>
+				                        </div>
+				                    </div>
+									<label for="tma15_vhcsnam" class="setting-grid-title">[[#{tm.tvhcma.vhcsnam}]]</label>
+									<div class="setting-grid-content">
+										<div class="input-wrapper tma15">
+											<input type="text" id="tma15_vhcsnam"
+												th:placeholder="${#messages.msg('tm.tvhcma.vhcsnam')}">
+										</div>
+									</div>
+	                            </div>
+								<div class="search-btn-group">
+									<button id="tma15_AreaModalSearch" class="btn-search btn-navy btn-green">
+										<img>
+										<span>조회</span>
+									</button>
+								</div>
+	                        </div>
+							<div class="search-list">
+								<div class="list-top">
+									<div class="list-title ic-title-mark">
+										<span>[[#{menu.tm.tma15}]]</span>
+									</div>
+								</div>
+								<div class="list-grid-wrapper con-box">
+									<div id="tma15_modalGrid"></div>
+								</div>
+							</div>
+							<div class="setting-grid con-box">
+							<label for="tma15_pbilpay" class="setting-grid-title ic-title-nece">[[#{tm.tplnhd.pbilpay}]]</label>
+	                          <div class="setting-grid-content">
+	                              <div class="input-wrapper">
+	                                  <input type="text" id="tma15_pbilpay" name="pbilpay" maxlength="14" th:placeholder="${#messages.msg('tm.tplnhd.pbilpay')}" oninput="onlyNumberPlus(this)">
+	                              </div>
+	                          </div>
+	                     </div>
+	                    </div>
+						<div class="modal-bottom">
+							<button class="btn-white" id="tma15AreaMdSaveBt">[[#{tm.tma15.savePlan}]]</button>
+							<button class="btn-save btn-navy btn-green" id="tma15AreaMdCloseBt">[[#{bt.close}]]</button>
+						</div>
+	                </div>
+	            </div>
+	        </div>
+    	</div>
+    </div>
+    <script>
+    /* *******************************************************
+	 * 최초 생성일시 : 2023-09-25
+	 * 최초 생성자 : 최재환
+	 * 설명 : 권역배차를 할 수 있는 화면입니다.
+	 *********************************************************/
+	 
+	let grid;
+	let subGrid;
+	let modalGrid;
+	let responseData;
+
+		_commonInit();
+
+		const pageId = 'tma15';
+		const gridId = '#' + pageId + '_pqgrid';
+		const subGridId = '#' + pageId + '_subGrid';
+		const modalGrigId = '#' + pageId + '_modalGrid';
+
+		$(function() {
+			const yesterday = moment().subtract(1, 'd').format('YYYY-MM-DD');
+			const today = moment().format('YYYY-MM-DD');
+			$('#' + pageId + '_postdatFrom').val(yesterday);
+			$('#' + pageId + '_postdatTo').val(today);
+
+			const tma15GridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+					type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+					cb: { all: false, header: true}
+				},
+				{ title: '[[#{tm.tma15.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+				{ title: '[[#{om.ocosal.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable: false, hidden: true,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.doccateList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.doccateList.find(function (obj) {
+							return (obj.doccate === ui.cellData && obj.warekey === ui.rowData.towarky);
+						});
+						ui.rowData.doccate = option ? ui.cellData : '';
+						return option ? option.docctnm : '';
+					},
+				},
+				{ title: '[[#{om.ocosal.cooutky}]]', dataType: 'string', dataIndx: 'cooutky', editable: false},
+				{ title: '[[#{om.ocosal.cooutit}]]', dataType: 'string', dataIndx: 'cooutit', editable: false},
+				{ title: '[[#{om.ocosal.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.doctypeList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.doctypeList.find(function (obj) {
+							return (obj.doctype === ui.cellData && obj.doccate === ui.rowData.doccate && obj.warekey === ui.rowData.towarky);
+						});
+						ui.rowData.doctype = option ? ui.cellData : '';
+						return option ? option.doctynm : '';
+					},
+				},
+				{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'towarky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.warehouseList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.warehouseList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.towarky = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{grid.ownamlc}]]', dataType: 'string', dataIndx: 'ownerky', editable: false,
+				 editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.ownerList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.ownerList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.ownerky = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{tm.tma15.custkey}]]', dataType: 'string', dataIndx: 'custkey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.customerList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.customerList.find(function (obj) {
+							return (obj.ptnrkey === ui.cellData);
+						});
+						ui.rowData.custkey = option ? ui.cellData : '';
+						return option ? option.ptnamlc : '';
+					},
+				},
+				{ title: '[[#{tm.tma15.destkey}]]', dataType: 'string', dataIndx: 'destkey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.destkeyList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.destkeyList.find(function (obj) {
+							return (obj.destkey === ui.cellData);
+						});
+						ui.rowData.destkey = option ? ui.cellData : '';
+						return option ? option.denamlc : '';
+					},
+				},
+				{ title: '[[#{tm.tarehd.trareky}]]'+'[[#{grid.vhcsnam}]]' + '([[#{tm.tvhcma.vhcfnam}]])', dataType: 'string', dataIndx: 'trvehky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.vehiList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.vehiList.find(function (obj) {
+							return (obj.vehicky === ui.cellData);
+						});
+						ui.rowData.trvehky = option ? ui.cellData : '';
+						return option ? option.vhcsnam : '';
+					},
+				},
+				{ title: '[[#{tm.tma15.deposcd}]]', dataType: 'string', dataIndx: 'deposcd', editable: false, hidden: true},
+				{ title: '[[#{tm.tplnhd.trareky}]]', dataType: 'string', dataIndx: 'trareky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.trarekyList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.trarekyList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.trareky = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{om.ocosal.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false, hidden: true},
+				{ title: '[[#{om.ocosal.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false, hidden: true},
+				{ title: '[[#{om.ocosal.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false, hidden: true},
+				{ title: '[[#{om.ocosal.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false, hidden: true},
+				{ title: '[[#{om.ocosal.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false, hidden: true},
+				{ title: '[[#{om.ocosal.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false, hidden: true},
+				{ title: '[[#{tm.tma15.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false},
+				{ title: '[[#{tm.tma15.saatc06}]]', dataType: 'string', dataIndx: 'saatc06', editable: false},
+				{ title: '[[#{grid.skuCode}]]', dataType: 'string', dataIndx: 'skumkey', editable: false},
+				{ title: '[[#{grid.skunm}]]', dataType: 'string', dataIndx: 'skudesc', editable: false},
+				{ title: '[[#{tm.tma15.rgitqty}]]', dataType: 'integer', dataIndx: 'rgitqty', format: '#,###', editable: false,
+					summary: { type: "sum" }},
+				{ title: '[[#{tm.tma15.suomkey}]]', dataType: 'string', dataIndx: 'suomkey', editable: false}
+			]
+
+			const tma15ModalGridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+					type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+					cb: { all: false, header: true}
+				},
+				{ title: '[[#{tm.tma15.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+				{ title: '[[#{tm.tvhcma.vhcsnam}]]' + '([[#{tm.tvhcma.vhcfnam}]])', dataType: 'string', dataIndx: 'vehicky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.vehiList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.vehiList.find(function (obj) {
+							return (obj.vehicky === ui.cellData);
+						});
+						ui.rowData.vehicky = option ? ui.cellData : '';
+						return option ? option.vhcsnam : '';
+					}
+				}
+			]
+
+			const tma15Grid = new GridUtil(tma15GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+			const tma15ModalGrid = new GridUtil(tma15ModalGridCM, '[[${gprogrid}]]', pageId + '_modalGrid');
+
+			//============================================================
+			//그리드 create 이벤트
+			//============================================================
+			tma15Grid.setCreate(async function (evt, ui) {
+				await initData();
+			});
+
+			//============================================================
+			//check 이벤트(하나만 체크되게끔)
+			//============================================================
+			tma15ModalGrid.setCheck(function(evt, ui){
+				if(ui.check){
+					this.Checkbox('state').unCheckAll();
+					ui.rowData.state = true;
+					this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+				}
+			});
+
+			tma15Grid.setFind();
+			tma15Grid.setReset();
+
+			tma15Grid.open();
+
+			tma15ModalGrid.setFind();
+			tma15ModalGrid.open();
+
+			$('#' + pageId + '_search').click(async function(){
+
+				await tma15_areaInitData();
+			});
+
+			$('#' + pageId + '_add').click(function(){
+
+				modalOpen();
+			});
+
+			//============================================================
+			//검색조건 초기화 이벤트
+			//============================================================
+			$('#' + pageId + '_reset').click(function () {
+				$('#' + pageId + '_towarky').val($('#' + pageId + '_towarky option:first').val());
+				$('#' + pageId + '_destkey').val($('#' + pageId + '_destkey option:first').val());
+
+				$('#' + pageId + '_ownamlc').val('');
+				$('#' + pageId + '_skumkey').val('');
+				$('#' + pageId + '_ptnamlc').val('');
+
+				$('#' + pageId + '_postdatFrom').val(yesterday);
+				$('#' + pageId + '_postdatTo').val(today);
+
+				grid = pq.grid('#' + pageId + '_pqgrid');
+
+				grid.showLoading();
+
+				grid.option('dataModel', {data: []}); // 해당 그리드 초기화
+
+				grid.refreshDataAndView();
+				grid.hideLoading();
+
+			});
+	});
+
+		//============================================================
+		//Init데이터 조회
+		//============================================================
+		async function initData() {
+
+			responseData = await fetchUtil('GET', '/tm/area/common/initdata', {});
+			responseData = await responseData.json();
+
+		}
+
+		//============================================================
+		//데이터 조회
+		//============================================================
+		async function tma15_areaInitData() {
+			grid = pq.grid(gridId);
+
+			const data = {
+					// 검색할 조건을 가지고 있는 변수
+					towarky: $('#' + pageId + '_towarky').val(),
+					ownamlc: $('#' + pageId + '_ownamlc').val().replace(/(\s*)/g, ''),
+					skumkey: $('#' + pageId + '_skumkey').val().replace(/(\s*)/g, ''),
+					destkey: $('#' + pageId + '_destkey').val(),
+					ptnamlc: $('#' + pageId + '_ptnamlc').val().replace(/(\s*)/g, ''),
+					postdatFrom: $('#' + pageId + '_postdatFrom').val().replaceAll('-', ''),
+					postdatTo: $('#' + pageId + '_postdatTo').val().replaceAll('-', ''),
+					progrid: ''
+			}
+
+			grid.showLoading();
+
+			try{
+				const response = await fetchUtil('GET', "/tm/area/tma15/grids/1", data);
+
+				//============================================================
+				//그리드 Option
+				//============================================================
+				if(response.status === 200) {
+					const resContent = await response.json();
+
+					grid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+				}
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				grid.hideLoading();
+			}
+		}
+
+		//============================================================
+		//TAREHD데이터 조회
+		//============================================================
+		async function tma15_modalInitData() {
+			modalGrid = pq.grid(modalGrigId);
+
+			const data = {
+				// 검색할 조건을 가지고 있는 변수
+				warekey: $('#' + pageId + '_m_towarky').val(),
+				vhcsnam: $('#' + pageId + '_vhcsnam').val().replace(/(\s*)/g, '')
+			}
+			modalGrid.showLoading();
+			try{
+				const response = await fetchUtil('GET', "/tm/area/tmm06/vehilist", data);
+
+					//============================================================
+					//그리드 Option
+					//============================================================
+					const resContent = await response.json();
+
+					modalGrid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					modalGrid.refreshDataAndView();
+					modalGrid.hideLoading();
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				modalGrid.hideLoading();
+			}
+		}
+		//============================================================
+		//모달 오픈
+		//============================================================
+
+		function modalOpen(){
+			grid = pq.grid('#' + pageId + '_pqgrid');
+			const gridCheck = grid.Checkbox('state').getCheckedNodes();
+
+			if(!gridCheck.length){
+				alert('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+
+			$('#' + pageId + 'AreaModal').modal('show');
+
+		};
+
+		//============================================================
+		//  모달 화면 이벤트
+		//============================================================
+
+		$('#' + pageId + 'AreaMdSaveBt').click(async function () {
+
+			modalGrid = pq.grid('#' + pageId + '_modalGrid');
+			const modalGridCheck = modalGrid.Checkbox('state').getCheckedNodes();
+
+			if(!modalGridCheck.length){
+				alert('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+			if(modalGridCheck.length) {
+				for(let i=0; i<modalGridCheck.length; i++) {
+					if(!modalGridCheck[i].vhcsnam) {
+						alert('[[#{tm.tma15.vhcsnam}]]'+'[[#{ms.choiceValue}]]');
+						modalGrid.editCell( { rowIndx: modalGridCheck[i].pq_ri, dataIndx: 'vhcsnam' });
+						return;
+					}
+				}
+			}
+
+			await tma15AreaModalAction();
+		});
+
+		//모달 open 시 값 초기화
+		$('#' + pageId + 'AreaModal').on('shown.bs.modal', async function() {
+
+			$('#' + pageId + '_tragrnm').find('option:first').prop('selected', true);
+			$('#' + pageId + '_vhcsnam').val('');
+			$('#' + pageId + '_pbilpay').val('');
+
+			await tma15_modalInitData();
+
+		});
+
+		//modal close button click
+
+		$('#tma15AreaMdClose, #tma15AreaMdCloseBt').click(function() {
+
+			$('#' + pageId + 'AreaModal').modal('hide');
+
+			modalGrid = pq.grid('#' + pageId + '_modalGrid');
+
+			modalGrid.option('dataModel', {data: []});
+
+			modalGrid.refreshDataAndView();
+			modalGrid.hideLoading();
+
+		});
+
+		$('#' + pageId + '_AreaModalSearch').click(async function(){
+
+			await tma15_modalInitData();
+
+		});
+
+
+		//=======================================================
+	  	// 모달 SAVE 후 실행하는 이벤트
+	  	//=======================================================
+	     async function tma15AreaModalAction() {
+
+	    	grid = pq.grid('#' + pageId + '_pqgrid');
+			modalGrid = pq.grid('#' + pageId + '_modalGrid');
+
+			const modalGridCheck = modalGrid.Checkbox('state').getCheckedNodes();
+			const modalGridData = modalGrid.getData();
+
+			const gridCheck = grid.Checkbox('state').getCheckedNodes();
+
+			const gridChange = grid.getChanges({all: true});
+			const modalGridChange = modalGrid.getChanges({all: true});
+
+			let pbilpay = document.querySelector('#tma15_pbilpay');
+
+			if(!pbilpay.value){
+				alert('[[#{tm.tplnhd.pbilpay}]]' + ' [[#{ms.requiredValue}]]');
+				pbilpay.focus();
+				return;
+			}
+			if(pbilpay.value.replace(/,/g, '').length>11){
+				alert('[[#{tm.tplnhd.pbilpay}]]' + ' [[#{ms.requiredValue}]]');
+				pbilpay.value = '';
+				pbilpay.focus();
+				return;
+			}
+
+			if(!modalGridCheck.length){
+				alert('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+			
+			const result = confirm('[[#{tm.common.checkSave}]]');
+			if(result) {
+
+				modalGridCheck[0].pbilpay = Number(pbilpay.value.replace(/,/g, ''));
+				gridChange.updateList = gridCheck;
+				modalGridChange.updateList = modalGridCheck;
+
+				const data = {
+					headGrid: gridChange,
+					itemGrid: modalGridChange
+				}
+				grid.showLoading();
+				modalGrid.showLoading();
+				try {
+					const response = await fetchUtil('POST', '/tm/area/tma15/tplnhdsave', data);
+
+					if(response.status === 200) {
+
+						modalGrid.option('dataModel', {data: []});
+
+						modalGrid.refreshDataAndView();
+						modalGrid.hideLoading();
+
+						$('#' + pageId + 'AreaModal').modal('hide');
+
+						await tma15_areaInitData();
+
+					}
+				}catch(err) {
+					alert('[[#{ms.saveErr}]]');
+				}finally {
+					grid.hideLoading();
+					modalGrid.hideLoading();
+				}
+
+			}
+
+		};
+
+		//============================================================
+		//검색 엔터키 이벤트
+		//============================================================
+
+	    async function enterKeySearch(event) {
+			grid = pq.grid('#' + pageId + '_pqgrid');
+			modalGrid = pq.grid('#' + pageId + '_modalGrid');
+
+	        if (event.key === 'Enter') {
+				if(event.target.parentNode.parentNode.parentNode === document.querySelector('div[id*="'+pageId+'Modal"]')){
+					modalGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+					modalGrid.refreshDataAndView();
+					modalGrid.hideLoading();
+
+					await tma15_modalInitData();
+				}
+				else{
+					grid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+
+					await tma15_areaInitData(); // 헤드그리드 재조회
+				}
+
+	        }
+	    }
+
+	    // 모든 input 요소 가져오기
+	    const inputElements = document.querySelectorAll('.input-wrapper.'+pageId);
+	    const gridSearchList = [];
+	    const modalSearchList = [];
+	    inputElements.forEach(inputElement => {
+	    	if(inputElement.parentNode.parentNode === document.querySelector('div[id*="'+pageId+'Modal"]')){
+	    		modalSearchList.push(inputElement);
+	    	}else{
+	    		gridSearchList.push(inputElement);
+	    	}
+	    });
+
+	    // 각 input 요소에 이벤트 리스너 추가
+	    gridSearchList.forEach(input => {
+	        input.addEventListener('keyup', enterKeySearch);
+	    });
+	    modalSearchList.forEach(input => {
+	        input.addEventListener('keyup', enterKeySearch);
+	    });
+
+	</script>
+</html>

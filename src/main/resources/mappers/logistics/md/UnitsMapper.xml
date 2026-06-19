@@ -1,0 +1,1332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- MSKUMA | MSKUWC | 작업지시 | MUOMMA | MTUTMA | MPACKMA -->
+<mapper namespace="com.logistics.md.mapper.UnitsMapper">
+	<!-- *********************************************** -->
+	<!-- MDM - MSKUWC SKU 수신 -->
+	<!-- *********************************************** -->
+	<!-- mdu01 : MDM SKU 데이터 조회 -->
+	<select id="selectMDMSkuList" resultType="com.logistics.md.domain.MdmSkuDTO">
+		/* selectMDMSkuList */
+		select concat(A.ACTCD, A.CUSTCD, A.PRTCD, A.APTCD) as ROWKEY
+		, A.ACTCD, A.CUSTCD, A.PRTCD, A.APTCD, C.CUSTNM
+		, P.PRTNM, P.UNCD, P.PRTLV1 ,P.PRTLV2, P.BARCD
+		from V_ACCUPT A
+		left join V_CUSTTB C on A.CUSTCD = C.CUSTCD
+		left join V_PARTTB P on A.PRTCD = P.PRTCD
+		where A.ACTYN = 'Y'
+		and A.ACTCD = #{userData.compkey}
+		<if test="prtnm != null and prtnm != ''">
+			and P.PRTNM like upper(concat('%', #{prtnm},'%'))
+		</if>
+		<if test="custnm != null and custnm != ''">
+			and C.CUSTNM like upper(concat('%', #{custnm},'%'))
+		</if>
+		order by A.CUSTCD, A.PRTCD, C.CUSTNM, P.PRTNM
+	</select>
+
+	<!-- mdu01 : SKU 조회 -->
+	<select id="selectMskuwcWithOwnerName" resultType="com.logistics.md.domain.MskuwcDTO">
+		/* selectMskuwcWithOwnerName */
+		select concat(A.COMPKEY, A.WAREKEY, A.OWNERKY, A.SKUMKEY) as ROWKEY
+		, A.COMPKEY, A.WAREKEY, A.OWNERKY, A.SKUMKEY, A.SKUDESC
+		, A.MINIQTY, A.SUOMKEY, A.SKUGR01, A.SKUGR02, A.SKUGR04
+		, A.UPCCODE
+		, (
+			select OWNAMLC
+			from MOWRMA as B
+			where A.COMPKEY = B.COMPKEY
+			and A.OWNERKY = B.OWNERKY
+		) as OWNAMLC
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, A.UPDTCHK
+		from MSKUWC A
+		where A.COMPKEY = #{userData.compkey}
+		order by A.COMPKEY, A.WAREKEY, A.OWNERKY, A.SKUMKEY, A.SKUDESC
+	</select>
+
+	<!-- mdu02 : 부품관리 추가 -->
+	<insert id="insertMDMSkuListToMskuwc" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* insertMDMSkuListToMskuwc */
+		insert into MSKUWC
+		(
+			COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+			, SKUDESC, MINIQTY, UPCCODE, SKUGR01, SKUGR02
+			, SKUGR04, SUOMKEY
+			, CREDATE, CRETIME, CREUSER
+			, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		(
+			#{compkey}, #{warekey}, #{ownerky}, trim(#{skumkey})
+			, #{skudesc}, #{miniqty}, #{upccode}, #{skugr01}, #{skugr02}
+			, #{skugr04}, #{suomkey}
+			, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+			, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		)
+	</insert>
+
+	<!-- *********************************************** -->
+	<!-- SKU관리 : MSKUWC -->
+	<!-- *********************************************** -->
+	<!-- mdu02 : SKU관리 조회 -->
+	<select id="selectMskuwcList" resultType="com.logistics.md.domain.MskuwcDTO">
+		/* selectMskuwcList */
+		select concat(A.COMPKEY, A.WAREKEY, A.OWNERKY, A.SKUMKEY) as ROWKEY
+		, A.COMPKEY, A.WAREKEY, A.OWNERKY, A.SKUMKEY, A.SKUDESC
+		, A.SKUTYPE, A.CUSKUKY, A.CUSKUNM, A.VDSKUKY, A.VDSKUNM
+		, A.SKUSKEY, A.SKUSDSC, A.VENDKEY, A.PACKKEY, A.TRUNTYP
+		, A.MINIQTY, A.SALFQTY, A.SPUTZON, A.SPUTLOC, A.SPIKLOC
+		, A.VNDFDAY, A.EANCODE, A.UPCCODE, A.SKUGR01, A.SKUGR02
+		, A.SKUGR03, A.SKUGR04, A.SKUGR05 ,A.SKUALT1, A.SKUALT2
+		, A.SKUALT3, A.SKUAT01, A.SKUAT02, A.SKUAT03, A.SKUAT04
+		, A.SKUAT05, A.SGRWEIG, A.SNEWEIG, A.SKULENG, A.SKUWIDH
+		, A.SKUHEIG, A.SKUCUBI, A.SUOMKEY, A.SKUNOTE, A.SKUWABC, A.SKUSTAT
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, A.SKUAT01 as COMCDNM 		<!-- 다른 페이지에서 WAREKEY(value) , SKUAT01(text)으로 이루어진 -->
+		, A.WAREKEY as COMCDVL 		<!-- select box 가져오기 위해 추가 -->
+		, A.UPDTCHK
+		from MSKUWC A
+		where A.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and A.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkey != null and skumkey != ""'>
+			and upper(A.SKUMKEY) like concat('%', upper(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			and upper(A.SKUDESC) like concat('%', upper(#{skudesc}), '%')
+		</if>
+		<if test='vendkey != null and vendkey != ""'>
+			and upper(A.VENDKEY) like concat('%', upper(#{vendkey}), '%')
+		</if>
+		<if test='skustats != null and skustats.size!=0'>
+			and A.SKUSTAT like
+			<foreach collection="skustats" item="stat" open="(" close=")" separator=",">
+				#{stat}
+			</foreach>
+		</if>
+		order by A.COMPKEY, A.WAREKEY, A.OWNERKY, A.SKUMKEY, A.SKUDESC
+	</select>
+
+	<!-- mdu02 : 기존 SKU UoM 및 vendkey 검색 -->
+	<select id="selectMskuwcUomAndSvend" resultType="com.logistics.md.domain.MskuwcDTO">
+		/* selectMskuwcUomAndSvend */
+		select A.VENDKEY, A.SUOMKEY
+		from MSKUWC A
+		where A.COMPKEY = #{userData.compkey}
+		and A.WAREKEY = #{warekey}
+		and A.OWNERKY = #{ownerky}
+		and A.SKUMKEY = #{skumkey}
+	</select>
+
+	<select id="selectMskuwcCheck" resultType="hashmap">
+		/* selectMskuwcCheck */
+		SELECT COUNT(1) AS CNT
+		FROM MSKUWC
+		WHERE COMPKEY = #{userData.compkey}
+		AND UPPER(SKUMKEY) IN
+		<foreach collection="addList" item="item" index="index" separator="," open="(" close=")">
+			#{item.skumkey}
+		</foreach>
+	</select>
+
+	<select id="selectMskuwcData" resultType="com.logistics.md.domain.MskuwcDTO">
+		/* selectMskuwcData */
+		SELECT
+		COMPKEY
+		, WAREKEY
+		, OWNERKY
+		, SKUMKEY
+		, SKUDESC
+		, SKUTYPE
+		, CUSKUKY
+		, CUSKUNM
+		, VDSKUKY
+		, VDSKUNM
+		, SKUSKEY
+		, SKUSDSC
+		, VENDKEY
+		, PACKKEY
+		, TRUNTYP
+		, MINIQTY
+		, SALFQTY
+		, SPUTZON
+		, SPUTLOC
+		, SPIKLOC
+		, VNDFDAY
+		, EANCODE
+		, UPCCODE
+		, SKUGR01
+		, SKUGR02
+		, SKUGR03
+		, SKUGR04
+		, SKUGR05
+		, SKUALT1
+		, SKUALT2
+		, SKUALT3
+		, SKUAT01
+		, SKUAT02
+		, SKUAT03
+		, SKUAT04
+		, SKUAT05
+		, SGRWEIG
+		, SNEWEIG
+		, SKULENG
+		, SKUWIDH
+		, SKUHEIG
+		, SKUCUBI
+		, SUOMKEY
+		, SKUNOTE
+		, SKUWABC
+		, SKUSTAT
+		FROM MSKUWC
+		WHERE COMPKEY = #{userData.compkey}
+		AND SKUMKEY = #{skumkey}
+		AND WAREKEY = #{warekey}
+	</select>
+
+	<!-- mdu02 : 부품관리 추가 -->
+	<insert id="insertMskuwc" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* insertMskuwc */
+		insert into MSKUWC
+		(
+		COMPKEY
+		, WAREKEY
+		, OWNERKY
+		, SKUMKEY
+		, SKUDESC
+		, SKUTYPE
+		, CUSKUKY
+		, CUSKUNM
+		, VDSKUKY
+		, VDSKUNM
+		, SKUSKEY
+		, SKUSDSC
+		, VENDKEY
+		, PACKKEY
+		, TRUNTYP
+		, MINIQTY
+		, SALFQTY
+		, SPUTZON
+		, SPUTLOC
+		, SPIKLOC
+		, VNDFDAY
+		, EANCODE
+		, UPCCODE
+		, SKUGR01
+		, SKUGR02
+		, SKUGR03
+		, SKUGR04
+		, SKUGR05
+		, SKUALT1
+		, SKUALT2
+		, SKUALT3
+		, SKUAT01
+		, SKUAT02
+		, SKUAT03
+		, SKUAT04
+		, SKUAT05
+		, SGRWEIG
+		, SNEWEIG
+		, SKULENG
+		, SKUWIDH
+		, SKUHEIG
+		, SKUCUBI
+		, SUOMKEY
+		, SKUNOTE
+		, SKUWABC
+		, SKUSTAT
+		, CREDATE
+		, CRETIME
+		, CREUSER
+		, LMODATE
+		, LMOTIME
+		, LMOUSER
+		)
+		values
+		(
+		#{compkey}
+		, #{warekey}
+		, #{ownerky}
+		, trim(#{skumkey})
+		, #{skudesc}
+		, #{skutype}
+		, #{cuskuky}
+		, #{cuskunm}
+		, #{vdskuky}
+		, #{vdskunm}
+		, #{skuskey}
+		, #{skusdsc}
+		, #{vendkey}
+		, #{packkey}
+		, #{truntyp}
+		, #{miniqty}
+		, #{salfqty}
+		, #{sputzon}
+		, #{sputloc}
+		, #{spikloc}
+		, #{vndfday}
+		, #{eancode}
+		, #{upccode}
+		, #{skugr01}
+		, #{skugr02}
+		, #{skugr03}
+		, #{skugr04}
+		, #{skugr05}
+		, #{skualt1}
+		, #{skualt2}
+		, #{skualt3}
+		, #{skuat01}
+		, #{skuat02}
+		, #{skuat03}
+		, #{skuat04}
+		, #{skuat05}
+		, #{sgrweig}
+		, #{sneweig}
+		, #{skuleng}
+		, #{skuwidh}
+		, #{skuheig}
+		, #{skucubi}
+		, #{suomkey}
+		, #{skunote}
+		, #{skuwabc}
+		, #{skustat}
+		, to_char(now(),'YYYYMMDD')
+		, to_char(now(),'hh24miss')
+		, #{userData.useract}
+		, to_char(now(),'YYYYMMDD')
+		, to_char(now(),'hh24miss')
+		, #{userData.useract}
+		)
+	</insert>
+
+	<!-- mdu02 : SKU관리 업데이트 -->
+	<update id="updateMskuwc" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* updateMskuwc */
+		update MSKUWC
+		set
+		WAREKEY = #{warekey}
+		, OWNERKY = #{ownerky}
+		, SKUMKEY = trim(#{skumkey})
+		, SKUDESC = #{skudesc}
+		, SKUTYPE = #{skutype}
+		, CUSKUKY = #{cuskuky}
+		, CUSKUNM = #{cuskunm}
+		, VDSKUKY = #{vdskuky}
+		, VDSKUNM = #{vdskunm}
+		, SKUSKEY = #{skuskey}
+		, SKUSDSC = #{skusdsc}
+		, VENDKEY = #{vendkey}
+		, PACKKEY = #{packkey}
+		, TRUNTYP = #{truntyp}
+		, MINIQTY = #{miniqty}
+		, SALFQTY = #{salfqty}
+		, SPUTZON = #{sputzon}
+		, SPUTLOC = #{sputloc}
+		, SPIKLOC = #{spikloc}
+		, VNDFDAY = #{vndfday}
+		, EANCODE = #{eancode}
+		, UPCCODE = #{upccode}
+		, SKUGR01 = #{skugr01}
+		, SKUGR02 = #{skugr02}
+		, SKUGR03 = #{skugr03}
+		, SKUGR04 = #{skugr04}
+		, SKUGR05 = #{skugr05}
+		, SKUALT1 = #{skualt1}
+		, SKUALT2 = #{skualt2}
+		, SKUALT3 = #{skualt3}
+		, SKUAT01 = #{skuat01}
+		, SKUAT02 = #{skuat02}
+		, SKUAT03 = #{skuat03}
+		, SKUAT04 = #{skuat04}
+		, SKUAT05 = #{skuat05}
+		, SGRWEIG = #{sgrweig}
+		, SNEWEIG = #{sneweig}
+		, SKULENG = #{skuleng}
+		, SKUWIDH = #{skuwidh}
+		, SKUHEIG = #{skuheig}
+		, SKUCUBI = #{skucubi}
+		, SUOMKEY = #{suomkey}
+		, SKUNOTE = #{skunote}
+		, SKUWABC = #{skuwabc}
+		, SKUSTAT = #{skustat}
+		, LMODATE = DATE_FORMAT(SYSDATE(), '%Y%m%d')
+		, LMOTIME = DATE_FORMAT(SYSDATE(), '%H%i%s')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test="oldWarekey != null and oldWarekey !=''">
+				and WAREKEY = #{oldWarekey}
+			</when>
+			<otherwise>
+				and WAREKEY = #{warekey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="oldOwnerky != null and oldOwnerky !=''">
+				and OWNERKY = #{oldOwnerky}
+			</when>
+			<otherwise>
+				and OWNERKY = #{ownerky}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="oldSkumkey != null and oldSkumkey !=''">
+				and SKUMKEY = #{oldSkumkey}
+			</when>
+			<otherwise>
+				and SKUMKEY = #{skumkey}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- Skuwc Select Box (SKU명 + 수량) -->
+	<select id="selectSkuwcBoxQty" resultType="com.logistics.md.domain.MskuwcDTO" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* selectSkuwcBoxQty */
+		select MS.SKUMKEY as COMBOVL
+		, concat("(",(ifnull(WS.ABALQTY,0) - ifnull(OA.TSOIQTY,0) - ifnull(WU.UNTRQTY, 0)),")", MS.SKUDESC) as COMBONM
+		, MS.COMPKEY
+		, MS.WAREKEY
+		, MS.OWNERKY
+		, MS.SKUSKEY
+		, MS.VENDKEY
+		, MP.PTNAMLC as VENDNAM
+		, MS.VNDFDAY
+		, MS.MINIQTY
+		from MSKUWC MS
+		inner join MPTNMA MP on
+		MS.COMPKEY = MP.COMPKEY and MS.VENDKEY = MP.PTNRKEY and MP.PTNRTYP = 'VENDER' and MP.PTUSEYN = 'N'
+		left join (
+		select COMPKEY, WAREKEY, OWNERKY, SKUMKEY, sum((STOTQTY - SBLOQTY) ) as ABALQTY
+		from WSTKKY
+		where COMPKEY = #{userData.compkey}
+		and WAREKEY != 'WHOLESALE'
+		and AREAKEY = 'STG'
+		and STOTQTY - SBLOQTY > 0
+		and SALLQTY = 0
+		and SINBQTY = 0
+		and SOUBQTY = 0
+		and ZONEKEY != 'TCZZ'
+		group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+		) WS
+		on WS.COMPKEY = MS.COMPKEY
+		and WS.WAREKEY = MS.WAREKEY
+		and WS.OWNERKY = MS.OWNERKY
+		and WS.SKUMKEY = MS.SKUMKEY
+		left join (
+		select COMPKEY, OWNERKY, SKUMKEY, sum(SOITQTY-RGITQTY) as TSOIQTY
+		from OCOSAL
+		where COMPKEY = #{userData.compkey}
+		and DOCCATE = '200'
+		and DOCTYPE in ('250')
+		and SALSTAT in ('ORDER','ORDFM')
+		and OUBSTAT = 'NEW'
+		and CLOSLYN = 'N'
+		group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+		) OA
+		on
+		OA.COMPKEY = MS.COMPKEY
+		and OA.OWNERKY = MS.OWNERKY
+		and OA.SKUMKEY = MS.SKUMKEY
+		left join (
+		select COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+           <![CDATA[ , SUM(case when concat(date_format(SALRQDT, '%Y-%m-%d'),' ', date_format(SALRQTM,'%H-%i-%s') <= date_format(NOW(), '%Y-%m-%d %H:%i:%s')) then SHCUQTY - SHALQTY else
+				 	   RGITQTY- SHALQTY END) as UNTRQTY ]]>
+		from WSHPIT
+		where COMPKEY = #{userData.compkey}
+		and WAREKEY != 'WHOLESALE'
+		and SHCUQTY - SHALQTY > 0
+		and SHPITST != 'F_ALOC'
+		group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+		) WU
+		on WU.COMPKEY = MS.COMPKEY
+		and WU.WAREKEY = MS.WAREKEY
+		and WU.OWNERKY = MS.OWNERKY
+		and WU.SKUMKEY = MS.SKUMKEY
+		where MS.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and MS.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and MS.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkeys != null and skumkeys.size != 0'>
+			and MS.SKUMKEY in
+			<foreach collection="skumkeys" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		group by MS.COMPKEY, MS.WAREKEY, MS.SKUMKEY, MS.OWNERKY, MS.SKUDESC
+					, MS.SKUSKEY, MS.VENDKEY, MS.VNDFDAY, MS.MINIQTY
+		order by MS.SKUDESC
+	</select>
+
+	<!-- mdu02 : Skuwc Select Box -->
+	<select id="selectSkuwcSelectBox" resultType="com.logistics.md.domain.MskuwcDTO" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* selectSkuwcSelectBox */
+		select MS.SKUMKEY as COMBOVL
+		, MS.SKUDESC as COMBONM
+		, MS.COMPKEY
+		, MS.WAREKEY
+		, MS.OWNERKY
+		, MS.SKUSKEY
+		, MS.VENDKEY
+		, MS.VNDFDAY
+		, MS.MINIQTY
+		, case when MS.SKUSTAT = 'OUT' then 'N' else 'Y' end as
+		SKUSTAT
+		from MSKUWC MS
+		where MS.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and MS.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and MS.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkeys != null and skumkeys.size != 0'>
+			and MS.SKUMKEY in
+			<foreach collection="skumkeys" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='skutype != null and skutype != ""'>
+			<!-- and upper(MS.SKUTYPE) like concat('%',upper(#{skutype}),'%') -->
+			and upper(MS.SKUTYPE) = upper(#{skutype})
+		</if>
+		<if test='notSet != null and notSet != ""'>
+			and upper(MS.SKUTYPE) != #{notSet}
+		</if>
+		group by MS.COMPKEY, MS.WAREKEY, MS.WAREKEY, MS.SKUMKEY, MS.SKUDESC
+					, MS.OWNERKY, MS.SKUSKEY, MS.VENDKEY, MS.VNDFDAY, MS.MINIQTY
+		order by MS.SKUDESC
+	</select>
+
+	<!-- mdu02 : Skuwc Select Box Customizing 2023.07.07 박소희 // 23.07.30 Park T. S. DTO로 수정 -->
+	<select id="selectSkuwcBoxCustom" resultType="com.logistics.md.domain.MskuwcDTO">
+		/* selectSkuwcBoxCustom */
+		select
+				MS.COMPKEY as compkey , MS.WAREKEY as warekey , MS.UPCCODE ,
+				(select WHNAMLC from MWARMA MW where MW.COMPKEY = MS.COMPKEY and MW.WAREKEY = MS.WAREKEY) as whnamlc
+				, MS.OWNERKY as ownerky
+				, MS.SKUMKEY as skumkey , MS.SKUDESC as skudesc
+				, MS.SKUMKEY as combovl , MS.SKUDESC as combonm
+				, MS.SKUSKEY as skuskey
+				, MS.SUOMKEY as suomkey
+				, MS.MINIQTY as miniqty	<!-- 07.22 한지수 추가 -->
+				, MS.PROPQTY as propqty	<!-- 07.22 한지수 추가 -->
+				, MS.SALFQTY as salfqty
+				, MP.TRUNTYP as truntyp	<!-- 07.22 한지수 추가 -->
+				, case when MS.SKUSTAT = 'OUT' then 'Y' else 'N' end as skustat
+				, MS.PACKKEY as packkey , IFNULL(MP.PACKQTY,0) as packqty
+				, IFNULL(ST.STOTQTY , 0) as stotqty
+				, MS.SKUAT03
+				, MS.SKUAT01 <!--2023-11-12 오권식 추가-->
+		   from MSKUWC MS
+		   left join (
+				select
+					  COMPKEY, OWNERKY, WAREKEY
+					, SKUMKEY, SKUDESC
+					, LOTAT17, LOTAT18, LOTAT19, LOTAT20
+					, (sum(STOTQTY)- sum(SBLOQTY)) as STOTQTY
+	  			 from WSTKKY
+				<where>
+					  COMPKEY = #{userData.compkey}
+				 <if test="warekey != null and warekey != ''">
+				  and WAREKEY = #{warekey}
+				 </if>
+				  and AREAKEY = 'STG'
+				  and SALLQTY = 0
+				  and SINBQTY = 0
+				  and SOUBQTY = 0
+				</where>
+				  group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+				  			, LOTAT17, LOTAT18, LOTAT19, LOTAT20
+		) ST on ST.COMPKEY = MS.COMPKEY
+			and ST.WAREKEY = MS.WAREKEY
+			and ST.OWNERKY = MS.OWNERKY
+			and ST.SKUMKEY = MS.SKUMKEY
+	   left join MPAKMA MP
+			  on MS.COMPKEY = MP.COMPKEY
+			 and MS.WAREKEY = MP.WAREKEY
+			 and MS.TRUNTYP = MP.TRUNTYP
+			 and MS.PACKKEY = MP.PACKKEY
+			 and MP.PKUSEYN = 'Y'
+	   <where>
+		     MS.COMPKEY = #{userData.compkey}
+		<if test="warekey != null and warekey != ''">
+	     and MS.WAREKEY = #{warekey}
+		</if>
+		<choose>
+			<when test='ownerky != null and ownerky != ""'>
+				and MS.OWNERKY = #{ownerky}
+			</when>
+			<when test='userData.ownerky != null and userData.ownerky != ""'>
+				and MS.OWNERKY = #{userData.ownerky}
+			</when>
+		</choose>
+		 and MS.SKUSTAT = 'PRODUCT'
+	   </where>
+		 group by MS.COMPKEY, MS.WAREKEY, MS.UPCCODE, MS.OWNERKY, MS.SKUMKEY
+		 			, MS.SKUDESC, MS.SKUSKEY, MS.SUOMKEY, MS.MINIQTY, MS.SALFQTY
+		 			, MP.TRUNTYP, MS.SKUSTAT, MS.PACKKEY, MP.PACKQTY, ST.STOTQTY
+		 			, MS.SKUAT03, MS.SKUAT01
+		 order by MS.SKUMKEY
+	</select>
+
+	<!-- mdu02 : Skuwc Select Box(wmr30/40 기타입고 및 반품등록 용) 2023.08.04 최강호 -->
+	<select id="selectInboundSkuwcBox" resultType="com.logistics.md.domain.MskuwcDTO" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* selectInboundSkuwcBox */
+		select MS.SKUMKEY as combovl
+		, MS.SKUDESC as combonm
+		, MS.COMPKEY
+		, MS.SKUSKEY
+		, MS.WAREKEY as WAREKEY
+		, MS.OWNERKY as OWNERKY
+		, case when MS.SKUSTAT = 'OUT' then 'Y' else 'N' end as SKUSTAT
+		, (SELECT SUM( case when (STOTQTY != 0 and SALLQTY = 0 and SINBQTY = 0 and SOUBQTY = 0) then STOTQTY - SBLOQTY else 0 END) as STOTQTY
+			 FROM WSTKKY 
+			WHERE COMPKEY = MS.COMPKEY AND WAREKEY = MS.WAREKEY AND AREAKEY = 'STG' AND OWNERKY = MS.OWNERKY AND SKUMKEY = MS.SKUMKEY ) AS STOTQTY
+		, IFNULL(MS.SUOMKEY, NULL) AS SUOMKEY
+		, MS.PACKKEY as PACKKEY
+		, MS.TRUNTYP as TRUNTYP
+		from MSKUWC MS
+		<where>
+			and MS.COMPKEY = #{userData.compkey}
+			<if test="warekey != null and warekey != ''">
+				and MS.WAREKEY = #{warekey}
+			</if>
+			<if test="ownerky != null and ownerky != ''">
+				and MS.OWNERKY = #{ownerky}
+			</if>
+			<if test='skumkeys != null and skumkeys.size != 0'>
+				and MS.SKUMKEY in
+				<foreach collection="skumkeys" item="item" index="index" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+		</where>
+		order by MS.SKUDESC
+	</select>
+
+	<!-- mdu02 : Skuwc Select Box (OMS2 주문등록 화면용) -->
+	<select id="selectSkuwcOms2SB" resultType="com.logistics.md.domain.MskuwcDTO" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* selectSkuwcOms2SB */
+		select MS.SKUMKEY as COMBOVL
+		, MS.SKUDESC
+		, MS.SKUSKEY
+		, IFNULL(OD.SEDPRIC, 0) as SEDPRIC
+		, IFNULL(OA.TSOIQTY, 0) as TSOIQTY
+		, IFNULL(WS.ABALQTY, 0) as ABALQTY
+		, IFNULL(WH.WBALQTY, 0) as WBALQTY
+		from MSKUWC MS
+		left join OCOIDC OD
+		on OD.COMPKEY = MS.COMPKEY
+		and OD.OWNERKY = MS.OWNERKY
+		and OD.SKUMKEY = MS.SKUMKEY
+		<if test='retakey != null and retakey != ""'>
+			and OD.RETAKEY = #{retakey}
+		</if>
+		left join (
+		select COMPKEY, OWNERKY, SKUMKEY
+		, sum(case when PAYTYPE = 'RECEIPT' then SOITQTY else 0 end) as RECEQTY
+		, sum(case when PAYTYPE = 'BILLING' then SOITQTY else 0 end) as BILLQTY
+		, sum(SOITQTY) as TSOIQTY
+		from OCOSAL
+		where COMPKEY = #{userData.compkey}
+		and SALSTAT in ('ORDER','ORDFM')
+		and OUBSTAT = 'NEW'
+		and CLOSLYN = 'N'
+		group by COMPKEY, OWNERKY, SKUMKEY
+		) OA
+		on OA.COMPKEY = MS.COMPKEY
+		and OA.OWNERKY = MS.OWNERKY
+		and OA.SKUMKEY = MS.SKUMKEY
+		left join (
+		select COMPKEY, WAREKEY, OWNERKY, SKUMKEY, sum((STOTQTY - SBLOQTY)) as ABALQTY
+		from
+		WSTKKY
+		where COMPKEY = #{userData.compkey}
+		and AREAKEY = 'STG'
+		and STOTQTY - SBLOQTY > 0
+		and SALLQTY = 0
+		and SINBQTY = 0
+		and SOUBQTY = 0
+		group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+		) WS
+		on WS.COMPKEY = MS.COMPKEY
+		and WS.WAREKEY = MS.WAREKEY
+		and WS.OWNERKY = MS.OWNERKY
+		and WS.SKUMKEY = MS.SKUMKEY
+		left join (
+		select COMPKEY, LOCAKEY, OWNERKY,
+		SKUMKEY, sum((STOTQTY - SBLOQTY)) as WBALQTY
+		from WSTKKY
+		where COMPKEY = #{userData.compkey}
+		and WAREKEY = 'WHOLESALE'
+		and AREAKEY = 'STG'
+		and STKSTAT = '80'
+		and STOTQTY - SBLOQTY > 0
+		and SALLQTY = 0
+		and SINBQTY = 0
+		and SOUBQTY = 0
+		group by COMPKEY, LOCAKEY, OWNERKY, SKUMKEY
+		) WH
+		on
+		WH.COMPKEY = MS.COMPKEY
+		and WH.LOCAKEY = #{brandcd}
+		and WH.OWNERKY = MS.OWNERKY
+		and WH.SKUMKEY = MS.SKUMKEY
+		where MS.COMPKEY = #{userData.compkey}
+		and MS.OWNERKY = #{ownerky}
+		and MS.WAREKEY = #{warekey}
+		<if test='skumkeys != null and skumkeys.size != 0'>
+			and MS.SKUMKEY in
+			<foreach collection="skumkeys" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		order by MS.SKUDESC
+	</select>
+
+	<select id="selectSkuwcBoxOmw1" resultType="com.logistics.md.domain.MskuwcDTO" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* selectSkuwcOms2SB */
+		select
+		MS.SKUMKEY as COMBOVL
+		, CONCAT("(", IFNULL(SK.TOTQTY,0),") ", MS.SKUDESC) as COMBONM
+		, IFNULL(SK.TOTQTY,0) as STOTQTY
+		, MS.OWNERKY
+		, MS.SKUSKEY
+		, MS.VENDKEY
+		, MP.PTNAMLC as VENDNAM
+		, MS.VNDFDAY
+		, MS.MINIQTY
+		from MSKUWC MS
+		left join (
+		select
+		COMPKEY,
+		OWNERKY,
+		WAREKEY,
+		SKUMKEY,
+		SKUDESC,
+		(sum(STOTQTY)- sum(SBLOQTY)) as TOTQTY
+		from
+		WSTKKY
+		where
+		COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and OWNERKY = #{ownerky}
+		</if>
+		<if test='stkstat != null and stkstat != ""'>
+			and STKSTAT = #{stkstat}
+		</if>
+		<if test='skumkeys != null and skumkeys.size != 0'>
+			and SKUMKEY in
+			<foreach collection="skumkeys" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		and AREAKEY = 'STG'
+		and ZONEKEY not in ( 'TCZZ' )
+		and SALLQTY = 0
+		and SINBQTY = 0
+		and SOUBQTY = 0
+		group by SKUMKEY
+		) SK on MS.COMPKEY = SK.COMPKEY and MS.OWNERKY = SK.OWNERKY and MS.SKUMKEY = SK.SKUMKEY
+		inner join MPTNMA MP on MS.COMPKEY = MP.COMPKEY and MS.VENDKEY = MP.PTNRKEY and MP.PTNRTYP = 'VENDER' and MP.PTUSEYN = 'N'
+		where
+		MS.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and MS.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and MS.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkeys != null and skumkeys.size != 0'>
+			and MS.SKUMKEY in
+			<foreach collection="skumkeys" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		group by MS.OWNERKY, MS.SKUMKEY, MS.SKUSKEY, MS.SKUDESC, SK.TOTQTY
+					, MS.VENDKEY, MP.PTNAMLC, MS.VNDFDAY, MS.MINIQTY
+		order by MS.SKUDESC
+	</select>
+
+	<select id="selectSkwucBoxByWarekey" resultType="com.logistics.md.domain.MskuwcDTO" parameterType="com.logistics.md.domain.MskuwcDTO">
+		/* selectSkwucBoxByWarekey */
+		select MS.SKUMKEY as COMBOVL
+		, MS.SKUDESC as COMBONM
+		from MSKUWC MS
+		where MS.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and MS.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			and MS.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkey != null and skumkey != ""'>
+			and MS.SKUMKEY = #{skumkey}
+		</if>
+		group by MS.SKUMKEY, MS.SKUDESC
+		order by MS.SKUDESC
+	</select>
+
+	<select id="selectMskuwcForSkustat" resultType="com.logistics.md.domain.MskuwcDTO">
+		/*selectMskuwcForSkustat*/
+		select COMPKEY, WAREKEY, OWNERKY, SKUMKEY, SKUSTAT
+		from MSKUWC
+		where COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != "" '>
+			and WAREKEY = #{warekey}
+		</if>
+		order by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- Unit of measure : muomma -->
+	<!-- *********************************************** -->
+	<!-- mdu3 : Unit of measure 조회 -->
+	<select id="selectMuomma" resultType="com.logistics.md.domain.MuommaDTO">
+		/* selectMuomma */
+		select concat(COMPKEY, UOMEKEY) as ROWKEY
+		, COMPKEY, UOMEKEY, UOMENAM, UOUSEYN
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, INDIBZL, INDIARC, UPDTCHK
+		from MUOMMA
+		where COMPKEY = #{userData.compkey}
+		<if test='uomekey != null and uomekey != "" '>
+			and upper(UOMEKEY) like concat('%', upper(#{uomekey}), '%')
+		</if>
+		<if test='uomenam != null and uomenam != "" '>
+			and upper(UOMENAM) like concat('%', upper(#{uomenam}), '%')
+		</if>
+		<if test='uouseyn != null and uouseyn != "" '>
+			and UOUSEYN = #{uouseyn}
+		</if>
+		order by COMPKEY, UOMEKEY
+	</select>
+
+	<!-- mdu3 : Unit of measure 생성 -->
+	<insert id="insertMuomma" parameterType="com.logistics.md.domain.MuommaDTO">
+		/* insertMuomma */
+		insert
+		into MUOMMA( COMPKEY, UOMEKEY, UOMENAM, UOUSEYN, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+		values
+		( #{compkey}, #{uomekey}, #{uomenam}, #{uouseyn}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdu3 : Unit of measure 수정 -->
+	<update id="updateMuomma" parameterType="com.logistics.md.domain.MuommaDTO">
+		/* updateMuomma */
+		update MUOMMA
+		set UOMEKEY = #{uomekey}
+		, UOMENAM = #{uomenam}
+		, UOUSEYN = #{uouseyn}
+		, LMODATE = to_char(now(),'YYYYMMDD')
+		, LMOTIME = to_char(now(),'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test='oldUomekey != null and oldUomekey !="" '>
+				and UOMEKEY = #{oldUomekey}
+			</when>
+			<otherwise>
+				and UOMEKEY = #{uomekey}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdu3 : Unit of measure Select Box -->
+	<select id="selectUnitsSelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* selectUnitsSelectBox */
+		select UOMEKEY as COMBOVL
+		, UOMENAM as COMBONM
+		from MUOMMA
+		where COMPKEY = #{userData.compkey}
+		<choose>
+			<when test='uouseyn != null and uouseyn != ""'>
+				and UOUSEYN = #{uouseyn}
+			</when>
+			<otherwise>
+				and UOUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by UOMEKEY, UOMENAM
+		order by UOMEKEY, UOMENAM
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- Transfer unit type : mtutma -->
+	<!-- *********************************************** -->
+	<!-- mdu4 : Transfer unit type 조회 -->
+	<select id="selectMtutmaList" resultType="com.logistics.md.domain.MtutmaDTO">
+		/* selectMtutmaList */
+		select concat(COMPKEY, TRUNTYP) as ROWKEY
+		, COMPKEY, TRUNTYP, TRUNNAM, TRUSEYN, TUTLENG
+		, TUTWIDH, TUTHEIG, TUTCUBI, TUTWEIG, UOMEKEY
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, INDIBZL, INDIARC, UPDTCHK
+		from MTUTMA
+		where COMPKEY = #{userData.compkey}
+		<if test='truntyp != null and truntyp != "" '>
+			and upper(TRUNTYP) like concat('%', upper(#{truntyp}), '%')
+		</if>
+		<if test='trunnam != null and trunnam != "" '>
+			and upper(TRUNNAM) like concat('%', upper(#{trunnam}), '%')
+		</if>
+		<if test='truseyn != null and truseyn != "" '>
+			and TRUSEYN = #{truseyn}
+		</if>
+		order by COMPKEY, TRUNTYP
+	</select>
+
+	<!-- mdu4 : Transfer unit type 생성 -->
+	<insert id="insertMtutma" parameterType="com.logistics.md.domain.MtutmaDTO">
+		/* insertMtutma */
+		insert
+		into MTUTMA( COMPKEY, TRUNTYP, TRUNNAM, TRUSEYN, TUTLENG
+		, TUTWIDH, TUTHEIG, TUTCUBI, TUTWEIG, UOMEKEY
+		, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+		values
+		( #{compkey}, #{truntyp}, #{trunnam}, #{truseyn}, #{tutleng}
+		, #{tutwidh}, #{tutheig}, #{tutcubi}, #{tutweig}, #{uomekey}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdu4 : Transfer unit type 수정 -->
+	<update id="updateMtutma" parameterType="com.logistics.md.domain.MtutmaDTO">
+		/* updateMtutma */
+		update MTUTMA
+		set TRUNTYP = #{truntyp}
+		, TRUNNAM = #{trunnam}
+		, TRUSEYN = #{truseyn}
+		, TUTLENG = #{tutleng}
+		, TUTWIDH = #{tutwidh}
+		, TUTHEIG = #{tutheig}
+		, TUTCUBI = #{tutcubi}
+		, TUTWEIG = #{tutweig}
+		, UOMEKEY = #{uomekey}
+		, LMODATE = to_char(now(),'YYYYMMDD')
+		, LMOTIME = to_char(now(),'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test='oldTruntyp != null and oldTruntyp !="" '>
+				and TRUNTYP = #{oldTruntyp}
+			</when>
+			<otherwise>
+				and TRUNTYP = #{truntyp}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdu4 : Transfer unit type Select Box -->
+	<select id="selectMtutmaSelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* selectMtutmaSelectBox */
+		select TRUNTYP as COMBOVL
+		, TRUNNAM as COMBONM
+		from MTUTMA
+		where COMPKEY = #{userData.compkey}
+		<choose>
+			<when test='truseyn != null and truseyn !="" '>
+				and TRUSEYN = #{truseyn}
+			</when>
+			<otherwise>
+				and TRUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by TRUNTYP, TRUNNAM
+		order by TRUNTYP, TRUNNAM
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- Pack master : mpakma -->
+	<!-- *********************************************** -->
+	<!-- mdu05 : Pack master 조회 -->
+	<select id="selectMpakmaList" resultType="com.logistics.md.domain.MpakmaDTO">
+		/* selectMpakmaList */
+		select concat(COMPKEY, WAREKEY, PACKKEY, TRUNTYP) as ROWKEY
+		, COMPKEY, WAREKEY, PACKKEY, TRUNTYP, PKUSEYN, PACKQTY, PUOMKEY
+		, FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		, INDIBZL, INDIARC, UPDTCHK
+		from MPAKMA
+		where COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != "" '>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='packkey != null and packkey != "" '>
+			and PACKKEY = #{packkey}
+		</if>
+		<if test='truntyp != null and truntyp != "" '>
+			and TRUNTYP = #{truntyp}
+		</if>
+		<choose>
+			<when test='pkuseyn != null and pkuseyn !="" '>
+				and PKUSEYN = #{pkuseyn}
+			</when>
+			<otherwise>
+				and PKUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		order by COMPKEY, WAREKEY, PACKKEY, TRUNTYP
+	</select>
+
+	<!-- mdu05 : Pack master 생성 -->
+	<insert id="insertMpakma" parameterType="com.logistics.md.domain.MpakmaDTO">
+		/* insertMpakma */
+		insert
+		into MPAKMA( COMPKEY, WAREKEY, PACKKEY, TRUNTYP, PKUSEYN, PACKQTY, PUOMKEY
+		, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+		values
+		( #{compkey}, #{warekey}, #{packkey}, #{truntyp}, #{pkuseyn}, #{packqty}, #{puomkey}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract} )
+	</insert>
+
+	<!-- mdu05 : Pack master 수정 -->
+	<update id="updateMpakma" parameterType="com.logistics.md.domain.MpakmaDTO">
+		/* updateMpakma */
+		update MPAKMA
+		set WAREKEY = #{warekey}
+		, PACKKEY = #{packkey}
+		, TRUNTYP = #{truntyp}
+		, PKUSEYN = #{pkuseyn}
+		, PACKQTY = #{packqty}
+		, PUOMKEY = #{puomkey}
+		, LMODATE = to_char(now(),'YYYYMMDD')
+		, LMOTIME = to_char(now(),'hh24miss')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test='oldWarekey != null and oldWarekey !="" '>
+				and WAREKEY = #{oldWarekey}
+			</when>
+			<otherwise>
+				and WAREKEY = #{warekey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test='oldPackkey != null and oldPackkey !="" '>
+				and PACKKEY = #{oldPackkey}
+			</when>
+			<otherwise>
+				and PACKKEY = #{packkey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test='oldTruntyp != null and oldTruntyp !="" '>
+				and TRUNTYP = #{oldTruntyp}
+			</when>
+			<otherwise>
+				and TRUNTYP = #{truntyp}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdu05 : Pack master & Transfer unit type Select Box -->
+	<select id="selectMpakmaSelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* selectMpakmaBox */
+		select A.TRUNTYP as COMBOVL
+		, B.TRUNNAM as COMBONM
+		from MPAKMA A
+		inner join MTUTMA B
+		on A.COMPKEY = B.COMPKEY
+		and A.TRUNTYP = B.TRUNTYP
+		where A.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test='packkey != null and packkey != ""'>
+			and A.PACKKEY = #{packkey}
+		</if>
+		<choose>
+			<when test='pkuseyn != null and pkuseyn !="" '>
+				and A.PKUSEYN = #{pkuseyn}
+			</when>
+			<otherwise>
+				and A.PKUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by A.TRUNTYP, B.TRUNNAM
+		order by A.TRUNTYP, B.TRUNNAM
+	</select>
+
+	<!-- mdu05 : Pack master RelationList -->
+	<select id="selectMpakmaRelations" resultType="com.logistics.md.domain.MpakmaDTO">
+		/* selectMpakmaRelations */
+		select A.COMPKEY, A.WAREKEY, A.TRUNTYP, A.PACKKEY, B.TRUNNAM
+		from MPAKMA A
+		inner join MTUTMA B
+		on A.COMPKEY = B.COMPKEY
+		and A.TRUNTYP = B.TRUNTYP
+		where A.COMPKEY = #{userData.compkey}
+		and A.PKUSEYN = 'Y'
+		group by A.COMPKEY, A.WAREKEY, A.TRUNTYP, A.PACKKEY, B.TRUNNAM
+		order by A.COMPKEY, A.WAREKEY, A.TRUNTYP, A.PACKKEY, B.TRUNNAM
+	</select>
+
+	<!-- mdu05 : Pack SelectBox -->
+	<select id="selectMpakmaPackSelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* selectMpakmaPackBox */
+		select A.TRUNTYP as COMBOVL
+		, A.PACKKEY as COMBONM
+		from MPAKMA A
+		where A.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and A.WAREKEY = #{warekey}
+		</if>
+		<if test='truntyp != null and truntyp != ""'>
+			and A.TRUNTYP = #{truntyp}
+		</if>
+		<if test='packkey != null and packkey != ""'>
+			and A.PACKKEY = #{packkey}
+		</if>
+		<choose>
+			<when test='pkuseyn != null and pkuseyn !="" '>
+				and A.PKUSEYN = #{pkuseyn}
+			</when>
+			<otherwise>
+				and A.PKUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by A.TRUNTYP, A.PACKKEY
+		order by A.PACKKEY
+	</select>
+
+	<!-- mdu10 : set 데이터 조회 -->
+	<select id="selectMskuwcSetList" resultType="com.logistics.md.domain.MskustDTO">
+		/* selectMskuwcSetList */
+		select
+		concat(WC.COMPKEY, WC.WAREKEY, WC.OWNERKY, WC.SKUMKEY) as ROWKEY
+		, WC.COMPKEY, WC.WAREKEY, WC.OWNERKY, WC.SKUMKEY as SKUMKEY
+		, WC.SKUDESC as SKUDESC
+		, FN_COM_TODATE(WC.CREDATE) as CREDATE, FN_COM_TOTIME(WC.CRETIME) as CRETIME, fn_sy_usernam(WC.COMPKEY, WC.CREUSER) as CREUSER
+		, FN_COM_TODATE(WC.LMODATE) as LMODATE, FN_COM_TOTIME(WC.LMOTIME) as LMOTIME, fn_sy_usernam(WC.COMPKEY, WC.LMOUSER) as LMOUSER
+		, WC.UPDTCHK
+		from MSKUWC WC
+		where WC.COMPKEY = #{userData.compkey}
+		and WC.WAREKEY = #{warekey}
+		<if test='ownerky != null and ownerky != ""'>
+			and WC.OWNERKY = #{ownerky}
+		</if>
+		<if test='skumkey != null and skumkey != ""'>
+			and upper(WC.SKUMKEY) like concat('%',upper(#{skumkey}),'%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			and upper(WC.SKUDESC) like concat('%',upper(#{skudesc}),'%')
+		</if>
+		and WC.SKUTYPE = 'SET'
+		<if test='(sbskuky != null and sbskuky != "") or (sbskuds != null and sbskuds != "")'>
+			and WC.SKUMKEY in (
+				select SKUMKEY
+				from MSKUST
+					where (COMPKEY, WAREKEY, OWNERKY, SBSKUKY) in (
+						(
+							select COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+							from MSKUWC
+							where COMPKEY = #{userData.compkey}
+							<if test='ownerky != null and ownerky != ""'>
+								and OWNERKY = #{ownerky}
+							</if>
+							and WAREKEY = #{warekey}
+							and SKUTYPE = 'KMAT'
+							<if test='sbskuky != null and sbskuky != ""'>
+								and upper(SKUMKEY) like concat('%', upper(#{sbskuky}),'%')
+							</if>
+							<if test='sbskuds != null and sbskuds != ""'>
+								and upper(SKUDESC) like concat('%', upper(#{sbskuds}),'%')
+							</if>
+						)
+				)
+			)
+		</if>
+		order by WC.COMPKEY, WC.WAREKEY, WC.OWNERKY, WC.SKUMKEY
+	</select>
+
+	<!-- mdu10 : mskust item 데이터 조회 -->
+	<select id="selectMskustSetItemList" resultType="com.logistics.md.domain.MskustDTO">
+		/* selectMskustSetItemList */
+		select
+		concat(ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, ST.SKUMKEY) as ROWKEY
+		, ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, ST.SKUMKEY as SKUMKEY
+		, MIWC.SKUDESC as SKUDESC, ST.SBSKUKY, SBWC.SKUDESC as SBSKUDS, ST.SBSTQTY, ST.UOMEKEY
+		, ST.SVENDKY, ST.STUSEYN
+		, FN_COM_TODATE(ST.CREDATE) as CREDATE, FN_COM_TOTIME(ST.CRETIME) as CRETIME, fn_sy_usernam(ST.COMPKEY, ST.CREUSER) as CREUSER
+		, FN_COM_TODATE(ST.LMODATE) as LMODATE, FN_COM_TOTIME(ST.LMOTIME) as LMOTIME, fn_sy_usernam(ST.COMPKEY, ST.LMOUSER) as LMOUSER
+		, ST.UPDTCHK
+		from MSKUST ST
+		inner join MSKUWC MIWC
+		/* 메인 sku name */
+		on (
+		MIWC.COMPKEY = ST.COMPKEY
+		and MIWC.WAREKEY = ST.WAREKEY
+		and MIWC.OWNERKY = ST.OWNERKY
+		and MIWC.SKUMKEY = ST.SKUMKEY
+		)
+		inner join MSKUWC SBWC
+		/* sub(구성품) sku name */
+		on (
+		SBWC.COMPKEY = ST.COMPKEY
+		and SBWC.WAREKEY = ST.WAREKEY
+		and SBWC.OWNERKY = ST.OWNERKY
+		and SBWC.SKUMKEY = ST.SBSKUKY
+		)
+		where ST.COMPKEY = #{userData.compkey}
+		and ST.WAREKEY = #{warekey}
+		and ST.OWNERKY = #{ownerky}
+		and upper(ST.SKUMKEY) = upper(#{skumkey})
+		and MIWC.SKUTYPE = 'SET'
+		and SBWC.SKUTYPE = 'KMAT'
+		group by ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, ST.SKUMKEY, ST.SBSKUKY
+					, MIWC.SKUDESC, SBWC.SKUDESC, ST.SBSTQTY, ST.UOMEKEY
+		order by ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, ST.SKUMKEY, ST.SBSKUKY
+	</select>
+
+	<!-- mdu10 : 세트구성 세트 추가 -->
+	<insert id="insertMskuwcSet" parameterType="com.logistics.md.domain.MskustDTO">
+		/* insertMskustSet */
+		INSERT INTO MSKUWC
+		( COMPKEY, OWNERKY, WAREKEY, SKUMKEY
+		, SKUDESC, SKUTYPE
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		VALUES
+		( #{compkey}, #{ownerky}, #{warekey}, #{skumkey}
+		, #{skudesc}, 'SET'
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		)
+	</insert>
+
+	<!-- mdu10 : 세트구성 세트 업데이트 -->
+	<update id="updateMskuwcSet" parameterType="com.logistics.md.domain.MskustDTO">
+		/* updateMskustSet */
+		update MSKUWC
+		set
+		WAREKEY = #{warekey}
+		, OWNERKY = #{ownerky}
+		, SKUMKEY = #{skumkey}
+		, SKUDESC = #{skudesc}
+		, SKUTYPE = 'SET'
+		, LMODATE = DATE_FORMAT(SYSDATE(), '%Y%m%d')
+		, LMOTIME = DATE_FORMAT(SYSDATE(), '%H%i%s')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test="oldSkumkey != null and oldSkumkey !=''">
+				and SKUMKEY = #{oldSkumkey}
+			</when>
+			<otherwise>
+				and SKUMKEY = #{skumkey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="oldSkudesc != null and oldSkudesc !=''">
+				and SKUDESC = #{oldSkudesc}
+			</when>
+			<otherwise>
+				and SKUDESC = #{skudesc}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdu10 : 세트구성 아이템 추가 -->
+	<insert id="insertMskustSetItem" parameterType="com.logistics.md.domain.MskustDTO">
+		/* insertMskustSetItem */
+		INSERT INTO MSKUST
+		( COMPKEY, OWNERKY, WAREKEY, SKUMKEY
+		, SBSKUKY, SBSTQTY, UOMEKEY, SVENDKY, STUSEYN
+		, CREDATE, CRETIME, CREUSER
+		, LMODATE, LMOTIME, LMOUSER
+		)
+		VALUES
+		( #{compkey}, #{ownerky}, #{warekey}, #{skumkey}
+		, #{sbskuky}, #{sbstqty}, #{uomekey}, #{svendky}, #{stuseyn}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		)
+	</insert>
+
+	<!-- mdu10 : 세트구성 아이템 세트키 변경 -->
+	<update id="updateMskustSetItemSkumkey" parameterType="com.logistics.md.domain.MskustDTO">
+		/* updateMskustSetItem */
+		update MSKUST
+		set
+		WAREKEY = #{warekey}
+		, OWNERKY = #{ownerky}
+		, SKUMKEY = #{skumkey}
+		, LMODATE = DATE_FORMAT(SYSDATE(), '%Y%m%d')
+		, LMOTIME = DATE_FORMAT(SYSDATE(), '%H%i%s')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and WAREKEY = #{warekey}
+		and OWNERKY = #{ownerky}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test="oldSkumkey != null and oldSkumkey !=''">
+				and SKUMKEY = #{oldSkumkey}
+			</when>
+			<otherwise>
+				and SKUMKEY = #{skumkey}
+			</otherwise>
+		</choose>
+	</update>
+
+	<!-- mdu10 : 세트구성 아이템 업데이트 -->
+	<update id="updateMskustSetItem" parameterType="com.logistics.md.domain.MskustDTO">
+		/* updateMskustSetItem */
+		update MSKUST
+		set
+		WAREKEY = #{warekey}
+		, OWNERKY = #{ownerky}
+		, SKUMKEY = #{skumkey}
+		, SBSKUKY = #{sbskuky}
+		, SBSTQTY = #{sbstqty}
+		, UOMEKEY = #{uomekey}
+		, SVENDKY = #{svendky}
+		, STUSEYN = #{stuseyn}
+		, LMODATE = DATE_FORMAT(SYSDATE(), '%Y%m%d')
+		, LMOTIME = DATE_FORMAT(SYSDATE(), '%H%i%s')
+		, LMOUSER = #{userData.useract}
+		where COMPKEY = #{compkey}
+		and UPDTCHK = #{updtchk}
+		<choose>
+			<when test="oldSkumkey != null and oldSkumkey !=''">
+				and SKUMKEY = #{oldSkumkey}
+			</when>
+			<otherwise>
+				and SKUMKEY = #{skumkey}
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="oldSbskuky != null and oldSbskuky !=''">
+				and SBSKUKY = #{oldSbskuky}
+			</when>
+			<otherwise>
+				and SBSKUKY = #{sbskuky}
+			</otherwise>
+		</choose>
+	</update>
+</mapper>

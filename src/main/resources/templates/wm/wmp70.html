@@ -1,0 +1,262 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col">
+					<button id="wmp70_toggle" value="skumkey" class="toggle-skumkey" disabled>[[#{wm.wlotma.skumkey}]]</button>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp70_input" name="wmp70_input">
+				</div>
+			</div>
+			<div class="row">
+				<button type="button" class="btn-clear btn-white col" id="wmp70_btnReset">[[#{bt.reset}]]</button>
+				<button type="button" class="btn-save btn-main col" id="wmp70_btnSave">[[#{bt.save}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+			</div>
+			<div class="table-wrapper con-box row2">
+				<table class="mobile-table wmp70-table">
+					<thead id="thtb">
+						<tr>
+							<th><input type="checkbox" id="wmp70_totalBox"></th>
+							<th id="taskoky" style="display: none">[[#{wm.wmp60.taskoky}]]</th>
+							<th id="taskoit" style="display: none">[[#{wm.wmp60.taskoit}]]</th>	
+							<th id="skumkey" style="display:none">[[#{md.mskuma.skumkey}]]</th>
+							<th id="skudesc">[[#{md.mskuma.skudesc}]]</th>
+							<th id="frlocky" style="display: none">[[#{wm.wmp70.frlocky}]]</th>
+							<th id="frlocnm">[[#{wm.wmp70.frlocky}]]</th>
+							<th id="tolocky" style="display: none">[[#{wm.wmp50.tolocky}]]</th>
+							<th id="tolocnm">[[#{wm.wmp50.tolocky}]]</th>
+							<th id="fordqty">[[#{wm.wmp50.fordqty}]]</th>
+							<th id="upccode" style="display: none"></th>					
+						</tr>
+					</thead>
+					<tbody class="table-body" id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+		<div class="spinner" id="wmp70Spinner"></div>
+		<div class="bg"></div> 
+	</main>
+	<script>
+		/*  wmp70 - 이동확정
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: PDA를 이용하여 부품(SKU)의 이동 지시가 내려왔을 때 이동지시를 확정 짓는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		$(function() {
+			const pageId = 'wmp70';
+			let wmp70List;
+			
+			//PDA니까 화면 처음 포커스 가게
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});	
+			
+			//이동지시 내린 리스트 불러오기
+			getWrcvitList();
+			
+			//상품코드 입력시 체크되게 구현하고, 로케이션은 한번만 찍으면 리스트에 다 담기게 구현
+			//상품코드 보다 로케이션을 미리 입력했을 경우 변수에 저장후 상품코드를 입력했을때 같이 들어가게 구현
+			//============================================================				
+			//ASN, LOCATION, 상품코드 바코드 입력시 자동 검색(ASN코드는 10자리 10자리가 아닌건 로케이션, -가 있으면 상품코드)
+			//============================================================	
+ 			document.querySelector('#'+pageId+'_input').addEventListener('keyup', async function(event){
+ 				if(event.keyCode === 13){
+ 					const codeData = document.querySelector('#'+pageId+'_input').value;
+ 					const toggleValue = document.querySelector('#'+pageId+'_toggle').value;
+ 					const trObjs = document.querySelectorAll('#tBody tr');
+ 					
+ 					let matchCnt = 0;
+ 					
+ 					if(!codeData){
+ 						alertOpen('[[#{wm.wmp70.scanSkumkey}]]', function(){
+ 		 					document.querySelector('#'+pageId+'_input').value = '';
+ 		 					document.querySelector('#'+pageId+'_input').focus();
+ 						});
+ 						return;
+ 					}
+ 					
+ 					if(toggleValue === 'skumkey') {
+ 						for(const trObj of trObjs) { //똑같은 상품이 있을 경우는 일단 패스
+ 							if(trObj.closest('tr').querySelector('.upccode').innerHTML === codeData){
+ 								trObj.closest('tr').querySelector('.checkbox').checked = true;
+ 								selectRow(trObj.closest('tr').querySelector('.checkbox'));
+ 								isChecked();
+ 								matchCnt++;
+ 							}
+ 						}
+ 						if(!matchCnt){
+ 							alertOpen('[[#{wm.wmp30.missMatchSkumkey}]]', function(){
+ 			 					document.querySelector('#'+pageId+'_input').value = '';
+ 			 					document.querySelector('#'+pageId+'_input').focus();
+ 							});
+ 							return;
+ 						}
+ 					}
+ 					document.querySelector('#'+pageId+'_input').value = '';
+ 					document.querySelector('#'+pageId+'_input').focus();
+ 				}
+			});
+			
+			//============================================================
+			//입하등록 저장 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnSave').click(async function(){
+				const thObjs = document.querySelector('#thtb').querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});
+				
+				if(!boxCheckedList.length){
+					alertOpen('[[#{ms.wmp.noCheckList}]]', function(){
+						document.querySelector('#'+pageId+'_input').value = '';
+						document.querySelector('#'+pageId+'_input').focus();
+					});
+					return;
+				}
+				let keyArray = [];
+				
+				//체크박스떄문에 1부터 시작(키값 세팅)
+				for(let i=1;i<thObjs.length;i++){
+					keyArray.push(thObjs[i].getAttribute('id'));
+				}
+				let param;
+				let wmp70SaveList = [];
+				
+				//키 : 벨류 형식 만들기
+				for (const trTag of trTagList) {
+				    param = {};
+				    const tdList = trTag.querySelectorAll('td');
+				
+				    for (let j = 1; j < tdList.length; j++) {
+				        param[keyArray[j - 1]] = tdList[j].innerHTML;
+				    }
+				    param['warekey'] = '[[${userattr.warekey}]]';
+				    wmp70SaveList.push(param);
+				}
+				
+				if(confirm('[[#{ms.checksave}]]')){
+					try{
+						document.querySelector('#wmp70Spinner').style.display = 'block';
+						const rData =  await fetchUtil('POST','/wm/pda/wmp70/save',{addList : wmp70SaveList});
+						if(rData.status === 200){
+							await getWrcvitList();
+							document.querySelector('#'+ pageId +'_totalBox').checked = false;
+						}
+					}catch(err){
+						alertOpen('[[#{ms.saveErr}]]');
+						return;
+					}finally{
+						document.querySelector('#wmp70Spinner').style.display = 'none';
+					}
+				}
+				document.querySelector('#'+pageId+'_input').value = '';
+				document.querySelector('#'+pageId+'_input').focus();
+			});
+			//================================
+			//초기화 버튼 이벤트
+			//================================
+			$('#'+pageId+'_btnReset').click(function(){
+				confirmOpen('[[#{ms.listViewRollback}]]', function(result){
+					if(result){
+						location.reload();
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			});
+			//================================
+			//PDA 입하등록 조회 값 불러오기
+			//================================
+			async function getWrcvitList(){
+				
+				document.querySelector('#wmp70Spinner').style.display = 'block';
+				
+				const response = await fetchUtil('GET', '/wm/pda/wmp70/grid', {warekey : '[[${userattr.warekey}]]'});
+				wmp70List = await response.json();
+				
+				document.querySelector('#tBody').innerHTML = '';
+				
+				if(!wmp70List.length){
+					document.querySelector('#wmp70Spinner').style.display = 'none';
+					return;
+				}
+				
+				let html = '';
+				for(const wmp70Data of wmp70List){
+					html += '<tr>';
+					html += '<td><input type="checkbox" class="checkbox" onclick="isChecked()"></td>';
+					html += '<td class="taskoky" style="display:none">' + wmp70Data.taskoky + '</td>';
+					html += '<td class="taskoit" style="display:none">' + wmp70Data.taskoit + '</td>';
+					html += '<td class="skumkey" style="display:none">' + wmp70Data.skumkey + '</td>';
+					html += '<td class="skudesc">' + wmp70Data.skudesc + '</td>';
+					html += '<td class="frlocky" style="display:none">' + wmp70Data.frlocky + '</td>';
+					html += '<td class="frlocnm">' + wmp70Data.frlocnm + '</td>';
+					html += '<td class="tolocky" style="display:none">' + wmp70Data.tolocky +'</td>';
+					html += '<td class="tolocnm">' + wmp70Data.tolocnm +'</td>';
+					html += '<td class="fordqty">' + wmp70Data.fordqty + '</td>';
+					html += '<td class="upccode" style="display:none">' + wmp70Data.upccode + '</td>';
+					html += '</tr>';
+				}
+				document.querySelector('#tBody').insertAdjacentHTML('afterbegin', html);
+				document.querySelector('#wmp70Spinner').style.display = 'none';
+			}
+			
+			//전체 체크박스 컨트롤
+			document.querySelector('#'+pageId+'_totalBox').addEventListener('click', function(){
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(tagObj){
+					tagObj.checked = document.querySelector('#'+pageId+'_totalBox').checked;
+					tagObj.closest('tr').style.backgroundColor = tagObj.checked ? '#5372d97d' : 'white';
+				});
+			});
+			
+			//물건 스캔시 일치할 경우 위로 올리면서 tr 색 입혀주는 함수
+			function selectRow(row){
+				const tableRow = row.parentElement.parentElement;
+				const table = tableRow.parentElement;
+				tableRow.style.backgroundColor = '#5372d97d';
+				table.insertBefore(tableRow, table.firstElementChild);
+			}
+		});
+		
+		//로우 체크박스 컨트롤
+		function isChecked(){
+			let checkedCnt = 0;
+			document.querySelectorAll('input[class*="checkbox"]').forEach(function(element){
+				if(element.checked){
+					element.closest('tr').style.backgroundColor = '#5372d97d';
+					checkedCnt++;
+				}else{
+					element.closest('tr').style.backgroundColor = 'white';
+				}
+			});
+			if(document.querySelectorAll('input[class*="checkbox"]').length === checkedCnt){
+				document.querySelector('#wmp70_totalBox').checked = true;
+			}else{
+				document.querySelector('#wmp70_totalBox').checked = false;
+			}
+		}
+	</script>
+</div>	
+</html>

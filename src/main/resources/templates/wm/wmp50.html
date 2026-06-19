@@ -1,0 +1,538 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col toggle">
+					<button id="wmp50_toggle" value="eoasnky" class="toggle-eoasnky">[[#{wm.wmp.eoasnky}]]</button>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp50_input" name="wmp50_input">
+				</div>
+			</div>
+			<div class="row location">
+				<div class="condition-title col">
+					<label for="inputGroupSelect01">[[#{md.mdo05.locanam}]]</label>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp50_locakey" disabled>
+				</div>				
+			</div>
+			<div class="row">
+				<button type="button" class="btn-clear btn-white col" id="wmp50_btnReset">[[#{bt.reset}]]</button>
+				<button type="button" class="btn-save btn-main col" id="wmp50_btnSave">[[#{bt.save}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+			</div>
+			<div class="search-condition p">
+				<div class="row p">
+					<div class="condition-title col">
+						<label>[[#{wm.wmp.totalStotqty}]]</label>
+					</div>
+					<div class="text-wrapper" id="wmp50TotalStotqty">0</div>
+					<span>[[#{wm.wmp.unit}]]</span>
+				</div>
+				<div class="row p">
+					<div class="condition-title col">
+						<label>[[#{wm.wmp.totalFordqty}]]</label>
+					</div>
+					<div class="text-wrapper" id="wmp50TotalFordqty">0</div>
+					<span>개</span>
+				</div>
+			</div>
+			<div class="table-wrapper con-box row2">
+				<table class="mobile-table wmp50-table">
+					<thead id="thtb">
+						<tr>
+							<th><input type="checkbox" id="wmp50_totalBox"></th>
+							<th id="doccate" class="d-none">[[#{wm.wmp60.doccate}]]</th>
+							<th id="doctype" class="d-none">[[#{wm.wmp60.doctype}]]</th>
+							<th id="taskoky" class="d-none">[[#{wm.wmp60.taskoky}]]</th>
+							<th id="taskoit" class="d-none">[[#{wm.wmp60.taskoit}]]</th>
+							<th id="stockky" class="d-none">[[#{wm.wmp.stockky}]]</th>
+							<th id="truntyp" class="d-none">[[#{wm.wmp50.truntyp}]]</th>
+							<th id="trunpid" class="d-none">[[#{wm.wmp50.truntid}]]</th>
+							<th id="lotnmky" class="d-none">[[#{wm.wmp50.lotnmky}]]</th>
+							<th id="ownerky" class="d-none">[[#{wm.wmp.ownerky}]]</th>
+							<th id="ownamlc" class="d-none">[[#{wm.wmp.ownerky}]]</th>
+							<th id="skumkey" class="d-none">[[#{md.mskuma.skumkey}]]</th>
+							<th id="skudesc">[[#{md.mskuma.skudesc}]]</th>
+							<th id="stotqty">[[#{wm.wmp50.stotqty}]]</th>
+							<th id="tolocky" class="d-none">[[#{wm.wmp50.tolocky}]]</th>
+							<th id="tolocnm">[[#{wm.wmp50.tolocky}]]</th>
+							<th id="fordqty">[[#{wm.wmp50.fordqty}]]</th>
+							<th id="upccode" style="display: none"></th>
+						</tr>
+					</thead>
+					<tbody class="table-body" id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+		<div class="spinner" id="wmp50Spinner"></div>
+		<div class="bg"></div> 
+	</main>
+	<script>
+		/*  wmp50 - 적치처리
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: PDA로 창고에 입하된 부품(SKU)의 로케이션(위치)를 변경하는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		let tmpLocationCode;
+		let totalStotqty = 0;
+		let totalFordqty = 0;
+		$(function() {
+			const pageId = 'wmp50';
+			let wmp50List;
+			let locationList;
+			const toggleArray = ['skumkey','tolocky','taskoky','eoasnky'];
+			let toggleIdx = 0;
+			const initToggle = document.querySelector('.toggle').innerHTML;
+			let tempDoctype;
+			let tempEoasnky;
+			
+			//PDA니까 화면 처음 포커스 가게
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});	
+			
+			initLocationList();
+			//상품코드 입력시 체크되게 구현하고, 로케이션은 한번만 찍으면 리스트에 다 담기게 구현
+			//상품코드 보다 로케이션을 미리 입력했을 경우 변수에 저장후 상품코드를 입력했을때 같이 들어가게 구현
+			//============================================================				
+			//ASN, LOCATION, 상품코드 바코드 입력시 검색(ASN코드는 10자리 10자리가 아닌건 로케이션, -가 있으면 상품코드)
+			//============================================================	
+ 			document.querySelector('#'+pageId+'_input').addEventListener('keyup', async function(event){
+ 				if(event.keyCode === 13){
+ 					const toggleValue = document.querySelector('#'+pageId+'_toggle').value;
+ 					const codeData = document.querySelector('#'+pageId+'_input').value;
+ 					const boxCheckedList = document.querySelectorAll('input[class="checkbox"]:checked');
+ 					const trObjs = document.querySelectorAll('#tBody tr');
+
+ 					let matchCnt = 0;
+ 					if(!codeData){ //빈 문자열 일때 동작 X
+ 						return;
+ 					}
+ 					
+ 					if(toggleValue === 'eoasnky') { // ASN번호는 10자리로 되어있다.
+						tempDoctype = toggleValue;
+						totalFordqty = 0;
+ 						await getWrcvitList(codeData);
+ 						if(!document.querySelectorAll('#tBody tr').length) {
+ 							alertOpen('[[#{ms.getDataZero}]]', function(){
+ 	 							tempEoasnky='';
+ 	 							document.querySelector('#'+pageId+'_totalBox').checked = false;
+ 	 		 					
+ 	 		 					document.querySelector('#'+pageId+'_input').value = '';
+ 	 		 					document.querySelector('#'+pageId+'_input').focus();
+ 							});
+ 							document.querySelector('#'+pageId+'TotalFordqty').innerHTML = totalFordqty;
+ 						}else{
+ 							tempEoasnky = codeData;
+ 							document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+ 							toggleIdx = 0;
+
+ 							document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+ 							document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+ 							document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+ 							toggleIdx++;
+ 						}
+ 					}else if(toggleValue === 'taskoky') { // ASN번호는 10자리로 되어있다.
+						tempDoctype = toggleValue;
+						totalFordqty = 0;
+						await getWrcvitList(codeData);
+						if(!document.querySelectorAll('#tBody tr').length) {
+ 							alertOpen('[[#{ms.getDataZero}]]', function(){
+ 	 							tempEoasnky='';
+ 	 							document.querySelector('#'+pageId+'_totalBox').checked = false;
+ 	 		 					document.querySelector('#'+pageId+'_input').value = '';
+ 	 		 					document.querySelector('#'+pageId+'_input').focus();
+ 							});
+ 							document.querySelector('#'+pageId+'TotalFordqty').innerHTML = totalFordqty;
+						}else{
+							tempEoasnky = codeData;
+							document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+							toggleIdx = 0;
+
+							document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+							document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+							document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+							toggleIdx++;
+						}
+					}else if(toggleValue === 'skumkey') { //상품코드 입력시(토글 바꾸기)
+ 						if(!trObjs.length){
+ 							alertOpen('[[#{wm.wmp30.firstEoasnky}]]', function(){
+ 								toggleIdx = 0;
+ 			 					document.querySelector('#'+pageId+'_input').value = '';
+ 			 					document.querySelector('#'+pageId+'_input').focus();
+ 	 							document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+ 	 							document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+ 	 							document.querySelector('.toggle').innerHTML = initToggle;
+ 							});
+ 						}else{
+ 							for(let i=0; i<trObjs.length; i++){
+ 								if(codeData === trObjs[i].querySelector('.upccode').innerHTML){
+ 									trObjs[i].querySelector('.checkbox').checked = true;
+ 									selectRow(trObjs[i].querySelector('.checkbox'));
+ 									totalFordqty += Number(trObjs[i].querySelector('.fordqty').value);
+ 									isChecked();
+ 									matchCnt++;
+ 									//로케이션 먼저 찍었을 경우 변수에 저장한 값을 상품코드 찍었을때 같이 넣어준다.(로케이션변수가 null이면 안넣어준다.)
+ 									tmpLocationCode?.combovl && !trObjs[i].querySelector('.locakey').value ? trObjs[i].querySelector('.locakey').value = tmpLocationCode.combovl : '';
+ 									tmpLocationCode?.combonm && !trObjs[i].querySelector('.locaknm').value ? trObjs[i].querySelector('.locaknm').value = tmpLocationCode.combonm : '';
+ 								}
+ 							}
+ 							if(!matchCnt) {
+ 								alertOpen('[[#{wm.wmp30.missMatchSkumkey}]]', function(){
+ 	 			 					document.querySelector('#'+pageId+'_input').value = '';
+ 	 			 					document.querySelector('#'+pageId+'_input').focus();
+ 								});
+ 								return;
+ 							}
+ 						}
+ 					}else if(toggleValue === 'tolocky'){ // 로케이션 입력시
+ 						if(!trObjs.length){ //로케이션 먼저 입력했을때 테이블이 안펼쳐져있다(ASN를 먼저 안찍었다)
+ 							alertOpen('[[#{wm.wmp30.firstEoasnky}]]', function(){
+ 	 							toggleIdx = 0;
+ 	 							document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+ 	 							document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+ 	 							document.querySelector('.toggle').innerHTML = initToggle;
+ 							});
+							document.querySelector('#'+pageId+'_input').value = '';
+							document.querySelector('#'+pageId+'_input').focus();
+ 						}else{
+							if(tempDoctype === 'taskoky'){
+								alertOpen('[[#{wm.wmp50.notNeedLocation}]]', function(){
+									document.querySelector('#'+pageId+'_input').value = '';
+									document.querySelector('#'+pageId+'_input').focus();
+								});
+								return;
+							}
+ 							const locationFilter = locationList.find(function(locationData){
+ 								return locationData.combovl === document.querySelector('#'+pageId+'_input').value;
+ 							});
+ 							
+ 							if(!locationFilter){
+ 								alertOpen('[[#{wm.wmp50.missMatchLocation}]]', function(){
+ 	 								document.querySelector('#'+pageId+'_input').value = '';
+ 	 								document.querySelector('#'+pageId+'_input').focus();
+ 								});
+ 								return;
+ 							}
+
+ 							//로케이션 값이 있을 경우(첫번째 tr에 로케이션이 있으면 다 있는 것) 초기화 하겠냐고 물어봐야함 => 하곘다면 다 바꿔주고 아니라 하면 그대로 놔둬
+ 							if(boxCheckedList.length){
+ 								if(boxCheckedList[0].closest('tr').querySelector('.locakey').value){
+ 									confirmOpen('[[#{wm.wmp50.changeLocation}]]', function(result){
+ 										if(result){
+ 	 										tmpLocationCode = locationFilter;
+ 	 										document.querySelector('#' + pageId + '_locakey').value = locationFilter.combonm;
+ 	 										for(let i=0;i<boxCheckedList.length;i++){
+ 	 		 									selectRow(boxCheckedList[i].closest('tr').querySelector('.checkbox'));
+ 	 		 									isChecked();
+ 	 											boxCheckedList[i].closest('tr').querySelector('.locakey').value = locationFilter.combovl;
+ 	 											boxCheckedList[i].closest('tr').querySelector('.locaknm').value = locationFilter.combonm;
+ 	 										}
+ 										}
+ 					 					document.querySelector('#'+pageId+'TotalFordqty').innerHTML = totalFordqty;
+ 					 					document.querySelector('#'+pageId+'_input').value = '';
+ 					 					document.querySelector('#'+pageId+'_input').focus();
+ 									});
+ 								}else{
+ 									boxCheckedList.forEach(function(element){
+	 									selectRow(element.closest('tr').querySelector('.checkbox'));
+	 									isChecked();
+ 										element.closest('tr').querySelector('.locakey').value = locationFilter.combovl;
+ 										element.closest('tr').querySelector('.locaknm').value = locationFilter.combonm;
+ 										document.querySelector('#' + pageId + '_locakey').value = locationFilter.combonm;
+ 									});
+ 								}
+ 							}else{
+ 								tmpLocationCode = locationFilter;
+ 								document.querySelector('#' + pageId + '_locakey').value = locationFilter.combonm;
+ 							}
+ 						}
+ 					}
+ 					document.querySelector('#'+pageId+'TotalFordqty').innerHTML = totalFordqty;
+ 					document.querySelector('#'+pageId+'_input').value = '';
+ 					document.querySelector('#'+pageId+'_input').focus();
+ 				}
+			});
+			//============================================================	 
+			//토글 버튼 클릭시 ASN코드(입고예정번호), tolocky(이동할 로케이션), 부품코드 바코드
+			//============================================================
+			document.querySelector('.toggle').addEventListener('click', function(){
+				if(toggleIdx === toggleArray.length){
+					toggleIdx = 0;
+				}
+				
+				if(toggleArray[toggleIdx] === 'skumkey'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+				}else if(toggleArray[toggleIdx] === 'eoasnky'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wmp.eoasnky}]]';
+				}else if(toggleArray[toggleIdx] === 'taskoky'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wmp60.taskoky}]]';
+				}else if(toggleArray[toggleIdx] === 'tolocky'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{md.mdo05.locanam}]]';
+				}
+				document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+				document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+				document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+				document.querySelector('#'+pageId+'_input').focus();
+				toggleIdx++;
+			});
+			
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function() {
+				confirmOpen('[[#{ms.listViewRollback}]]', function(result){
+					if(result){
+						location.reload();
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			})
+			//============================================================
+			//입하등록 저장 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnSave').click(async function(){
+				const thObjs = document.querySelector('#thtb').querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});	
+				
+				if(!boxCheckedList.length){
+					alertOpen('[[#{ms.wmp.noCheckList}]]');
+					return;
+				}
+				
+				let keyArray = [];
+				
+				//체크박스떄문에 1부터 시작
+				for(let i=1;i<thObjs.length;i++){
+					keyArray.push(thObjs[i].getAttribute('id'));
+				}
+				
+				let param;
+				let wmp50SaveList = [];
+				
+				for(let i=0;i<trTagList.length;i++){
+					param = {};
+					for(let j=1; j<trTagList[i].querySelectorAll('td').length;j++){
+						if(j === 14){
+							if(!trTagList[i].querySelectorAll('td')[j].querySelector('input').value){
+								alertOpen('[[#{wm.wmp50.scanLocation}]]', function(){
+									document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{md.mdo05.locanam}]]';
+									toggleIdx = 1;
+
+									document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+									document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+									document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+									toggleIdx++;
+									document.querySelector('#'+ pageId +'_input').focus();
+								});
+								return;
+							}
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].querySelector('input').value;
+						}else if(j === 16){
+							if(!Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value) || Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value) < 0){
+								alertOpen('[[#{wm.wmp50.insertFordqty}]]', function(){
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').value = Number(trTagList[i].querySelectorAll('td')[j-3].innerHTML);
+								});
+								return;
+							}
+							if(Number(trTagList[i].querySelectorAll('td')[j-3].innerHTML) < Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value)){ //총 재고 수량 < 지시수량
+								alertOpen('[[#{wm.wmp50.overFordqty}]]',function(){
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').value = Number(trTagList[i].querySelectorAll('td')[j-3].innerHTML);
+								});
+								return;
+							}
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].querySelector('input').value;
+						}else{
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].innerHTML;
+						}
+					}
+					param['exctype'] = tempDoctype;
+					param['warekey'] = '[[${userattr.warekey}]]';
+					wmp50SaveList.push(param);
+				}
+				confirmOpen('[[#{ms.checksave}]]', async function(result){
+					if(result){
+						try{
+							document.querySelector('#wmp50Spinner').style.display = 'block';
+							const rData =  await fetchUtil('POST','/wm/pda/wmp50/save',{ addList : wmp50SaveList });
+							if(rData.status=== 200){
+								await getWrcvitList(tempEoasnky);
+								totalFordqty = 0;
+								document.querySelector('#wmp50TotalFordqty').innerHTML = totalFordqty;
+							}
+						}catch(err){
+							alertOpen('[[#{ms.saveErr}]]');
+							return;
+						}finally{
+							document.querySelector('#wmp50Spinner').style.display = 'none';
+						}
+					}
+				});
+			})			
+
+			//================================
+			//PDA 입하등록 조회 값 불러오기
+			//================================
+			async function getWrcvitList(codeData){
+				
+				let param;
+				
+				document.querySelector('#wmp50Spinner').style.display = 'block';
+
+				if(tempDoctype === 'eoasnky'){
+					param = {
+							warekey : '[[${userattr.warekey}]]',
+							eoasnky : codeData
+					};
+				}else if(tempDoctype === 'taskoky'){
+					param = {
+						warekey : '[[${userattr.warekey}]]',
+						taskoky : codeData
+					};
+				}
+
+				const response = await fetchUtil('GET', '/wm/pda/wmp50/grid', param);
+				wmp50List = await response.json();
+				document.querySelector('#tBody').innerHTML = '';
+				if(!wmp50List.length) {
+					tempEoasnky='';
+					tempDoctype='';
+					document.querySelector('#tBody').innerHTML = '';
+					document.querySelector('#'+pageId+'_input').value = '';
+					document.querySelector('#' + pageId + '_locakey').value = '';
+					document.querySelector('#'+pageId+'_totalBox').checked = false;
+					document.querySelector('#wmp50TotalFordqty').innerHTML = 0;
+					document.querySelector('#wmp50TotalStotqty').innerHTML = 0;
+					toggleIdx = 0;
+					document.querySelector('.toggle').innerHTML = initToggle;
+					document.querySelector('#'+pageId+'_input').focus();
+					document.querySelector('#wmp50Spinner').style.display = 'none';
+					return;
+				}
+				let html = '';
+				totalStotqty = 0;
+
+				for(const wmp50Data of wmp50List){
+					totalStotqty += Number(wmp50Data.stotqty);
+					html += '<tr>';
+					html += '<td><input type="checkbox" class="checkbox" onclick="isChecked(this)"></td>';
+					html += '<td class="doccate d-none">' + (wmp50Data.doccate != undefined ? wmp50Data.doccate : '') + '</td>';
+					html += '<td class="doctype d-none">' + (wmp50Data.doctype != undefined ? wmp50Data.doctype : '') + '</td>';
+					html += '<td class="taskoky d-none">' + (wmp50Data.taskoky != undefined ? wmp50Data.taskoky : '') + '</td>';
+					html += '<td class="taskoit d-none">' + (wmp50Data.taskoit != undefined ? wmp50Data.taskoit : '') + '</td>';
+					html += '<td class="stockky d-none">' + (wmp50Data.stockky != undefined ? wmp50Data.stockky : '') + '</td>';
+					html += '<td class="truntyp d-none">' + (wmp50Data.truntyp != undefined ? wmp50Data.truntyp : '') + '</td>';
+					html += '<td class="trunpid d-none">' + (wmp50Data.trunpid != undefined ? wmp50Data.trunpid : '') + '</td>';
+					html += '<td class="lotnmky d-none">' + (wmp50Data.lotnmky != undefined ? wmp50Data.lotnmky : '') + '</td>';
+					html += '<td class="ownerky d-none">' + (wmp50Data.ownerky != undefined ? wmp50Data.ownerky : '') + '</td>';
+					html += '<td class="ownamlc d-none">' + (wmp50Data.combovl != undefined ? wmp50Data.combovl : '') + '</td>';
+					html += '<td class="skumkey d-none">' + (wmp50Data.skumkey != undefined ? wmp50Data.skumkey : '') + '</td>';
+					html += '<td class="skudesc">' + (wmp50Data.skudesc != undefined ? wmp50Data.skudesc : '') + '</td>';
+					html += '<td class="stotqty">' + (wmp50Data.stotqty != undefined ? wmp50Data.stotqty : '') + '</td>';
+					html += '<td class="d-none"><input type="text" class="locakey" value="' + (wmp50Data.locakey != undefined ? wmp50Data.locakey : '') +'"></td>';
+					html += '<td><input type="text" class="locaknm" value="' + (wmp50Data.locaknm != undefined ? wmp50Data.locaknm : '') +'" disabled></td>';
+					html += '<td><input type="number" class="fordqty" value="' + wmp50Data.stotqty +'" onchange="fordqtyControl()"></td>';
+					html += '<td class="upccode" style="display:none">' + wmp50Data.upccode + '</td>';
+					html += '</tr>';
+				}
+				document.querySelector('#'+ pageId +'TotalStotqty').innerHTML = totalStotqty;
+				document.querySelector('#wmp50Spinner').style.display = 'none';
+				document.querySelector('#tBody').insertAdjacentHTML('afterbegin', html);
+			}
+			
+			async function initLocationList(){
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						areakey : 'STG'
+				};
+				
+				const response = await fetchUtil('GET', '/md/common/organization/location/multi', param);
+				
+				locationList = await response.json();
+			}
+			//전체 체크박스 컨트롤
+			document.querySelector('#'+pageId+'_totalBox').addEventListener('click', function(){
+				totalFordqty = 0;
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(tagObj){
+					if(tmpLocationCode){
+						tagObj.closest('tr').querySelector('.locakey').value = tmpLocationCode.combovl;
+						tagObj.closest('tr').querySelector('.locaknm').value = tmpLocationCode.combonm;
+					}
+					tagObj.checked = document.querySelector('#'+pageId+'_totalBox').checked;
+					tagObj.closest('tr').style.backgroundColor = tagObj.checked ? '#5372d97d' : 'white';
+					totalFordqty += tagObj.checked ? Number(tagObj.closest('tr').querySelector('.fordqty').value) : totalFordqty;
+				});
+				document.querySelector('#'+ pageId +'TotalFordqty').innerHTML = totalFordqty;
+				document.querySelector('#'+pageId+'_input').focus();
+			});
+			
+			//물건 스캔시 일치할 경우 위로 올리면서 tr 색 입혀주는 함수
+			function selectRow(row){
+				const tableRow = row.parentElement.parentElement;
+				const table = tableRow.parentElement;
+				tableRow.style.backgroundColor = '#5372d97d';
+				table.insertBefore(tableRow, table.firstElementChild);
+			}			
+		});
+		
+		//로우 체크박스 컨트롤
+		function isChecked(){
+			let checkedCnt = 0;
+			totalFordqty = 0;
+			document.querySelectorAll('input[class*="checkbox"]').forEach(function(element){
+				if(element.checked){
+					totalFordqty += element.checked ? Number(element.closest('tr').querySelector('.fordqty').value) : totalFordqty;
+					element.closest('tr').style.backgroundColor = '#5372d97d';
+					checkedCnt++;
+					if(tmpLocationCode){
+						element.closest('tr').querySelector('.locakey').value = tmpLocationCode.combovl;
+						element.closest('tr').querySelector('.locaknm').value = tmpLocationCode.combonm;
+					}
+				}else{
+					element.closest('tr').style.backgroundColor = 'white';
+				}
+			});
+			
+			document.querySelector('#wmp50TotalFordqty').innerHTML = totalFordqty;
+			
+			if(document.querySelectorAll('input[class*="checkbox"]').length === checkedCnt){
+				document.querySelector('#wmp50_totalBox').checked = true;
+			}else{
+				document.querySelector('#wmp50_totalBox').checked = false;
+			}
+			document.querySelector('#wmp50_input').focus();
+		}
+		//적치(지시수량) 변경시 헤더에 토탈 값 핸들링
+		function fordqtyControl(){
+			isChecked();
+		}
+	</script>
+</div>	
+</html>

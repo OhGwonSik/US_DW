@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.logistics.om.mapper.OMasterMapper">
+	
+	<select id="getOmm3List" resultType="com.logistics.om.domain.OalarmVO">
+		select concat(COMPKEY , ALARMKY) as rowkey 
+			 , COMPKEY as compkey 
+			 , ALARMKY as alarmky 
+			 , USERACT as useract 
+			 , CYCLETY as cyclety 
+			 , date_format(ALARMDT, '%Y-%m-%d') as alarmdt
+			 , date_format(ALARMTM, '%H-%i-%s') as alarmtm
+			 , date_format(ALAREDT, '%Y-%m-%d') as alaredt
+			 , ALARMNM 
+			 , ALARMTX 
+			 , ALARMRM 
+			 , date_format(CREDATE, '%Y-%m-%d') as CREDATE 
+			 , date_format(CRETIME, '%Y-%m-%d') as CRETIME 
+			 , fn_sy_usernam(COMPKEY, CREUSER) as creuser 
+			 , date_format(LMODATE, '%Y-%m-%d') as LMODATE 
+			 , date_format(LMOTIME, '%Y-%m-%d') as LMOTIME 
+			 , fn_sy_usernam(COMPKEY, LMOUSER) as lmouser
+		from oalarm
+		 where 1=1
+		  and COMPKEY = #{compkey}
+		  and ALARMDT BETWEEN replace(#{alarmft}, '-', '') AND replace(#{alarmtt}, '-', '')
+		<if test="alarmft != null and alarmtt != null">
+		  and ALARMDT BETWEEN replace(#{alarmft}, '-', '') AND replace(#{alarmtt}, '-', '')
+		</if>
+		<if test="alarmft == null and alarmtt == null">
+		  and ALARMDT = to_char(now() , 'YYYYMMDD')
+		</if>
+		<if test="alarmnm != null and alarmnm != ''">
+		  and ALARMNM like concat('%' ,#{alarmnm} , '%') 	
+		</if> 
+		<if test="alarmtx != null and alarmtx != ''">
+		  and ALARMTX like concat('%' ,#{alarmtx} , '%') 	
+		</if>
+	</select>
+	
+	<select id="getAlarmky" resultType="string">
+		select fn_om_alarmky() from dual
+	</select>
+	
+	<insert id="insertOmm3List" parameterType="hashmap">
+		insert into 
+		 OALARM(
+			COMPKEY , ALARMKY , USERACT , CYCLETY ,
+			ALARMDT , ALARMTM , ALAREDT ,
+			ALARMNM , ALARMTX , ALARMRM ,
+			CREDATE , CRETIME , CREUSER ,
+			LMODATE , LMOTIME , LMOUSER 
+		 )
+		 values
+		  (	
+			#{compkey} , #{alarmky} , #{useract} , #{cyclety} , 
+			replace(#{alarmdt}, '-', '') , replace(#{alarmtm}, ':', '') , replace(#{alaredt},'-', '') , 
+			#{alarmnm} , #{alarmtx} , #{alarmrm} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{creuser} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now() , 'hh24miss') , #{lmouser}
+		  )
+	</insert> 
+	
+	<update id="updateOmm3List" parameterType="com.logistics.om.domain.OalarmVO">
+		update OALARM
+		 set CYCLETY = #{cyclety} ,
+		  	 ALARMDT = replace(#{alarmdt}, '-', '') ,
+		  	 ALARMTM = replace(#{alarmtm}, ':', '') ,
+		  	 ALAREDT = replace(#{alaredt}, '-', '') , 
+		  	 ALARMTX = #{alarmtx} ,
+		  	 ALARMNM = #{alarmnm} ,
+			 ALARMRM = #{alarmrm} ,
+		  	 LMODATE = to_char(now() , 'YYYYMMDD') , 
+		  	 LMOTIME = to_char(now() , 'hh24miss') , 
+		  	 LMOUSER = #{lmouser} 
+		 where 1=1
+		  and COMPKEY = #{compkey}
+		  and ALARMKY = #{alarmky} 
+	</update>
+	
+	<delete id="deleteOmm3List" parameterType="com.logistics.om.domain.OalarmVO">
+		delete from OALARM
+		 where 1=1
+		  and COMPKEY = #{compkey}
+		  and ALARMKY = #{alarmky}
+	</delete>
+	
+	<!-- omm3 : 알람 주기 생성/삭제 프로시저 -->
+	<select id="updateOalarmList" statementType="CALLABLE" parameterType="java.util.HashMap">
+	 { CALL sp_om_ctroalarm( #{compkey}, #{alarmky}, #{datatyp} ,#{lmouser}
+         , #{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR}, #{O_ORESULT, mode=OUT, jdbcType=INTEGER} )
+      }
+	</select>
+	
+	<!-- OMS2 위젯용 (알람) -->
+	<select id="selectWzGrid05" resultType="com.logistics.om.domain.OalarmVO">
+		select date_format(ALARMTM, '%H-%i-%s') as alarmtm
+			 , ALARMNM
+			 , ALARMTX
+			 , ALARMRM
+		  from OALARM
+		 where 1=1
+		  and COMPKEY = #{compkey}
+		  and USERACT = #{userData.useract}
+		  and ALARMDT = to_char(now(), 'YYYYMMDD')
+	</select>
+</mapper>

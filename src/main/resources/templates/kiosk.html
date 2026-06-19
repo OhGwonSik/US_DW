@@ -1,0 +1,87 @@
+<html xmlns:th="http://www.thymeleaf.org"  xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+	<meta charset="utf-8">
+    <meta http-equiv="Content-Language" content="ko" >
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
+	<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+	<META HTTP-EQUIV="Expires" CONTENT="-1">
+	<link id="rPath" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+	
+ 	<!-- 파비콘 -->
+	<link rel="manifest" th:href="@{/manifest_kiosk.json}" />
+	<link rel="apple-touch-icon" sizes="57x57" th:href="@{/v2/assets/favicon/apple-icon-57x57.png}">
+	<link rel="apple-touch-icon" sizes="60x60" th:href="@{/v2/assets/favicon/apple-icon-60x60.png}">
+	<link rel="apple-touch-icon" sizes="72x72" th:href="@{/v2/assets/favicon/apple-icon-72x72.png}">
+	<link rel="apple-touch-icon" sizes="76x76" th:href="@{/v2/assets/favicon/apple-icon-76x76.png}">
+	<link rel="apple-touch-icon" sizes="114x114" th:href="@{/v2/assets/favicon/apple-icon-114x114.png}">
+	<link rel="apple-touch-icon" sizes="120x120" th:href="@{/v2/assets/favicon/apple-icon-120x120.png}">
+	<link rel="apple-touch-icon" sizes="144x144" th:href="@{/v2/assets/favicon/apple-icon-144x144.png}">
+	<link rel="apple-touch-icon" sizes="152x152" th:href="@{/v2/assets/favicon/apple-icon-152x152.png}">
+	<link rel="apple-touch-icon" sizes="180x180" th:href="@{/v2/assets/favicon/apple-icon-180x180.png}">
+	<link rel="icon" type="image/png" sizes="192x192"  th:href="@{/v2/assets/favicon/android-icon-192x192.png}">
+	<link rel="icon" type="image/png" sizes="32x32" th:href="@{/v2/assets/favicon/favicon-32x32.png}">
+	<link rel="icon" type="image/png" sizes="96x96" th:href="@{/v2/assets/favicon/favicon-96x96.png}">
+	<link rel="icon" type="image/png" sizes="16x16" th:href="@{/v2/assets/favicon/favicon-16x16.png}">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/v2/assets/favicon/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+    
+    <!-- CSS  -->	
+    <link rel="stylesheet" th:href="@{/vender/bootstrap/bootstrap-4.1.3/css/bootstrap.css}">
+    <link rel="stylesheet" th:href="@{/v2/css/kiosk.css}">
+    
+    <script type="text/javascript" th:src="@{/vender/jquery/jquery-3.6.0.js}"></script>
+    <script type="text/javascript" th:src="@{/vender/jqueryui/jquery-ui-1.13.1/jquery-ui.js}"></script>
+</head>
+<body>
+	<div class="kiosk">
+		<div class="line"></div>
+		<div class="kiosk-top">
+			<h1>스마트물류플랫폼</h1>
+		</div>
+		<div class="kiosk-content">
+			<ul>
+				<li class="btn-move" data-progid="wmp90">
+					<img>
+					<p>[[#{menu.wm.wmp90}]]</p>
+				</li>
+				<li class="btn-move" data-progid="wmp91">
+					<img>
+					<p>[[#{menu.wm.wmp91}]]</p>
+				</li>
+				<li class="btn-move" data-progid="wmp92">
+					<img>
+					<p>[[#{menu.wm.wmp92}]]</p>
+				</li>
+			</ul>
+		</div>
+	</div>
+</body>
+<script>
+	const rPath = $('#rPath').attr('data-contextPath')?$('#rPath').attr('data-contextPath'):'';
+	
+	const urlParams = new URLSearchParams(window.location.search);
+	const accountCode = urlParams.get('account_code');
+	
+	document.querySelectorAll('.btn-move').forEach(function(element){
+		element.addEventListener('click', async function(){
+			const progid = element.dataset.progid;
+
+			let url = rPath;
+			if(progid == 'wmp90'){
+				url += '/main/mainPageDeviceSD?gprogcmd=/wm/'+progid+'&gprogrid='+progid+'&langkey=us&account_code='+accountCode;
+			}else{
+				url += '/kiosklogin?gprogcmd=/wm/'+progid+'&gprogrid='+progid+'&account_code='+accountCode;
+			}
+			location.href = url;
+		});
+	});
+
+	//2023.10.19 프레임에서 키오스크 페이지 접근시 OP 서버로 이동처리
+	let isFrame = window.location != window.parent.location ? true : false;
+	if(isFrame){
+		window.parent.location.href = window.location.ancestorOrigins[0] + '/com/login';
+	}
+</script>
+</html>

@@ -1,0 +1,676 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdc06Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdc06Warekey"></select>
+					</div>
+				</div>
+				<label for="mdc06Docctnm" class="setting-grid-title">[[#{md.mdocma.docctnm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdocma.docctnm')}" id="mdc06Docctnm">
+					</div>
+				</div>
+				<label for="mdc06Doctynm" class="setting-grid-title">[[#{md.mdocma.doctynm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdocma.doctynm')}" id="mdc06Doctynm">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdc06Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdc06Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdc06Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdc06Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdc06
+	  - 최초생성자  : Park T. S.
+	  - 최초생성일시 : 2023.07
+	  - 설명 : 사유코드
+	  ------------------------------------------
+	*/
+	$(function() {
+		//----------- 전역변수 ------------//
+		const mdc06ComboData = {};
+		let mdc06WarekeyCondition; // 현재 warekey 검색값 저장
+		let mdc06InitData;
+		//----------- 전역변수 end ------------//
+
+		//============================================================
+		//영역 검색 버튼 이벤트
+		//============================================================
+		$('#' + '[[${gprogrid}]]' + 'Search').click(function(){
+			getMdc06List();
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Save').click(function(){
+			mdc06SaveChanges();
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+			resetSearchConditions();
+			makeEmptyGrid(mdc06Grid);
+		});
+		//----------- 검색영역 Event end ------------//
+
+		// Grid Column Model
+		const mdc06GridCM = [
+			{
+				title: '',
+				dataType: 'bool',
+				dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+				align: 'center',
+				type: 'checkbox',
+				sortable: false,
+				editor: false,
+				cb: {
+					all: false,
+					header: true
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rowkey}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: '[[#{common.grid.recIndx}]]',
+				hidden: true,
+				editable: false
+			},
+			{
+				title: '[[#{md.mrscma.compkey}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'compkey',
+				hidden: true,
+				editable: false
+			},
+			{
+				title: '[[#{grid.whnamlc}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'warekey',
+		   		render: ui => {
+		   			const option = mdc06ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	              	return {text: option ? option[ui.cellData] : ui.cellData};
+		   		},
+	         	editable: false
+			},
+			{
+				title: '[[#{md.mdocma.doccate}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'doccate',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				editor: {
+					type: 'select',
+					init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => {
+			           		return mdc06InitData[ui.dataIndx].map(obj => {
+				           			if(obj['warekey'] === ui.rowData['warekey']){
+				        				let rObj = {};
+
+				        				rObj[obj[ui.dataIndx]] = obj['docctnm'];
+
+				        				return rObj;
+				           			}
+			           		}).filter(e => e);
+			        },
+		            prepend: { '' : ' ' }
+	           },
+				render: ui => {
+					const option = mdc06InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey'] && obj[ui.dataIndx] === ui.cellData);
+
+					return { text: option && ui.cellData ? option['docctnm'] : '' };
+				},
+	           	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mrscma.doctype}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'doctype',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				editor: {
+					type: 'select',
+					init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => {
+			           		return mdc06InitData[ui.dataIndx].map(obj => {
+			           			if(obj['warekey'] === ui.rowData['warekey'] && obj['doccate'] === ui.rowData['doccate']){
+			        				let rObj = {};
+
+			        				rObj[obj[ui.dataIndx]] = obj['doctynm'];
+
+			        				return rObj;
+			           			}
+			           		}).filter(e => e);
+			        },
+		            prepend: { '' : ' ' }
+	           },
+				render: ui => {
+					const option = mdc06InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey']
+																						&& obj['doccate'] === ui.rowData['doccate']
+																						&& obj[ui.dataIndx] === ui.cellData);
+
+					return { text: option && ui.cellData ? option['doctynm'] : '' };
+				},
+	           	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mrscma.rsncode}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rsncode',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				validations: [ {
+					type: 'minLen',
+					value: 1,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				}, {
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				} ],
+	           	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mrscma.rsncdnm}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rsncdnm',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				validations: [ {
+					type: 'minLen',
+					value: 1,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				}, {
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				} ],
+			},
+			{
+				title: '[[#{md.mrscma.rsuseyn}]]',
+				dataType: 'string',
+				dataIndx: 'rsuseyn',
+				align: 'center', //reason code use YN
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				type: 'checkbox',
+				editor: false,
+				cb: {
+					all: false,
+					header: true,
+					check: 'Y',
+					uncheck: 'N'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rsnmlky}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rsnmlky',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rsncdod}]]',
+				width: 100,
+				dataType: 'float',
+				dataIndx: 'rsncdod',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rscate1}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rscate1',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				},
+				editor: {
+					type: 'select',
+					init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => mdc06ComboData[ui.dataIndx],
+			        prepend: { '' : ' ' }
+				},
+				render: ui => {
+					const option = mdc06ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+		           	return { text: option ? option[ui.cellData] : ui.cellData };
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rscate2}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rscate2',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rscate3}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rscate3',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rsattr1}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rsattr1',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rsattr2}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rsattr2',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.rsattr3}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'rsattr3',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				}
+			},
+			{
+				title: '[[#{md.mrscma.credate}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'credate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mrscma.cretime}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'cretime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mrscma.creuser}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'creuser',
+				editable: false
+			},
+			{
+				title: '[[#{md.mrscma.lmodate}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'lmodate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mrscma.lmotime}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'lmotime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mrscma.lmouser}]]',
+				width: 100,
+				dataType: 'string',
+				dataIndx: 'lmouser',
+				editable: false
+			}
+		]
+
+		// Grid Object 및 기초 세팅
+		const mdc06Grid = new GridUtil(mdc06GridCM,'[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+		// Grid 데이터 변경 이벤트
+		mdc06Grid.setChange(async function(evt, ui) {
+	    	if('edit' === ui.source || 'paste' === ui.source){
+	    		const updateRowList = [];
+
+	    		await ui.updateList.forEach(async updateData => {
+					let newRow = {state: true};
+
+	    			if((updateData.newRow.hasOwnProperty('doctype') && updateData.oldRow.hasOwnProperty('doctype'))
+	    				|| (updateData.newRow.hasOwnProperty('doccate') && updateData.oldRow.hasOwnProperty('doccate'))){
+
+	               		const clearCols = ['rsncode', 'rsncdnm', 'rscate1'];
+
+	               		await clearCols.forEach(cols => newRow[cols] = null);
+	    			}
+
+	    			if(updateData.newRow.hasOwnProperty('doccate') && updateData.oldRow.hasOwnProperty('doccate')){
+	    				const option = mdc06InitData['doccate'].find(obj => obj['warekey'] === updateData.rowData['warekey'] && obj['doccate'] === updateData.rowData['doccate']);
+
+	    				if(option){
+	 						newRow['doccate'] =option['doccate'];
+	    				} else {
+		    				newRow['doctype'] = null;
+	 						newRow['doccate'] = null;
+	    				}
+	    			}
+
+	    			if(updateData.newRow.hasOwnProperty('doctype') && updateData.oldRow.hasOwnProperty('doctype')){
+						const option = mdc06InitData['doctype'].find(obj => obj['warekey'] === updateData.rowData['warekey']
+																							&& obj['doccate'] === updateData.rowData['doccate']
+																							&& obj['doctype'] === updateData.rowData['doctype']);
+
+ 						newRow['doctype'] = option ? option['doctype'] : null;
+	    			}
+	    			if(updateData.newRow.hasOwnProperty('rscate1') && updateData.oldRow.hasOwnProperty('rscate1')){
+	    				const option = mdc06ComboData['rscate1'].find(obj => obj[updateData.rowData['rscate1']]);
+
+	    				newRow['rscate1'] = option ? updateData.rowData['rscate1'] : null;
+	    			}
+
+	    			if(updateData.newRow.hasOwnProperty('rsncode') && updateData.oldRow.hasOwnProperty('rsncode')){
+	    				newRow['rsncode'] = updateData.newRow['rsncode']?.toUpperCase();
+	    			}
+
+	    			updateRowList.push({
+	    				rowIndx: updateData.rowIndx,
+	    				newRow: newRow
+	    			});
+	    		});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+	    	} else if('checkbox' === ui.source){
+	    		const updateRowList = [];
+
+	    		await ui.updateList.forEach(updateData => {
+					let newRow = {state: true};
+
+	    			if(updateData.newRow.hasOwnProperty('rsuseyn')){
+	        			updateRowList.push({
+	        				rowIndx: updateData.rowIndx,
+	        				newRow: newRow
+	        			});
+	    			}
+	    		});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+	    	}
+	    	if('paste' === ui.source){
+	    		await ui.addList.forEach(addData =>
+	    			addData.newRow = {
+       					state: true,
+       					compkey: '[[${userattr.compkey}]]',
+       					warekey: mdc06WarekeyCondition,
+    	    			rsuseyn: addData?.newRow?.rsuseyn || 'Y'
+       			});
+				await this.updateRow({
+					rowList: ui.addList,
+					checkEditable: false
+				});
+    		}
+		});
+
+		// Grid 생성시 이벤트
+		mdc06Grid.setCreate(async function(evt, ui) {
+			const response = await initMdc06();
+
+			mdc06InitData = response.item;
+
+			for(let key of Object.keys(mdc06InitData)){
+				const gData = mdc06InitData[key];
+				let target = '';
+
+				if('warekey' === key){
+					target = '[[${gprogrid}]]' + 'Warekey';
+				}
+
+				if('' !==target){
+					$('#' + target + ' option').not('[value=""]').remove();
+					gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'));
+				}
+
+				if('doccate' !== key || 'doctype' !== key){
+					const options = gData.map(obj => {
+			        	let rObj = {};
+
+			        	rObj[obj['combovl']] = obj['combonm'];
+
+			        	return rObj;
+					});
+
+					mdc06ComboData[key] = options;
+				}
+			}
+		});
+
+		// Grid 데이터 추가 이벤트
+		mdc06Grid.setAdd(function(evt, ui) {
+			if(!mdc06WarekeyCondition){
+				alert('[[#{ms.noSearchError}]]');
+
+				return false;
+			}
+
+			const rowData = {
+				compkey: '[[${userattr.compkey}]]',
+				warekey: mdc06WarekeyCondition,
+				rsuseyn: 'Y'
+			};
+			const rowIndx = this.addRow({
+				rowData: rowData,
+				checkEditable: false
+			});
+
+			this.goToPage({	rowIndx: rowIndx });
+			this.focus({
+				rowIndxPage: rowIndx,
+				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )
+			});
+		});
+
+		// Grid 검색 세팅
+		mdc06Grid.setFind();
+
+		// Grid 초기화 세팅
+		mdc06Grid.setReset();
+
+		// Grid 객체 생성
+		mdc06Grid.open();
+
+		async function initMdc06() {
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+			const response = await fetchUtil('GET', url);
+
+			return response.json();
+		}
+
+	//============================================================
+	// 영역 검색 버튼 이벤트
+	//============================================================
+	// Grid 데이터 조회 함수
+	async function getMdc06List() {
+		const grid = mdc06Grid.getGrid();
+		const data = {
+			warekey: $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val(),
+			docctnm: $('#' + '[[${gprogrid}]]' + 'Docctnm').val(),
+			doctynm: $('#' + '[[${gprogrid}]]' + 'Doctynm').val()
+		};
+
+		grid.showLoading();
+		mdc06WarekeyCondition = $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', { data: resContent, recIndx: '[[#{common.grid.recIndx}]]' } );
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	//============================================================
+	// 그리드 세이브 버튼 이벤트
+	//============================================================
+	// Grid 데이터 저장 validation
+	async function mdc06SaveChanges() {
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all: true});
+
+		//============================================================
+    	// 체크 데이터 중 필수 & 중복 값 체크
+    	//============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['warekey', 'doccate', 'doctype', 'rsncode', 'rsncdnm'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+	      			});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+   				const keyCols = ['warekey', 'doccate', 'doctype', 'rsncode'];
+
+   				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+   					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData)
+   										+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+   					alert(alertTxt);
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: "warekey" } )
+	      			});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdc06List(gridChange);
+	}
+
+	// Grid 데이터 저장 함수
+	async function saveMdc06List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdc06Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdc06Response.status === 200){
+			await getMdc06List();
+		}
+
+		grid.hideLoading();
+	}
+});
+</script>
+</div>
+</html>

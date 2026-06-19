@@ -1,0 +1,887 @@
+<!-- 	/*  OMR01 - OMR01 반출등록
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 안성민 
+	*   설명			: OMR01 재고조회 후 반출 오더의 등록 
+	*/
+ -->
+
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="omr01_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omr01_warekey" name="omr01_warekey"
+							data-cb-variable="warekey" data-cb-val="combovl"
+							data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"></select>
+					</div>
+				</div>
+				<label for="omr01_ownerkey" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omr01_ownerky" name="omr01_ownerky"
+							data-cb-variable="ownerky" data-cb-val="combovl"
+							data-cb-name="combonm" data-cb-url="/md/common/partner/owner">
+						</select>
+					</div>
+				</div>
+<!-- 				<label for="omr01_oeinsdt" class="setting-grid-title ic-title-nece">[[#{om.omr.oeinsdt}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="date" max="2999-12-31" id="omr01_oeinsdt_from"
+							onkeyup="setInputDateDel(this)" /> <span>~</span> <input
+							type="date" max="2999-12-31" id="omr01_oeinsdt_to"
+							onkeyup="setInputDateDel(this)" />
+					</div>
+				</div> -->
+				<label for="omr01_skumkey" class="setting-grid-title">[[#{om.omr.skumkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text"
+							th:placeholder="${#messages.msg('om.omr.skumkey')}"
+							id="omr01_skumkey" name="omr01_skumkey" />
+					</div>
+				</div>
+				<label for="omr01_skudesc" class="setting-grid-title">[[#{om.omr.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text"
+							th:placeholder="${#messages.msg('om.omr.skudesc')}"
+							id="omr01_skudesc" name="omr01_skudesc" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="omr01_btnSearch">
+					<img />조회
+				</button>
+				<button type="button" class="btn-clear btn-white"
+					id="omr01_btnReset">
+					<img />초기화
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="omr01_btnSave">
+						<img class="ic-bt-save" />저장
+					</button>
+				</div>
+			</div>
+		</div>
+		<div class="list-grid-wrapper con-box">
+			<div id="omr01_pqgrid"></div>
+		</div>
+		<!-- 로딩이미지 부분 -->
+		<div class="spinner" id="spinner"></div>
+		<!-- <div class="d-flex justify-content-center">
+			<div id="lodingImg" class="spinner-border" role="status"
+				style="display: none; width: 3rem; height: 3rem">
+				<span class="sr-only">Loading...</span>
+			</div>
+		</div> -->
+	</div>
+	<script>
+      $(function () {
+        var pageId = "omr01";
+
+        let omr01GridColModel;
+        let omr01GridObject;
+        let initData;
+        let omr01Warekey;
+        let omr01Ownerky;
+
+        // 공통함수 - 버튼 클릭 이벤트
+        $("#" + pageId + "_btnSearch").click(function () {
+          searchOmr01List();
+        });
+
+        $("#" + pageId + "_btnSave").click(function () {
+          saveOmr01Change();
+        });
+
+        $("#" + pageId + "_btnReset").click(function () {
+          refreshOmr01List();
+        });
+
+     	// 공통함수 - Grid 생성
+        omr01GridColModel = [
+          {
+            title: "",
+            dataType: "String",
+            dataIndx: "state",
+            type: "checkBoxSelection",
+            align : "center",
+            maxWidth: "30",
+            maxHeight: "30",
+            menuIcon: false,
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          },
+          {
+            title: "[[#{om.omr.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey1",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.ownerkey}]]",
+            dataType: "string",
+            dataIndx: "ownerky1",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.lotnmky}]]",
+            dataType: "string",
+            dataIndx: "lotnmky",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.skudesc}]]",
+            dataType: "string",
+            dataIndx: "skudesc",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.skumkey}]]",
+            dataType: "string",
+            dataIndx: "skumkey",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.stotqty}]]",
+            dataType: "integer",
+            dataIndx: "stotqty",
+            editable: false,
+            format: "#,###",
+          },
+          {
+            title: "[[#{om.omr.stkstat}]]",
+            dataType: "string",
+            dataIndx: "stkstat1",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.suomkey}]]",
+            dataType: "string",
+            dataIndx: "suomkey",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.rcvdcdt}]]",
+            dataType: "date",
+            dataIndx: "rcvdcdt",
+            format: "yy-mm-dd",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.rsncode}]]",
+            dataType: "string",
+            dataIndx: "rsncdnm",
+            styleHead: { background: "[[#{grid.styleHead01}]]" },
+            dataTarget: "",
+            editor: {
+				type: 'select',
+				init: function (ui) {
+					ui.$cell.find('select').pqSelect();
+					setTimeout(function () {
+						ui.$cell.find('select').pqSelect('open');
+					}, 250);
+				},
+				options: [],      
+			},
+			render: function (ui) {
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				ui.rowData.rsncdnm = option ? ui.cellData : '';
+				return option ? option[ui.cellData] : '';
+			},	
+          },
+          {
+        	  title: "[[#{om.oereti.rsndesc}]]",
+              dataType: "string",
+              dataIndx: "rsndesc",
+              width: '100',
+			  styleHead: { background: '[[#{grid.styleHead02}]]' },
+			  dataTarget: ''
+          },
+          {
+            title: "[[#{om.omr.rtodqty}]]",
+            dataType: "integer",
+            dataIndx: "poitqty",
+            align: "right",
+            format: "#,###",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            summary: { type: "sum" },
+          },
+          {
+            title: "[[#{om.omr.stockky}]]",
+            dataType: "string",
+            dataIndx: "stockky",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.areakey}]]",
+            dataType: "string",
+            dataIndx: "areanam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.zonekey}]]",
+            dataType: "string",
+            dataIndx: "zonenam",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.locakey}]]",
+            dataType: "string",
+            dataIndx: "locanam",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.subsect}]]",
+            dataType: "string",
+            dataIndx: "subsect",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.truntyp}]]",
+            dataType: "string",
+            dataIndx: "truntyp",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.trunpid}]]",
+            dataType: "string",
+            dataIndx: "trunpid",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.shelife}]]",
+            dataType: "integer",
+            dataIndx: "shelife",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.expidat}]]",
+            dataType: "string",
+            dataIndx: "expidat",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.rcvfrdt}]]",
+            dataType: "string",
+            dataIndx: "rcvfrdt",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat01}]]",
+            dataType: "string",
+            dataIndx: "lotat01",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat02}]]",
+            dataType: "string",
+            dataIndx: "lotat02",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat03}]]",
+            dataType: "string",
+            dataIndx: "lotat03",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat04}]]",
+            dataType: "string",
+            dataIndx: "lotat04",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat05}]]",
+            dataType: "string",
+            dataIndx: "lotat05",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat06}]]",
+            dataType: "string",
+            dataIndx: "lotat06",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat07}]]",
+            dataType: "string",
+            dataIndx: "lotat07",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat08}]]",
+            dataType: "string",
+            dataIndx: "lotat08",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat09}]]",
+            dataType: "string",
+            dataIndx: "lotat09",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat10}]]",
+            dataType: "string",
+            dataIndx: "lotat10",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat11}]]",
+            dataType: "string",
+            dataIndx: "lotat11",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat12}]]",
+            dataType: "string",
+            dataIndx: "lotat12",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat13}]]",
+            dataType: "string",
+            dataIndx: "lotat13",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat14}]]",
+            dataType: "string",
+            dataIndx: "lotat14",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat15}]]",
+            dataType: "string",
+            dataIndx: "lotat15",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat16}]]",
+            dataType: "string",
+            dataIndx: "lotat16",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat17}]]",
+            dataType: "string",
+            dataIndx: "lotat17",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat18}]]",
+            dataType: "string",
+            dataIndx: "lotat18",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat19}]]",
+            dataType: "string",
+            dataIndx: "lotat19",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lotat20}]]",
+            dataType: "string",
+            dataIndx: "lotat20",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.rcvdcky}]]",
+            dataType: "string",
+            dataIndx: "rcvdcky",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.rcvdcit}]]",
+            dataType: "integer",
+            dataIndx: "rcvdcit",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.taskoky}]]",
+            dataType: "string",
+            dataIndx: "taskoky",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.taskoit}]]",
+            dataType: "integer",
+            dataIndx: "taskoit",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.shpdcky}]]",
+            dataType: "string",
+            dataIndx: "shpdcky",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.shpdcit}]]",
+            dataType: "integer",
+            dataIndx: "shpdcit",
+            editable: false,
+          },/* 
+          {
+            title: "[[#{wm.wstkky.adjsoky}]]",
+            dataType: "string",
+            dataIndx: "adjsoky",
+            editable: false,
+          }, */
+          {
+            title: "[[#{wm.wstkky.adjsoit}]]",
+            dataType: "integer",
+            dataIndx: "adjsoit",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.adjsoky}]]",
+            dataType: "string",
+            dataIndx: "adjsoky",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.physoky}]]",
+            dataType: "string",
+            dataIndx: "physoky",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.physoit}]]",
+            dataType: "integer",
+            dataIndx: "physoit",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.storfky}]]",
+            dataType: "string",
+            dataIndx: "storfky",
+            editable: false,
+          },
+          {
+            title: "[[#{wm.wstkky.lmodate}]]",
+            dataType: "date",
+            dataIndx: "lmodate",
+            editable: false,
+            render: function () {
+                return moment().format('yy-MM-DD');
+              },
+          },
+          {
+            title: "[[#{wm.wstkky.lmotime}]]",
+            dataType: "string",
+            dataIndx: "lmotime",
+            editable: false,
+            render: function () {
+                return moment().format('HH:mm:ss');
+              },
+          },
+          {
+            title: "[[#{wm.wstkky.lmouser}]]",
+            dataType: "string",
+            dataIndx: "lmouser",
+            editable: false,
+          },
+          {
+            title: "[[#{om.omr.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          },
+        ];
+
+        // 공통함수 - pqGrid 객체 생성
+        omr01GridObject = new GridUtil(
+          omr01GridColModel,
+          "[[${gprogrid}]]",
+          pageId + "_pqgrid"
+        );
+
+        omr01GridObject.setFind();
+        omr01GridObject.setReset();
+        
+        // 공통함수 - setCreate
+        omr01GridObject.setCreate(async function(event, ui){
+        	await _commonInit();
+        	
+            omr01Warekey = document.querySelector('#omr01_warekey').value;
+    		omr01Ownerky = document.querySelector('#omr01_ownerky').value;		
+    		
+    		// 20231018 화주로그인=화주 고정 옵션 수정
+    		if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+				const html = '<option value="" selected>[[#{om.omr.all}]]</option>';
+				document.querySelector('#omr01_ownerky').insertAdjacentHTML('afterbegin', html); 
+				$('#omr01_ownerky').pqSelect({ deselect : false }); 
+			} 		
+    		
+        });
+        
+        // 공통함수 - pqGrid 이벤트발생시 validate 함수
+        omr01GridObject.setBeforeValidate(function (event, ui) {
+          // 한글 문서타입 '입고처 반출'
+          let targetCombovl =
+            ui.updateList[0].newRow.rsncdnm === "폐기" ? "340" : "330";
+
+          let doctynmValues = initData.mordmaList
+            .filter((obj) => obj.combovl === targetCombovl)
+            .map((obj) => obj.combonm);
+
+          if (
+            ui.source != "undo" &&
+            (ui.source == "edit" ||
+              ui.source == "paste" ||
+              ui.source == "checkbox")
+          ) {
+            let rownum = ui.updateList[0].rowIndx;
+
+            if (ui.updateList[0].newRow.rsncdnm !== null) {
+              this.updateRow({
+                rowIndx: rownum,
+                newRow: {
+                  state: "Y",
+                  //rsndesc: ui.updateList[0].newRow,
+                },
+                checkEditable: false,
+              });
+            }
+          }
+
+          // 반출사유를 선택하면 반출사유코드를 자동으로 대입함
+          if (ui.source === "edit") {
+            // 반출 사유를 선택하면
+            if (ui.updateList[0].newRow.rsncdnm) {
+              let rsncdnm = ui.updateList[0].newRow.rsncdnm;
+              let rsncode = initData.commonList.find(
+                (row) => row.rsncdnm === rsncdnm
+              );
+
+              let newRsncode = rsncode.rsncode;
+
+              // 반출사유가 '폐기'이면 반출처도 '폐기'로 매핑
+              // 반출사유가 '폐기'를 제외한 나머지는 NULL로 셋팅
+              if (rsncode) {
+            	  this.updateRow({
+                  rowIndx: ui.updateList[0].rowIndx,
+                  newRow: {
+                	  rsndesc : '',
+                    //rsncode: newRsncode,
+                    //doctynm: doctynmValues,
+                  },
+                  checkEditable: false,
+                });
+              } else {
+                console.error("[[#{om.omr.norsncdnm}]]", rsncdnm);
+              }
+            }
+
+            // 반출수량 validation
+            if (
+              ui.updateList[0].newRow.poitqty == null ||
+              ui.updateList[0].newRow.poitqty == 0 ||
+              ui.updateList[0].newRow.poitqty <= 0
+            ) {
+              ui.updateList[0].newRow.state = "Y";
+            }
+
+            if (ui.updateList[0].newRow.poitqty != null) {
+              let currentRow = this.getRowData({
+                rowIndx: ui.updateList[0].rowIndx,
+              });
+              let currentStotqty = currentRow.stotqty;
+              let poitqty = ui.updateList[0].newRow.poitqty;
+
+              // poitqty가 null이 아니고 숫자도 아닌 경우 입력을 막고 알림창을 띄웁니다.
+              if (poitqty != null && !/^\d+$/.test(poitqty)) {
+                ui.updateList[0].newRow.poitqty = 0;
+                //return;
+              } else if (poitqty == null) {
+                ui.updateList[0].newRow.poitqty = null;
+              } else if (poitqty < 0) {
+                ui.updateList[0].newRow.poitqty = 0;
+                alert("0 " + "[[#{ms.notSmallQty}]]");
+              } else if (currentStotqty < poitqty) {
+                alert("[[#{om.omr.overpoitqty}]]");
+                // 유효한 재고수량 값으로 조정합니다. (재고수량과 같거나 작게 설정)
+                ui.updateList[0].newRow.poitqty = currentStotqty;
+              }
+            }
+          }
+          if (ui.source === "update" || ui.source === "paste") {
+            let selectedRowNum = ui.updateList.map(
+              (updatedRow) => updatedRow.rowIndx
+            );
+            
+            // Paste
+ 			if (ui.updateList[0].newRow.rsncdnm) {
+		       let rsncdnm = ui.updateList[0].newRow.rsncdnm;
+		       let rsncode = initData.commonList.find(
+		             (row) => row.rsncdnm === rsncdnm
+		        );
+
+              let newRsncode = rsncode.rsncode;
+
+              // 반출사유가 '폐기'이면 반출처도 '폐기'로 매핑
+              // 반출사유가 '폐기'를 제외한 나머지는 NULL로 셋팅
+              if (rsncode) {
+            	  for (const rowIndx of selectedRowNum) {
+            		  this.updateRow({
+            		    rowIndx,
+            		    newRow: {
+            		      //rsncode: newRsncode, (231211 코드 삭제)
+            		      //doctynm: doctynmValues,
+            		      //rsndesc : rsndesc,
+            		      state: "Y",
+            		    },
+            		    checkEditable: true,
+            		  });
+            		}
+              } else {
+                console.error("[[#{om.omr.norsncdnm}]]", rsncdnm);
+              }
+            }
+            
+         // 반출수량 검증 로직 추가
+         ui.updateList.forEach((updateItem) => {
+             let poitqty = updateItem.newRow.poitqty;
+             let rowsStotqty = updateItem.rowData.stotqty;
+
+             if (poitqty != null) {
+                 if (!/^\d+$/.test(poitqty)) {
+                     // 유효하지 않은 경우, 기존 값 유지 또는 적절한 처리
+                     //alert("유효하지 않은 수량: " + poitqty);
+                     // updateItem.newRow.poitqty 값을 변경하지 않음
+                 } else if (poitqty < 0) {
+                     updateItem.newRow.poitqty = 0;
+                 } else if (rowsStotqty < poitqty) {
+                	 alert("[[#{om.omr.overpoitqty}]]");
+                     updateItem.newRow.poitqty = rowsStotqty;
+                 }
+                 // 유효한 경우, 변경 없음
+             }
+             // poitqty가 null인 경우에 대한 처리 필요
+         });
+
+          }
+          
+        });
+
+        //pqGrid 랜더링
+        omr01GridObject.open();
+        
+        //============================================================
+        //그리드 초기화 버튼 이벤트
+        //============================================================
+        async function refreshOmr01List() {
+          const selectedWarekey = $("#" + pageId + "_warekey").prop(
+            "selectedIndex",
+            0
+          );
+          const selectedOwnerky = $("#" + pageId + "_ownerky").prop(
+            "selectedIndex",
+            0
+          );
+
+
+          document.getElementById("omr01_skudesc").value = "";
+          document.getElementById("omr01_skumkey").value = "";
+
+          omr01GridObject.searchList([]);
+        }
+
+        //============================================================
+        //그리드 세이브 버튼 이벤트
+        //============================================================
+        async function saveOmr01Change() {
+          let grid = omr01GridObject.getGrid();
+          let gridAllData = grid.getChanges({ all: true });
+          let gridDataList = grid.getData();
+
+          let checkList = gridDataList.filter(function (e) {
+            return e.state == "Y";
+          });
+          
+          // 231211 추가 여기서 checkList에 대한 반복문을 시작합니다.
+          for (const item of checkList) {
+            // 'rsncdnm' 값에 따라 'newRsncode' 설정
+            if (item.rsncdnm) {
+              let rsncode = initData.commonList.find(row => row.rsncdnm === item.rsncdnm);
+              item.rsncode = rsncode ? rsncode.rsncode : null;
+            }
+          }
+
+          // 231208 1115 체크박스 선택된 row만 진행 추가
+          if (checkList.length != 0) {
+        	  for (const checkData of checkList) {
+        	    if (!checkData.rsncdnm || checkData.skumkey.includes(",")) {
+        	      alert(
+        	        checkData.pq_ri +
+        	          1 +
+        	          " Row " +
+        	          "[[#{ms.requiredValue}]]" +
+        	          " (" +
+        	          "[[#{om.omr.norsncdnm}]]" +
+        	          ")"
+        	      );
+        	      grid.editCell({ rowIndx: checkData.pq_ri, dataIndx: "rsncdnm" });
+        	      return false;
+        	    }
+        	    if (!checkData.poitqty) {
+        	      alert(
+        	        checkData.pq_ri +
+        	          1 +
+        	          " Row의 " +
+        	          "[[#{ms.requiredValue}]]" +
+        	          " (" +
+        	          "[[#{om.omr.rtodqty}]]" +
+        	          ")"
+        	      );
+        	      grid.editCell({ rowIndx: checkData.pq_ri, dataIndx: "poitqty" });
+        	      return false;
+        	    }
+        	  }
+        	} else {
+        	  alert("[[#{ms.choiceRowZero}]]");
+        	}
+
+
+          if (checkList.length > 0) {
+            if (confirm("[[#{ms.checksave}]]")) {
+              let list = new Object();
+              let addList = [];
+              let updateList = [];
+
+
+              for (const item of checkList) {
+            	  if (item.recindx == undefined)
+            	    addList.push(item);
+            	  else
+            	    updateList.push(item);
+              }
+              
+              list.addList = addList;
+              list.updateList = updateList;
+
+              if (gridAllData.deleteList.length > 0) {
+                list.deleteList = gridAllData.deleteList;
+              }
+
+              let data = {
+                list: list,
+              };
+
+              omr01GridObject.getGrid().showLoading();
+              const rData = await fetchUtil(
+                "POST",
+                "/om/omr01/omr1Save.do",
+                data
+              );
+
+              omr01GridObject.getGrid().hideLoading();
+
+              if (rData.status === 200) {
+                //alert("[[#{ms.saveSuccess}]]");
+
+                // 프린트 주석처리
+                if (confirm("[[#{om.omr.printOut}]]")) {
+                  let resContent = await rData.json();
+                  let report = []; // Report 객체들을 담을 리스트를 생성합니다.
+
+                  // resContent.data의 각 항목에 대해 반복합니다.
+                  let reportObj = {
+                    //oeretky: dataItem.oeretky,
+                    oeretky: resContent.data[0].oeretky,
+                    compkey: "[[${userattr.compkey}]]",
+                    progrid: "[[${gprogrid}]]",
+                    warekey: document.querySelector("#omr01_warekey").value,
+                    user: "[[${userattr.useract}]]",
+                    type: resContent.type,
+                  };
+                  report.push(reportObj); // 생성된 reportObj를 reportObjList에 추가합니다.
+                  
+                  await reportPrint(report, 'om');
+
+                } 
+
+                searchOmr01List();
+              } else {
+                //alert("[[#{ms.saveErr}]]");
+                searchOmr01List();
+              }
+            }
+          } else {
+            //alert("[[#{ms.saveErr}]]");
+          }
+        }
+
+        // OMR01 데이터의 조회
+        async function initOMRData(param) {
+          const grid = pq.grid('#omr01_pqgrid');
+          grid.showLoading();
+          
+          let rData = await fetchUtil("", "/om/omr01Select.do", param);
+          initData = await rData.json();
+          
+          
+          
+          if (initData.omr01List.length == 0) {
+            //alert("[[#{ms.getDataZero}]]");
+          }
+
+          // rsncdnm은 서브쿼리기 때문에 null인 데이터를 제외하기 위한 변수
+          let filteredCommonList = initData.commonList.filter(
+            (row) => row.rsncdnm != null
+          );
+
+          comboCreateData("omr01_pqgrid", "rsncdnm", filteredCommonList, {
+            combovl: "rsncdnm",
+            combonm: "rsncdnm",
+          });
+
+          grid.hideLoading();
+          omr01GridObject.searchList(initData.omr01List, initData.commonList);
+          
+        }
+
+        //============================================================
+        //영역 검색 버튼 이벤트
+        //============================================================
+        async function searchOmr01List() {
+          let param = {
+            warekey: $("#omr01_warekey").val(),
+            ownerky: $("#omr01_ownerky").val(),
+            skudesc: $("#omr01_skudesc").val(),
+            skumkey: $("#omr01_skumkey").val(),
+          };
+
+          initOMRData(param);
+        }
+      });
+    </script>
+	<!--  mainConten 종료 -->
+</div>
+</html>

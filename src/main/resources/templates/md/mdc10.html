@@ -1,0 +1,394 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdc10Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdc10Warekey"></select>
+					</div>
+				</div>
+				<label for="mdc10Stddate" class="setting-grid-title">[[#{md.mlscal.stddate}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="mdc10FromStdDate" onkeyup="setInputDateDel(this)"> <span>~</span> <input type="date" max="2999-12-31" id="mdc10ToStdDate" onkeyup="setInputDateDel(this)">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdc10Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdc10Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdc10Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdc10Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdc10
+	  - 최초생성자 : Park. T. S.
+	  - 최초생성일시 : 2023.08
+	  - 설명 : 물류달력
+	  ------------------------------------------
+	*/
+$(function(){
+	//----------- 전역변수 ------------//
+	const mdc10ComboData = {};
+	let mdc10InitData;
+	//----------- 전역변수 end ------------//
+
+	//===============================================================
+	// 검색 이벤트
+	//===============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(async function() {
+		 await getMdc10List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid')
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all: true});
+
+		//updateList 체크 데이터 정제
+		for(let idx=0; idx<gridChange.updateList.length; idx++){
+			if(gridChange.updateList[idx]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(idx, 1);
+				gridChange.oldList.splice(idx, 1);
+			}
+		}
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdc10List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		await resetSearchConditions(0, 0, 0, true);
+		makeEmptyGrid(mdc10Grid);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'FromStdDate, #' + '[[${gprogrid}]]' + 'ToStdDate').on('change', async function(){ // 검색영역 날짜 바뀌면 validation
+	    const $currentFromDate = $('#' + '[[${gprogrid}]]' + 'FromStdDate').val();
+	    const $currentToDate = $('#' + '[[${gprogrid}]]' + 'ToStdDate').val();
+
+		if($currentToDate && $currentFromDate>$currentToDate){
+			alert('[[#{ms.dateConditionError}]]');
+			$('#' + '[[${gprogrid}]]' + 'FromStdDate').val('');
+		}
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdc10GridCM = [
+		{
+			title: '',
+			dataType: 'bool',
+			dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+			align: 'center',
+            type: 'checkbox',
+            sortable: false,
+            editor: false,
+            cb: {
+            	all: true,
+            	header: true
+            }
+     	},
+        {
+     		title: '[[#{common.grid.recIndx}]]',
+     		dataType: 'string',
+     		dataIndx: '[[#{common.grid.recIndx}]]',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mwarma.compkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'compkey',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mwarma.warekey}]]',
+     		dataType: 'string',
+     		dataIndx: 'warekey',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mwarma.whnamlc}]]',
+     		dataType: 'string',
+     		dataIndx: 'whnamlc',
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mlscal.stddate}]]',
+     		dataType: 'string',
+     		dataIndx: 'stddate',
+     		editable: false,
+			render : ui => {
+				return { text: ui.cellData?.replace(regDivideDateYMD, divideDateFormatYMD) }
+			}
+		},
+		{
+			title: '[[#{md.mlscal.logyear}]]',
+			dataType: 'string',
+			dataIndx: 'logyear',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlscal.logmont}]]',
+			dataType: 'string',
+			dataIndx: 'logmont',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlscal.logdate}]]',
+			dataType: 'string',
+			dataIndx: 'logdate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mlscal.logweek}]]',
+			dataType: 'string',
+			dataIndx: 'logweek',
+			editable: false,
+			render : ui => {
+				 const weekday = ['[[#{md.mlscal.sundval}]]', '[[#{md.mlscal.mondval}]]', '[[#{md.mlscal.tuedval}]]'
+				 						, '[[#{md.mlscal.weddval}]]', '[[#{md.mlscal.thudval}]]', '[[#{md.mlscal.fridval}]]'
+				 						, '[[#{md.mlscal.satdval}]]'];
+
+				 return ui.cellData ? weekday[Number(ui.cellData)] : '';
+			}
+		},
+		{
+			title: '[[#{md.mlscal.weknum7}]]',
+			dataType: 'string',
+			dataIndx: 'weknum7',
+			editable: false,
+			render : ui => {
+				return {text: ui.cellData?.replace(regDivideDateYM, divideDateFormatYM)}
+			}
+		},
+		{
+			title: '[[#{md.mlscal.weknum0}]]',
+			dataType: 'string',
+			dataIndx: 'weknum0',
+			editable: false,
+			render : ui => {
+				return {text: ui.cellData?.replace(regDivideDateYM, divideDateFormatYM)}
+			}
+		},
+		{
+			title: '[[#{md.mlscal.natholi}]]',
+			dataType: 'string',
+			dataIndx: 'natholi',
+			align: 'center',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mwarma.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdc10Grid = new GridUtil(mdc10GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+	mdc10Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdc10Grid.setReset();
+
+	// Grid 생성시 이벤트
+	mdc10Grid.setCreate(async function(evt, ui){
+		const response = await initMdc10Data();
+
+		mdc10InitData = response.item;
+		setToDateCondition();
+
+		for(let key of Object.keys(mdc10InitData)){
+			const gData = mdc10InitData[key];
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+			}
+
+			if('' !== target){
+				$('#' + target + ' option').not('[value=""]').remove();
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'));
+			}
+
+			const options = gData.map(obj => {
+	        	let rObj = {};
+
+	        	rObj[obj['combovl']] = obj['combonm'];
+
+	        	return rObj;
+			});
+
+			mdc10ComboData[key] = options;
+		}
+
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdc10Grid.setChange(async function(evt, ui){
+    	if('checkbox' === ui.source){
+    		const updateRowList = [];
+
+    		await ui.updateList.forEach(updateData => {
+    			let newRow = {state : true};
+
+           		if(updateData.newRow.hasOwnProperty('natholi')){
+        			updateRowList.push({
+        				rowIndx: updateData.rowIndx,
+        				newRow: newRow
+        			});
+       			}
+   			});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+	});
+
+	// Grid 객체 생성
+	mdc10Grid.open();
+
+	// 검색영역 toDataCondition 설정 함수
+	function setToDateCondition(){ // input(date) 설정
+		const eDate = new Date();
+		const $toStdDate = $('#' + '[[${gprogrid}]]' + 'ToStdDate');
+		const endDate = String(eDate.getFullYear()) + String((eDate.getMonth()+1)).padStart(2, '0') + String(eDate.getDate()).padStart(2, '0'); // 날짜 형식 맞추기
+
+		$toStdDate.val(endDate?.replace(regDivideDateYMD,divideDateFormatYMD));
+	}
+
+	// 페이지 init
+	async function initMdc10Data(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const fetchObj = new EnhancedFetchUtil(url);
+
+		return fetchObj.get();
+	}
+
+	// Grid 조회 함수
+	async function getMdc10List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const data = {
+			warekey: $('#' + '[[${gprogrid}]]' + 'Warekey').val(),
+			fromStdDate: $('#' + '[[${gprogrid}]]' + 'FromStdDate').val(),
+			toStdDate: $('#' + '[[${gprogrid}]]' + 'ToStdDate').val()
+		};
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// Grid 저장 함수
+	async function saveMdc10List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdc10Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdc10Response.status === 200){
+			await getMdc10List();
+		}
+
+		grid.hideLoading();
+	}
+});
+</script>
+</div>
+</html>

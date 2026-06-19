@@ -1,0 +1,570 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent">
+		<div class="tab-contents">
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+                	<label for="tma1_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tma01_towarky" name="tma01_towarky"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList">
+							</select>
+                        </div>
+                    </div>
+                    <label for="tma1_doctype" class="setting-grid-title">[[#{tm.tma1.doctype}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                        	<select id="tma01_doctype" name="tma01_doctype"></select>
+                        </div>
+                    </div>
+                    <label for="tma1_saatc06" class="setting-grid-title">[[#{tm.tma1.saatc06}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id="tma01_saatc06" th:placeholder="${#messages.msg('tm.tma1.saatc06')}" onkeyup="tma01KeyupEvt()">
+                        </div>
+                    </div>
+					<label for="tma1_denamlc" class="setting-grid-title">[[#{tm.tma1.destkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                        	<select id="tma01_destkey" name="tma01_destkey"></select>
+                        </div>
+                    </div>
+                    <label for="tma1_saatc10" class="setting-grid-title">[[#{tm.tma1.saatc10}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id="tma01_saatc10" th:placeholder="${#messages.msg('tm.tma1.saatc10')}" onkeyup="tma01KeyupEvt()">
+                        </div>
+                    </div>
+                    <label for="tma1_postdat" class="setting-grid-title">[[#{tm.tma1.postdat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-date-group">
+                            <input type="date" id="tma01_postdatFrom" onkeyup="setInputDateDel(this)">
+                            <span>~</span>
+                            <input type="date" id="tma01_postdatTo" onkeyup="setInputDateDel(this)">
+                        </div>
+                    </div>
+					<label for="tma1_salstat" class="setting-grid-title">[[#{tm.tma1.salstat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tma01_salstat" name="tma01_salstat"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/tm/order/common/salstatlist"
+							data-cb-variable="salstatList">
+								<option value="">[[#{tm.common.all}]]</option>
+							</select>
+                        </div>
+                    </div>
+					<label for="tma1_oubstat" class="setting-grid-title">[[#{tm.tma1.oubstat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tma01_oubstat" name="tma01_oubstat"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/tm/order/common/oubstatlist"
+							data-cb-variable="oubstatList">
+								<option value="">[[#{tm.common.all}]]</option>
+							</select>
+                        </div>
+                    </div>
+					<label for="tma1_trnstat" class="setting-grid-title">[[#{tm.tma1.trnstat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-check-group" id="tma01_trnstat">
+							<label class="check-box">
+								<input type="checkbox" autocomplete="off" id="tma01_trnstatAll">
+								<span>[[#{tm.common.all}]]</span>
+							</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" id="tma01Search"><img>[[#{bt.search}]]</button>
+                    <button type="button" class="btn-clear btn-white" id="tma01Reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="tma01_Head_pqgrid"></div>
+                </div>
+            </div>
+            <div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="tma01_Item_pqgrid"></div>
+				</div>
+			</div>
+        </div>
+	<script>
+	/* *******************************************************
+	 * 최초 생성일시 : 2023-07-17
+	 * 최초 생성자 : 하주영
+	 * 설명 : 현재 등록된 운송오더 현황을 확인할 수 있는 화면입니다.
+	 *********************************************************/
+	let responseData;
+	const pageId = 'tma01';
+	const headGridId = '#' + pageId + '_Head' + '_pqgrid';
+	const itemGridId = '#' + pageId + '_Item' + '_pqgrid';
+
+	$(function() {
+		//날짜 셋팅
+		const yesterday = moment().subtract(1, "d").format("YYYY-MM-DD");
+		const today = moment().format('YYYY-MM-DD');
+		$('#tma01_postdatFrom').val(yesterday);
+		$('#tma01_postdatTo').val(today);
+
+		//============================================================
+		//Head 그리드
+		//============================================================
+		const tma01HeadGridCM = [
+			{ title: '[[#{tm.tma1.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.doccate}]]', dataType: 'string', dataIndx: 'ococtnm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.doctype}]]', dataType: 'string', dataIndx: 'cootynm', editable: false},
+			{ title: '[[#{tm.tma1.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false},
+			{ title: '[[#{tm.tma1.custkey}]]', dataType: 'string', dataIndx: 'ptnamlc', editable: false},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false},
+			{ title: '[[#{tm.tma1.destkey}]]', dataType: 'string', dataIndx: 'denamlc', editable: false},
+			{ title: '[[#{tm.common.saatc01}]]', dataType: 'string', dataIndx: 'saatc01', editable: false},
+			{ title: '[[#{tm.tma1.saatc02}]]', dataType: 'string', dataIndx: 'saatc02', editable: false, hidden: true},
+			{ title: '[[#{tm.common.saatc03}]]', dataType: 'string', dataIndx: 'saatc03', editable: false},
+			{ title: '[[#{tm.tma1.saatc04}]]', dataType: 'string', dataIndx: 'saatc04', editable: false, hidden: true},
+			{ title: '[[#{tm.common.saatc05}]]', dataType: 'string', dataIndx: 'saatc05', editable: false},
+			{ title: '[[#{tm.tma1.saatc06}]]', dataType: 'string', dataIndx: 'saatc06', editable: false},
+			{ title: '[[#{tm.tma1.saatc08}]]', dataType: 'string', dataIndx: 'saatc08', editable: false,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.mcatecd === ui.cellData);
+					});
+					
+					return option ? option.mcatenm : ui.cellData;
+				}	
+			},
+			{ title: '[[#{tm.tma1.saatc09}]]', dataType: 'string', dataIndx: 'saatc09', editable: false},
+			{ title: '[[#{tm.tma1.saatc10min}]]', dataType: 'string', dataIndx: 'saatc10min', editable: false},
+			{ title: '[[#{tm.tma1.saatc10max}]]', dataType: 'string', dataIndx: 'saatc10max', editable: false},
+			{ title: '[[#{tm.tma1.rgitqty}]]', dataType: 'integer', dataIndx: 'rgitqty', editable: false, format: '#,###', summary: { type: "sum" }},
+			{ title: '[[#{tm.tma1.trnstat}]]', dataType: 'string', dataIndx: 'trnstat', editable: false},
+			{ title: '[[#{tm.tma1.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false},
+			{ title: '[[#{tm.tma1.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false},
+			{ title: '[[#{tm.tma1.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+			{ title: '[[#{tm.tma1.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false},
+			{ title: '[[#{tm.tma1.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false},
+			{ title: '[[#{tm.tma1.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false}
+		]
+
+		let tma01HeadGrid = new GridUtil(tma01HeadGridCM, '[[${gprogrid}]]', pageId + '_Head_pqgrid');
+		tma01HeadGrid.setFind();
+
+		//============================================================
+		//그리드 create 이벤트
+		//============================================================
+		tma01HeadGrid.setCreate(async function() {
+			await _commonInit();
+			await tma01InitData();
+		});
+
+		//============================================================
+		//그리드 rowClick 이벤트
+		//============================================================
+		tma01HeadGrid.setCellDblClick(async function (evt, ui) {
+			ocatmaList = [];
+			
+			let destkey = '';
+
+			if(ui.rowData.destkey) {
+				destkey = ui.rowData.destkey;
+			}
+
+			let saatc06 = '';
+
+			if(ui.rowData.saatc06) {
+				saatc06 = ui.rowData.saatc06;
+			}
+
+			let postdat = '';
+
+			if(ui.rowData.postdat) {
+				postdat = ui.rowData.postdat.replaceAll('-', '');
+			}
+
+			const data = {
+				saatc06: saatc06,
+				postdat: postdat,
+				destkey: destkey,
+				doccate: ui.rowData.doccate,
+				doctype: ui.rowData.doctype
+			}
+
+			const grid = pq.grid(itemGridId);
+
+			grid.showLoading();
+
+			const itemData = await fetchUtil('GET', '/tm/order/common/grids/2', data);
+
+			const itemList = await itemData.json();
+
+			grid.option('dataModel', {
+				data: itemList,
+				recIndx: 'rowkey'
+			});
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+		});
+
+		tma01HeadGrid.open();
+
+		//============================================================
+		//Item 그리드
+		//============================================================
+		//salstat, trnstat, oubstat, inbstat 들고오는 값은 키값인데 보여지는 값을 한글로 보여주려고 render 돌림
+		let tma01ItemGridCM = [
+			{ title: '[[#{tm.tma1.cooutky}]]', dataType: 'string', dataIndx: 'cooutky', editable: false},
+			{ title: '[[#{tm.tma1.cooutit}]]', dataType: 'integer', dataIndx: 'cooutit', editable: false},
+			{ title: '[[#{tm.tma1.doccate}]]', dataType: 'string', dataIndx: 'ococtnm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.doctype}]]', dataType: 'string', dataIndx: 'cootynm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saldate}]]', dataType: 'string', dataIndx: 'saldate', editable: false},
+			{ title: '[[#{tm.tma1.saltime}]]', dataType: 'string', dataIndx: 'saltime', editable: false},
+			{ title: '[[#{tm.tma1.vendkey}]]', dataType: 'string', dataIndx: 'vendkey', editable: false, hidden: true},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'towarky', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.custkey}]]', dataType: 'string', dataIndx: 'ptnamlc', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salmemo}]]', dataType: 'string', dataIndx: 'salmemo', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salrqdt}]]', dataType: 'string', dataIndx: 'salrqdt', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salrqtm}]]', dataType: 'string', dataIndx: 'salrqtm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.destkey}]]', dataType: 'string', dataIndx: 'denamlc', editable: false, hidden: true},
+			{ title: '[[#{grid.ownamlc}]]', dataType: 'string', dataIndx: 'ownamlc', editable: false},
+			{ title: '[[#{tm.tma1.skuskey}]]', dataType: 'string', dataIndx: 'skuskey', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.skumkey}]]', dataType: 'string', dataIndx: 'skumkey', editable: false},
+			{ title: '[[#{tm.tma1.skudesc}]]', dataType: 'string', dataIndx: 'skudesc', editable: false},
+			{ title: '[[#{tm.tma1.soitqty}]]', dataType: 'string', dataIndx: 'soitqty', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.rgitqty}]]', dataType: 'integer', dataIndx: 'rgitqty', editable: false, format: '#,###', summary: { type: "sum" }},
+			{ title: '[[#{tm.tma1.shcfqty}]]', dataType: 'integer', dataIndx: 'shcfqty', editable: false, format: '#,###', summary: { type: "sum" }, hidden: true},
+			{ title: '[[#{tm.tma1.diffqty}]]', dataType: 'integer', dataIndx: 'diffqty', editable: false, format: '#,###', summary: { type: "sum" }, hidden: true},
+			{ title: '[[#{tm.tma1.suomkey}]]', dataType: 'string', dataIndx: 'suomkey', editable: false},
+			{ title: '[[#{tm.tma1.dctctyp}]]', dataType: 'string', dataIndx: 'dctctyp', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.rsncode}]]', dataType: 'string', dataIndx: 'rsncode', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.rsndesc}]]', dataType: 'string', dataIndx: 'rsndesc', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salstat}]]', dataType: 'string', dataIndx: 'salstat', editable: false,
+				render: function(ui) {
+					const option = responseData.salstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.inbstat}]]', dataType: 'string', dataIndx: 'inbstat', editable: false, hidden: true,
+				render: function(ui) {
+					const option = responseData.inbstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.oubstat}]]', dataType: 'string', dataIndx: 'oubstat', editable: false,
+				render: function(ui) {
+					const option = responseData.oubstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.trnstat}]]', dataType: 'string', dataIndx: 'trnstat', editable: false,
+				render: function(ui) {
+					const option = responseData.trnstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.ordgr01}]]', dataType: 'string', dataIndx: 'ordgr01', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.ordgr02}]]', dataType: 'string', dataIndx: 'ordgr02', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.ordgr03}]]', dataType: 'string', dataIndx: 'ordgr03', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn01}]]', dataType: 'string', dataIndx: 'saatn01', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn02}]]', dataType: 'string', dataIndx: 'saatn02', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn03}]]', dataType: 'string', dataIndx: 'saatn03', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn04}]]', dataType: 'string', dataIndx: 'saatn04', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn05}]]', dataType: 'string', dataIndx: 'saatn05', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc01}]]', dataType: 'string', dataIndx: 'saatc01', editable: false},
+			{ title: '[[#{tm.tma1.saatc02}]]', dataType: 'string', dataIndx: 'saatc02', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc03}]]', dataType: 'string', dataIndx: 'saatc03', editable: false},
+			{ title: '[[#{tm.tma1.saatc04}]]', dataType: 'string', dataIndx: 'saatc04', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc05}]]', dataType: 'string', dataIndx: 'saatc05', editable: false},
+			{ title: '[[#{tm.tma1.saatc06}]]', dataType: 'string', dataIndx: 'saatc06', editable: false},
+			{ title: '[[#{tm.tma1.saatc07}]]', dataType: 'string', dataIndx: 'saatc07', editable: false, hidden: true,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.scatecd === ui.cellData);
+					});
+					
+					return option ? option.scatenm : ui.cellData;
+				}
+			},
+			{ title: '[[#{tm.tma1.saatc08}]]', dataType: 'string', dataIndx: 'saatc08', editable: false, hidden: true,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.mcatecd === ui.cellData);
+					});
+					
+					return option ? option.mcatenm : ui.cellData;
+				}		
+			},
+			{ title: '[[#{tm.tma1.saatc09}]]', dataType: 'string', dataIndx: 'saatc09', editable: false},
+			{ title: '[[#{tm.tma1.saatc10}]]', dataType: 'string', dataIndx: 'saatc10', editable: false},
+			{ title: '[[#{tm.tma1.saatc11}]]', dataType: 'string', dataIndx: 'saatc11', editable: false},
+			{ title: '[[#{tm.tma1.saatc12}]]', dataType: 'string', dataIndx: 'saatc12', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.closlyn}]]', dataType: 'string', dataIndx: 'closlyn', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.clodate}]]', dataType: 'string', dataIndx: 'clodate', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.clotime}]]', dataType: 'string', dataIndx: 'clotime', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.clouser}]]', dataType: 'string', dataIndx: 'clouser', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.bthdcky}]]', dataType: 'string', dataIndx: 'bthdcky', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.bthdcit}]]', dataType: 'integer', dataIndx: 'bthdcit', editable: false, format: '#,###', summary: { type: "sum" }, hidden: true},
+			{ title: '[[#{tm.tma1.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+			{ title: '[[#{tm.tma1.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.indibzl}]]', dataType: 'string', dataIndx: 'indibzl', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.indiarc}]]', dataType: 'string', dataIndx: 'indiarc', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.updtchk}]]', dataType: 'integer', dataIndx: 'updtchk', editable: false, hidden: true}
+		]
+		let tma01ItemGrid = new GridUtil(tma01ItemGridCM, '[[${gprogrid}]]', pageId + '_Item_pqgrid');
+		tma01ItemGrid.setFind();
+
+		tma01ItemGrid.open();
+
+		//============================================================
+		//Search 버튼 클릭 이벤트
+		//============================================================
+		$('#' + pageId + 'Search').click(async function () {
+			await tma01Search();
+		});
+
+		//============================================================
+		//초기화 이벤트
+		//============================================================
+		$('#' + pageId + 'Reset').click(async function() {
+			$('#' + pageId + '_postdatFrom').val(yesterday);
+			$('#' + pageId + '_postdatTo').val(today);
+			
+			$('select[id*="' + pageId + '_"]').each(function(index, element) {
+				element.options[0].selected = true;
+			});
+			
+			$('input:text[id*="' + pageId + '_"]').each(function(index, element) {
+				element.value = '';
+			});
+			
+			await doctypeSetting();
+
+			$('input:checkbox[name="' + pageId + '_trnstat"]').prop('checked', false);
+			$('#' + pageId + '_trnstatAll').prop('checked', true);
+
+			//Head 그리드와 Item 그리드 둘 다 데이터 날림.
+			//Head 그리드
+			const headGrid = pq.grid(headGridId);
+
+			headGrid.showLoading();
+
+			headGrid.option('dataModel', {data: []});
+
+			headGrid.refreshDataAndView();
+			headGrid.hideLoading();
+
+			//Item 그리드
+			const itemGrid = pq.grid(itemGridId);
+
+			itemGrid.showLoading();
+
+			itemGrid.option('dataModel', {data: []});
+
+			itemGrid.refreshDataAndView();
+			itemGrid.hideLoading();
+		});
+
+	});
+
+	//============================================================
+	//전체 클릭하면 나머지 체크 다 풀림
+	//============================================================
+	$('#' + pageId + '_trnstatAll').click(function () {
+		if($('input:checkbox[name="' + pageId + '_trnstat"]:checked').length === 0) {
+			return false;
+		}else {
+			$('input:checkbox[name="' + pageId + '_trnstat"]').prop('checked', false);
+		}
+	});
+
+
+	//============================================================
+	//다 클릭하면 전체만 체크되고 전체가 클릭된 상황에서 다른거 누르면 전체 체크 풀림
+	//============================================================
+	function trnstatClickEvt() {
+		if($('input:checkbox[name="' + pageId + '_trnstat"]').length === $('input:checkbox[name="' + pageId + '_trnstat"]:checked').length) {
+			$('#' + pageId + '_trnstatAll').prop('checked', true);
+			$('input:checkbox[name="' + pageId + '_trnstat"]').prop('checked', false);
+		}else {
+			$('#' + pageId + '_trnstatAll').prop('checked', false);
+		}
+	}
+
+	//============================================================
+	//체크박스 db에서 가져오기
+	//============================================================
+	function trnstatCheckbox() {
+		let html = '';
+
+		for(const trnstat of responseData.trnstatList) {
+			html += '<label class="check-box" onclick="trnstatClickEvt()">';
+			html += '<input type="checkbox" autocomplete="off" id="' + pageId + '_trnstat' + trnstat.combovl + '" name="' + pageId + '_trnstat" value="' + trnstat.combovl + '">';
+			html += '<span>' + trnstat.combonm + '</span>';
+			html += '</label>';
+		}
+
+		$('#' + pageId + '_trnstat').append(html);
+
+		$('#' + pageId + '_trnstatAll').prop('checked', true);
+	}
+
+	//============================================================
+	//데이터 조회
+	//============================================================
+	async function tma01InitData() {
+		responseData = await fetchUtil('GET', '/tm/order/common/init', {warekey: $('#' + pageId + '_towarky').val()});
+		responseData = await responseData.json();
+		
+		$('#' + pageId + '_destkey option').remove();
+  		$('#' + pageId + '_destkey').append($('<option></option>').attr('value', '').text('[[#{tm.common.all}]]'));
+  		
+  		for(const destkey of responseData.destList) {
+  			$('#' + pageId + '_destkey').append($('<option></option>').attr('value', destkey.destkey).text(destkey.denamlc));
+  		}
+  		
+  		await doctypeSetting();
+
+		trnstatCheckbox();
+
+		return responseData;
+	}
+	
+	//============================================================
+	//창고 change 이벤트
+	//============================================================
+	$('#' + pageId + '_towarky').change(async function() {
+		await doctypeSetting();
+	});
+	
+	async function doctypeSetting() {
+		let mordmaList = await fetchUtil('GET', '/tm/order/common/doctypelist', {warekey: $('#' + pageId + '_towarky').val()});
+		mordmaList = await mordmaList.json();
+		$('#' + pageId + '_doctype option').remove();
+		
+		$('#' + pageId + '_doctype').append($('<option></option>').attr('value', '').text('[[#{tm.common.all}]]'));
+  		
+  		for(mordma of mordmaList) {
+  			$('#' + pageId + '_doctype').append($('<option></option>').attr('value', mordma.combovl).text(mordma.combonm));
+  		}
+	}
+
+	//============================================================
+	//검색
+	//============================================================
+	async function tma01Search() {
+		let trnstatCheckedList = [];
+
+		const trnstatList = $('input:checkbox[name="' + pageId + '_trnstat"]');
+
+		const checkTrnstatList = $('input:checkbox[name="' + pageId + '_trnstat"]:checked');
+
+		//운송상태 전체 클릭 되어있으면 운송상태 전체 다 가져오기
+		//전체 클릭 안되어있으면 클릭된 값들만 가져오기
+		if($('#' + pageId + '_trnstatAll').is(':checked') === true) {
+			for(const trnstat of trnstatList) {
+				trnstatCheckedList.push(trnstat.value);
+			}
+		}else {
+			for(const trnstat of checkTrnstatList) {
+				trnstatCheckedList.push(trnstat.value);
+			}
+		}
+
+		//날짜 - 제거
+		let postdatFrom = $('#' + pageId + '_postdatFrom').val();
+		let postdatTo = $('#' + pageId + '_postdatTo').val();
+
+		postdatFrom = postdatFrom.replaceAll('-', '');
+		postdatTo = postdatTo.replaceAll('-', '');
+
+		const data = {
+				destkey: $('#' + pageId + '_destkey').val(),
+				doctype: $('#' + pageId + '_doctype').val(),
+				towarky: $('#' + pageId + '_towarky').val(),
+				saatc10: $('#' + pageId + '_saatc10').val(),
+				saatc06: $('#' + pageId + '_saatc06').val(),
+				salstat: $('#' + pageId + '_salstat').val(),
+				oubstat: $('#' + pageId + '_oubstat').val(),
+				trnstatCheckedList: trnstatCheckedList,
+				postdatFrom: postdatFrom,
+				postdatTo: postdatTo
+		}
+
+		const headGrid = pq.grid(headGridId);
+
+		headGrid.showLoading();
+
+		const searchData = await fetchUtil('GET', '/tm/order/common/grids/1', data);
+
+		const searchList = await searchData.json();
+
+		headGrid.option('dataModel', {
+			data: searchList,
+			recIndx: 'rowkey'
+		});
+
+		headGrid.refreshDataAndView();
+		headGrid.hideLoading();
+
+		const itemGrid = pq.grid(itemGridId);
+
+		itemGrid.showLoading();
+
+		itemGrid.option('dataModel', {data: []});
+
+		itemGrid.refreshDataAndView();
+		itemGrid.hideLoading();
+	}
+
+	//============================================================
+	//keyup 이벤트
+	//============================================================
+	async function tma01KeyupEvt() {
+		const key = this.event.key || this.event.keyCode;
+		if(key === 'Enter' || key === 13) {
+			await tma01Search();
+		}
+	}
+
+	//============================================================
+	//날짜 validation
+	//============================================================
+// 	function dateValidation() {
+// 		if($('#' + pageId + '_postdatFrom').val() > $('#' + pageId + '_postdatTo').val()) {
+// 			alert('[[#{ms.dateCheck}]]');
+// 			$('#' + pageId + '_postdatFrom').val(moment().subtract(1, "d").format("YYYY-MM-DD"));
+// 			$('#' + pageId + '_postdatTo').val(moment().format('YYYY-MM-DD'));
+// 			return;
+// 		}
+// 	}
+
+	</script>
+	</div>
+</html>

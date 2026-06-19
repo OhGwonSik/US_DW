@@ -1,0 +1,518 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdu05Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdu05Warekey"></select>
+					</div>
+				</div>
+				<label for="mdu05Truntyp" class="setting-grid-title">[[#{md.mpakma.truntyp}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdu05Truntyp">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" id="mdu05Search" class="btn-search btn-navy btn-green">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdu05Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdu05Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdu05Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdu05
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023. 07. 28
+	  - 설명 : 물류비검증처리
+	  ------------------------------------------
+	*/
+$(function(){
+	//----------- 전역변수 ------------//
+	const mdu05ComboData = {};
+	let mdu05InitData;
+	let mdu05WarekeyCondition;
+	//----------- 전역변수 end ------------//
+
+	//============================================================
+	//검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function(){
+		getMdu05List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid')
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all: true});
+
+		//===============================================================
+		// 체크된 데이터 필수 값 & 중복 체크
+		//===============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['warekey', 'packkey', 'truntyp'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+						rowIndxPage: gCheck.pq_ri,
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol })
+					});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+   				const keyCols = ['warekey', 'packkey', 'truntyp'];
+
+   				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+   					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData) + ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+   					alert(alertTxt);
+	      			grid.focus({
+						rowIndxPage: gCheck.pq_ri,
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'warekey' })
+					});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdu05List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdu05Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdu05GridCM = [
+		{
+			title: '',
+			dataType: 'bool',
+			dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+			align: 'center',
+            type: 'checkbox',
+            sortable: false,
+            editor: false,
+            cb: {
+            	all: false,
+            	header: true
+            }
+     	},
+		{
+     		title: '[[#{common.grid.recIndx}]]',
+     		dataType: 'string',
+     		dataIndx: '[[#{common.grid.recIndx}]]',
+     		editable: false,
+     		hidden: true
+     	},
+		{
+     		title: '[[#{md.mpakma.compkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'compkey',
+     		editable: false,
+     		hidden: true
+     	},
+		{
+     		title: '[[#{grid.whnamlc}]]',
+     		dataType: 'string',
+     		dataIndx: 'warekey',	//창고
+            render: ui => {
+                const option = mdu05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ''};
+         	},
+         	editable: false
+		},
+		{
+			title: '[[#{md.mpakma.packkey}]]',
+			dataType: 'string',
+			dataIndx: 'packkey',//포장키
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+            validations: [
+				{
+					type: 'minLen',
+					value: 1,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				}
+			],
+        	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.mpakma.truntyp}]]',
+			dataType: 'string',
+			dataIndx: 'truntyp', //이동용기타입
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+               			search: true,
+               			singlePlaceholder: '',
+               			width: getSelectBoxWidthCondition(ui)
+               		});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdu05ComboData[ui.dataIndx],
+    			prepend: { '' : ' ' }
+            },
+            render: ui => {
+            	const option = mdu05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+            	return { text: option ? option[ui.cellData] : '' };
+            }
+		},
+		{
+			title: '[[#{md.mpakma.pkuseyn}]]',
+			dataIndx: 'pkuseyn',
+			align: 'center',	//사용여부
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mpakma.packqty}]]',
+			dataType: 'float',
+			dataIndx: 'packqty', 	//입수량
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			format: '#,###.000',
+			summary : {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000000000,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(15)}]]'
+				},
+				{
+					type: 'regexp',
+					value: regNum15Dot3,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(15)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mpakma.puomkey}]]',
+			dataType: 'string',
+			dataIndx: 'puomkey',	//단위
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+                		search: false,
+                		singlePlaceholder: '',
+                		width: getSelectBoxWidthCondition(ui)
+                	});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdu05ComboData[ui.dataIndx],
+    			prepend: { '' : ' ' }
+            },
+            render: ui => {
+            	const option = mdu05ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+            	return { text: option ? option[ui.cellData] : '' };
+            }
+		},
+		{
+			title: '[[#{md.mpakma.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mpakma.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mpakma.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.mpakma.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mpakma.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mpakma.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdu05Grid = new GridUtil(mdu05GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+	mdu05Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdu05Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+	mdu05Grid.setAdd(function(evt, ui){
+		if(!mdu05WarekeyCondition){
+			alert('[[#{ms.noSearchError}]]');
+
+			return;
+		}
+
+		const rowIndx = this.addRow({
+			rowData: {
+				state: true,
+				compkey: '[[${userattr.compkey}]]',
+				warekey: mdu05WarekeyCondition,
+				pkuseyn: 'Y',
+				puomkey: '[[#{md.mdu02.suomkey.default}]]'
+			},
+			checkEditable : false
+		});
+
+		this.goToPage({ rowIndx : rowIndx });
+		this.focus({
+			rowIndxPage: rowIndx,
+			colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )
+		});
+	});
+
+	// Grid 생성시 이벤트
+	mdu05Grid.setCreate(async function (evt, ui) {
+		const response = await initMdu05();
+		mdu05InitData = response.item;
+
+		for(let key of Object.keys(mdu05InitData)){
+			const gData = mdu05InitData[key];
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+			} else if ('truntyp' === key){
+				target = '[[${gprogrid}]]' + 'Truntyp';
+			}
+
+			if('' !== target){
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'));
+			}
+
+			const options = gData.map(obj => {
+	        	let rObj = {};
+
+	        	rObj[obj['combovl']] = obj['combonm'];
+
+	        	return rObj
+			});
+
+			mdu05ComboData[key] = options;
+		}
+
+		$('#' + '[[${gprogrid}]]' + 'Truntyp').pqSelect({
+			deselect: false
+		});
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdu05Grid.setChange(async function (evt, ui) {
+    	if('edit' === ui.source || 'paste' === ui.source){
+    		const updateRowList = [];
+
+    		await ui.updateList.forEach(async updateData => {
+        		let newRow = {state : true};
+
+    			if(updateData.newRow.hasOwnProperty('packkey') && updateData.oldRow.hasOwnProperty('packkey')){
+    				newRow['packkey'] = updateData.newRow['packkey']?.toUpperCase();
+    			}
+
+    			const selectBoxCols = ['truntyp', 'puomkey'];
+    			await selectBoxCols.forEach(cols => {
+        			if(updateData.newRow.hasOwnProperty(cols) && updateData.oldRow.hasOwnProperty(cols)){
+        				const option = mdu05ComboData[cols].find(obj => obj[updateData.rowData[cols]]);
+
+    				    newRow[cols] = option ? updateData.rowData[cols] : null;
+        			}
+    			});
+
+    			updateRowList.push({
+					rowIndx: updateData.rowIndx,
+					newRow : newRow
+				});
+    		});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	} else if ('checkbox' === ui.source){
+    		const updateRowList = [];
+
+    		await ui.updateList.forEach(updateData => {
+        		let newRow = {state : true};
+
+    			if(updateData.newRow.hasOwnProperty('pkuseyn')){
+        			updateRowList.push({
+						rowIndx: updateData.rowIndx,
+						newRow : newRow
+					});
+    			}
+    		});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+
+    	if('paste' === ui.source){
+    		await ui.addList.forEach(addData =>
+    			addData.newRow = {
+   					state: true,
+   					compkey: '[[${userattr.compkey}]]',
+   	    			pkuseyn: addData.newRow['pkuseyn'] ? addData.newRow['pkuseyn'] : 'Y'
+   			});
+			await this.updateRow({
+				rowList: ui.addList,
+				checkEditable: false
+			});
+    	}
+    });
+
+	// Grid 객체 생성
+	mdu05Grid.open();
+
+	// 그리드 저장 함수
+	async function saveMdu05List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+
+		grid.showLoading();
+
+		const saveMdu05Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdu05Response.status === 200){
+			await getMdu05List();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 그리드 조회 함수
+	async function getMdu05List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+		mdu05WarekeyCondition = $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val();
+
+		const data = { warekey : $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val(), truntyp : $('#' + '[[${gprogrid}]]' + 'Truntyp option:selected').val() };
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 페이지 초기화 함수
+	async function initMdu05(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const response = await fetchUtil('GET', url);
+
+		return response.json();
+	}
+});
+</script>
+</div>
+</html>

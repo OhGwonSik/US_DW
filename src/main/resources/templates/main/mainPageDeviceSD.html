@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<th:block th:replace="~{/main/fragment/comHeadMobile.html :: fragments-comHead}"></th:block>
+	<th:block th:replace="~{/main/fragment/comScriptMobile.html :: fragments-comScript}"></th:block>
+	<div class="popup">
+		<div class="msg-box">
+		  	<div class="msg-txt"></div>
+		</div>
+		<div class="edit-btn-wrapper">
+		  	<button type="button" class="btn-white" id="pdaConfirmCancel">취소</button>
+		  	<button type="button" class="btn-blue" id="pdaConfirm">확인</button>
+		</div>
+	</div>
+	<div class="popup">
+		<div class="msg-box">
+		  	<div class="msg-txt"></div>
+		</div>
+		<div class="edit-btn-wrapper">
+		  	<button type="button" class="btn-blue" id="pdaAlert">확인</button>
+		</div>
+	</div>
+  	<th:block th:replace="${gprogcmd}"></th:block>
+</html>

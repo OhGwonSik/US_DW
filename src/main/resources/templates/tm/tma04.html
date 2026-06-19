@@ -1,0 +1,911 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+    <div th:fragment="fragments-mainContent">
+        <div class="tab-contents">
+            <div class="search-conditions con-box">
+        		<div class="setting-grid">
+                    <label for="tma4_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tma04_towarky" name="tma04_towarky"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList">
+							</select>
+                        </div>
+                    </div>
+                    <label for="tma4_saatc06" class="setting-grid-title">[[#{tm.tma4.saatc06}]]</label>
+                    <div class="setting-grid-content">
+                    	<div class="input-wrapper">
+                    		<input type="text" id="tma04_saatc06" th:placeholder="${#messages.msg('tm.tma4.saatc06')}" onkeyup="tma04KeyupEvt()">
+                    	</div>
+                    </div>
+                    <label for="tma4_saatc08" class="setting-grid-title">[[#{tm.tma4.saatc08}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id="tma04_saatc08" th:placeholder="${#messages.msg('tm.tma4.saatc08')}" onkeyup="tma04KeyupEvt()">
+                        </div>
+                    </div>
+                    <label for="tma4_destkey" class="setting-grid-title">[[#{tm.tma4.destkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                        	<select id="tma04_destkey" name="tma04_destkey"></select>
+                        </div>
+                    </div>
+                    <label for="tma4_saatc10" class="setting-grid-title">[[#{tm.tma4.saatc10}]]</label>
+                    <div class="setting-grid-content">
+                    	<div class="input-wrapper">
+                    		<input type="text" id="tma04_saatc10" th:placeholder="${#messages.msg('tm.tma4.saatc10')}" onkeyup="tma04KeyupEvt()">
+                    	</div>
+                    </div>
+                    <label for="tma4_postdat" class="setting-grid-title">[[#{tm.tma4.postdat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-date-group">
+                            <input type="date" id="tma04_postdatFrom" onkeyup="setInputDateDel(this)">
+                            <span>~</span>
+                            <input type="date" id="tma04_postdatTo" onkeyup="setInputDateDel(this)">
+                        </div>
+                    </div>
+        		</div>
+                <div class="search-btn-group">
+                    <button id="tma04_OrderListSearch" class="btn-search btn-navy btn-green"><img>[[#{bt.search}]]</button>
+                    <button id="tma04_Reset" class="btn-clear btn-white"><img>[[#{bt.reset}]]</button>
+                </div>
+        	</div>
+        	<div class="search-list">
+	        	<div class="list-top">
+	                <div class="list-title ic-title-mark">
+	                    <span th:text="${gnatitle}"></span>
+	                </div>
+	                <div class="edit-btn-wrapper">
+	                	<button class="btn-navy btn-green" id="tma04_shuttlePlan">[[#{tm.tma4.shuttleplan}]]</button>
+	               	    <button class="btn-navy btn-green" id="tma04_emergencyPlan">[[#{tm.tma6.emplan}]]</button>
+        			</div>
+	            </div>
+	            <div class="list-grid-wrapper con-box">
+	            	<div id="tma04_pqgrid"></div>
+	            </div>
+	        	<div class="search-list">
+					<div class="list-grid-wrapper con-box">
+						<div id="tma04_item_pqgrid"></div>
+					</div>
+	        	</div>
+	        </div>
+	        <!-- 셔틀배차 모달 -->
+			<div class="modal fade modalTm" id="tma04ShuttleModal" tabindex="-1" role="dialog" aria-labelledby="tma04ShuttleModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+	            <div class="modal-dialog modal-lg" role="document">
+	                <div class="modal-content">
+	                    <div class="modal-top">
+	                        <button type="button" class="close" id="tma04ShuttleMdClose" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+	                    </div>
+	                    <div class="modal-body">
+	                        <div class="setting-grid">
+	                            <div class="setting-grid-content">
+	                                <div class="input-wrapper">
+	                                    <input type="text" id="tma04_shtgrnm" name="tma04_shtgrnm" th:placeholder="${#messages.msg('tm.tshrhd.shtgrnm')}" onkeyup="tma04KeyupEvt(this)">
+	                                </div>
+	                            </div>
+								<div class="search-btn-group">
+									<button id="tma04_ShuttleModalSearch" class="btn-search btn-navy btn-green">
+										<img>
+										<span>[[#{bt.search}]]</span>
+									</button>
+								</div>
+	                        </div>
+							<div class="search-list">
+								<div class="list-top">
+									<div class="list-title ic-title-mark">
+										<span>[[#{tm.tma4.shuttleplan}]]</span>
+									</div>
+								</div>
+								<div class="list-grid-wrapper con-box">
+									<div id="tma04_Shuttle_Modal_pqgrid"></div>
+								</div>
+							</div>
+	                    </div>
+						<div class="modal-bottom">
+							<button class="btn-white" id="tma04ShuttleMdSaveBt">[[#{bt.save}]]</button>
+							<button class="btn-save btn-navy btn-green" id="tma04ShuttleMdCloseBt">[[#{bt.close}]]</button>
+						</div>
+	                </div>
+	            </div>
+	        </div>
+	        <!-- 긴급배차 모달 -->
+			<div class="modal fade modalTm" id="tma04EmergencyModal" tabindex="-1" role="dialog" aria-labelledby="tma04EmergencyModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+	            <div class="modal-dialog modal-lg" role="document">
+	                <div class="modal-content">
+	                    <div class="modal-top">
+	                        <button type="button" class="close" id="tma04EmergencyMdClose" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+	                    </div>
+	                    <div class="modal-body">
+							<div class="search-list">
+								<div class="list-top">
+									<div class="list-title ic-title-mark">
+										<span>[[#{tm.tma6.emplan}]]</span>
+									</div>
+								</div>
+								<div class="list-grid-wrapper con-box">
+									<div id="tma04_Emergency_Modal_pqgrid"></div>
+								</div>
+							</div>
+	                        <div class="setting-grid con-box">
+								<label for="tma04_emerscd" class="setting-grid-title">[[#{tm.tma6.emerscd}]]</label>
+	                            <div class="setting-grid-content">
+	                                <div class="input-group">
+	                                    <select id="tma04_emerscd" name="tma04_emerscd"></select>
+	                                </div>
+									<div class="input-wrapper">
+	                                    <input type="text" id="tma04_emerdnm" name="tma04_emerdnm" th:placeholder="${#messages.msg('tm.tma6.emerscd')}">
+	                                </div>
+	                            </div>
+								<label for="tma04_pbilpay" class="setting-grid-title">[[#{tm.tplnhd.pbilpay}]]</label>
+	                            <div class="setting-grid-content">
+	                                <div class="input-wrapper">
+	                                    <input type="text" id="tma04_pbilpay" name="pbilpay" th:placeholder="${#messages.msg('tm.tplnhd.pbilpay')}" onkeyup="onlyNumber(this)">
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+						<div class="modal-bottom">
+							<button class="btn-white" id="tma04EmergencyMdSaveBt">[[#{bt.save}]]</button>
+							<button class="btn-save btn-navy btn-green" id="tma04EmergencyMdCloseBt">[[#{bt.close}]]</button>
+						  </div>
+	                </div>
+	            </div>
+	        </div>
+    	</div>
+    </div>
+    <script>
+    /* *******************************************************
+     * 최초 생성일시 : 2023-08-02
+     * 최초 생성자 : 하주영
+     * 설명 : 운송상태가 운송오더생성인 운송오더들을 셔틀배차 혹은 긴급배차를 할 수 있는 화면입니다.
+     *********************************************************/
+    let responseData;
+    const pageId = 'tma04';
+    const gridId = '#' + pageId + '_pqgrid';
+    const itemGridId = '#' + pageId + '_item_pqgrid';
+    const shuttleMdGridId = '#' + pageId + '_Shuttle_Modal_pqgrid';
+    const EmergencyMdGridId = '#' + pageId + '_Emergency_Modal_pqgrid';
+
+    $(function() {
+    	const yesterday = moment().subtract(1, "d").format("YYYY-MM-DD");
+		const today = moment().format('YYYY-MM-DD');
+		$('#tma04_postdatFrom').val(yesterday);
+		$('#tma04_postdatTo').val(today);
+
+		//============================================================
+		//운송오더현황 그리드
+		//============================================================
+		const tma04OrderGridCM = [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: { all: false, header: true}
+			},
+			{ title: '[[#{tm.tma1.doccate}]]', dataType: 'string', dataIndx: 'ococtnm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.doctype}]]', dataType: 'string', dataIndx: 'cootynm', editable: false},
+			{ title: '[[#{tm.tma4.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false},
+			{ title: '[[#{tm.tma4.custkey}]]', dataType: 'string', dataIndx: 'ptnamlc', editable: false},
+			{ title: '[[#{tm.tma4.destkey}]]', dataType: 'string', dataIndx: 'denamlc', editable: false},
+			{ title: '[[#{tm.common.saatc01}]]', dataType: 'string', dataIndx: 'saatc01', editable: false},
+			{ title: '[[#{tm.tma1.saatc02}]]', dataType: 'string', dataIndx: 'saatc02', editable: false, hidden: true},
+			{ title: '[[#{tm.common.saatc03}]]', dataType: 'string', dataIndx: 'saatc03', editable: false},
+			{ title: '[[#{tm.tma1.saatc04}]]', dataType: 'string', dataIndx: 'saatc04', editable: false, hidden: true},
+			{ title: '[[#{tm.common.saatc05}]]', dataType: 'string', dataIndx: 'saatc05', editable: false},
+			{ title: '[[#{tm.tma4.saatc06}]]', dataType: 'string', dataIndx: 'saatc06', editable: false},
+			{ title: '[[#{tm.tma4.saatc08}]]', dataType: 'string', dataIndx: 'saatc08', editable: false,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.mcatecd === ui.cellData);
+					});
+					
+					return option ? option.mcatenm : ui.cellData;
+				}		
+			},
+			{ title: '[[#{tm.tma1.saatc09}]]', dataType: 'string', dataIndx: 'saatc09', editable: false},
+			{ title: '[[#{tm.tma4.saatc10min}]]', dataType: 'string', dataIndx: 'saatc10min', editable: false},
+			{ title: '[[#{tm.tma4.saatc10max}]]', dataType: 'string', dataIndx: 'saatc10max', editable: false},
+			{ title: '[[#{tm.tma4.trnstat}]]', dataType: 'string', dataIndx: 'trnstat', editable: false},
+			{ title: '[[#{tm.tma4.vhplnky}]]', dataType: 'string', dataIndx: 'vhplnky', editable: false},
+			{ title: '[[#{grid.vhcsnam}]]', dataType: 'string', dataIndx: 'vhcsnam', editable: false},
+			{ title: '[[#{tm.tma1.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false},
+			{ title: '[[#{tm.tma1.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false},
+			{ title: '[[#{tm.tma1.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+			{ title: '[[#{tm.tma1.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false},
+			{ title: '[[#{tm.tma1.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false},
+			{ title: '[[#{tm.tma1.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false}
+		]
+
+		let tma04OrderGrid = new GridUtil(tma04OrderGridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+
+		tma04OrderGrid.setFind();
+
+		//============================================================
+		//그리드 create 이벤트
+		//============================================================
+		tma04OrderGrid.setCreate(async function(evt, ui) {
+			await _commonInit();
+			await tma04_initData();
+		});
+
+		tma04OrderGrid.setCellDblClick(async function(evt, ui) {
+			let destkey = '';
+
+			if(ui.rowData.destkey) {
+				destkey = ui.rowData.destkey;
+			}
+
+			let saatc06 = '';
+
+			if(ui.rowData.saatc06) {
+				saatc06 = ui.rowData.saatc06;
+			}
+
+			let postdat = '';
+
+			if(ui.rowData.postdat) {
+				postdat = ui.rowData.postdat.replaceAll('-', '');
+			}
+
+			const data = {
+				saatc06: saatc06,
+				postdat: postdat,
+				destkey: destkey,
+				doccate: ui.rowData.doccate,
+				doctype: ui.rowData.doctype
+			}
+
+			const grid = pq.grid(itemGridId);
+
+			grid.showLoading();
+
+			const itemData = await fetchUtil('GET', '/tm/order/common/grids/2', data);
+
+			const itemList = await itemData.json();
+
+			grid.option('dataModel', {
+				data: itemList,
+				recIndx: 'rowkey'
+			});
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+		});
+
+		tma04OrderGrid.open();
+
+		const tma04ItemGridCM = [
+			{ title: '[[#{tm.tma1.cooutky}]]', dataType: 'string', dataIndx: 'cooutky', editable: false},
+			{ title: '[[#{tm.tma1.cooutit}]]', dataType: 'integer', dataIndx: 'cooutit', editable: false},
+			{ title: '[[#{tm.tma1.doccate}]]', dataType: 'string', dataIndx: 'ococtnm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.doctype}]]', dataType: 'string', dataIndx: 'cootynm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saldate}]]', dataType: 'string', dataIndx: 'saldate', editable: false},
+			{ title: '[[#{tm.tma1.saltime}]]', dataType: 'string', dataIndx: 'saltime', editable: false},
+			{ title: '[[#{tm.tma1.vendkey}]]', dataType: 'string', dataIndx: 'vendkey', editable: false, hidden: true},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'towarky', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.custkey}]]', dataType: 'string', dataIndx: 'ptnamlc', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salmemo}]]', dataType: 'string', dataIndx: 'salmemo', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salrqdt}]]', dataType: 'string', dataIndx: 'salrqdt', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salrqtm}]]', dataType: 'string', dataIndx: 'salrqtm', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.destkey}]]', dataType: 'string', dataIndx: 'denamlc', editable: false, hidden: true},
+			{ title: '[[#{grid.ownamlc}]]', dataType: 'string', dataIndx: 'ownamlc', editable: false},
+			{ title: '[[#{tm.tma1.skuskey}]]', dataType: 'string', dataIndx: 'skuskey', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.skumkey}]]', dataType: 'string', dataIndx: 'skumkey', editable: false},
+			{ title: '[[#{tm.tma1.skudesc}]]', dataType: 'string', dataIndx: 'skudesc', editable: false},
+			{ title: '[[#{tm.tma1.soitqty}]]', dataType: 'string', dataIndx: 'soitqty', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.rgitqty}]]', dataType: 'integer', dataIndx: 'rgitqty', editable: false, format: '#,###', summary: { type: "sum" }},
+			{ title: '[[#{tm.tma1.shcfqty}]]', dataType: 'integer', dataIndx: 'shcfqty', editable: false, format: '#,###', summary: { type: "sum" }, hidden: true},
+			{ title: '[[#{tm.tma1.diffqty}]]', dataType: 'integer', dataIndx: 'diffqty', editable: false, format: '#,###', summary: { type: "sum" }, hidden: true},
+			{ title: '[[#{tm.tma1.suomkey}]]', dataType: 'string', dataIndx: 'suomkey', editable: false},
+			{ title: '[[#{tm.tma1.dctctyp}]]', dataType: 'string', dataIndx: 'dctctyp', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.rsncode}]]', dataType: 'string', dataIndx: 'rsncode', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.rsndesc}]]', dataType: 'string', dataIndx: 'rsndesc', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.salstat}]]', dataType: 'string', dataIndx: 'salstat', editable: false,
+				render: function(ui) {
+					const option = responseData.salstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.inbstat}]]', dataType: 'string', dataIndx: 'inbstat', editable: false, hidden: true,
+				render: function(ui) {
+					const option = responseData.inbstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.oubstat}]]', dataType: 'string', dataIndx: 'oubstat', editable: false,
+				render: function(ui) {
+					const option = responseData.oubstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.trnstat}]]', dataType: 'string', dataIndx: 'trnstat', editable: false,
+				render: function(ui) {
+					const option = responseData.trnstatList.find(function(obj) {
+						return (obj.combovl === ui.cellData);
+					});
+
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				}
+			},
+			{ title: '[[#{tm.tma1.ordgr01}]]', dataType: 'string', dataIndx: 'ordgr01', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.ordgr02}]]', dataType: 'string', dataIndx: 'ordgr02', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.ordgr03}]]', dataType: 'string', dataIndx: 'ordgr03', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn01}]]', dataType: 'string', dataIndx: 'saatn01', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn02}]]', dataType: 'string', dataIndx: 'saatn02', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn03}]]', dataType: 'string', dataIndx: 'saatn03', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn04}]]', dataType: 'string', dataIndx: 'saatn04', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatn05}]]', dataType: 'string', dataIndx: 'saatn05', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc01}]]', dataType: 'string', dataIndx: 'saatc01', editable: false},
+			{ title: '[[#{tm.tma1.saatc02}]]', dataType: 'string', dataIndx: 'saatc02', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc03}]]', dataType: 'string', dataIndx: 'saatc03', editable: false},
+			{ title: '[[#{tm.tma1.saatc04}]]', dataType: 'string', dataIndx: 'saatc04', editable: false},
+			{ title: '[[#{tm.tma1.saatc05}]]', dataType: 'string', dataIndx: 'saatc05', editable: false},
+			{ title: '[[#{tm.tma1.saatc06}]]', dataType: 'string', dataIndx: 'saatc06', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc07}]]', dataType: 'string', dataIndx: 'saatc07', editable: false, hidden: true,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.scatecd === ui.cellData);
+					});
+					
+					return option ? option.scatenm : ui.cellData;
+				}	
+			},
+			{ title: '[[#{tm.tma1.saatc08}]]', dataType: 'string', dataIndx: 'saatc08', editable: false, hidden: true,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.mcatecd === ui.cellData);
+					});
+					
+					return option ? option.mcatenm : ui.cellData;
+				}	
+			},
+			{ title: '[[#{tm.tma1.saatc09}]]', dataType: 'string', dataIndx: 'saatc09', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.saatc10}]]', dataType: 'string', dataIndx: 'saatc10', editable: false},
+			{ title: '[[#{tm.tma1.saatc11}]]', dataType: 'string', dataIndx: 'saatc11', editable: false},
+			{ title: '[[#{tm.tma1.saatc12}]]', dataType: 'string', dataIndx: 'saatc12', editable: false},
+			{ title: '[[#{tm.tma1.closlyn}]]', dataType: 'string', dataIndx: 'closlyn', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.clodate}]]', dataType: 'string', dataIndx: 'clodate', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.clotime}]]', dataType: 'string', dataIndx: 'clotime', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.clouser}]]', dataType: 'string', dataIndx: 'clouser', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.bthdcky}]]', dataType: 'string', dataIndx: 'bthdcky', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.bthdcit}]]', dataType: 'integer', dataIndx: 'bthdcit', editable: false, format: '#,###', summary: { type: "sum" }, hidden: true},
+			{ title: '[[#{tm.tma1.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+			{ title: '[[#{tm.tma1.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.indibzl}]]', dataType: 'string', dataIndx: 'indibzl', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.indiarc}]]', dataType: 'string', dataIndx: 'indiarc', editable: false, hidden: true},
+			{ title: '[[#{tm.tma1.updtchk}]]', dataType: 'integer', dataIndx: 'updtchk', editable: false, hidden: true}
+		]
+
+		const tma04ItemGrid = new GridUtil(tma04ItemGridCM, '[[${gprogrid}]]', pageId + '_item_pqgrid');
+
+		tma04ItemGrid.setFind();
+		tma04ItemGrid.open();
+
+		//============================================================
+		//셔틀배차 모달 그리드
+		//============================================================
+		const tma04ShuttleGridCM = [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: {all: false, header: true}
+			},
+			{ title: '[[#{tm.tma4.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tshrhd.shtrtnm}]]', dataType: 'string', dataIndx: 'shtrtnm', editable: false},
+			{ title: '[[#{tm.tshrhd.shtmemo}]]', dataType: 'string', dataIndx: 'shtmemo', editable: false},
+			{ title: '[[#{grid.vhcsnam}]]', dataType: 'string', dataIndx: 'vhcsnam', editable: false},
+			{ title: '[[#{tm.tma4.shtvcap}]]', dataType: 'integer', dataIndx: 'shtvcap', editable: false}
+		]
+
+		let tma04ShuttleGrid = new GridUtil(tma04ShuttleGridCM, '[[${gprogrid}]]', pageId + '_Shuttle_Modal_pqgrid');
+
+		tma04ShuttleGrid.setFind();
+
+		//============================================================
+		//check 이벤트(하나만 체크되게끔)
+		//============================================================
+		tma04ShuttleGrid.setCheck(function(evt, ui){
+			if(ui.check){
+				this.Checkbox('state').unCheckAll();
+				ui.rowData.state = true;
+				this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+			}
+		});
+
+		tma04ShuttleGrid.open();
+
+		const tma06CarGridCM = [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: {all: false, header: true}
+			},
+			{ title: '[[#{tm.tma6.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+			{ title: '[[#{grid.vhcsnam}]]', dataType: 'string', dataIndx: 'vhcsnam', editable: false},
+			{ title: '[[#{tm.tvhcma.vehgrnm}]]', dataType: 'string', dataIndx: 'vehgrnm', editable: false},
+			{ title: '[[#{tm.tvhcma.vehcsnm}]]', dataType: 'string', dataIndx: 'vehcsnm', editable: false},
+			{ title: '[[#{tm.tvhcma.vehtpyn}]]', dataType: 'string', dataIndx: 'vehtpyn', editable: false},
+			{ title: '[[#{tm.tvhcma.vhcmemo}]]', dataType: 'string', dataIndx: 'vhcmemo', editable: false},
+			{ title: '[[#{tm.tvhcma.ownernm}]]', dataType: 'string', dataIndx: 'ownernm', editable: false}
+		]
+
+		let tma06CarGrid = new GridUtil(tma06CarGridCM, '[[${gprogrid}]]', pageId + '_Emergency_Modal_pqgrid');
+
+		tma06CarGrid.setFind();
+
+		tma06CarGrid.setCheck(function(evt, ui){
+			if(ui.check){
+				this.Checkbox('state').unCheckAll();
+				ui.rowData.state = true;
+				this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+			}
+		});
+
+		tma06CarGrid.open();
+
+		$('#' + pageId + '_OrderListSearch').click(async function() {
+			await tma04OrderSearch();
+		});
+
+		$('#' + pageId + '_ShuttleModalSearch').click(async function() {
+			await tma04ShuttleModalSearch();
+		});
+
+		//============================================================
+		//초기화
+		//============================================================
+		$('#' + pageId + '_Reset').click(function() {
+			$('select[id*="' + pageId + '_"]').each(function(index, element) {
+				element.options[0].selected = true;
+			});
+			
+			$('input:text[id*="' + pageId + '_"]').each(function(index, element) {
+				element.value = '';
+			});
+
+			$('#' + pageId + '_postdatFrom').val(yesterday);
+			$('#' + pageId + '_postdatTo').val(today);
+
+			const grid = pq.grid(gridId);
+			const itemGrid = pq.grid(itemGridId);
+
+			grid.showLoading();
+
+			grid.option('dataModel', {data: []});
+
+			grid.refreshDataAndView();
+			
+			itemGrid.option('dataModel', {data: []});
+			itemGrid.refreshDataAndView();
+			
+			grid.hideLoading();
+			
+		});
+	});
+
+ 	//============================================================
+	//모달 오픈 이벤트
+	//============================================================
+ 	//셔틀배차
+ 	$('#' + pageId + '_shuttlePlan').click(function () {
+ 		const orderGrid = pq.grid(gridId);
+		const orderGridCheck = orderGrid.Checkbox('state').getCheckedNodes();
+
+		if(orderGridCheck.length > 0) {
+			$('#' + pageId + 'ShuttleModal').modal('show');
+		}else {
+			alert('[[#{tm.tma4.choiceOrder}]]')
+		}
+
+ 	});
+
+ 	$('#' + pageId + 'ShuttleModal').on('shown.bs.modal', async function() {
+ 		await tma04ShuttleModalSearch();
+ 	});
+ 	
+ 	//긴급배차
+ 	$('#' + pageId + '_emergencyPlan').click(function () {
+ 		const orderGrid = pq.grid(gridId);
+		const orderGridCheck = orderGrid.Checkbox('state').getCheckedNodes();
+
+		if(orderGridCheck.length > 0) {
+			$('#' + pageId + '_emerscd option:eq(0)').attr('selected', 'selected');
+			$('#' + pageId + '_emerdnm').val('');
+			$('#' + pageId + '_pbilpay').attr('disabled', true);
+			
+			$('#' + pageId + 'EmergencyModal').modal('show');
+		}else {
+			alert('[[#{tm.tma6.choiceOrder}]]')
+		}
+ 	});
+ 	
+ 	$('#' + pageId + 'EmergencyModal').on('shown.bs.modal', async function() {
+		await tma04EmergencyModalSearch();
+	});
+
+ 	//============================================================
+	//모달 닫기 이벤트
+	//============================================================
+ 	//셔틀배차
+ 	$('#' + pageId + 'ShuttleMdCloseBt, #' + pageId + 'ShuttleMdClose').click(function () {
+ 		const shuttleMdGrid = pq.grid(shuttleMdGridId);
+ 		
+ 		shuttleMdGrid.option('dataModel', {data: []});
+ 		shuttleMdGrid.refreshDataAndView();
+ 		
+ 		$('#' + pageId + 'ShuttleModal').modal('hide');
+ 	});
+
+ 	//긴급배차
+ 	$('#' + pageId + 'EmergencyMdCloseBt, #' + pageId + 'EmergencyMdClose').click(function () {
+ 		const emergencyMdGrid = pq.grid(EmergencyMdGridId);
+ 		
+ 		emergencyMdGrid.option('dataModel', {data: []});
+ 		emergencyMdGrid.refreshDataAndView();
+ 		
+ 		$('#' + pageId + 'EmergencyModal').modal('hide');
+ 	});
+	
+	$('#' + pageId + '_towarky').change(function() {
+ 		tma04ReasonList();
+ 	});
+	
+	//============================================================
+	//사유 change 이벤트
+	//============================================================
+	$('#' + pageId + '_emerscd').change(function() {
+ 		if($('#' + pageId + '_emerscd').val() === '') {
+ 			$('#' + pageId + '_pbilpay').attr('disabled', true);
+ 		}else {
+ 			$('#' + pageId + '_pbilpay').attr('disabled', false);
+ 		}
+ 	});
+
+	//============================================================
+	//긴급배차 모달 검색
+	//============================================================
+	async function tma04EmergencyModalSearch() {
+		const orderGrid = pq.grid(gridId);
+		const orderGridCheck = orderGrid.Checkbox('state').getCheckedNodes();
+
+		let warekeyList = new Set();
+
+		for(let i=0; i<orderGridCheck.length; i++) {
+			warekeyList.add(orderGridCheck[i].towarky);
+		}
+
+		warekeyList = Array.from(warekeyList);
+
+		const data = {
+				wareList: warekeyList
+		}
+
+		const grid = pq.grid(EmergencyMdGridId);
+
+		grid.showLoading();
+
+		const searchData = await fetchUtil('GET', '/tm/order/tma06/grids/4', data);
+
+		const searchList = await searchData.json();
+
+		grid.option('dataModel', {
+			data: searchList,
+			recIndx: 'rowkey'
+		});
+
+		grid.refreshDataAndView();
+		grid.hideLoading();
+	}
+
+
+  	//============================================================
+	//init 데이터
+	//============================================================
+    async function tma04_initData() {
+    	responseData = await fetchUtil('GET', '/tm/order/common/init', {warekey: $('#' + pageId + '_towarky').val()});
+		responseData = await responseData.json();
+		
+		$('#' + pageId + '_destkey option').remove();
+  		$('#' + pageId + '_destkey').append($('<option></option>').attr('value', '').text('[[#{tm.common.all}]]'));
+  		
+  		for(destkey of responseData.destList) {
+  			$('#' + pageId + '_destkey').append($('<option></option>').attr('value', destkey.destkey).text(destkey.denamlc));
+  		}
+		
+		tma04ReasonList();
+
+		return responseData;
+    }
+  	
+  	//============================================================
+	//긴급사유 리스트
+	//============================================================
+  	async function tma04ReasonList() {
+  		let reasonList = await fetchUtil('GET', '/tm/order/common/reasonlist', {warekey: $('#' + pageId + '_towarky').val()});
+  		reasonList = await reasonList.json();
+  		$('#' + pageId + '_emerscd option').remove();
+  		
+  		$('#' + pageId + '_emerscd').append($('<option></option>').attr('value', '').text('[[#{tm.tma6.noemerscd}]]'));
+  		
+  		for(reason of reasonList) {
+  			$('#' + pageId + '_emerscd').append($('<option></option>').attr('value', reason.combovl).text(reason.combonm));
+  		}
+  	}
+
+  	//============================================================
+	//운송오더리스트 검색
+	//============================================================
+  	async function tma04OrderSearch() {
+  		let postdatFrom = $('#' + pageId + '_postdatFrom').val();
+		let postdatTo = $('#' + pageId + '_postdatTo').val();
+
+		postdatFrom = postdatFrom.replaceAll('-', '');
+		postdatTo = postdatTo.replaceAll('-', '');
+
+		const data = {
+				saatc06: $('#' + pageId + '_saatc06').val(),
+				saatc10: $('#' + pageId + '_saatc10').val(),
+				destkey: $('#' + pageId + '_destkey').val(),
+				saatc08: $('#' + pageId + '_saatc08').val(),
+				towarky: $('#' + pageId + '_towarky').val(),
+				trnstat: 'NEW',
+				postdatFrom: postdatFrom,
+				postdatTo: postdatTo
+		}
+
+		const grid = pq.grid(gridId);
+		const itemGrid = pq.grid(itemGridId);
+
+		grid.showLoading();
+		itemGrid.showLoading();
+
+		const searchData = await fetchUtil('GET', '/tm/order/common/grids/1', data);
+
+		const searchList = await searchData.json();
+
+		grid.option('dataModel', {
+			data: searchList,
+			recIndx: 'rowkey'
+		});
+		itemGrid.option('dataModel', {data: []});
+
+		grid.refreshDataAndView();
+		itemGrid.refreshDataAndView();
+		
+		grid.hideLoading();
+		itemGrid.hideLoading();
+  	}
+
+	//============================================================
+	//셔틀배차 모달 검색
+	//============================================================
+	async function tma04ShuttleModalSearch() {
+		const orderGrid = pq.grid(gridId);
+		const orderGridCheck = orderGrid.Checkbox('state').getCheckedNodes();
+
+		let destkeyList = new Set();
+
+		for(let i=0; i<orderGridCheck.length; i++) {
+			destkeyList.add(orderGridCheck[i].destkey);
+		}
+
+		destkeyList = Array.from(destkeyList);
+
+		const data = {
+				destkeyList: destkeyList,
+				dtcount: destkeyList.length,
+				shtgrnm: $('#' + pageId + '_shtgrnm').val(),
+				warekey: $('#' + pageId + '_towarky').val()
+		}
+
+		const grid = pq.grid(shuttleMdGridId);
+
+		grid.showLoading();
+
+		const searchData = await fetchUtil('GET', '/tm/order/tma04/grids/2', data);
+
+		const searchList = await searchData.json();
+
+		grid.option('dataModel', {
+			data: searchList,
+			recIndx: 'rowkey'
+		});
+
+		grid.refreshDataAndView();
+		grid.hideLoading();
+	}
+
+  	//============================================================
+	//셔틀배차 저장
+	//============================================================
+    $('#' + pageId + 'ShuttleMdSaveBt').click(async function () {
+    	const orderGrid = pq.grid(gridId);
+		const orderGridCheck = orderGrid.Checkbox('state').getCheckedNodes();
+
+		const shuttleGrid = pq.grid(shuttleMdGridId);
+		const shuttleGridCheck = shuttleGrid.Checkbox('state').getCheckedNodes();
+		
+		const itemGrid = pq.grid(itemGridId);
+
+		if(shuttleGridCheck.length <= 0) {
+			alert('[[#{tm.tma4.choiceShuttle}]]');
+			return false;
+		}
+
+		let postdat = orderGridCheck[0].postdat.replaceAll('-', '');
+
+		for(let i=0; i<orderGridCheck.length; i++) {
+			if(postdat < orderGridCheck[i].postdat.replaceAll('-', '')) {
+				postdat = orderGridCheck[i].postdat.replaceAll('-', '');
+			}
+		}
+
+		let doccate = '';
+		let warekey = '';
+		let shtrtky = '';
+		let vehicky = '';
+
+		if(shuttleGridCheck.length > 1) {
+			alert('[[#{ms.notMultiCheck}]]');
+			return false;
+		}else {
+			for(let i=0; i<shuttleGridCheck.length; i++) {
+				doccate = shuttleGridCheck[i].doccate;
+				warekey = shuttleGridCheck[i].warekey;
+				shtrtky = shuttleGridCheck[i].shtrtky;
+				vehicky = shuttleGridCheck[i].vehicky;
+			}
+		}
+
+		const data = {
+				orderList: orderGridCheck,
+				doccate: doccate,
+				warekey: warekey,
+				shtrtky: shtrtky,
+				vehicky: vehicky,
+				postdat: postdat
+		}
+		
+		const result = confirm('[[#{tm.common.checkSave}]]');
+		
+		if(result === true) {
+			try {
+				const saveShuttle = await fetchUtil('POST', '/tm/order/tma04/shuttlesave', data);
+
+				if(saveShuttle.status === 200) {
+					$('#' + pageId + 'ShuttleModal').modal('hide');
+
+					await tma04OrderSearch();
+
+					shuttleGrid.option('dataModel', {data: []});
+					shuttleGrid.refreshDataAndView();
+					
+					itemGrid.option('dataModel', {data: []});
+					itemGrid.refreshDataAndView();
+				}else {
+					alert('[[#{ms.saveErr}]]');
+				}
+			}catch (err) {
+				alert('[[#{ms.saveErr}]]');
+			}
+		}
+    });
+
+  //============================================================
+	//긴급배차 저장
+	//============================================================
+  	$('#' + pageId + 'EmergencyMdSaveBt').click(async function() {
+  		const orderGrid = pq.grid(gridId);
+		const orderGridCheck = orderGrid.Checkbox('state').getCheckedNodes();
+
+		const emergencyGrid = pq.grid(EmergencyMdGridId);
+		const emergencyGridCheck = emergencyGrid.Checkbox('state').getCheckedNodes();
+		
+		const itemGrid = pq.grid(itemGridId);
+
+		if(emergencyGridCheck.length <= 0) {
+			alert('[[#{tm.tma6.choiceShuttle}]]');
+			return false;
+		}
+
+		let postdat = orderGridCheck[0].postdat.replaceAll('-', '');
+
+		for(let i=0; i<orderGridCheck.length; i++) {
+			if(postdat < orderGridCheck[i].postdat.replaceAll('-', '')) {
+				postdat = orderGridCheck[i].postdat.replaceAll('-','');
+			}
+		}
+		
+		let pbillyn;
+		if($('#' + pageId + '_pbilpay').val().length > 0 && $('#' + pageId + '_pbilpay').val() != '0') {
+			pbillyn = 'Y';
+		}else {
+			pbillyn = 'N';
+		}
+
+		let doccate = '';
+		let wareket = '';
+		let vehicky = '';
+
+		if(emergencyGridCheck.length > 1) {
+			alert('[[#{ms.notMultiCheck}]]');
+			return false;
+		}else {
+			for(let i=0; i<emergencyGridCheck.length; i++) {
+				doccate = emergencyGridCheck[i].doccate;
+				warekey = emergencyGridCheck[i].warekey;
+				vehicky = emergencyGridCheck[i].vehicky;
+			}
+		}
+
+		const data = {
+				orderList: orderGridCheck,
+				doccate: doccate,
+				warekey: warekey,
+				vehicky: vehicky,
+				postdat: postdat,
+				emerdnm: $('#' + pageId + '_emerdnm').val(),
+				emerscd: $('#' + pageId + '_emerscd').val(),
+				pbilpay: $('#' + pageId + '_pbilpay').val().replaceAll(",", ""),
+				pbillyn: pbillyn
+		}
+		
+		const result = confirm('[[#{tm.common.checkSave}]]');
+		
+		if(result === true) {
+			try {
+				const saveAddPlan = await fetchUtil('POST', '/tm/order/tma06/emergencysave', data);
+
+				if(saveAddPlan.status === 200) {
+					$('#' + pageId + 'EmergencyModal').modal('hide');
+
+					await tma04OrderSearch();
+
+					emergencyGrid.option('dataModel', {data: []});
+					emergencyGrid.refreshDataAndView();
+					
+					itemGrid.option('dataModel', {data: []});
+					itemGrid.refreshDataAndView();
+				}else {
+					alert('[[#{ms.saveErr}]]');
+				}
+			}catch (err) {
+				alert('[[#{ms.saveErr}]]');
+			}
+		}
+  	});
+
+  	//============================================================
+	//keyup 이벤트
+	//============================================================
+	async function tma04KeyupEvt(param) {
+		const key = this.event.key || this.event.keyCode;
+		if(key === 'Enter' || key === 13) {
+			if(param) {
+				await tma04ShuttleModalSearch();
+			}else {
+				await tma04OrderSearch();	
+			}
+		}
+	}
+    </script>
+</html>

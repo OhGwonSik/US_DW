@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.PrintMapper">
+	<select id="getWmpt8List" resultType="hashMap">
+		WITH RECURSIVE WR_TEMP as (															
+			select 1 as level														
+		     union all															
+		    select 1 + WR_TEMP.LEVEL															
+		      from WR_TEMP															
+		     <![CDATA[ where WR_TEMP.LEVEL < #{level} ]]>													
+		) 															
+		select  
+			concat(compkey , level) as rowkey ,
+			#{userInfo.compkey} as compkey , 
+			#{warekey} as warekey ,		
+			#{ownerky} as ownerky ,		
+			fn_wm_paklbky() as paklbky , 
+			'대봉라벨' as paklbnm	 ,	
+			M.CUSTKEY as custkey , 
+			M.CUNAMLC as cunamlc , 
+			level ,
+			' ' as retakey , 
+			' ' as retainm ,
+			#{userInfo.useract} as creuser ,
+			#{userInfo.useract} as lmouser								
+		from WR_TEMP															
+		 inner join MCUSMA M on M.COMPKEY = #{userInfo.compkey} 														
+		                    and M.OWNERKY = #{ownerky} 														
+		                    and M.CUSTKEY = #{custkey} 														
+		 <![CDATA[ where level >= 1 ]]>
+	</select>
+ 
+	 <select id="getWmpt8PrintList" resultType="hashMap">
+		select 
+			CUNAMLC as cunamlc , PAKLBKY as paklbky
+		from  WSLBMA
+		 where 1=1
+		  and COMPKEY = #{compkey}
+		  and WAREKEY = #{warekey}
+		  and OWNERKY = #{ownerky}		
+		  and CUSTKEY = #{custkey}
+	 </select>
+ 
+	<insert id="setWmpt8List" parameterType="hashMap">
+		insert into WSLBMA(
+			COMPKEY , PAKLBKY , WAREKEY , PAKLBNM ,
+			CUSTKEY , CUNAMLC , RETAKEY , RETAINM ,
+			CREDATE , CRETIME , CREUSER ,
+			LMODATE , LMOTIME , LMOUSER 
+		)values(
+			#{compkey} , #{paklbky} , #{warekey} , #{paklbnm} ,
+			#{custkey} , #{cunamlc} , #{retakey} , #{retainm} ,
+			to_char(now() , 'yyyymmdd') , to_char(now() , 'hh24miss') , #{creuser} ,
+			to_char(now() , 'yyyymmdd') , to_char(now() , 'hh24miss') , #{lmouser}
+		)
+	</insert>
+	
+	<!-- 장끼 인쇄 이력 번호 채번 Invhseq --> 
+    <select id="getInvhseq" resultType="String">
+     	select fn_om_invhseq() as invhseq from dual
+    </select>
+    
+	<!-- 장끼 호출 -->
+	<select id="sp_om_invoice" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		{ CALL sp_om_invoice( #{compkey}, #{invhseq}, #{invokey}, #{ownerky}, #{custkey}, #{retakey}, #{vendkey}, #{orderno}, #{allgrky}, #{stadate}, #{enddate}, #{loguser},
+			#{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR},
+			#{O_ORESULT, mode=OUT, jdbcType=INTEGER} )
+		}
+	</select>
+	
+	<select id="sp_om_invoiceman" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		{ CALL sp_om_invoice_man( #{compkey}, #{invhseq}, #{loguser},
+			#{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR},
+			#{O_ORESULT, mode=OUT, jdbcType=INTEGER} )
+		}
+	</select>
+	
+	<select id="sp_om_invoicePickingList" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		{ CALL sp_wm_invoice_picking( #{compkey}, #{invhseq}, #{invokey}, #{allgrky}, #{loguser},
+			#{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR},
+			#{O_ORESULT, mode=OUT, jdbcType=INTEGER} )
+		}
+	</select>
+	
+	<select id="getOinvthList" resultType="com.logistics.om.domain.OinvthVO">
+		select COMPKEY, INVHSEQ, INVITNO, INVCATE, ROWGRID, ZZCOL01, ZZCOL02, ZZCOL03, ZZCOL04
+		  from OINVTH
+		 where COMPKEY = #{compkey}
+		   and INVHSEQ = #{invhseq}
+		 order by COMPKEY, INVHSEQ, INVITNO
+	</select>
+	
+	
+	<select id="getWmpt9HeaderList" resultType="hashMap">
+		select concat(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TS.PICKTYP) as rowkey
+	      	 , SH.COMPKEY as compkey
+	      	 , SH.WAREKEY as warekey
+	      	 , SH.OWNERKY as ownerky
+	      	 , TS.ALLGRKY as allgrky
+	      	 , TS.PICKTYP as picktyp
+	      	 , count(distinct SH.REFSODC) as resocnt
+	      	 , count(distinct SH.SKUMKEY) as skkycnt
+	      	 , count(distinct SH.CUSTKEY) as ctkycnt
+	      	 , count(distinct SH.RETAKEY) as rtkycnt
+	      	 , sum(SH.SHCUQTY) as shcuqty
+	      	 , sum(SH.RGITQTY) as rgitqty
+	      	 , sum(SH.SHALQTY) as shalqty
+	      	 , sum(TS.FORDQTY) as fordqty
+	      	 , sum(TS.TCMPQTY) as tcmpqty
+	      	 , sum(TS.SHDVSQT) as shdvsqt
+	      	 , sum(TS.SHDVEQT) as shdveqt
+	      	 , sum(SH.SHCFQTY) as shcfqty
+	      	 , date_format(max(SH.SHPSDAY), '%Y-%m-%d') as credate
+	      	 , date_format(max(SH.SHPSTIM), '%H-%i-%s') as CRETIME
+	      	 , max(SH.LMOUSER) as creuser
+	      	 , fn_sy_usernam(SH.COMPKEY, max(SH.LMOUSER)) as crename
+	   	  from WSHPIT SH
+		 inner join MCUSMA MC on MC.COMPKEY = SH.COMPKEY and MC.CUSTKEY = SH.RETAKEY
+		 inner join (
+					select COMPKEY, WAREKEY, OWNERKY, ALLGRKY, PICKTYP, REFSODC, REFSOIT
+			  			 , sum(FORDQTY) as fordqty, sum(TCMPQTY) as tcmpqty
+			  			 , sum(SHDVSQT) as shdvsqt, sum(SHDVEQT) as shdveqt
+					  from WTAKIT t
+			 		 where 1=1
+			   		   and t.COMPKEY = #{compkey}
+			 		<if test="ownerky != null and ownerky !=''">
+			   		   and t.OWNERKY = #{ownerky}
+			 		</if>
+			   		   and t.DOCCATE = '500'
+			   		   and t.DOCTYPE = '520'
+			 		<if test='tasksts.equals("Y")'>
+			   		   and t.TASKSTS not in ('CANCEL')
+			 		</if>
+			 		<if test='tasksts.equals("N")'>
+			   		   and t.TASKSTS not in ('CANCEL' ,'SHPOUT')
+			 		</if>
+			 		 group by REFSODC, REFSOIT
+	   		) TS on SH.COMPKEY = TS.COMPKEY
+	      and SH.WAREKEY = TS.WAREKEY
+	      and SH.OWNERKY = TS.OWNERKY
+	      and SH.REFSODC = TS.REFSODC
+	      and SH.REFSOIT = TS.REFSOIT
+	    where 1=1
+	      and SH.COMPKEY = #{compkey}
+		<if test="warekey != null and warekey !=''">
+	      and SH.WAREKEY = #{warekey}
+		</if>
+		<if test="posdtft != null and posdtft !='' and posdttt != null and posdttt !=''">
+	      and SH.SHPPDAY BETWEEN replace(#{posdtft} , '-' ,'') AND replace(#{posdttt} , '-' ,'')
+		</if>
+	    <if test="ownerky != null and ownerky !=''">
+	      and SH.OWNERKY = #{ownerky}
+		</if>
+		<if test="custkey != null and custkey !=''">
+	      and SH.CUSTKEY = #{custkey}
+		</if>
+		<if test="cunamlc != null and cunamlc !=''">
+		  and MC.CUNAMLC like concat('%' , #{cunamlc} , '%')
+		</if>
+		<if test="refsodc != null and refsodc !=''">  	  																		
+		  and SH.REFSODC = #{refsodc}
+		</if>
+		  and SH.DOCCATE = '700'
+	      and SH.DOCTYPE in ('720','750','760')
+	      and trim(TS.ALLGRKY) != ''
+	      and trim(TS.PICKTYP) != ''
+	    group by SH.COMPKEY, SH.OWNERKY, SH.WAREKEY, TS.ALLGRKY, TS.PICKTYP
+ 	   having sum(SH.SHALQTY) > 0
+	</select>
+	
+	<select id="getWmpt9ItemList" resultType="hashMap">
+		select SH.COMPKEY as compkey
+		     , TS.ALLGRKY as allgrky 
+		     , date_format(OS.POSTDAT, '%Y-%m-%d') as postdat 
+		     , MH.CUNAMLC as custnam 
+		     , MC.CUNAMLC as retanam 
+		     , OS.COOUTKY as cooutky 
+		     , COUNT(distinct SP.PRINTSQ) as ordprcn 
+		     , ifnull(max(OH.PAYORTY),'') as payorty 
+		     , ifnull(max(OH.VIAMTYN),'') as viamtyn 
+		     , ifnull(max(OH.ORDTAMT),0) as ordtamt
+		from WSHPIT SH
+	     inner join MCUSMA MH on MH.COMPKEY = SH.COMPKEY and MH.CUSTKEY = SH.CUSTKEY
+		 inner join MCUSMA MC on MC.COMPKEY = SH.COMPKEY and MC.CUSTKEY = SH.RETAKEY
+		 inner join ( 
+		            select COMPKEY, WAREKEY, OWNERKY, ALLGRKY, PICKTYP, REFSODC, REFSOIT 
+		                 , sum(FORDQTY) as fordqty , sum(TCMPQTY) as tcmpqty 
+		                 , sum(SHDVSQT) as shdvsqt , sum(SHDVEQT) as shdveqt
+		              from WTAKIT t
+		             where 1 = 1
+		               and t.COMPKEY = #{compkey}
+		               and t.OWNERKY = #{ownerky}
+		               and t.DOCCATE = '500'
+		               and t.DOCTYPE = '520'
+		               and t.TASKSTS not in ('CANCEL')
+		             group by REFSODC, REFSOIT 
+		    ) TS 
+		   on SH.COMPKEY = TS.COMPKEY
+		  and SH.WAREKEY = TS.WAREKEY
+		  and SH.OWNERKY = TS.OWNERKY
+		  and SH.REFSODC = TS.REFSODC
+		  and SH.REFSOIT = TS.REFSOIT
+		inner join OCOSAL OS on SH.COMPKEY = OS.COMPKEY and SH.REFSODC = OS.COOUTKY and SH.REFSOIT = OS.COOUTIT
+		 left join OCOSAH OH on SH.COMPKEY = OH.COMPKEY and SH.REFSODC = OH.COOUTKY and OH.STEMPYN != 'Y'
+		 left join SPRTHI SP on SH.COMPKEY = SP.COMPKEY and SH.REFSODC = SP.REFSODC
+	    where SH.COMPKEY = #{compkey}
+		  and SH.WAREKEY = #{warekey}
+		  and SH.OWNERKY = #{ownerky}
+		  and TS.ALLGRKY = #{allgrky}
+		group by SH.COMPKEY, TS.ALLGRKY, OS.POSTDAT, MH.CUNAMLC, MC.CUNAMLC, OS.COOUTKY
+		order by OS.POSTDAT, MH.CUNAMLC, MC.CUNAMLC
+	</select>
+	
+	<select id="getWmpt9PrintList" resultType="hashMap">
+		select
+			CONCAT(OS.COMPKEY , OS.COOUTKY) as rowkey ,
+			OS.COMPKEY as compkey ,
+			date_format(OS.POSTDAT, '%Y-%m-%d') as postdat , 
+			MH.CUNAMLC as custnam ,
+			MC.CUNAMLC as retanam ,
+			OS.COOUTKY as cooutky ,
+			fn_om_cooutxt(OS.COOUTKY) as COOUTXT, 
+			max(OH.RMKCOOR) as rmkcoor,
+			ifnull(OH.PAYORTY,'') as payorty ,
+			GROUP_CONCAT(distinct(select COMCDTX 	
+								    from MCODEM C
+								   where C.COMPKEY = '000'
+								     and C.COMCDKY = 'PAYTYPE'
+								     and C.COMCDVL = OS.PAYTYPE 
+			                       order by C.COMCDOR) 
+		    ) as payortx , 
+			OH.VIAMTYN as viamtyn ,
+			ifnull( format(max( case when OH.PAYORTY = 'BILLING' then OH.ORDTAMT when OH.PAYORTY = 'RECEIPT' and OH.VIAMTYN = 'Y' then OH.ORDTAMT else 0 end ),0), 0 ) as ordtamt ,
+			WS.ALLGRKY as allgrky
+		from OCOSAL OS
+		inner join WTAKIT WS on	WS.COMPKEY = OS.COMPKEY	and WS.REFSODC = OS.COOUTKY
+		left  join OCOSAH OH on	OH.COMPKEY = OS.COMPKEY	and OH.COOUTKY = OS.COOUTKY and OH.STEMPYN != 'Y'
+		inner  join MCUSMA MH on	MH.COMPKEY = OS.COMPKEY	and MH.CUSTKEY = OS.CUSTKEY
+		left  join MCUSMA MC on	MC.COMPKEY = OS.COMPKEY	and MC.CUSTKEY = OS.RETAKEY
+		where OS.COMPKEY = #{compkey}
+			and OS.DOCCATE in ('200','300')
+			and OH.COOUTKY IN
+	   		<foreach collection="cooutkyStr" item="cooutkyStr" separator="," open="(" close=")">
+	   			#{cooutkyStr}
+	   		</foreach>
+			and OS.MNGWHKY = #{warekey}
+			and OS.OWNERKY = #{ownerky}
+		    	and WS.ALLGRKY = #{allgrky}
+		group by	OS.COMPKEY,	OS.POSTDAT,	MH.CUNAMLC,	MC.CUNAMLC,	OS.COOUTKY
+		order by	OS.POSTDAT,	MH.CUNAMLC,	MC.CUNAMLC
+	</select>
+</mapper>

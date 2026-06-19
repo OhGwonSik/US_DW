@@ -1,0 +1,507 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="omp06_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omp06_warekey" name="omp06_warekey" 
+						data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user" 
+						data-cb-select="" data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<label for="omp06_ownerky" class="setting-grid-title">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omp06_ownerky" name="omp06_ownerky" 
+						data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/partner/owner" 
+						data-cb-select="" data-cb-variable="ownerkyList">
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wasnif.asndate}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="omp06_asndateFrom" onkeyup="setInputDateDel(this)" name="omp06_asndateFrom"/>
+						<span>~</span>
+						<input type="date" max="2999-12-31" id="omp06_asndateTo" onkeyup="setInputDateDel(this)" name="omp06_asndateTo">
+					</div>
+				</div>
+				<label for="omp06_skumkey" class="setting-grid-title">[[#{search.skuCode}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.skuCode')}" onkeyup="omp06KeyUp()" id="omp06_skumkey" name="omp06_skumkey">
+					</div>
+				</div>
+				<label for="oms03_skudesc" class="setting-grid-title">[[#{search.skunm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.skunm')}" onkeyup="omp06KeyUp()" id="omp06_skudesc" name="omp06_skudesc">
+					</div>
+				</div>
+				<label for="omp06_custkey" class="setting-grid-title">[[#{wm.wasnif.custkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omp06_custkey" name="omp06_custkey" 
+						data-cb-val="ptnrkey" data-cb-name="ptnamlc" data-cb-url="/om/purchase/common/partner/customer" 
+						data-cb-select="" data-cb-variable="custkeyList">
+						</select>
+					</div>
+				</div>
+				<label for="omp06_destkey" class="setting-grid-title">[[#{wm.wasnif.destkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omp06_destkey" name="omp06_destkey">
+							<option value="">[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="omp06_btnSearch">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="omp06_btnReset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="omp06_pqgrid_header"></div>
+			</div>
+		</div>
+		<div class="edit-btn-wrapper">
+			<button class="btn-navy btn-green" id="omp06_btnCancel">
+				<img class="ic-bt-save">[[#{bt.save}]]
+			</button>
+		</div>
+		<div class="search-list">
+			<div class="list-grid-wrapper con-box">
+				<div id="omp06_pqgrid_item"></div>
+			</div>
+		</div>
+	</div>
+<script>
+/* *******************************************************************************
+ * 최초 생성일시 : 2023-07-30
+ * 최초 생성자 : 한지수
+ * 설명 : 3PL 및 부품사가 입고예정정보 ASN 데이터를 취소등록하는 화면입니다. '신규' 상태의 ASN만 취소등록이 가능합니다.
+ *********************************************************************************/
+$(function() {
+	const pageId = 'omp06';
+	
+	let omp06HeaderGridColModel;
+	let omp06HeaderGridObject;
+	let omp06ItemGridColModel;
+	let omp06ItemGridObject;
+	const tempDestkeyArr = [];
+	
+	const asndateTo = document.querySelector('#omp06_asndateTo');
+	const asndateFrom = document.querySelector('#omp06_asndateFrom');
+	asndateFrom.value = moment().subtract(1, 'd').format('YYYY-MM-DD');					//작일
+	asndateTo.value = moment().format("YYYY-MM-DD");									//금일
+	
+	//date validation
+	document.querySelectorAll('input[type="date"]').forEach(function(element) {
+		element.addEventListener('change', function() {
+			if(asndateFrom.value > asndateTo.value) {
+				alert('[[#{ms.dateCheck}]]');
+				asndateFrom.value = moment().subtract(1, 'd').format('YYYY-MM-DD');		//작일
+				asndateTo.value = moment().format("YYYY-MM-DD");						//금일
+				element.focus();
+			}
+		});
+		
+		element.addEventListener('keydown', function(event) {
+			if(event.key === 'Backspace' || event.key === 'Delete') {
+				element.value = '';
+			}
+		});
+	});
+
+	// custkey change event. 고객 미선택 시 도착지 비활성화. 선택 시 활성화. 
+	document.querySelector('#omp06_custkey').addEventListener('change', async function() {
+		const param = document.querySelector('#omp06_custkey').value;
+		if(!param) {
+			document.querySelector('#omp06_destkey').innerHTML = '<option value="">[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]</option>';
+			$('#omp06_destkey').pqSelect('refreshData');
+			return;
+		}
+		
+		const destkeyList = await getDestkeyByCustkey(param, tempDestkeyArr);
+		if(!destkeyList.length) {
+			let html = '<option value="">[[#{om.common.noDestkey}]]</option>';
+			document.querySelector('#omp06_destkey').innerHTML = html;
+			$('#omp06_destkey').pqSelect('refreshData');
+			return;
+		}
+		
+		let html = '<option value="">[[#{ms.chooseAll}]]</option>';
+		for(const destkey of destkeyList) {
+			html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+		}
+		document.querySelector('#omp06_destkey').innerHTML = html;
+		$('#omp06_destkey').pqSelect('refreshData');
+	});
+	
+	//============================================================
+	//초기화 버튼 클릭 시 검색 조건 초기화
+	//============================================================
+	document.querySelector('#omp06_btnReset').addEventListener('click', function() {
+		document.querySelectorAll('input[id*="omp06_"][type="text"], select[id*="omp06_"]').forEach(function(element) {
+			if(element.localName === 'select') {
+				if(element.id === 'omp06_destkey' && custkeyList.length !== 1) {
+					element.innerHTML = '<option value="">[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]</option>';
+				}
+				element.selectedIndex = 0;
+				if(element.className === 'pq-select') {
+					$('#' + element.id).pqSelect('refreshData');
+				}
+			}else if(element.localName === 'input') {
+				element.value = '';
+			}
+		});
+		
+		asndateFrom.value = moment().subtract(1, 'd').format('YYYY-MM-DD');		//작일
+		asndateTo.value = moment().format("YYYY-MM-DD");						//금일
+		
+		omp06HeaderGridObject.getGrid().showLoading();
+		omp06HeaderGridObject.getGrid().option('dataModel', { data : [] });
+		omp06HeaderGridObject.getGrid().hideLoading();
+		omp06HeaderGridObject.getGrid().refreshDataAndView();
+		
+		omp06ItemGridObject.getGrid().showLoading();
+		omp06ItemGridObject.getGrid().option('dataModel', { data : [] });
+		omp06ItemGridObject.getGrid().refreshDataAndView();
+		omp06ItemGridObject.getGrid().hideLoading();
+	});
+	
+	//============================================================	 
+	//그리드 search 버튼 이벤트 
+	//============================================================
+	$('#'+ pageId +'_btnSearch').click(async function() { 
+		await omp06Search(); 
+	});
+	
+	//============================================================	 
+	//그리드 취소 버튼 이벤트 
+	//============================================================
+	$('#'+ pageId +'_btnCancel').click(async function() { 
+		
+		const grid 			= omp06ItemGridObject.getGrid();
+		const gridDataList 	= grid.getData();  
+		
+		const checkList = gridDataList.filter(function(e) {     
+			return e.state === 'Y';
+		});
+
+		if(checkList.length) { 
+			
+			for(const checkData of checkList) { 
+				if(!checkData.rsncode) { 
+					alert((checkData.pq_ri + 1) + ' Row ' + '[[#{ms.requiredValue}]]' + ' (' + '[[#{wm.wasnif.rsncode}]]' + ')');	//사유코드
+					grid.editCell({ rowIndx: checkData.pq_ri, dataIndx: 'rsncode' });
+					return false;
+				}
+			}
+			
+			if(confirm('[[#{ms.checkCancel}]]')) {
+				
+				const data = { updateList: checkList };
+				
+				omp06HeaderGridObject.getGrid().showLoading();
+				omp06ItemGridObject.getGrid().showLoading();
+				const rData = await fetchUtil('PATCH', '/om/purchase/omp06/cancel', data); 
+				if(rData.status === 200) {
+					await omp06Search();
+					omp06ItemGridObject.getGrid().option('dataModel', { data: [] });
+				}
+				omp06HeaderGridObject.getGrid().hideLoading();
+				omp06ItemGridObject.getGrid().hideLoading();
+				omp06HeaderGridObject.getGrid().refreshDataAndView();
+				omp06ItemGridObject.getGrid().refreshDataAndView();
+			}
+		}else{
+			alert('[[#{ms.choiceRowZero}]]');
+		}
+	});
+	
+	omp06HeaderGridColModel = [
+     	{ title: 'rowkey', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true },
+		{ title: '[[#{wm.wasnif.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true },		// Company Key
+		{ title: '[[#{wm.wasnif.copodky}]]', dataType: 'string', dataIndx: 'copodky', editable: false },					// 발주문서
+		{ title: '[[#{wm.wasnif.eoasnky}]]', dataType: 'string', dataIndx: 'eoasnky', editable: false },					// 입고예정번호
+		{ title: '[[#{wm.wasnif.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable: false, hidden: true },		// 문서유형
+		{ title: '[[#{wm.wasnif.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable: false, hidden: true },		// 문서타입
+		{ title: '[[#{wm.wasnif.doccate}]]', dataType: 'string', dataIndx: 'docctnm', editable: false, hidden: true },		// 문서유형명칭
+		{ title: '[[#{wm.wasnif.doctype}]]', dataType: 'string', dataIndx: 'doctynm', editable: false },					// 문서타입명칭
+		{ title: '[[#{wm.wmr20.itemcnt}]]', dataType: 'integer', dataIndx: 'itemcnt', editable: false, format: '#,###',		// 품목수
+			summary: { type: 'sum' }	
+		},	
+		{ title: '[[#{grid.wareCode}]]', dataType: 'string', dataIndx: 'warekey', editable: false, hidden: true },			// 창고
+		{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false, hidden: true },			// 창고명
+		{ title: '[[#{grid.ownamlc}]]', dataType: 'string', dataIndx: 'ownerky', editable: false },							// 화주
+		{ title: '[[#{wm.wasnif.asndqty}]]', dataType: 'integer', dataIndx: 'asndqty', editable: false, format: '#,###',	// 입고예정수량
+			summary: { type: 'sum' }	
+		},		
+		{ title: '[[#{wm.wasnif.rchsqty}]]', dataType: 'integer', dataIndx: 'rchsqty', editable: false, format: '#,###',	// 입하가능수량
+			summary: { type: 'sum' }	
+		},		
+		{ title: '[[#{wm.wasnif.auomkey}]]', dataType: 'string', dataIndx: 'auomkey', editable: false },					// 입고예정단위
+		{ title: '[[#{wm.wtrhis.stotqty}]]', dataType: 'integer', dataIndx: 'stotqty', editable: false, format: '#,###',	// 총재고수량
+			summary: { type: 'sum' }	
+		},
+		{ title: '[[#{om.omp02.asitbox}]]', dataType: 'integer', dataIndx: 'asitbox', editable: false, format: '#,###',		// 박스수량
+			summary: { type: 'sum' }	
+		},		
+		{ title: '[[#{wm.wasnif.asnstat}]]', dataType: 'string', dataIndx: 'asnstat', editable: false },					// ASN 상태
+		{ title: '[[#{wm.wasnif.asndate}]]', dataType: 'string', dataIndx: 'asndate', editable: false },					// 입고예정일
+		{ title: '[[#{wm.wasnif.asntime}]]', dataType: 'string', dataIndx: 'asntime', editable: false },					// 입고예정시간
+		{ title: '[[#{wm.wasnif.credate}]]',  dataType: 'string', dataIndx: 'credate',  editable:false },					// 생성일자
+		{ title: '[[#{wm.wasnif.cretime}]]',  dataType: 'string', dataIndx: 'cretime',  editable:false },					// 생성일시
+		{ title: '[[#{wm.wasnif.creuser}]]',  dataType: 'string', dataIndx: 'creuser',  editable:false },					// 생성사용자
+	];
+	
+	omp06HeaderGridObject = new GridUtil(omp06HeaderGridColModel, '[[${gprogrid}]]', pageId+'_pqgrid_header');
+	omp06HeaderGridObject.setFind();
+	
+	omp06HeaderGridObject.setCreate(async function() {
+		await _commonInit();
+		
+		if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+			const html = '<option value="" selected>[[#{ms.chooseAll}]]</option>';
+			document.querySelector('#omp06_ownerky').insertAdjacentHTML('afterbegin', html); 
+			$('#omp06_ownerky').pqSelect({ deselect : false }); 
+		}
+
+		let html = '<option value="" selected>[[#{ms.chooseAll}]]</option>';
+	    if(custkeyList.length === 1) { 
+			const destkeyList = await getDestkeyByCustkey(custkeyList[0].ptnrkey, tempDestkeyArr); 
+			for(const destkey of destkeyList) {
+				html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+			}
+
+			document.querySelector('#omp06_destkey').innerHTML = html;
+	    }else{
+	    	document.querySelector('#omp06_custkey').insertAdjacentHTML('afterBegin', html);
+	    	document.querySelector('#omp06_custkey').selectedIndex = 0;
+	    }
+		$('#omp06_destkey').pqSelect({ deselect : false });
+	});
+	
+	//header grid 더블 클릭 시 item grid 조회 
+	omp06HeaderGridObject.setRowDblClick(async function(event, ui) { 
+		
+        const param = {
+    		    copodky : ui.rowData.copodky,
+    		    eoasnky : ui.rowData.eoasnky,
+    		    warekey : ui.rowData.warekey,
+    		    doccate : ui.rowData.doccate,
+    		    doctype : ui.rowData.doctype
+        };
+        
+        omp06ItemGridObject.getGrid().showLoading();
+        const rData = await fetchUtil('GET', '/om/purchase/omp06/grids/2', param);
+        if(rData.status === 200) {
+            const itemList = await rData.json();
+            omp06ItemGridObject.getGrid().option('dataModel', { data: itemList.purchaseList, recIndx: 'rowkey' });
+    	    comboCreateData('omp06_pqgrid_item', 'rsncode', itemList.reasonList, { combovl : 'combovl', combonm : 'combonm' }); 
+        }
+	    omp06ItemGridObject.getGrid().hideLoading();
+	    omp06ItemGridObject.getGrid().refreshDataAndView();
+    });
+
+	omp06HeaderGridObject.open();
+	
+	omp06ItemGridColModel = [
+		{ title: '', dataType: 'String',  dataIndx: 'state', type: 'checkBoxSelection', align: 'center', 
+		    maxWidth:'30', maxHeight:'30', menuIcon: false, sortable: false, editor: false,
+		    cb: {all: false, header: true, check:'Y', uncheck:'N'}
+		},
+     	{ title: 'rowkey', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true },
+		{ title: '[[#{wm.wasnif.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false , hidden: true},							// Company Key
+		{ title: '[[#{wm.wasnif.eoasnky}]]', dataType: 'string', dataIndx: 'eoasnky', editable: false },										// 입고예정번호
+		{ title: '[[#{wm.wasnif.eoasnit}]]', dataType: 'integer', dataIndx: 'eoasnit', editable: false, format: '#,###' },						// 입고예정아이템
+		{ title: '[[#{grid.wareCode}]]', dataType: 'string', dataIndx: 'warekey', editable: false, hidden: true },								// 창고	
+		{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false, hidden: true },								// 창고명칭	
+		{ title: '[[#{wm.wasnif.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable: false, hidden: true },							// 문서유형
+		{ title: '[[#{wm.wasnif.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable: false, hidden: true },							// 문서타입
+		{ title: '[[#{md.mdocma.doctynm}]]', dataType: 'string', dataIndx: 'doctynm', editable: false },										// 문서타입명칭
+		{ title: '[[#{wm.wasnif.ownerky}]]', dataType: 'string', dataIndx: 'ownerky', editable: false },										// 화주
+		{ title: '[[#{grid.skuCode}]]', dataType: 'string', dataIndx: 'skumkey', editable: false },												// 상품 
+		{ title: '[[#{grid.skunm}]]', dataType: 'string', dataIndx: 'skudesc', editable: false },												// 상품명
+		{ title: '[[#{wm.wasnif.skuskey}]]', dataType: 'string', dataIndx: 'skuskey', editable: false , hidden: true},							// 대표상품
+		{ title: '[[#{wm.wasnif.rsncode}]]', dataType: 'string', dataIndx: 'rsncode',															// 입고사유코드
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },	
+			editor: {
+				type: 'select',
+                init: function (ui) {
+                	ui.$cell.find('select').pqSelect();
+                	setTimeout(function () {
+	                	ui.$cell.find('select').pqSelect('open'); 
+	                }, 250);
+				},
+				options: [],
+				prepend: { '' : '' }
+			},
+			render: gridRenderAndValue
+		},
+		{ title: '[[#{wm.wasnif.rcvsrmk}]]', dataType: 'string', dataIndx: 'rcvsrmk',															// 입고사유내용
+			styleHead : { 'background-color' : '[[#{grid.styleHead02}]]' }
+		},
+		{ title: '[[#{wm.wtrhis.stotqty}]]', dataType: 'integer', dataIndx: 'stotqty', editable: false, format: '#,###',						// 재고수량
+			summary: { type: 'sum' }	
+		},
+		{ title: '[[#{wm.wasnif.asndqty}]]', dataType: 'integer', dataIndx: 'asndqty', editable: false, format: '#,###',						// 입고예정수량	
+			summary: { type: 'sum' }	
+		},
+		{ title: '[[#{md.mskuwc.propqty}]]',  dataType: 'integer', dataIndx: 'propqty', format: '#,###', editable: false,						// 적정재고수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.propqty ? ui.rowData.propqty : 0;
+			} 
+		},
+		{ title: '[[#{md.mskuwc.salfqty}]]',  dataType: 'integer', dataIndx: 'salfqty', format: '#,###', editable: false,						// 안전재고수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.salfqty ? ui.rowData.salfqty : 0;
+			} 
+		},
+		{ title: '[[#{md.mpakma.packqty}]]',  dataType: 'integer', dataIndx: 'packqty', format: '#,###', editable: false,						// 입수량
+			summary: { type: 'sum' } 
+		},	
+		{ title: '[[#{om.omp02.asitbox}]]', dataType: 'integer', dataIndx: 'asitbox', editable: false, format: '#,###',							// 박스수량	
+			summary: { type: 'sum' }
+		},						
+		{ title: '[[#{wm.wasnif.asnstat}]]', dataType: 'string', dataIndx: 'asnstat', editable: false, hidden: true },							// ASN 상태
+		{ title: '[[#{wm.wasnif.asnstat}]]', dataType: 'string', dataIndx: 'comcdtx', editable: false },										// 공통코드값 명칭(ASN상태)
+		{ title: '[[#{wm.wasnif.asndate}]]', dataType: 'string', dataIndx: 'asndate', editable: false },										// 입고예정일
+		{ title: '[[#{wm.wasnif.asntime}]]', dataType: 'string', dataIndx: 'asntime', editable: false },										// 입고예정시간
+		{ title: '[[#{wm.wasnif.auomkey}]]', dataType: 'string', dataIndx: 'auomkey', editable: false },										// 입고예정단위
+		{ title: '[[#{md.mskuwc.miniqty}]]',  dataType: 'integer', dataIndx: 'miniqty', format: '#,###', editable: false,						// 최소발주수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.miniqty ? ui.rowData.miniqty : 0;
+			} 
+		},				
+		{ title: '[[#{wm.wasnif.sirbcod}]]', dataType: 'string', dataIndx: 'sirbcod', editable: false, hidden: true },							// 개별관리번호
+		{ title: '[[#{wm.wasnif.poitqty}]]', dataType: 'integer', dataIndx: 'poitqty', editable: false, format: '#,###',						// 발주수량
+			summary: { type: 'sum' }	
+		},								
+		{ title: '[[#{wm.wasnif.puomkey}]]', dataType: 'string', dataIndx: 'puomkey', editable: false },										// 발주단위		
+		{ title: '[[#{wm.wasnif.truntyp}]]', dataType: 'string', dataIndx: 'truntyp', editable: false, hidden: true },							// Transfer Unit type
+		{ title: '[[#{wm.wasnif.rchpqty}]]', dataType: 'integer', dataIndx: 'rchpqty', editable: false, format: '#,###',						// 입하완료 누적수량
+			summary: { type: 'sum' }
+		},						
+		{ title: '[[#{wm.wasnif.rchsqty}]]', dataType: 'integer', dataIndx: 'rchsqty', editable: false, format: '#,###',						// 입하완료수량	
+			summary: { type: 'sum' }
+		},						
+		{ title: '[[#{wm.wasnif.rchsuom}]]', dataType: 'string', dataIndx: 'rchsuom', editable: false },										// 입하완료 단위UOM
+		{ title: '[[#{wm.wasnif.vendkey}]]', dataType: 'string', dataIndx: 'vendkey', editable: false },										// 부품사	
+		{ title: '[[#{wm.wasnif.carrkey}]]', dataType: 'string', dataIndx: 'carrkey', editable: false },										// 운송사	
+		{ title: '[[#{wm.wasnif.truckno}]]', dataType: 'string', dataIndx: 'truckno', editable: false },										// 입고차량번호	
+		{ title: '[[#{wm.wasnif.tructon}]]', dataType: 'string', dataIndx: 'tructon', editable: false },										// 입고차량톤수	
+		{ title: '[[#{wm.wasnif.asnmemo}]]', dataType: 'string', dataIndx: 'asnmemo', editable: false },										// 입고요청사항	
+		{ title: '[[#{wm.wasnif.proddat}]]', dataType: 'string', dataIndx: 'proddat', editable: false, hidden: true },							// 생산일자	
+		{ title: '[[#{wm.wasnif.shelife}]]', dataType: 'integer', dataIndx: 'shelife', editable: false, format: '#,###', hidden: true },		// 유통기한	
+		{ title: '[[#{wm.wasnif.expidat}]]', dataType: 'string', dataIndx: 'expidat', editable: false, hidden: true },							// 유통기간	
+		{ title: '[[#{wm.wasnif.custkey}]]', dataType: 'string', dataIndx: 'custkey', editable: false },										// 고객
+		{ title: '[[#{wm.wasnif.destkey}]]', dataType: 'string', dataIndx: 'destkey', editable: false },										// 도착지
+		{ title: '[[#{wm.wasnif.stkstat}]]', dataType: 'string', dataIndx: 'stkstat', editable: false, hidden: true },							// 재고상태
+		{ title: '[[#{wm.wasnif.copodky}]]', dataType: 'string', dataIndx: 'copodky', editable: false },										// 발주문서
+		{ title: '[[#{wm.wasnif.copodit}]]', dataType: 'integer', dataIndx: 'copodit', editable: false, format: '#,###' },						// 발주아이템번호
+		{ title: '[[#{wm.wasnif.refsodc}]]',  dataType: 'string', dataIndx: 'refsodc', editable: false, hidden: true },							// ref ERP SO
+		{ title: '[[#{wm.wasnif.refsoit}]]',  dataType: 'string', dataIndx: 'refsoit', editable: false, hidden: true },							// ref ERP SO Item
+		{ title: '[[#{wm.wasnif.refdndc}]]',  dataType: 'string', dataIndx: 'refdndc', editable: false, hidden: true },							// ref ERP DN
+		{ title: '[[#{wm.wasnif.refdnit}]]',  dataType: 'string', dataIndx: 'refdnit', editable: false, hidden: true },							// ref ERP DN Item
+		{ title: '[[#{wm.wasnif.refsddc}]]',  dataType: 'string', dataIndx: 'refsddc', editable: false, hidden: true },							// ref ERP SD
+		{ title: '[[#{wm.wasnif.refsdit}]]',  dataType: 'string', dataIndx: 'refsdit', editable: false, hidden: true },							// ref ERP DD Item
+		{ title: '[[#{wm.wasnif.credate}]]',  dataType: 'string', dataIndx: 'credate', editable: false },										// 생성일자
+		{ title: '[[#{wm.wasnif.cretime}]]',  dataType: 'string', dataIndx: 'cretime', editable: false },										// 생성일시
+		{ title: '[[#{wm.wasnif.creuser}]]',  dataType: 'string', dataIndx: 'creuser', editable: false },										// 생성사용자
+		{ title: '[[#{wm.wasnif.lmodate}]]',  dataType: 'string', dataIndx: 'lmodate', editable: false },										// 수정일자
+		{ title: '[[#{wm.wasnif.lmotime}]]',  dataType: 'string', dataIndx: 'lmotime', editable: false },										// 수정일시
+		{ title: '[[#{wm.wasnif.lmouser}]]',  dataType: 'string', dataIndx: 'lmouser', editable: false },										// 수정사용자
+		{ title: '[[#{wm.wasnif.indibzl}]]',  dataType: 'string', dataIndx: 'indibzl', editable: false, hidden: true },							// biz logic indicator
+		{ title: '[[#{wm.wasnif.indiarc}]]',  dataType: 'string', dataIndx: 'indiarc', editable: false, hidden: true },							// Archieve indicator
+		{ title: '[[#{wm.wasnif.updtchk}]]',  dataType: 'integer', dataIndx: 'updtchk', editable: false, format: '#,###', hidden: true }		// Update Check
+	];
+	
+	omp06ItemGridObject = new GridUtil(omp06ItemGridColModel, '[[${gprogrid}]]', pageId+'_pqgrid_item');
+	
+	omp06ItemGridObject.setFind();
+	
+	omp06ItemGridObject.setBeforeValidate(function(event, ui) {
+ 		if(ui.source !== 'undo' && (ui.source === 'edit' || ui.source === 'paste' || ui.source === 'checkbox')) {		
+			for(const updateData of ui.updateList) { 
+				if(updateData.newRow.rsncode || (updateData.newRow.rcvsrmk && updateData.newRow.rcvsrmk.trim())) { 
+					this.updateRow({
+		       			rowIndx : updateData.rowIndx,
+		       		    newRow : {
+		    				state : 'Y'
+		       		    },
+		       		    checkEditable: false
+		       		});
+				}
+			}
+        } 
+	});
+	
+	omp06ItemGridObject.open();
+
+});
+
+//MPTNMA : 고객에 따른 도착지 조회. array에 미존재 시 DB에서 조회 후 array에 추가.
+async function getDestkeyByCustkey(param, arr) {
+	
+	if(!arr[param]) {
+		const destkeyData = await fetchUtil('GET', '/om/purchase/common/destination/' + param);
+		arr[param] = await destkeyData.json();
+	}
+	
+	return arr[param];
+}
+
+//신규 등록된 ASN만 조회 header grid.
+async function omp06Search() {
+	
+	const grid = pq.grid('#omp06_pqgrid_header');
+	const searchParams = document.querySelectorAll('input[id*="omp06_"], select[id*="omp06_"], input:checked');
+	const params = {};
+	
+	for(const searchParam of searchParams) {
+		const key = searchParam.name.substring(6);
+		params[key] = searchParam.value;
+	}
+	
+	grid.showLoading();
+	const asnData = await fetchUtil('GET', '/om/purchase/omp06/grids/1', params);
+	if(asnData.status === 200) {
+		const asnList = await asnData.json();
+		grid.option( 'dataModel', { data: asnList, recIndx: 'rowkey' });
+	}
+	grid.hideLoading();
+	grid.refreshDataAndView();
+}
+
+//============================================================
+//input 키보드 엔터 이벤트
+//============================================================
+function omp06KeyUp() {
+	const key = this.event.key || this.event.keyCode;
+	if (key === 'Enter' || key === 13) {
+		omp06Search();
+	}
+}
+</script>
+</div>
+</html>

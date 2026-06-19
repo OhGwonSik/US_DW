@@ -1,0 +1,421 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col">
+					<button id="wmp93_toggle" value="skumkey" class="toggle-skumkey" disabled>[[#{wm.wlotma.skumkey}]]</button>
+				</div>
+				<div class="select-group k d-none">
+                     <select id="wmp93Warekey"
+                        data-cb-val="combovl"
+                        data-cb-name="combonm"
+                        data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList"
+                        data-cb-select=""
+                     ></select>
+                </div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp93_input" name="wmp93_input">
+				</div>
+			</div>
+			<div class="row">
+				<button type="button" class="btn-save btn-main col" id="wmp93_btnSave">[[#{bt.save}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+				<div class="btn-delete btn-white btn-wmp93" id="wmp93Delete">[[#{bt.delete}]]</div>
+			</div>
+			<div class="table-wrapper con-box row2">
+				<table class="mobile-table wmp93-table"
+						data-role="table" 
+						data-rownum="true" 
+						data-check="true">
+				  <thead id="thtb_manual">
+                     <tr id="thColumn">      
+				        <th><input type="checkbox" id="wmp93HeadCheck" onclick="isHeadChecked(this)"></th>    
+				        <th id="destkey" class="d-none">[[#{om.ocosal.destkey}]]</th>
+				        <th id="custkey" class="d-none">[[#{om.ocosal.custkey}]]</th>       
+				        <th id="ownerky" class="d-none">[[#{wm.wshpit.ownerky}]]</th>
+				        <th id="skudesc">[[#{wm.wshpit.skudesc}]]</th>            
+				        <th id="skumkey" class="d-none">[[#{wm.wshpit.skumkey}]]</th>
+				        <th id="skuskey" class="d-none">[[#{wm.wmp93.skuskey}]]</th>
+				        <th id="suomkey" class="d-none">[[#{wm.wshpit.suomkey}]]</th>   
+				        <th id="stotqty" class="d-none">[[#{wm.wstkky.stotqty}]]</th>
+				        <th id="rgitqty">[[#{wm.wshpit.rgitqty}]]</th>
+				        <th id="saatc03">[[#{om.ocosal.saatc03}]]</th>
+				        <th id="saatc06">[[#{om.ocosal.saatc06}]]</th>	
+                     </tr>
+                  </thead>
+					<tbody class="table-body" id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+		<div class="spinner-border" id="wmp93Spinner"></div> 
+		<div class="spinner-background"></div>
+		<div class="modal">
+            <div class="table-wrapper con-box">
+                <table class="mobile-table">
+                    <thead>
+                        <tr>
+                            <th colspan="3">[[#{md.mskuwc.skuat01}]]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tBodySkuat03"></tbody>
+                </table>
+            </div>
+            <div class="table-wrapper con-box">
+                <table class="mobile-table">
+                    <thead>
+                        <tr>
+                            <th colspan="3">[[#{md.mdesma.destkey}]]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tBodyDestkey"></tbody>
+                </table>
+            </div>
+            <div class="search-condition">
+    			<div class="row">
+    				<div class="condition-title col justify-center">
+    					<label for="inputGroupSelect01">[[#{bm.blgtit.refcqty}]]</label>
+    				</div>
+    				<div class="input-wrapper col">
+    					<input type="text" id="wmp93Rgitqty" value="1">
+    				</div>			
+    			</div>
+    		</div>
+            <div class="btn-wrap">
+            <button class="btn-close btn-white btn-delete" id="wmp93ModalClose">[[#{bt.close}]]</button>
+                <button class="btn-save btn-main" id="wmp93ModalSave">[[#{bt.save}]]</button>
+            </div>
+        </div>
+	</main>
+	<div class="bg"></div>
+	<script>
+	/*  wmp93 - 긴급출고
+	*   최초 생성일시   : 2023-12-12 10:30
+	*   최초 생성자    : 오권식
+	*   설명      	: PDA를 이용하여 부품(SKU)을(ALC코드를 이용함) 긴급으로 출고시키는 화면
+	*   수정 내역  	:
+	*   수정일시	    :
+	*   수정자	    :
+	*   변경 사항      :
+	*/	
+	 $(function() {
+		 
+		$('#wmp93ModalClose').click(function(){
+			modalClose();
+		})
+		
+		const pageId = '[[${gprogrid}]]';
+		let itemList;
+		let modalParam = {};
+		let tempALC;
+		wmp93Init().then(result => itemList = result).then(result => {
+		setDestkeyToModal();
+		document.querySelector('#' + pageId + '_input').focus()});
+      
+		//============================================================				
+		//바코드 입력칸 포커스(가상 키보드 삭제)
+		//============================================================	
+		document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+			document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+		});
+		//============================================================				
+		//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+		//============================================================	
+		document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+			document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+		});	
+      //=============================================
+      //=============== 부품 스캔 keyEvent ==============
+      //=============================================  
+      document.querySelector('#' + pageId + '_input').addEventListener('keyup', function(e) {
+    	  
+		  if(event.keyCode === 13) {
+			  const scanData = document.querySelector('#'+pageId+'_input').value;
+			  
+			  let scanAlc = scanData;
+			  
+			  if(!scanAlc){
+				  return;
+			  }
+			  const scanDataSplit = scanData.split('\u001d');
+			  
+			  //split후 길이가 1이면 순수 ALC코드 스캔 행위, 길이가 2이상이면 tofu가 끼어있는 ALC코드이다.
+			  //그래서 tofu로 스플릿시 길이가 6 나오는데 인덱스 3에 S + ALC코드가 들어있다.
+			  if(scanDataSplit.length > 1){
+				  scanAlc = scanDataSplit[3].trim().substring(1);
+			  }
+			  
+			  const findSkumkey = itemList['skumkeyList'].filter(function(element){
+				  return element.skuat03?.includes(scanAlc);
+			  });
+			  
+			  if(!findSkumkey.length){
+				  alertOpen('[[#{wm.wmp93.unmatchALC}]]', function(){
+					  document.querySelector('#'+pageId+'_input').value = '';
+					  document.querySelector('#'+pageId+'_input').focus();
+				  });
+				  return;
+			  }
+			  tempALC = scanAlc;
+			  setSkuat01ToModal(findSkumkey);
+			  $('.modal').css('top', '10px');
+			  $('.bg').show();
+			  document.querySelector('#'+pageId+'_input').value = '';
+			  document.querySelector('#'+pageId+'_input').focus();
+    	  }
+      }); 	  
+      //=============================================
+      //================= save event ================
+      //=============================================  
+      document.querySelector('#' + pageId + '_btnSave').addEventListener('click', async function() {
+		const thObjs = document.querySelector('#thtb_manual').querySelectorAll('th');
+		const boxCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="wmp93Checkbox"]:checked');
+		const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+			  return boxCheckedList.closest('tr');
+		});
+         
+		if(!boxCheckedList.length){
+			alertOpen('[[#{ms.choiceRowZero}]]', function(){
+				document.querySelector('#'+pageId+'_input').focus();
+			});
+			return;
+		}
+		const keyArray = [];
+		
+		//체크박스떄문에 1부터 시작(키값 세팅)
+		for(let i=1;i<thObjs.length;i++){
+			keyArray.push(thObjs[i].getAttribute('id'));
+		}
+		let param;
+		let wmp93SaveList = [];
+		//키 : 벨류 형식 만들기
+		for(const trTag of trTagList){
+			param = {};
+			const tdList = trTag.querySelectorAll('td');
+			
+		    for (let j = 1; j < tdList.length; j++) {
+		    	if(tdList[j].children.length){
+		    		param[keyArray[j - 1]] = tdList[j].children[0].value;
+		    	}else{
+		    		param[keyArray[j - 1]] = tdList[j].innerText;
+		    	}
+		    }
+		    param['warekey'] = '[[${userattr.warekey}]]';
+		    wmp93SaveList.push(param);
+		}
+		confirmOpen('[[#{ms.checksave}]]', async function(result){
+			if(result){
+				try{
+			        $('.spinner-background').css('display', 'block');
+			        $('#' + pageId + 'Spinner').css('display', 'block');
+					const res =  await fetchUtil('POST', '/wm/pda/' + pageId + '/save', { addList : wmp93SaveList } );
+					if(res.status === 200){
+						deleteRow();
+					}
+				}catch(err){
+					alertOpen("[[#{ms.saveErr}]]");
+				}finally{
+			        $('.spinner-background').css('display', 'none');
+			        $('#' + pageId + 'Spinner').css('display', 'none');
+				}
+			}
+		});
+      });
+      
+     //=============================================
+     //=============== ComboBox Init ===============
+     //=============================================
+     async function wmp93Init() {
+        return await wmp93CommonInit();
+     }
+     
+    	async function wmp93CommonInit() {
+	        await _commonInit();   
+	        const param = { warekey : $('#' + pageId + 'Warekey option:selected').val()}; 
+	        const res = await fetchUtil('GET', '/wm/pda/' + pageId + '/init' , param);
+	        try {
+				if(res.status !== 200) {
+					alertOpen("[[#{ms.saveErr}]]");
+				}
+		        const jsonData  = await res.json();
+		        return await jsonData.item;
+			} catch(err) {
+				alertOpen('code : ' + res.status + '\n' + err + '\n' + res.statusText); // get method 통신의 경우
+			} finally{
+		        $('.spinner-background').css('display', 'none');
+		        $('#' + pageId + 'Spinner').css('display', 'none');
+		        $('#' + pageId + 'Save').attr('disabled', false);
+			}
+    	}
+	//=============================================
+	//=============== 모달 품목 세팅 ==================
+	//=============================================
+	function setSkuat01ToModal(skuat01List){
+		let html ='';
+		for(const skuat01Data of skuat01List){
+			html += '<tr onclick="selectSkuat03(this)">';
+			html += '<td colspan="3" data-value="'+ skuat01Data.skuat01 +'">' + skuat01Data.skuat01+' ['+ skuat01Data.skumkey +']' +'</td>'
+			html += '</tr>';
+		}
+		document.querySelector('#tBodySkuat03').insertAdjacentHTML('beforeend', html);
+	}
+	//=============================================
+	//=============== 모달 도착지 세팅 ================
+	//=============================================
+	function setDestkeyToModal(){
+		let html ='';
+		for(const destkey of itemList.destkeyList){
+			html += '<tr onclick="selectDestkey(this)">';
+			html += '<td colspan="3" data-value="'+ destkey.combovl +'">'+ destkey.combonm +'</td>';
+			html += '</tr>';
+		}
+		document.querySelector('#tBodyDestkey').insertAdjacentHTML('beforeend', html);
+	}
+	//=============================================
+	//============== 모달 품목 클릭 ==================
+	//=============================================
+	selectSkuat03 = function(obj){
+		if(document.querySelector('#tBodySkuat03 tr.select')){
+			document.querySelector('#tBodySkuat03 tr.select').removeAttribute('class');
+		}
+		obj.classList.add('select');
+	}
+	//=============================================
+	//============== 모달 도착지 클릭 ==================
+	//=============================================
+	selectDestkey = function(obj){
+		if(document.querySelector('#tBodyDestkey tr.select')){
+			document.querySelector('#tBodyDestkey tr.select').removeAttribute('class');
+		}
+		obj.classList.add('select');
+	}
+	//=============================================
+	//============== 모달 저장버튼 클릭 ==================
+	//=============================================		
+	document.querySelector('#'+pageId+'ModalSave').addEventListener('click', function(){
+		
+		if(!document.querySelector('#tBodySkuat03 tr.select')){
+			modelAlertOpen('[[#{wm.wmp93.selectSkuat03}]]');
+			return;
+		}
+		if(!document.querySelector('#tBodyDestkey tr.select')){
+			modelAlertOpen('[[#{wm.wmp93.selectDestkey}]]');
+			return;
+		}
+		if(Number(document.querySelector('#wmp93Rgitqty').value) <= 0){
+			modelAlertOpen('[[#{wm.wmp93.insertRgitqty}]]', function(){
+				document.querySelector('#wmp93Rgitqty').value = '1';
+				document.querySelector('#wmp93Rgitqty').focus();
+			});
+			return;
+		}
+		modalParam = {}
+		modalParam.skuat03 = document.querySelector('#tBodySkuat03 tr.select').children[0].dataset.value;
+		modalParam.destkey = document.querySelector('#tBodyDestkey tr.select').children[0].dataset.value;
+		modalParam.rgitqty = document.querySelector('#'+ pageId +'Rgitqty').value;
+		modalParam.saatc03 = tempALC;
+		
+		modalClose();
+		addRow();
+		
+	});
+	
+	function modalClose(){
+		$('.modal').css('top', '-100%');
+		$('.bg').hide();
+		document.querySelector('#tBodySkuat03').innerHTML = '';
+		document.querySelector('#wmp93Rgitqty').value = '1';
+		document.querySelector('#tBodyDestkey tr.select')?.removeAttribute('class');
+		document.querySelector('#' + pageId + '_input').value = '';
+		document.querySelector('#' + pageId + '_input').focus();
+	};
+	
+      //=============================================
+      //=================== 행 추가 ===================
+      //=============================================
+      addRow = async function() {
+    	const selectDestkeyData = itemList['destkeyList'].filter(function(element){
+    		return element.combovl === modalParam.destkey;
+    	});
+    	
+		const selectRowData = itemList['skumkeyList'].filter(function(element){
+			return (element.skuat01 === modalParam.skuat03) && (element.skuat03.includes(modalParam.saatc03));
+		});
+    	 
+		let html = '';
+		html += '<tr>';
+		html += '<td><input type="checkbox" class="wmp93Checkbox" checked onchange="isChecked()"></td>';
+		html += '<td class="destkey d-none">'+ modalParam.destkey +'</td>';
+		html += '<td class="custkey d-none">'+ selectDestkeyData[0].ptnrkey +'</td>';
+		html += '<td class="ownerky d-none">'+ selectRowData[0].ownerky +'</td>';
+		html += '<td class="skudesc">'+ selectRowData[0].skudesc +'</td>';
+		html += '<td class="skumkey d-none">'+ selectRowData[0].combovl +'</td>';
+		html += '<td class="skuskey d-none">'+ selectRowData[0].skuskey +'</td>';
+		html += '<td class="suomkey d-none">'+ selectRowData[0].suomkey +'</td>';
+		html += '<td class="stotqty d-none">'+ selectRowData[0].stotqty +'</td>';
+		html += '<td class="rgitqty">'+ modalParam.rgitqty +'</td>';
+		html += '<td class="saatc03">'+ selectRowData[0].skuat03 +'</td>';
+		html += '<td><input type="text" class="saatc06"></td>';
+		html += '</tr>';
+		
+		document.querySelector('#tBody').insertAdjacentHTML('beforeend', html);
+		isChecked();
+      }
+
+      //=============================================
+      //================== row check ================
+      //=============================================
+       isChecked = function() {
+          let isCheck = '';
+          let headCheck = document.querySelector('#wmp93HeadCheck');
+          document.querySelectorAll('input[class*="wmp93Checkbox"]').forEach(function(obj){
+               isCheck += obj.checked;
+          });
+          document.querySelector('#'+ pageId +'_input').focus();
+          return headCheck.checked = isCheck.indexOf("true") > -1 ? true : false;
+       }
+		
+       //=============================================
+       //================= head check ================
+       //=============================================
+       isHeadChecked = function(e) {
+          document.querySelectorAll('input[class*="wmp93Checkbox"]').forEach(function(element){
+             element.checked = e.checked
+          });
+          document.querySelector('#'+ pageId +'_input').focus();
+       }
+       
+       //=============================================
+       //============== table row delete =============
+       //=============================================
+	   document.querySelector('#'+ pageId +'Delete').addEventListener('click', async function(){
+		   const deleteCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="wmp93Checkbox"]:checked');
+		   
+		   if(!deleteCheckedList.length){
+			   alertOpen('[[#{ms.choiceRowZero}]]',function(){
+				   document.querySelector('#'+ pageId +'_input').focus();
+			   });
+			   return;
+		   }
+		   const result = await confirmOpenAsync('[[#{ms.rowDelete}]]');
+		   if(result){
+			   deleteRow();
+		   }
+		   document.querySelector('#'+ pageId +'_input').focus();
+	   });
+       function deleteRow(){
+          const tbody = document.querySelector('#tBody');
+          const tr = tbody.querySelectorAll('tr');
+         	  tr.forEach((element) => {
+	          	tbody.removeChild(element);
+          });
+		  isChecked(); 
+       }
+	});
+	</script>
+</div>	
+</html>

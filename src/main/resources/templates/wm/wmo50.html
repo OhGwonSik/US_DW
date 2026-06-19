@@ -1,0 +1,432 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmo50Warekey" data-cb-val="combovl"
+							data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList"></select>
+					</div>
+				</div>
+				<label class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmo50Ownerky" data-cb-val="combovl"
+							data-cb-name="combonm" 
+							data-cb-url="/md/common/partner/owner"
+							data-cb-variable="ownerkyList">
+							<option value="" selected>[[#{wm.wmo50.all}]]</option>
+							</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wshpit.shppday}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmo50Shppdayfrom"
+							onkeyup="setInputDateDel(this)" /> <span>~</span> <input
+							type="date" max="2999-12-31" id="wmo50Shppdayto"
+							onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wtakit.tasksts}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmo50Shpdcst">
+							<option value="NEW" selected>[[#{wm.wmo50.new}]]</option>
+							<option value="F_ALOC">[[#{wm.wmo50.falloc}]]</option>
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wmo50.shpdcky}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="wmo50Shpdcky" th:placeholder="${#messages.msg('wm.wmo50.shpdcky')}">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="wmo50Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="wmo50Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-white" id="wmo50Cancel">
+						<img class="ic-bt-cancel">[[#{bt.cancel}]]
+					</button>
+					<button class="btn-navy btn-green" id="wmo50Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmo50HeadPqgrid"></div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-grid-wrapper con-box">
+				<div id="wmo50ItemPqgrid"></div>
+			</div>
+		</div>
+		<div class="spinner" id="spinner"></div>
+	</div>	
+	<script>
+	$(function(){
+		const pageId = "[[${gprogrid}]]";
+		const wmo50ModuleName = 'wm';
+		const wmo50HeadGridId = '#' + pageId + 'HeadPqgrid';
+		const wmo50ItemGridId = '#' + pageId + 'ItemPqgrid';
+		const wmo50FallcValue = 'F_ALOC';
+		const wmo50TypeSingle = 'SINGLE';
+		const wmo50PrintId = 'wmd10_1';
+		
+		$('#' + pageId + 'Search').click(async function(){
+			await wmo50List();
+		});
+		
+		$('#' + pageId + 'Reset').click(function(){
+			resetSearchConditions();
+			$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+			wmo50HeadGridObject.searchList([]);
+			wmo50ItemGridObject.searchList([]);
+		});
+		
+		$('#' + pageId + 'Shpdcst').change(function(){
+			if(this.value === wmo50FallcValue){
+				$('#' + pageId + 'Save').addClass('d-none');
+			}else{
+				$('#' + pageId + 'Save').removeClass('d-none');
+			}
+		});
+		
+		$('#' + pageId + 'Save').click(async function(){
+			const headGrid = pq.grid(wmo50HeadGridId);
+			const itemGrid = pq.grid(wmo50ItemGridId);
+
+			const itemGridList = itemGrid.getChanges();
+			const headGridList = headGrid.getChanges();
+			
+			const itemCheckList = itemGrid.Checkbox('state').getCheckedNodes();
+			const headCheckList = headGrid.Checkbox('state').getCheckedNodes();
+			
+			let headFilterCheckList = headCheckList.filter((obj) => { 
+				obj.progrid = pageId ,
+				obj.picktyp = wmo50TypeSingle
+				return obj.state === true;
+			});
+			
+			let itemFilterCheckList = itemCheckList.filter((obj) => {
+				obj.progrid = pageId ,
+				obj.picktyp = wmo50TypeSingle
+				return obj.state === true;
+			});
+			
+			for(let headFilterRow of headFilterCheckList){
+				if(headFilterRow.stockyn === 'N'){
+					alert("[[#{wm.wmo50.checkStock}]]");
+					return false;
+				}
+			}
+			
+			if(headFilterCheckList.length && itemFilterCheckList.length) {
+				if(confirm("[[#{ms.checksave}]]")){
+					headGridList.updateList = headCheckList;
+					itemGridList.updateList = itemFilterCheckList;
+					let data = { headGrid : headGridList , itemGrid : itemGridList };
+
+					headGrid.showLoading();
+					itemGrid.showLoading();
+
+					const res = await fetchUtil('POST', '/wm/outbound/' + pageId + '/alloc' , data);
+					if(res.ok){
+						const resjsonObj = await res.json();
+						if(resjsonObj) {
+	// 							alert(resjsonObj.omsgkey);
+								// 프린트 출력 여부확인 ( 부분할당 건에 대한 재할당의 case )
+	// 							let result = wmo50Reprint(resjsonObj);
+	// 							if(result){
+	// 								await wmo50Print(resjsonObj);
+	// 							}
+							await wmo50List();
+						}
+					}
+					headGrid.hideLoading();
+					itemGrid.hideLoading();
+				}
+			}else{
+				alert("[[#{ms.choiceRowZero}]]");
+				return;
+			}
+		});
+		
+		$('#' + pageId + 'Cancel').click(async function(){
+			const itemGrid  = pq.grid(wmo50ItemGridId);
+			const headGrid  = pq.grid(wmo50HeadGridId);
+			const gridCheck = itemGrid.Checkbox('state').getCheckedNodes();
+			const gridList  = itemGrid.getChanges({all:true});
+			let checkList   = gridCheck.filter((obj) => {   obj.picktyp = ' ' , 
+															obj.doccate = '500', 
+															obj.doctype = '535' 
+														  return obj.state === true });
+			if(checkList.length) {
+				if(confirm("[[#{ms.checksave}]]")){
+					gridList.updateList = checkList;
+					
+					headGrid.showLoading();
+					itemGrid.showLoading();
+					
+					const res = await fetchUtil('POST', '/wm/outbound/' + pageId + '/alloc-cancel' , gridList);
+					if(res.ok){
+						const resData = res.json();
+						if(resData){
+							alert("[[#{ms.cancelComplete}]]");
+							await wmo50List();
+						}
+					}
+					headGrid.hideLoading();
+					itemGrid.hideLoading();
+				}
+			} else{
+				alert("[[#{ms.choiceRowZero}]]");
+				return;
+			}
+		});
+		
+	 	/**
+	 	 * Head Grid
+	  	 **/
+		let wmo50HeadGridColModel 	= [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+	            type: 'checkbox', sortable: false, editor: false,
+	            cb: { all: false, header: true }
+	     	},
+	 		{ title: "[[#{wm.wshpit.rowkey}]]",  dataType: "string",  dataIndx:"rowkey",  hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.compkey}]]", dataType: "string",  dataIndx:"compkey", hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.warekey}]]", dataType: "string",  dataIndx:"warekey", hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.ownerky}]]", dataType: "string",  dataIndx:"ownerky", hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.oeretky}]]", dataType: "string",  dataIndx:"oeretky", editable:false },
+	 		{ title: "[[#{wm.wmo50.shpdcky}]]", dataType: "string",  dataIndx:"shpdcky", editable:false },
+	 		{ title: "[[#{wm.wshpit.picktyp}]]", dataType: "string",  dataIndx:"picktyp", hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.doccate}]]", dataType: "string",  dataIndx:"doccate", editable:false },
+	 		{ title: "[[#{wm.wshpit.doctype}]]", dataType: "string",  dataIndx:"doctype", editable:false },
+	 		{ title: "[[#{md.mdocma.doctynm}]]", dataType: "string",  dataIndx:"doctynm", editable:false },
+	 		{ title: "[[#{wm.wmo50.refscnt}]]", dataType: "integer", dataIndx:"refscnt", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wshpit.shcuqty}]]", dataType: "integer", dataIndx:"shcuqty", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wshpit.rgitqty}]]", dataType: "integer", dataIndx:"rgitqty", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wshpit.shalqty}]]", dataType: "integer", dataIndx:"shalqty", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wmo50.stockyn}]]", dataType: "string",  dataIndx:"stockyn", editable:false,
+	 			type: 'checkbox', editor: false, align: 'center',
+	            cb: { check: 'Y', uncheck: 'N' },
+				render: function (ui) {                            
+	            	ui.column.cb.check === ui.cellData ? 'checked' : '';
+				} 
+	        },
+	 		{ title: "[[#{wm.wmo50.shsdate}]]", dataType: "string", dataIndx: "shsdate",  editable: false },
+	 		{ title: "[[#{wm.wmo50.shstime}]]", dataType: "string", dataIndx: "shstime",  editable: false },
+	 		{ title: "[[#{wm.wshpit.updtchk}]]", dataType: "integer", dataIndx: "updtchk",  hidden: true , editable: false },
+	 	]
+	 	const wmo50HeadGridObject = new GridUtil(wmo50HeadGridColModel, pageId , pageId + 'HeadPqgrid');
+	 	
+	 	wmo50HeadGridObject.setFind();
+	 	wmo50HeadGridObject.setBeforeValidate(function(evt ,ui){
+	    	if(ui.source === 'checkbox'){
+    			const updateList = ui.updateList;
+    			updateList.forEach((row) => {
+        			findSameKey(pageId + 'Head' , ui);
+	    			if(row.newRow.hasOwnProperty('state')){
+						Object.keys(row).map((obj) => {
+							findSameKey(pageId + 'Item' , ui);
+	    				});
+	    			}
+    			});
+	    	}
+	    });
+	    
+	    wmo50HeadGridObject.open();
+	 	/**
+	 	 * Item Grid
+	  	 **/
+	    let wmo50ItemGridColModel 	= [
+	    	{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+	            type: 'checkbox', sortable: false, editor: false,
+	            cb: { all: false, header: true }
+	     	},
+	 		{ title: "[[#{wm.wshpit.rowkey}]]",  dataType: "string",  dataIndx:"rowkey",  hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.warekey}]]", dataType: "string",  dataIndx:"warekey", hidden: true, editable:false },
+	 		{ title: "[[#{md.mowrma.ownamlc}]]", dataType: "string",  dataIndx:"ownamlc", editable:false },
+	 		{ title: "[[#{wm.wshpit.oeretky}]]", dataType: "string",  dataIndx:"oeretky", editable:false },
+	 		{ title: "[[#{wm.wshpit.oeretit}]]", dataType: "integer",  dataIndx:"oeretit", editable:false },
+	 		{ title: "[[#{wm.wmo50.shpdcky}]]", dataType: "string",  dataIndx:"shpdcky", editable:false },
+	 		{ title: "[[#{wm.wshpit.shpdcit}]]", dataType: "integer",  dataIndx:"shpdcit", editable:false },
+	 		{ title: "[[#{wm.wshpit.picktyp}]]", dataType: "string",  dataIndx:"picktyp", hidden: true, editable:false },
+	 		
+	 		{ title: "[[#{wm.wshpit.doccate}]]", dataType: "string",  dataIndx:"doccate", hidden: true, editable:false },
+	 		{ title: "[[#{wm.wshpit.doctype}]]", dataType: "string",  dataIndx:"doctype", hidden: true, editable:false },
+	 		{ title: "[[#{md.mdocma.doctynm}]]", dataType: "string",  dataIndx:"doctynm", editable:false },
+	 		{ title: "[[#{grid.skuCode}]]", dataType: "string", dataIndx:"skumkey", editable:false },
+	 		{ title: "[[#{grid.skunm}]]", dataType: "string", dataIndx:"skudesc", editable:false },
+			{ title: "[[#{wm.wshpit.shcuqty}]]", dataType: "integer", dataIndx:"shcuqty", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wmo50.stockct}]]", dataType: "integer", dataIndx:"stockct", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wshpit.rgitqty}]]", dataType: "integer", dataIndx:"rgitqty", editable:false,
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },	
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wshpit.shalqty}]]", dataType: "integer", dataIndx:"shalqty", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wshpit.shpkqty}]]", dataType: "integer", dataIndx:"shpkqty", editable:false,
+	 			summary: { type: "sum" }, format: "#,###"
+	 		},
+	 		{ title: "[[#{wm.wmo50.stockyn}]]", dataType: "string",  dataIndx:"stockyn", editable:false,
+	 			type: 'checkbox', editor: false, align: 'center',
+	            cb: { check: 'Y', uncheck: 'N' },
+				render: function (ui) {                            
+	            	ui.column.cb.check === ui.cellData ? 'checked' : '';
+				} 
+	        },
+	 		{ title: "[[#{wm.wmo50.shsdate}]]", dataType: "string", dataIndx: "shsdate",  editable: false },
+	 		{ title: "[[#{wm.wmo50.shstime}]]", dataType: "string", dataIndx: "shstime",  editable: false },
+	 		{ title: "[[#{wm.wshpit.updtchk}]]", dataType: "integer", dataIndx: "updtchk",  hidden: true , editable: false },
+	 	]
+	 	const wmo50ItemGridObject = new GridUtil(wmo50ItemGridColModel, pageId , pageId + 'ItemPqgrid');
+	 	
+	    wmo50ItemGridObject.setFind();
+	    
+	    wmo50ItemGridObject.setBeforeValidate(function(evt ,ui){
+	    	if(ui.source === 'checkbox'){
+    			const updateList = ui.updateList;
+    			findSameKey(pageId + 'Item' , ui);
+    			updateList.forEach((row) => {
+		    		if(row.newRow.hasOwnProperty('state')){
+						Object.keys(row).map((obj) => {
+							findSameKey(pageId + 'Head' , ui);
+			    		});
+		    		}
+    			});
+	    	}
+	    });
+	    
+	    wmo50ItemGridObject.setCreate(async function(evt , ui){
+	    	$('#' + pageId + 'Shppdayfrom').val(moment().subtract(1, 'days').format('YYYY-MM-DD'));
+	    	$('#' + pageId + 'Shppdayto').val(moment().format('YYYY-MM-DD'));
+			await _commonInit();
+			$('#' + pageId + 'Ownerky').pqSelect({
+				deselect : false
+			});
+	    })
+	    
+	    wmo50ItemGridObject.open();
+		
+	   //============================================================
+	   // 그리드 리스트
+	   //============================================================
+	    async function wmo50List(){
+	    	let headGrid = pq.grid(wmo50HeadGridId);
+	  		let itemGrid = pq.grid(wmo50ItemGridId);
+	  		
+	    	let param = { warekey : $('#' + pageId + 'Warekey').val() ,
+	    				  ownerky : $('#' + pageId + 'Ownerky').val() ,
+	    				  shppdayfrom : $('#' + pageId + 'Shppdayfrom').val().replaceAll('-','') ,
+	    				  shppdayto : $('#' + pageId + 'Shppdayto').val().replaceAll('-','') ,
+	    				  shpdcky : $('#' + pageId + 'Shpdcky').val() ,
+	    				  shpdcstArr : $('#' + pageId + 'Shpdcst').val() 
+	    				}
+	    	
+	    	headGrid.showLoading();
+	    	itemGrid.showLoading();
+
+	    	const res = await fetchUtil('GET' , '/wm/outbound/' + pageId + '/grids-all' , param);
+	    	if(res.ok){
+				const resData = await res.json();
+					
+				headGrid.option( 'dataModel', { data: resData.headList } );
+		        headGrid.refreshDataAndView();
+		        itemGrid.option( 'dataModel', { data: resData.itemList } );
+		        itemGrid.refreshDataAndView();
+	    	}
+			headGrid.hideLoading();
+			itemGrid.hideLoading();
+	    }
+	    
+	    //============================================================
+		// 그리드 간 동일한 반출번호 row 선택 
+		//============================================================
+	    function findSameKey(gridNm , ui) {
+    		const grid = pq.grid('#' + gridNm + 'Pqgrid');
+    		const gridList = grid.getData();
+    		
+   			ui.updateList.forEach((updateRow) => {
+	    		gridList.filter(function(gridRow){
+					if(gridRow.oeretky === updateRow.rowData.oeretky){
+						grid.updateRow({
+							rowIndx : gridRow.pq_ri ,
+							newRow : {
+								state : updateRow.newRow['state']
+							},
+							checkEditable : false
+						});
+					}
+	    		})
+			});
+	    }
+	    
+	    //============================================================
+		// 피킹지시서 출력 판단 용도 ( 재고부족의 case ) - 현재 미사용 ( 2023/12/13 기준 )
+		//============================================================
+	    async function wmo50Reprint(res){
+	    	if(res){
+	    		const fetchUtilRes = await fetchUtil('GET', '/wm/outbound/' + pageId + '/print', res);
+	    		if(fetchUtilRes.ok){
+					return await fetchUtilRes.json();
+	    		}
+	    		return;
+	    	}
+	    }
+	    
+	    //============================================================
+		// 피킹지시서 출력 - 현재 미사용 ( 2023/12/13 기준 )
+		//============================================================
+	    async function wmo50Print(res){
+			if(res){
+				if(confirm("[[#{wm.wmo50.printout}]]")) {
+					let printList = res.printList;
+					for(let row of printList){
+						row['user']    = "[[${userattr.useract}]]";
+						row['type']    = wmo50PrintId;
+						row['progrid'] = pageId;
+						row['tasksts'] = "task";
+					}
+					reportPrint(printList , wmo50ModuleName);
+				}
+			}else{
+				alert("[[#{wm.wmo50.printError}]]");
+			}
+		}
+	});
+	</script>
+</div>
+</html>

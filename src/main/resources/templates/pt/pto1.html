@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="fragments-mainContent">
+
+<script>
+$(function(){
+	var now = moment().add(5, "y").format("YYYY-MM-DD");
+	Combo('', "ptp1_usertyp" , { comcdky : "USERTYP" } , "/md/mdc7code2.do" );
+	
+	//저장 이벤트
+	function saveChanges(){
+		var grid = this;
+		if (grid.saveEditCell() === false) {
+	    	return false;
+	    }
+		if (grid.isDirty() && grid.isValidChange({ focusInvalid: true }).valid) {
+	        var data = { data : grid.getChanges({ format: 'byVal' }), useract : $('#syu1_useract').val(), usernam : $('#syu1_usernam').val() };
+	        $("#syu1_pqgrid").pqGrid( "showLoading" );
+	    	var aul = new AjaxUtil_Order("/sy/userSave.do", data);
+	    	aul.setCallbackSuccess(setUserSaveCallback);
+	    	aul.send();
+	    }
+	}
+	
+	//select 선택 이벤트
+	function initSelect(ui) {
+        ui.$cell.find("select").pqSelect();
+        setTimeout(function () {
+            ui.$cell.find("select").pqSelect('open');
+        })
+    }
+	
+	//날짜 수정 이벤트
+	function dateEditor(ui) {
+		var $inp = ui.$cell.find("input"),
+            grid = this,
+		    format = ui.column.format || "mm/dd/yy",
+		    val = $.datepicker.formatDate(format, new Date($inp.val()));
+
+        //initialize the editor
+        $inp.attr('readonly', 'readonly').val(val).datepicker({
+            changeMonth: true,
+            changeYear: true,
+            dateFormat: format,
+            showAnim: '',
+            onSelect: function () {
+                this.firstOpen = true;
+            },
+            beforeShow: function (input, inst) {
+                setTimeout(function () {
+                    $('.ui-datepicker').css('z-index', 999999999999);
+                });
+            },
+            onClose: function () {
+                this.focus();
+            }
+        });
+	}
+	
+	var obj = {
+            hwrap: false,
+            rowHt: 32,
+            rowBorders: false,
+            trackModel: { on: true }, //to turn on the track changes.            
+            toolbar: {
+                items: [
+                    {
+                        type: 'button', icon: 'ui-icon-plus', label: 'Add', listener: function () {
+                            var rowData = { compkey: "000" , alocked: "N", idexpdt: now, pwexpdt: now, pwercnt: 0 };
+                            var rowIndx = this.addRow({ rowData: rowData, checkEditable: true });
+                            this.goToPage({ rowIndx: rowIndx });
+                            this.editFirstCellInRow({ rowIndx: rowIndx });
+                        }
+                    },
+                    { type: 'separator' },
+                    {
+                        type: 'button', icon: 'ui-icon-disk', label: 'Save Changes', cls: 'changes', listener: saveChanges,
+                        options: { disabled: true }
+                    },
+                    {
+                        type: 'button', icon: 'ui-icon-cancel', label: 'Reject Changes', cls: 'changes', listener: function () {
+                            this.rollback();
+                            this.history({ method: 'resetUndo' });
+                        },
+                        options: { disabled: true }
+                    }
+                ]
+            },
+            scrollModel: { autoFit: false },
+            swipeModel: { on: false },
+            editor: { select: true },
+            cellBeforeSave: function( event, ui ) {
+            	var dataIndx = ui.dataIndx, newVal = ui.newVal, exCnt = 0;
+            	if( dataIndx == 'useract' ){
+            		if(newVal != null){
+                		newVal = newVal.trim();
+                	}
+            		
+            		if(newVal != '' && newVal != null){
+            			var gridCK = ui.dataModel.data.slice();
+            			var useract = newVal.trim();
+            			gridCK.splice(ui.rowData.pq_ri,1);
+                    	$.each(gridCK,function(index,item){
+                    		if(item.useract == useract){
+                    			exCnt = 1;
+                    			alert(index+1 + "[[#{md.mdo3.cellCheckErr}]]");	//No 테이터와 같습니다.
+                    		}
+            			});
+                    }
+                    
+                    if(exCnt == 1){
+                    	return false;
+                    }
+            	}
+            },
+            title: "<b>User Info</b>",
+            history: function (evt, ui) {
+                var $tb = this.toolbar();
+                if (ui.canUndo != null) {
+                    $("button.changes", $tb).button("option", { disabled: !ui.canUndo });
+                }
+                if (ui.canRedo != null) {
+                    $("button:contains('Redo')", $tb).button("option", "disabled", !ui.canRedo);
+                }
+            },
+            colModel: [
+            	{ title: "no", width: 100, datatype: "integer", dataIndx: "no", hidden: true, editable: false},
+            	{ title: "[[#{sy.susrma.compkey}]]", width: 100, datatype: "string", dataIndx: "compkey", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.useract}]]", width: 100, datatype: "string", dataIndx: "useract", 
+            		render: function (ui) {                            
+            			if(ui.rowData.no != undefined){
+            				ui.rowData.disabled = true;
+            			}else{
+            				ui.rowData.disabled = false;
+            			}
+                    },
+            		editable: function (ui) {
+            			if(ui.rowData){
+            				return !ui.rowData.disabled;
+            			}else{
+            				return false;
+            			}
+            		},
+            		validations: [
+                        { type: 'minLen', value: 1, msg: "Required" },
+                        { type: 'maxLen', value: 60, msg: "length should be <= 60" }
+                    ]
+        		},
+        		{ title: "[[#{sy.susrma.passwrd}]]", width: 100, datatype: "string", dataIndx: "passwrd",
+        			validations: [
+                        { type: 'minLen', value: 1, msg: "Required" },
+                        { type: 'maxLen', value: 100, msg: "length should be <= 100" }
+                    ]
+        		},
+        		{ title: "[[#{sy.susrma.usernam}]]", width: 100, datatype: "string", dataIndx: "usernam",
+        			validations: [
+                        { type: 'minLen', value: 1, msg: "Required" },
+                        { type: 'maxLen', value: 60, msg: "length should be <= 60" }
+                    ]	
+        		},
+        		{ title: "[[#{sy.susrma.address}]]", datatype: "string", dataIndx: "address", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.citycod}]]", datatype: "string", dataIndx: "citycod", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.rsonkey}]]", datatype: "string", dataIndx: "rsonkey", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.postcod}]]", datatype: "string", dataIndx: "postcod", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.natn2ky}]]", datatype: "string", dataIndx: "natn2ky", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.telphnm}]]", width: 100, datatype: "string", dataIndx: "telphnm"},
+        		{ title: "[[#{sy.susrma.emailad}]]", width: 100, datatype: "string", dataIndx: "emailad"},
+        		{ title: "[[#{sy.susrma.departm}]]", width: 100, datatype: "string", dataIndx: "departm"},
+        		{ title: "[[#{sy.susrma.emploid}]]", datatype: "string", dataIndx: "emploid", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.acapdoc}]]", datatype: "string", dataIndx: "acapdoc", hidden: true, editable: false},
+        		{ title: "[[#{sy.susrma.usertyp}]]", width: 100, dataIndx: "usertyp", editable: false, hidden: true },
+        		{ title: "[[#{sy.susrma.usertyp}]]", width: 120, dataIndx: "usertyptext",
+        			editor: {
+    		            type: 'select',
+    		            init: initSelect,
+    		            valueIndx: "comcdvl",
+    		            labelIndx: "comcdtx",
+    		            options: [],
+    		            mapIndices: { "comcdtx": "usertyptext", "comcdvl": "usertyp" }
+    		        },
+    		        validations: [{ type: 'minLen', value: 1, msg: "Required"}]
+                },
+        		{ title: "[[#{sy.susrma.ownerky}]]", width: 100, datatype: "string", dataIndx: "ownerky"},
+        		{ title: "[[#{sy.susrma.ptnrkey}]]", width: 100, datatype: "string", dataIndx: "ptnrkey"},
+        		{ title: "[[#{sy.susrma.custkey}]]", width: 100, datatype: "string", dataIndx: "custkey"},
+        		{ title: "[[#{sy.susrma.usergr1}]]", width: 100, datatype: "string", dataIndx: "usergr1"},
+        		{ title: "[[#{sy.susrma.usergr2}]]", width: 100, datatype: "string", dataIndx: "usergr2"},
+        		{ title: "[[#{sy.susrma.usergr3}]]", width: 100, datatype: "string", dataIndx: "usergr3"},
+        		{ title: "[[#{sy.susrma.langkey}]]", width: 100, datatype: "string", dataIndx: "langkey", hidden: true , editable: false},
+        		{ title: "[[#{sy.susrma.datefmt}]]", width: 100, datatype: "string", dataIndx: "datefmt", hidden: true , editable: false},
+        		{ title: "[[#{sy.susrma.timefmt}]]", width: 100, datatype: "string", dataIndx: "timefmt", hidden: true , editable: false},
+        		{ title: "[[#{sy.susrma.decifmt}]]", width: 100, datatype: "string", dataIndx: "decifmt", hidden: true , editable: false},
+        		
+        		{ title: "[[#{sy.susrma.idexpdt}]]", width: 120, datatype: "date", format:"yy-mm-dd", dataIndx: "idexpdt",
+        			cls: 'pq-calendar pq-side-icon',
+    		        editor: {
+    		            type: 'textbox',
+    		            init: dateEditor,
+    		            getData: function (ui) {
+    		                var dt = $.datepicker.parseDate(ui.column.format, ui.$cell.find("input").val());
+    		                return $.datepicker.formatDate("mm/dd/yy", dt);
+    		            }
+    		        }
+    		    },
+        		
+        		{ title: "[[#{sy.susrma.pwexpdt}]]", width: 100, datatype: "date", format:"yy-mm-dd", dataIndx: "pwexpdt",
+    		    	cls: 'pq-calendar pq-side-icon',
+    		        editor: {
+    		            type: 'textbox',
+    		            init: dateEditor,
+    		            getData: function (ui) {
+    		                var dt = $.datepicker.parseDate(ui.column.format, ui.$cell.find("input").val());
+    		                return $.datepicker.formatDate("mm/dd/yy", dt);
+    		            }
+    		        }
+        		},
+        		
+        		{ title: "[[#{sy.susrma.pwercnt}]]", width: 100, datatype: "integer",dataIndx: "pwercnt"},
+        		{ title: "[[#{sy.susrma.alocked}]]", width: 120, dataIndx: "alocked",
+        			align: "center",
+                    type: 'checkbox',
+                    cb: {
+                        all: false,
+                        header: true,
+                        check: "Y",
+                        uncheck: "N"
+                    },
+                    render: function (ui) {                            
+                        var cb = ui.column.cb,
+                            cellData = ui.cellData,
+                            checked = cb.check === cellData ? 'checked' : '';
+                    },
+                    editor: false,
+                    editable: function (ui) {}
+        		},
+        		{ title: "[[#{sy.susrma.alockmo}]]", width: 100, datatype: "string", dataIndx: "alockmo"},
+        		{ title: "[[#{sy.susrma.utimzon}]]", width: 100, datatype: "integer",dataIndx: "utimzon", hidden: true , editable: false},
+				{ title: "[[#{sy.susrma.credate}]]", width: 100, datatype: "string", dataIndx: "credate", editable: false},
+				{ title: "[[#{sy.susrma.cretime}]]", width: 100, datatype: "string", dataIndx: "cretime", editable: false},
+				{ title: "[[#{sy.susrma.creuser}]]", width: 100, datatype: "string", dataIndx: "creuser", editable: false},
+				{ title: "[[#{sy.susrma.lmodate}]]", width: 100, datatype: "string", dataIndx: "lmodate", editable: false},
+				{ title: "[[#{sy.susrma.lmotime}]]", width: 100, datatype: "string", dataIndx: "lmotime", editable: false},
+				{ title: "[[#{sy.susrma.lmouser}]]", width: 100, datatype: "string", dataIndx: "lmouser", editable: false}
+            ],
+            postRenderInterval: -1, //call postRender synchronously.
+            pageModel: { type: "local", rPP: 50, strRpp: "{0}", strDisplay: "{0} to {1} of {2}" }, 
+            create: function (evt, ui) {
+            	this.widget().pqTooltip();	//툴팁
+            	
+            	var grid = this, column;
+            	$.getJSON("/md/mdc7code.do", {compkey: "100", comcdky: "USERTYP"}, function (response) {
+                    column = grid.getColumn({ dataIndx: 'usertyptext' });
+                    response.item.unshift({comcdvl:'',comcdtx:''});
+                    column.editor.options = response.item;
+                });
+                
+            },
+            editModel: {
+                saveKey: $.ui.keyCode.ENTER,
+                keyUpDown: false,
+                clicksToEdit: 1
+            },
+            historyModel:{ checkEditable: true },
+            numberCell: { show: true }	//행 번호를 나타내는 숫자 셀이 그리드에 표시
+            //resizable: true			//그리드의 크기를 가로 및 세로로 조정
+            //showBottom: false			//그리드의 맨 아래 섹션 표시를 제어
+        };
+	
+	pq.grid("#syu1_pqgrid", obj);
+});	
+//============================================================	
+//검색 버튼 이벤트
+//============================================================	
+function ptp1_search(){
+	var data = { progrid:'[[${param.progrid}]]', useract : $('#syu1_useract').val(), usernam : $('#syu1_usernam').val() };
+	$("#syu1_pqgrid").pqGrid( "showLoading" );
+	var aul = new AjaxUtil_Order("/sy/userSelect.do", data, "GET");
+	aul.setCallbackSuccess(getUserListCallback);
+	aul.send();
+}
+
+//============================================================	
+//저장 버튼 이벤트
+//============================================================	
+function ptp1_save(){
+	
+	
+	var data = { progrid:'[[${param.progrid}]]', useract : $('#syu1_useract').val(), usernam : $('#syu1_usernam').val() };
+	$("#syu1_pqgrid").pqGrid( "showLoading" );
+	var aul = new AjaxUtil_Order("/sy/userSelect.do", data, "POST");
+	aul.setCallbackSuccess(getUserListCallback);
+	aul.send();
+}
+
+//============================================================	
+//수정 버튼 이벤트
+//============================================================	
+function ptp1_edit(){
+	var data = { progrid:'[[${param.progrid}]]', useract : $('#syu1_useract').val(), usernam : $('#syu1_usernam').val() };
+	$("#syu1_pqgrid").pqGrid( "showLoading" );
+	var aul = new AjaxUtil_Order("/sy/userSelect.do", data, "PUT");
+	aul.setCallbackSuccess(getUserListCallback);
+	aul.send();
+}
+
+//============================================================	
+//삭제 버튼 이벤트
+//============================================================	
+function ptp1_delete(){
+	var data = { progrid:'[[${param.progrid}]]', useract : $('#syu1_useract').val(), usernam : $('#syu1_usernam').val() };
+	$("#syu1_pqgrid").pqGrid( "showLoading" );
+	var aul = new AjaxUtil_Order("/sy/userSelect.do", data, "DELETE");
+	aul.setCallbackSuccess(getUserListCallback);
+	aul.send();
+}
+//============================================================	
+//검색 콜백
+//============================================================	
+function getUserListCallback(data){
+	$("#syu1_pqgrid").pqGrid( "hideLoading" );
+	if(data.code == '200'){
+		if(data.userList.length == 0){
+			alert("[[#{md.mdo3.getDataZero}]]");	//데이터 조회 결과 0 건 입니다.
+			return;
+		}
+		$("#syu1_pqgrid").pqGrid( {dataModel: {data: data.userList , recIndx: "no" }} );
+		$("#syu1_pqgrid").pqGrid( "refreshDataAndView" );
+	}else{
+		alert(data.code + ":" + data.message);
+	}
+}
+//============================================================	
+//저장 콜백
+//============================================================
+function setUserSaveCallback(data){
+	$("#syu1_pqgrid").pqGrid( "hideLoading" );
+	if(data.code == '200'){
+		if(data.userList.length == 0){
+			alert("[[#{md.mdo3.getDataZero}]]");	//데이터 조회 결과 0 건 입니다.
+			return;
+		}
+		$("#syu1_pqgrid").pqGrid( {dataModel: {data: data.userList , recIndx: "no" }} );
+		$("#syu1_pqgrid").pqGrid( "refreshDataAndView" );
+		$("#syu1_pqgrid").pqGrid( "history", { method: 'reset' } );     
+	}else{
+		alert(data.code + ":" + data.message);
+	}
+} 
+
+</script>
+
+	
+	<div class="row">
+		<div class="col">  			
+    		<a class="navbar-brand">User Info</a>
+  		</div>
+  	</div>
+  	
+  	<div class="form-group">
+		<div class="col">
+			<label for="title" class="control-label" th:text="${#messages.msg('sy.susrma.useract')}"></label>
+			<input type="text" placeholder="계정ID" id="syu1_useract"/>
+			
+			<label for="title" class="control-label" th:text="${#messages.msg('sy.susrma.usernam')}"></label>
+			<input type="text" placeholder="사용자이름" id="syu1_usernam"/>
+  		</div>
+							    <div class="col-md-6">
+							        <label class="small mb-1" th:for="usertyp" th:text="${#messages.msg('sy.main.login.usertyp')}" >사용자 유형</label>
+									<select class="form-control" id="ptp1_usertyp" name="ptp1_usertyp" placeholder="사용자 유형을 선택하세요."  >
+										<option value="">-- select --</option>
+        								<option th:each="usertyp : ${usertypyList}" th:value="${usertyp.comcdvl}" 
+                								th:utext="${usertyp.comcdtx}">
+        								</option>  
+									</select>
+							    </div>  		
+  	</div>
+  		
+  	<div class="col">
+    	<button id="syu1_btnSearch" onclick="ptp1_search();" Method="GET" class="btn btn-outline-success" th:text="${#messages.msg('md.mdo3.searchBtn')}"></button>
+    	<button id="syu1_btnSave" onclick="ptp1_save();" Method="POST" class="btn btn-outline-success" text="저장">저장</button>
+    	<button id="syu1_btnEdit" onclick="ptp1_edit();" Method="PUT" class="btn btn-outline-success" text="수정">수정</button>
+    	<button id="syu1_btnDelete" onclick="ptp1_delete();" Method="DELETE" class="btn btn-outline-success" text="삭제">삭제</button>
+    	<button id="syu1_btnSearch2" onclick="ptp1_search();" Method="GET" class="btn btn-outline-success" th:text="${#messages.msg('md.mdo3.searchBtn')}"></button>
+	</div>
+	 
+   	<div id="syu1_pqgrid" style="width:100%;font-size:12px;"></div>
+   	
+<script>
+	getRoleElements("[[${param.progrid}]]","");
+	
+	
+	//============================================================
+	//공통 Role채크
+	//============================================================ 
+	function getRoleElements(progrid, posactv, getactv, putactv, delactv){
+		console.log(progrid);	
+		//html에서 button요소 가져오기
+		var btnGETElements = $("button[Method=GET]");
+		//console.log(btnGETElements.init.length);
+		if(btnGETElements.length>0){
+			$(btnElements).each(function (index, item){
+				var ids = this.id;	
+				console.log(ids);
+			}); 
+		}
+				
+	}		
+</script>
+   	
+   	
+	
+   	    
+</div>
+</html>
+		 
+		 

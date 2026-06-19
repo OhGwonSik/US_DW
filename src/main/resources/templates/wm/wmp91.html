@@ -1,0 +1,677 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-list flex-1">
+			<ul class="nav nav-tabs" id="wmp91_tab">
+				<li class="nav-item active">
+					<a class="nav-link manual" data-toggle="tab" href="#wmp91_manual" data-tab-type="manual">[[#{wm.wmp90.manual}]]</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link search" data-toggle="tab" href="#wmp91_search" data-tab-type="search">[[#{wm.wmp90.search}]]</a>
+				</li>			  	
+			</ul>
+			<div class="tab-pane show" id="wmp91_manual">
+				<div class="row k">
+					<button class="btn-home" id="wmp91_home" onclick="kioskHome()"><img></button>
+					<div class="row k">
+						<button type="button" class="btn-delete btn-white col k" id="wmp91_delete"  onclick="deleteRow()">[[#{bt.delete}]]</button>
+						<button type="button" class="btn-add btn-white col k" id="wmp91_add" onclick="addRow()">[[#{bt.add}]]</button>
+						<button type="button" class="btn-save btn-main col k" id="wmp91_save">[[#{bt.save}]]</button>
+					</div>
+				</div>	
+				<div class="search-condition t">
+					<div class="row t">
+						<div class="condition-title col">
+							<label>[[#{wm.wmp90.rcveqty}]]</label>
+						</div>
+						<div class="text-wrapper" id="wmp91DivRcveqty">0</div>
+					</div>
+				</div>		
+				<div class="search-condition">
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.whnamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp91_manual_warekey" name="wmp91_manual_warekey" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.ownamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp91_manual_ownerky" name="wmp91_manual_ownerky" disabled>
+						</div>
+					</div>
+				</div>
+				<div class="table-wrapper con-box flex-1 wmp91-table">
+					<table class="mobile-table">
+						<thead id="thtb_manual">
+							<tr>		
+								<th><input type="checkbox" id="wmp91_manual_entire"></th>
+								<th id="manual_rowkey">[[#{wm.wmp92.rowkey}]]</th>
+								<th id="manual_warekey" style="display: none"></th>
+								<th id="manual_warenm">[[#{search.whnamlc}]]</th>
+								<th id="manual_ownerky" style="display: none"></th>
+								<th id="manual_ownernm">[[#{search.ownamlc}]]</th>		
+								<th id="manual_skumkey">[[#{search.skunm}]]</th>
+								<th id="manual_propqty">[[#{wm.wmp90.propqty}]]</th>
+								<th id="manual_salfqty">[[#{wm.wmp90.salfqty}]]</th>
+								<th id="manual_stotqty">[[#{wm.wmp91.stotqty}]]</th>					
+								<th id="manual_rcveqty">[[#{wm.wmp90.rcveqty}]]</th>
+								<th id="manual_auomkey">[[#{wm.wmp90.auomkey}]]</th>
+								<th id="manual_asndate">[[#{wm.wmp90.asndate}]]</th>						
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_manual"></tbody>
+					</table>
+				</div>
+			</div>
+			<div class="tab-pane" id="wmp91_search">
+					<div class="row k">
+						<button class="btn-home" onclick="kioskHome()"><img></button>
+						<div class="row k">
+							<button type="button" class="btn-clear btn-white col k" id="wmp91_btnReset">[[#{bt.reset}]]</button>
+							<button type="button" class="btn-search btn-main col k" id="wmp91_btnSearch">[[#{bt.search}]]</button>
+						</div>
+					</div>
+				<div class="search-condition">
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.whnamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp91_search_warekey" name="wmp91_search_warekey" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label for="inputGroupSelect01">[[#{search.ownamlc}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="text" id="wmp91_search_ownerky" name="wmp91_search_ownerky" disabled>
+						</div>
+					</div>
+					<div class="row">
+						<div class="condition-title col">
+							<label class="setting-grid-title">[[#{wm.wmp90.rcvdcdt}]]</label>
+						</div>
+						<div class="input-wrapper col">
+							<input type="date" max="2999-12-31" id="wmp91_rcvdcdt_from" onkeyup="setInputDateDel(this)"/>
+							<span>~</span>
+							<input type="date" max="2999-12-31" id="wmp91_rcvdcdt_to"   onkeyup="setInputDateDel(this)"/>
+						</div>
+					</div>
+				</div>
+				<div class="table-wrapper con-box row2">
+					<table class="mobile-table">
+						<thead id="thtb_search">
+							<tr>		
+								<th id="search_ownerky">[[#{search.ownamlc}]]</th>		
+								<th id="search_skumkey">[[#{search.skuCode}]]</th>
+								<th id="search_skudesc">[[#{search.skunm}]]</th>
+								<th id="search_tolocky">[[#{wm.wmp90.tolocky}]]</th>
+								<th id="search_doctynm">[[#{wm.wmp90.doctynm}]]</th>							
+								<th id="search_asnstat">[[#{wm.wmp90.asnstat}]]</th>
+								<th id="search_stotqty">[[#{wm.wmp91.stotqty}]]</th>
+								<th id="search_rchsqty">[[#{wm.wmp90.rchsqty}]]</th>
+								<th id="search_rcvdcdt">[[#{wm.wmp90.rcvdcdt}]]</th>
+								<th id="search_rcvdctm">[[#{wm.wmp90.rcvdctm}]]</th>								
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_search"></tbody>
+					</table>
+				</div>
+			</div>
+   		    <div class="spinner-border" id="spinner" style="display : none"></div>
+            <div class="bg"></div>
+		</div>
+	</main>
+	<script>
+		/*  wmp91 - 키오스크 - 수동입고
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: 키오스크를 이용하여 ASN번호없이 수동으로 부품(SKU)을 입하등록 및 로그인한 화주사의 입하된 정보를 확인할 수 있는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		const pageId = 'wmp91';
+		let skumkeyList;
+		let wareName;
+		let ownerName;
+		let totalRchsqty=0;
+		let beforeValue = '';
+		const defaultCnt = 8;
+		let skumkeyMsg = '';
+		$(function() {
+			
+			//로그인을 안하는 페이지라서 기본값 200 - 인터넷이 끊겨 있어도 쿠키에 유저 compkey는 남아있다.
+			window.addEventListener('offline',function(){
+	            alertOpen('[[#{wm.wmp90.internetFail}]]', function(){
+	            	const tempCompkey = '[[${userattr.compkey}]]' ? '[[${userattr.compkey}]]' : '200';
+	                fetchUtil('GET','/logout').finally(() => {
+	                   location.href= rPath + '/kiosklogin?gprogcmd=/wm/wmp92&gprogrid=wmp92&account_code='+tempCompkey;
+	                });
+	            });
+			});
+			
+			// 부품사 계정이 아닌 계정이 로그인할 경우
+			if(!'[[${userattr.ownerky}]]'){
+				alertOpen('[[#{wm.wmp91.unOwnerLogin}]]', function(){
+					const tempCompkey = '[[${userattr.compkey}]]' ? '[[${userattr.compkey}]]' : '200';
+					fetchUtil('GET','/logout').finally(() => {
+						location.href= rPath + '/kiosklogin?gprogcmd=/wm/wmp91&gprogrid=wmp91&account_code='+tempCompkey;
+					});
+				});
+				return;
+			}
+			
+			let wmp91List;
+			
+			tabGridInit();
+			
+			defaultRowAndInit();
+			
+ 			//============================================================	 
+ 			//키오스크 저장 버튼 이벤트(입고, 수동입고탭 구분해서 저장)
+ 			//============================================================	
+			document.querySelector('#'+pageId+'_save').addEventListener('click',async function(){
+				
+ 				if(!navigator.onLine){
+ 	 				document.querySelector('#spinner').style.display='none';
+ 	 				document.querySelector('.bg').style.display='none';
+ 					alertOpen('[[#{wm.wmp90.internetFail}]]',function(){
+ 						location.href= rPath + '/kiosk?account_code=200';
+ 					});
+ 					return;
+ 				}
+				
+				const tab = document.querySelector(".nav-item.active").children[0].dataset.tabType;
+				const thObjs = document.querySelector('#thtb_'+tab).querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tBody_'+tab).querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});	
+				
+				if(!boxCheckedList.length){
+					alertOpen('[[#{wm.wmp90.noRowChecked}]]');
+					return;
+				}
+				
+				let rcveqtySum = 0;
+				let keyArray = [];
+				//체크박스떄문에 1부터
+				for(let i=1;i<thObjs.length;i++){
+					let objId = thObjs[i].getAttribute('id');
+					let objIdPart = objId.substring(objId.indexOf('_') + 1);
+					keyArray.push(objIdPart);
+				}
+				let param;
+				let wmp91SaveList = [];
+				skumkeyMsg = '';
+				if(tab === 'manual'){
+					for(let i=0;i<trTagList.length;i++){
+						param = {};
+						for(let j=1;j<trTagList[i].querySelectorAll('td').length;j++){
+							if(trTagList[i].querySelectorAll('td')[j].children.length){
+								if(trTagList[i].querySelectorAll('td')[j].children[0].id === 'skumval'){
+									const hasSkumkey = skumkeyList.filter(function(element){
+										return element.combovl === trTagList[i].querySelectorAll('td')[j].children[0].value;
+									});
+									if(!hasSkumkey.length){
+										alertOpen(trTagList[i].querySelector('.rowkey').innerHTML + "[[#{wm.wmp92.rowNum}]] " +'[[#{wm.wmp90.inputSkumkey}]]', function(){
+											trTagList[i].querySelectorAll('td')[j].children[1].focus();
+										});
+										return;
+									}
+								}else if(trTagList[i].querySelectorAll('td')[j].children[0].className ==='rcveqty'){//입하대상 수량
+									if(!trTagList[i].querySelectorAll('td')[j].children[0].value || Number(trTagList[i].querySelectorAll('td')[j].children[0].value) <= 0){
+										alertOpen(trTagList[i].querySelector('.rowkey').innerHTML + "[[#{wm.wmp92.rowNum}]] " +'[[#{wm.wmp90.inputRcveqty}]]', function(){
+											trTagList[i].querySelectorAll('td')[j].children[0].value = '';
+											trTagList[i].querySelectorAll('td')[j].children[0].focus();
+										});
+										return;
+									}
+									await salfqtyChecked(trTagList[i].querySelectorAll('td')[j]);
+									rcveqtySum += Number(trTagList[i].querySelectorAll('td')[j].children[0].value);
+								}
+								param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].children[0].value;
+							}else{
+								param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].innerHTML;	
+							}
+						}
+						wmp91SaveList.push(param);
+					}
+				}
+				//string으로 입고인지, 수동입고 구분 플래그->서버에서 가름
+				const result = await confirmOpenAsync(skumkeyMsg ? skumkeyMsg + ' [[#{wm.wmp90.checkSalfqtyConfirm}]]' : '[[#{ms.checksave}]]');
+				if(result){
+					try{
+		 				document.querySelector('#spinner').style.display="block";
+		 				document.querySelector('.bg').style.display="block";
+						const rData =  await fetchUtil('POST','/wm/pda/wmp90/save',{addList : wmp91SaveList, tabFlag : tab });
+						if(rData.status === 200){
+							alertOpen('[[#{wm.wmp90.total}]] ' + rcveqtySum + '[[#{wm.wmp90.confirmInbound}]]', async function(){
+								document.querySelector('#wmp91_manual_entire').checked = false;
+								totalRchsqty = 0;
+								document.querySelector('#wmp91DivRcveqty').innerHTML = totalRchsqty;
+								document.querySelector('#tBody_'+tab).innerHTML = '';
+								await defaultRowAndInit();
+							});
+						}
+					}catch(err){
+						alertOpen('[[#{ms.saveErr}]]');
+						return;
+					}finally{
+		 				document.querySelector('#spinner').style.display="none";
+		 				document.querySelector('.bg').style.display="none";
+					}
+				}
+			});
+			
+			function tabGridInit(){
+				$(".mobile-content .tab-pane").removeClass("active");
+				$(".mobile-content .tab-pane.show").addClass("active");
+			}
+			
+			document.querySelector('#wmp91_btnSearch').addEventListener('click', async function(){
+				await getWmp91List();
+			});
+			
+			document.querySelector('#wmp91_btnReset').addEventListener('click', async function(){
+				const result = await confirmOpenAsync('[[#{ms.listViewRollback}]]');
+				if(result){
+					document.querySelector('#'+pageId+'_rcvdcdt_from').value = moment().subtract(1, "d").format("YYYY-MM-DD");
+					document.querySelector('#'+pageId+'_rcvdcdt_to').value = moment().format("YYYY-MM-DD");
+					document.querySelector('#tBody_search').innerHTML = '';
+				}
+			});
+			
+ 			//============================================================	 
+ 			//텝 메뉴 클릭 이벤트(플래그로 display none, block 컨트롤)
+ 			//============================================================
+			document.querySelectorAll('#wmp91_tab .nav-item').forEach(async function (element){
+				element.addEventListener('click', async function(){
+					let tabType = element.children[0].dataset.tabType;
+					let dispalyFlag = true;
+					
+					if(tabType === 'search'){
+						if(document.querySelectorAll('#tBody_manual tr').length){
+							event.stopImmediatePropagation();
+							const result = await confirmOpenAsync('[[#{ms.listViewRollback}]]');
+							
+							if(result){
+								document.querySelector('#tBody_manual').innerHTML = '';
+								document.querySelector('#wmp91_manual_entire').checked = false;
+							}else{
+								dispalyFlag = false;
+							}
+						}
+						document.querySelector('#'+pageId+'_rcvdcdt_from').value = moment().subtract(1, "d").format("YYYY-MM-DD");
+						document.querySelector('#'+pageId+'_rcvdcdt_to').value = moment().format("YYYY-MM-DD");
+					}else if(tabType === 'manual'){
+						if(document.querySelectorAll('#tBody_search tr').length){
+							event.stopImmediatePropagation();
+							const result = await confirmOpenAsync('[[#{ms.listViewRollback}]]');
+							
+							if(result){
+								document.querySelector('#tBody_search').innerHTML = '';
+								await defaultRowAndInit();
+							}else{
+								dispalyFlag = false;
+							}
+						}else{
+							if(document.querySelectorAll('#tBody_manual tr').length !== defaultCnt){
+								document.querySelector('#tBody_manual').innerHTML = '';
+								await defaultRowAndInit();
+							}
+						}
+					}
+					if(dispalyFlag){
+						tabActive(element);	
+					}
+				});
+			});
+ 			
+ 			function tabActive(element){
+ 				//tab-pane show
+				document.querySelectorAll('.mobile-content .tab-pane').forEach(function (elementTab){
+					elementTab.classList.remove('show');
+				});
+				document.querySelector(element.children[0].getAttribute('href')).classList.add('show');
+				
+				document.querySelectorAll('.nav-item').forEach(function(elementTabItem){
+					elementTabItem.classList.remove('active');
+				});
+				element.classList.add('active');
+ 			}
+
+			//수동 입하 전체 버튼 컨트롤
+			document.querySelector('#wmp91_manual_entire').addEventListener('change',function(){
+				totalRchsqty = 0;
+				document.querySelectorAll('input[class*="manual_checkbox"]').forEach(function(element){
+					element.checked = document.querySelector('#wmp91_manual_entire').checked;
+					totalRchsqty += element.checked ? Number(element.closest('tr').querySelector('.rcveqty').value) : totalRchsqty;
+				});
+				document.querySelector('#wmp91DivRcveqty').innerHTML = totalRchsqty;
+			});
+			
+			kioskHome = async function(){
+				const result = await confirmOpenAsync('[[#{wm.wmp91.goHome}]]');
+				
+				if(result){
+					const response = await fetchUtil('GET','/logout');
+					if(response.status){
+						location.href= rPath + '/kiosk?account_code='+'[[${userattr.compkey}]]';
+					}
+				}
+			}
+			
+			async function getWmp91List(){
+				
+ 				if(!navigator.onLine){
+					document.querySelector('#spinner').style.display='none';
+					document.querySelector('.bg').style.display='none';
+ 					alertOpen('[[#{wm.wmp90.internetFail}]]',function(){
+ 						location.href= rPath + '/kiosk?account_code=200';
+ 					});
+ 					return;
+ 				}
+ 				
+ 				document.querySelector('#spinner').style.display="block";
+ 				document.querySelector('.bg').style.display="block";
+ 				
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						ownerky : '[[${userattr.ownerky}]]',
+						rcvdcdtfrom : document.querySelector('#'+pageId+'_rcvdcdt_from').value,
+						rcvdcdtto : document.querySelector('#'+pageId+'_rcvdcdt_to').value
+				}
+				wmp91List = await fetchUtil('GET', '/wm/pda/wmp91/grid', param);
+				wmp91List = await wmp91List.json();
+				document.querySelector('#tBody_search').innerHTML = '';
+				let html = '';
+				
+				for(const wmp91Data of wmp91List){
+					html += '<tr>';
+					html += '<td class="ownerky">' + wmp91Data.ownerky + '</td>';
+					html += '<td class="skumkey">' + wmp91Data.skumkey + '</td>';
+					html += '<td class="skudesc">' + wmp91Data.skudesc +'</td>';
+					if(wmp91Data.tolocnm){
+						html += '<td class="tolocky">' + wmp91Data.tolocnm +'</td>';
+					}else{
+						html += '<td class="tolocky">' + wmp91Data.rclocnm +'</td>';
+					}
+					html += '<td class="doctynm">' + (wmp91Data.doctype === '430' ? '[[#{wm.wmp90.manual}]]' : '[[#{wm.wmp90.inbound}]]') +'</td>';
+					html += '<td class="asnstat">' + wmp91Data.rcvdcnm +'</td>';
+					html += '<td class="stotqty">' + wmp91Data.stotqty +'</td>';
+					html += '<td class="rchsqty">' + wmp91Data.rchsqty +'</td>';
+					html += '<td class="rcvdcdt">' + wmp91Data.rcvdcdt +'</td>';
+					html += '<td class="rcvdctm">' + wmp91Data.rcvdctm + '</td>';
+					html += '</tr>';
+				}
+				document.querySelector('#tBody_search').insertAdjacentHTML('afterbegin',html);
+ 				document.querySelector('#spinner').style.display="none";
+ 				document.querySelector('.bg').style.display="none";
+			}
+		});
+		//창고명, 화주명 한글 init
+		async function wmp91Init(){
+			document.querySelector('#'+pageId+'_rcvdcdt_from').value = moment().subtract(1, "d").format("YYYY-MM-DD");
+			document.querySelector('#'+pageId+'_rcvdcdt_to').value = moment().format("YYYY-MM-DD");
+			const warekeyResponse = await fetchUtil('GET', '/md/common/organization/warehouse', {warekey : '[[${userattr.warekey}]]'});
+			const wareList = await warekeyResponse.json();
+			const tmpWareName = wareList.find(function(element){
+				return element.combovl === '[[${userattr.warekey}]]'
+			});
+			wareName = tmpWareName;
+			const ownerkyResponse = await fetchUtil('GET', '/md/common/partner/owner', {ownerky : '[[${userattr.ownerky}]]'});
+			const ownerList = await ownerkyResponse.json();
+			const tmpOwnerName = ownerList.find(function(element){
+				return element.combovl === '[[${userattr.ownerky}]]'
+			});
+			ownerName = tmpOwnerName;
+			document.querySelector('#wmp91_manual_warekey').value = wareName.combonm;
+			document.querySelector('#wmp91_manual_ownerky').value = ownerName.combonm;
+			document.querySelector('#wmp91_search_warekey').value = wareName.combonm;
+			document.querySelector('#wmp91_search_ownerky').value = ownerName.combonm;
+		}
+		async function skumAndVendListInit(){
+			let tmpSkumkeyList = callAjax('data', 'GET', "/wm/pda/wmp91/init",{ownerky : '[[${userattr.ownerky}]]'});
+			skumkeyList = tmpSkumkeyList;
+		}
+
+		async function addRow(){
+			
+			const tBody = document.querySelector('#tBody_manual');
+			const tBodyLastChild = document.querySelector('#tBody_manual').lastElementChild;
+			
+			let html ='';
+			
+			html += '<tr>';
+			html += '<td><input type="checkbox" class="manual_checkbox" onclick="isChecked()"></td>';
+			html += '<td class="rowkey">'+ (tBody.childElementCount ? Number(tBodyLastChild.querySelector('.rowkey').innerText)+1 : tBody.childElementCount+1) +'</td>'
+			html += '<td class="warekey" style="display:none">' + wareName.combovl + '</td>';
+			html += '<td class="warenm">' + wareName.combonm + '</td>';
+			html += '<td class="ownerky" style="display:none">'+ ownerName.combovl +'</td>';
+			html += '<td class="ownernm">'+ ownerName.combonm +'</td>';
+			html += '<td>';
+			html += '<select id="skumval" data-id="skumkeyList" onchange="insertSkuAndUom(this)">';
+			html += '<option value="">[[#{wm.wmp92.all}]]</option>';
+			html += '</td>';
+			html += '<td class="propqty">0</td>';
+			html += '<td class="salfqty">0</td>';
+			html += '<td class="stotqty">0</td>';
+			html += '<td><input type="number" class="rcveqty" min="0" value="1" onmousedown="moveCursorToEnd(this)" oninput="onlyNumberPlus(this)" onblur="totalRcveqty(this)"></td>';
+			html += '<td><input class="auomkey" disabled></td>';
+			html += '<td class="asndate">'+ currentDate() +'</td>';
+			html += '</tr>';
+			
+			document.querySelector('#tBody_manual').insertAdjacentHTML('beforeend',html);
+			getSkukeyAndVendkeyList();
+			isAllchecked();
+			$('.rcveqty').keyboard({type : 'numpad'});
+		}
+		
+		const moveCursorToEnd = function (inputElement) {
+			inputElement.value='';
+		}
+		
+		async function defaultRowAndInit(){
+			document.querySelector('#spinner').style.display="block";
+			document.querySelector('.bg').style.display="block";
+			
+			await wmp91Init();
+			await skumAndVendListInit();
+			
+			for(let i=0; i<defaultCnt ;i++){
+				await addRow();
+			}
+			
+			document.querySelector('#spinner').style.display="none";
+			document.querySelector('.bg').style.display="none";
+		}
+		async function checkBoxChecked(obj){
+			if(obj.value){
+				obj.closest('tr').querySelector('.manual_checkBox').checked = true;
+			}
+			isChecked();
+		}
+		async function deleteRow(){
+			const boxCheckedList = document.querySelector('#tBody_manual').querySelectorAll('input[class*="checkbox"]:checked');
+			const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+				  return boxCheckedList.closest('tr');
+			});
+			if(!trTagList.length){
+				alertOpen('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+			const result = await confirmOpenAsync('[[#{ms.rowDelete}]]');
+			
+			if(result){
+				for(const trTagObj of trTagList){
+					totalRchsqty -= Number(trTagObj.querySelector('.rcveqty').value);
+					trTagObj.remove();
+					isAllchecked();
+				}
+				document.querySelector('#wmp91DivRcveqty').innerHTML = totalRchsqty;
+			}
+		}
+		//입하수량 입력시 총 입하수량 계산해주는 함수
+		 async function totalRcveqty(obj){
+			obj.closest('tr').querySelector('.manual_checkbox').checked = true;
+			await isChecked();
+		}
+		
+		function currentDate(){
+			const today = new Date();
+			
+			const year = today.getFullYear();//년도
+			const month = today.getMonth()+1 >= 10 ? today.getMonth()+1 : '0' + (today.getMonth()+1);//월
+			const day = today.getDate() >=10 ? today.getDate() : '0' + today.getDate();//요일
+			
+			return year+'-'+month+'-'+day;
+		}
+		//datalist에 skumkey, vendkey를 넣어주는 함수
+		function getSkukeyAndVendkeyList() {
+			const lastTrSkumkey = document.querySelector('#tBody_manual').lastElementChild.querySelector('select[data-id="skumkeyList"]');
+			
+		    const skuList = skumkeyList.filter(function (element) {
+		        return element.warekey === '[[${userattr.warekey}]]' && element.ownerky === '[[${userattr.ownerky}]]';
+		    });
+			
+		    if(skuList) {
+		        skuList.forEach(function (obj) {
+		            let option = document.createElement("option");
+		            option.text = '[' +obj.combovl + '] '+ obj.combonm;
+		            option.value = obj.combovl;
+		            if (obj.salfqty > obj.stotqty) {
+		            	option.setAttribute('data-class', 'out-of-stock');
+		            }
+		            lastTrSkumkey.appendChild(option);
+		        });
+		    }
+			select2Insert(lastTrSkumkey);
+		}
+		function select2Insert(lastTrSkumkey) {
+		    $(lastTrSkumkey).select2({
+		        width: 'style',
+		        templateResult: function (data) {
+		            if (!data.id) {
+		                return data.text;
+		            }
+
+		            const $option = $('<span>' + data.text + '</span>');
+		            
+		            if (data.element && data.element.getAttribute('data-class')) {
+		                $option.addClass(data.element.getAttribute('data-class'));
+		            }
+		            return $option;
+		        },
+		        templateSelection: function (data) {
+		            if (!data.id) {
+		                return data.text;
+		            }
+
+		            const $option = $('<span>' + data.text + '</span>');
+		            if (data.element && data.element.getAttribute('data-class')) {
+		                $option.addClass(data.element.getAttribute('data-class'));
+		            }
+		            return $option;
+		        },		        
+		        matcher: function (params, data) {
+		            if ($.trim(params.term) === '') {
+		                return data;
+		            }
+
+		            if (typeof data.text === 'undefined') {
+		                return null;
+		            }
+
+		            if (params.term) {
+		                let param = params.term.toUpperCase();
+		                if (data.text.indexOf(param) > -1 || data.id.indexOf(param) > -1) {
+		                    let modifiedData = $.extend({}, data, true);
+		                    return modifiedData;
+		                }
+		            }
+
+		            return null;
+		        }
+		    });
+		}
+		function isAllchecked(){
+			//로우 추가시 올체크인지 확인하고 올체크면 체크되게
+			let checkCnt = 0;
+			totalRchsqty = 0;
+			document.querySelectorAll('input[class*="manual_checkbox"]').forEach(function(element){
+				if(element.checked){
+					checkCnt++;
+					totalRchsqty += Number(element.closest('tr').querySelector('.rcveqty').value);
+				}
+			});
+			document.querySelector('#wmp91DivRcveqty').innerHTML = totalRchsqty;
+			if(document.querySelectorAll('input[class*="manual_checkbox"]').length === 0){
+				document.querySelector('#wmp91_manual_entire').checked = false;
+			}else if(document.querySelectorAll('input[class*="manual_checkbox"]').length === checkCnt){
+				document.querySelector('#wmp91_manual_entire').checked = true;
+			}else{
+				document.querySelector('#wmp91_manual_entire').checked = false;
+			}
+		}
+// 		로우별 올 체크시 전체 체크박스 체크 or 체크 해제
+		function isChecked(){
+			let checkedCnt = 0;
+			totalRchsqty = 0;
+			
+			document.querySelectorAll('input[class*="manual_checkbox"]').forEach(function(element){
+				if(element.checked){
+					checkedCnt++;
+					totalRchsqty += Number(element.closest('tr').querySelector('.rcveqty').value);
+				}
+			});
+			document.querySelector('#wmp91DivRcveqty').innerHTML = totalRchsqty;
+			if(document.querySelectorAll('input[class*="manual_checkbox"]').length === checkedCnt){
+				document.querySelector('#wmp91_manual_entire').checked = true;
+			}else{
+				document.querySelector('#wmp91_manual_entire').checked = false;
+			}
+		}
+		//부품 입력했을때 UOM 넣어주기 + 부품명이 input에 hidden에 부품코드
+		//안전재고 확인
+		async function insertSkuAndUom(object){
+			
+			const skumkeyToUom = skumkeyList.filter(function(element){
+				return element.combovl === object.value
+			});
+			//style => class로 바꾸기 글씨 빨간색
+			if(skumkeyToUom.length){
+				object.closest('tr').querySelector('.stotqty').innerHTML = skumkeyToUom[0].stotqty;
+				object.closest('tr').querySelector('.propqty').innerHTML = skumkeyToUom[0].propqty;
+				object.closest('tr').querySelector('.salfqty').innerHTML = skumkeyToUom[0].salfqty;
+				object.closest('tr').querySelector('.auomkey').value = skumkeyToUom[0].suomkey;
+				object.closest('tr').querySelector('.manual_checkbox').checked = true;
+			}else{
+				object.closest('tr').querySelector('.auomkey').value = '';
+				object.closest('tr').querySelector('.salfqty').innerHTML = 0;
+				object.closest('tr').querySelector('.propqty').innerHTML = 0;
+				object.closest('tr').querySelector('.stotqty').innerHTML = 0;
+			}
+			await isChecked();
+		}
+		
+		async function salfqtyChecked(trData){
+			
+			const salfqty = Number(trData.closest('tr').querySelector('.salfqty').innerHTML);
+			const stotqty = Number(trData.closest('tr').querySelector('.stotqty').innerHTML);
+			const rcveqty = Number(trData.closest('tr').querySelector('.rcveqty').value);
+			const skumkey = trData.closest('tr').querySelector('#skumval').value;
+			
+			skumkeyMsg += salfqty > (stotqty + rcveqty) ? (skumkeyMsg ? ', ' : '') + skumkey : '';
+		}
+	</script>
+</div>	
+</html>

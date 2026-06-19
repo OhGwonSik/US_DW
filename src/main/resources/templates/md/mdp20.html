@@ -1,0 +1,636 @@
+<html lang='ko' xmlns:th='http://www.thymeleaf.org'>
+<div th:fragment='fragments-mainContent'>
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdp20Custnm" class="setting-grid-title">[[#{md.custtb.custnm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.custtb.custnm')}" id="mdp20Custnm">
+					</div>
+				</div>
+				<label for="mdp20Regno" class="setting-grid-title">[[#{md.mptnma.ptblctc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mptnma.ptblctc')}" id="mdp20Regno">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdp20Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdp20Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdp20HeadGrid"></div>
+			</div>
+		</div>
+		<div class="search-list con-box">
+			<div class="list-grid-wrapper">
+				<div id="mdp20ItemGrid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdp20
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.08.11
+	  - 설명 : 업체수신
+	  ------------------------------------------
+	*/
+	$(function() {
+		//----------- 전역변수 ------------//
+		const mdp20ComboData = {};
+		let mdp20InitData;
+		//----------- 전역변수 end ------------//
+
+		//----------- 검색영역 Event ------------//
+		$('#' + '[[${gprogrid}]]' + 'Search').click(async function(){
+			await Promise.all([getMdp20HeadGrid(), getMdp20ItemGrid()]);
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+			resetSearchConditions();
+			makeEmptyGrid(mdp20HeadGrid);
+			makeEmptyGrid(mdp20ItemGrid);
+		});
+		//----------- 검색영역 Event end ------------//
+
+		// Head Grid Column Model
+		const mdp20HeadGridCM = [
+			{
+				title: '',
+				dataType: 'bool',
+				dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+				align: 'center',
+				type: 'checkbox',
+				sortable: false,
+				editor: false,
+				cb: {
+					all: false,
+					header: true
+				}
+			},
+			{
+				title: '[[#{common.grid.recIndx}]]',
+				dataType: 'string',
+				dataIndx: '[[#{common.grid.recIndx}]]',
+				editable: false,
+				hidden: true
+			},
+			{
+				title: '[[#{md.custtb.custcd}]]',
+				dataType: 'string',
+				dataIndx: 'custcd',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.custnm}]]',
+				dataType: 'string',
+				dataIndx: 'custnm',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.regno}]]',
+				dataType: 'string',
+				dataIndx: 'regno',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.natcd}]]',
+				dataType: 'string',
+				dataIndx: 'natcd',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.adr}]]',
+				dataType: 'string',
+				dataIndx: 'adr',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.zipcd}]]',
+				dataType: 'string',
+				dataIndx: 'zipcd',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.rpnm}]]',
+				dataType: 'string',
+				dataIndx: 'rpnm',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.pchg}]]',
+				dataType: 'string',
+				dataIndx: 'pchg',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.phnm}]]',
+				dataType: 'string',
+				dataIndx: 'phnm',
+				editable: false
+			},
+			{
+				title: '[[#{md.custtb.preml}]]',
+				dataType: 'string',
+				dataIndx: 'preml',
+				editable: false
+			}
+		];
+
+		// Item Grid Column Model
+		const mdp20ItemGridCM = [
+			{
+				title: '',
+				dataType: 'bool',
+				dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+				align: 'center',
+	            type: 'checkbox',
+	            sortable: false,
+	            editor: false,
+	            cb: {
+	            	all: false,
+	            	header: true
+	            },
+	            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+	     	},
+	        {
+	     		title: '[[#{common.grid.recIndx}]]',
+	     		dataType: 'string',
+	     		dataIndx: '[[#{common.grid.recIndx}]]',
+	     		editable: false,
+	     		hidden: true
+	     	},
+			{
+	     		title: '[[#{md.mptnma.compkey}]]',
+	     		dataType: 'string',
+	     		dataIndx: 'compkey',
+	     		editable: false,
+	     		hidden: true
+	     	},
+			{
+	     		title: '[[#{md.mptnma.ptnrkey}]]',
+	     		dataType: 'string',
+	     		dataIndx: 'ptnrkey',
+	     		editable: false, //Partner Key
+	            validations: [
+	            	{
+	            		type: 'minLen',
+						value: 1,
+						msg: '[[#{ms.validations.minLenLength(1)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mptnma.ptnrtyp}]]',
+				dataType: 'string',
+				dataIndx: 'ptnrtyp',
+				styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+				editor: {
+	                type: 'select',
+	                init: ui => {
+	                	ui.$cell.find('select').pqSelect({
+	                		search: false,
+	                		singlePlaceholder: '',
+	                		width: getSelectBoxWidthCondition(ui)
+	                	});
+	                	ui.$cell.find('select').pqSelect('open');
+	                },
+		            options: ui => mdp20ComboData[ui.dataIndx],
+		   			prepend: { '' : ' ' }
+		        },
+				render: ui => {
+					const option = mdp20ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+		           	return { text: option ? option[ui.cellData] : ui.cellData };
+				},
+	            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mptnma.ptnamlc}]]',
+				dataType: 'string',
+				dataIndx: 'ptnamlc',
+				styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+	            editable: ui =>  !ui.rowData['[[#{common.grid.recIndx}]]'],
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mptnma.ownerky}]]',
+				dataType: 'string',
+				dataIndx: 'ownerky',
+				styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+				editor: {
+	                type: 'select',
+	                init: ui => {
+	                	ui.$cell.find('select').pqSelect({
+	                		search: true,
+	                		singlePlaceholder: '',
+	                		width: getSelectBoxWidthCondition(ui)
+	                	});
+		                ui.$cell.find('select').pqSelect('open');
+	                },
+	                options: ui => mdp20ComboData[ui.dataIndx],
+	    			prepend: { ' ' : ' ' }
+	            },
+	            render: ui => {
+	        		const option = mdp20ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	            	return { text: option ? option[ui.cellData] : ui.cellData };
+	            },
+	            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mptnma.ptnatcd}]]',
+				dataType: 'string',
+				dataIndx: 'ptnatcd',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptaddr1}]]',
+				dataType: 'string',
+				dataIndx: 'ptaddr1',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptciynm}]]',
+				dataType: 'string',
+				dataIndx: 'ptciynm',
+				hidden: true,
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptregnm}]]',
+				dataType: 'string',
+				dataIndx: 'ptregnm',
+				hidden: true,
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptteln1}]]',
+				dataType: 'string',
+				dataIndx: 'ptteln1',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptposcd}]]',
+				dataType: 'string',
+				dataIndx: 'ptposcd',
+				hidden: true,
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptrepnm}]]',
+				dataType: 'string',
+				dataIndx: 'ptrepnm',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptmannm}]]',
+				dataType: 'string',
+				dataIndx: 'ptmannm',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptmantl}]]',
+				dataType: 'string',
+				dataIndx: 'ptmantl',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptmanem}]]',
+				dataType: 'string',
+				dataIndx: 'ptmanem',
+				editable: false
+			},
+			{
+				title: '[[#{md.mptnma.ptblctc}]]',
+				dataType: 'string',
+				dataIndx: 'ptblctc',
+				editable: false
+			}
+		];
+
+		// Head Grid Object 및 기초 세팅
+		const mdp20HeadGrid = new GridUtil(mdp20HeadGridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'HeadGrid');
+
+		// Item Grid Object 및 기초 세팅
+		const mdp20ItemGrid = new GridUtil(mdp20ItemGridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'ItemGrid');
+
+		// Head Grid 검색 세팅
+		mdp20HeadGrid.setFind();
+
+		// Head Grid 초기화 세팅
+		mdp20HeadGrid.setReset(function(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+
+			headGrid.rollback();
+			headGrid.history({ method: 'reset' });
+		});
+
+		// Head Grid 데이터 추가 이벤트
+		mdp20HeadGrid.setAdd(async function(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const headGridCheck = headGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+
+			if(headGridCheck.length === 0){
+				return;
+			}
+
+			const headToItemList = [];
+
+			for(let hgCheck of headGridCheck){
+				const newRow = {
+					state: true,
+					compkey: '[[${userattr.compkey}]]',
+					ptnrkey: hgCheck['custcd'],
+					ptnamlc: hgCheck['custnm'],
+					ptnatcd: hgCheck['natcd'],
+					ptblctc: hgCheck['regno'],
+					ptaddr1: hgCheck['adr'],
+					ptrepnm: hgCheck['rpnm'],
+					ptmannm: hgCheck['pchg'],
+					ptmantl: hgCheck['phnm'],
+					ptmanem: hgCheck['preml'],
+					ptuseyn: 'Y',
+					ownerky: ''
+				};
+
+				headToItemList.push({newRow : newRow});
+			}
+
+			itemGrid.addRow({
+				rowList : headToItemList,
+				checkEditable: false
+			});
+			itemGrid.focus({
+				rowIndxPage: itemGrid.pdata.length-1,
+				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: 'ptnrkey'} )
+			});
+		});
+
+		// Head Grid 객체 생성
+		mdp20HeadGrid.open();
+
+		// Item Grid 생성시 이벤트
+		mdp20ItemGrid.setCreate(async function(evt, ui){
+			const response = await initMdp20();
+
+			mdp20InitData = response.item;
+
+			for(let key of Object.keys(mdp20InitData)){
+				const gData = mdp20InitData[key];
+				const options = gData.map(obj => {
+		        	let rObj = {};
+
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+
+				mdp20ComboData[key] = options;
+			}
+		});
+
+		// Item Grid 데이터 변경시 이벤트
+		mdp20ItemGrid.setChange(async function(evt, ui){
+			if('edit' === ui.source || 'paste' === ui.source){
+	    		const updateRowList = [];
+
+	    		await ui.updateList.forEach(async updateData => {
+	    			let newRow = {state : true};
+
+	    			if(updateData.newRow.hasOwnProperty('ptnrkey') && updateData.oldRow.hasOwnProperty('ptnrkey')){
+	    				newRow['ptnrkey'] = updateData.newRow['ptnrkey']?.toUpperCase();
+	    			}
+
+        			if(updateData.newRow.hasOwnProperty('ptnrtyp') && updateData.oldRow.hasOwnProperty('ptnrtyp')){
+        				const option = mdp20ComboData['ptnrtyp'].find(obj => obj[updateData.rowData['ptnrtyp']]);
+
+        				newRow['ptnrtyp'] = option ? updateData.rowData['ptnrtyp'] : null;
+        			}
+
+        			if(updateData.newRow.hasOwnProperty('ownerky') && updateData.oldRow.hasOwnProperty('ownerky')){
+        				const option = mdp20ComboData['ownerky'].find(obj => obj[updateData.rowData['ownerky']]);
+
+        				newRow['ownerky'] = option ? updateData.rowData['ownerky'] : ' ';
+        			}
+
+	    			updateRowList.push({
+	    				rowIndx: updateData.rowIndx,
+	    				newRow : newRow
+	    			});
+	    		});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+			}
+		});
+
+		// Item Grid 저장 이벤트
+		mdp20ItemGrid.setSave(function(evt, ui){
+			if(!checkItemGridChangeDataLength()){
+				alert('[[#{ms.choiceRowZero}]]');
+
+				return;
+			}
+
+			if(validateItemGridChangeData()){
+				saveMdp20ItemGrid(makeItemGridChangeData());
+			}
+		});
+
+		// Item Grid 검색 세팅
+		mdp20ItemGrid.setFind();
+
+		// Item Grid 초기화 세팅
+		mdp20ItemGrid.setReset();
+
+		// Item Grid 삭제 이벤트
+		mdp20ItemGrid.setDelete(function(){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const itemGridCheck = itemGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+			if(confirm("[[#{ms.choiceRowDelete}]]")){
+				itemGrid.deleteRow({ rowList: itemGridCheck });
+			}
+		});
+
+		// Item Grid 객체 생성
+		mdp20ItemGrid.open();
+
+		// Head Grid 검색 함수
+		async function getMdp20HeadGrid(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+
+			headGrid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.common}]]' + '[[#{common.url.partner}]]' + '[[#{common.url.mdm}]]';
+			const response = await fetchUtil('GET', url, {
+				custnm: $('#' + '[[${gprogrid}]]' + 'Custnm').val(),
+				regno: $('#' + '[[${gprogrid}]]' + 'Regno').val()
+			});
+
+			if(response.status===200){
+				const resContent = await response.json();
+
+				headGrid.option( 'dataModel', {
+					data: resContent,
+					recIndx: '[[#{common.grid.recIndx}]]'
+				});
+				headGrid.refreshDataAndView();
+			}
+
+			headGrid.hideLoading();
+		}
+
+		// Item Grid 검색 함수
+		async function getMdp20ItemGrid(){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			itemGrid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/2';
+			const response = await fetchUtil('GET', url);
+
+			if(response.status===200){
+				const resContent = await response.json();
+
+				itemGrid.option( 'dataModel', {
+					data: resContent,
+					recIndx: '[[#{common.grid.recIndx}]]'
+				});
+				itemGrid.refreshDataAndView();
+			}
+
+			itemGrid.hideLoading();
+		}
+
+		// Item Grid 변경 데이터 validation
+		function validateItemGridChangeData(){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const itemGridCheck = itemGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+	        for(let igCheck of itemGridCheck){
+		   		const essentialCols = ['ptnrkey', 'ptnrtyp', 'ptnamlc'];
+
+	    		for(let checkCol of essentialCols){
+	    			if(null === igCheck[checkCol] || undefined === igCheck[checkCol] || '' === igCheck[checkCol]){
+		    	  		alert((igCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + itemGrid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+		      			grid.focus({
+		      				rowIndxPage: gCheck.pq_ri,
+		      				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+		      			});
+
+		    	  		return false;
+	    			}
+	    		}
+
+				for(let igData of itemGrid.getData()){
+	   				const keyCols = ['ptnrkey'];
+
+	   				if(igCheck.pq_ri !== igData.pq_ri && isKeyDuplication(keyCols, igCheck, igData)){
+	   					const alertTxt = makeDuplicateRowText(keyCols, itemGrid, igCheck, igData) + ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (igData.pq_ri+1) + '[[#{ms.row}]] & ' + (igCheck.pq_ri+1) + '[[#{ms.row}]] )';
+						alert(alertTxt);
+		      			itemGrid.focus({
+		      				rowIndxPage: (igCheck.pq_ri),
+		      				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: 'ptnrkey' } )
+		      			});
+
+						return false;
+					}
+				}
+	        }
+		    // validation end
+			return true;
+		}
+
+		// Item Grid 체크된 데이터 갯수
+		function checkItemGridChangeDataLength(){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const itemGridCheck = itemGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+			return itemGridCheck.length>0;
+		}
+
+		// Item Grid 저장 데이터 정제
+		function makeItemGridChangeData(){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const itemGridChange = itemGrid.getChanges({all: true});
+
+			for(let data=0; data<itemGridChange.updateList.length; data++){
+				if(itemGridChange.updateList[data]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+					itemGridChange.updateList.splice(data, 1);
+					itemGridChange.oldList.splice(data, 1);
+				}
+			}
+
+			itemGridChange.addList = itemGridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+			return itemGridChange;
+		}
+
+		// Item Grid 저장 함수
+		async function saveMdp20ItemGrid(saveData){
+			if(!saveData){
+				return;
+			}
+
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+
+			headGrid.showLoading();
+			itemGrid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/2';
+			const saveMdp20Response = await fetchUtil('POST', url, saveData);
+
+			if(saveMdp20Response.status === 200){
+				await Promise.all([getMdp20HeadGrid(), getMdp20ItemGrid()]);
+			}
+
+			headGrid.hideLoading();
+			itemGrid.hideLoading();
+		}
+
+		// 페이지 초기화 함수
+		async function initMdp20(){
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+			const response = await fetchUtil('GET', url);
+
+			return response.json();
+		}
+	});
+	</script>
+</div>
+</html>

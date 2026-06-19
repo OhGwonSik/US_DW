@@ -1,0 +1,274 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<main class="mobile-content">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col">
+					<button id="wmp80_toggle" value="skumkey" class="toggle-skumkey">[[#{wm.wlotma.skumkey}]]</button>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp80_input" name="wmp80_input">
+				</div>
+			</div>
+			<div class="row b1">
+				<button type="button" class="btn-clear btn-white col" id="wmp80_btnReset">[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+			</div>
+			<ul class="nav-tabs" id="wmp80_tab">
+				<li class="nav-item active">
+				  <a class="nav-link sku" data-toggle="tab" href="#wmp80_SKU" data-tab-type="SKU">[[#{wm.wmp80.sku}]]</a>
+				</li>
+				<li class="nav-item">
+				  <a class="nav-link loca" data-toggle="tab" href="#wmp80_LOCA" data-tab-type="LOCA">[[#{wm.wmp80.loca}]]</a>
+				</li>
+				<li class="nav-item">
+				  <a class="nav-link lot" data-toggle="tab" href="#wmp80_LOT" data-tab-type="LOT">[[#{wm.wmp80.lot}]]</a>
+				</li>
+		  	</ul>
+			<div class="tab-content">		  	
+				<div class="table-wrapper con-box row2 tab-pane show active" id="wmp80_SKU">
+					<table class="mobile-table wmp80-table">
+						<thead id="thtb">
+							<tr>			
+								<th style="display : none" id="ownerky_SKU">[[#{wm.wmp.ownerky}]]</th>		
+								<th style="display : none" id="skumkey_SKU">[[#{md.mskuma.skumkey}]]</th>
+								<th id="skudesc_SKU">[[#{md.mskuma.skudesc}]]</th>
+								<th id="stotqty_SKU">[[#{wm.wmp50.stotqty}]]</th>
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_SKU"></tbody>
+					</table>
+				</div>
+				<div class="table-wrapper con-box row2 tab-pane active" id="wmp80_LOCA">
+					<table class="mobile-table wmp80-table">
+						<thead id="thtb">
+							<tr>		
+								<th style="display : none" id="ownerky_LOCA">[[#{wm.wmp.ownerky}]]</th>		
+								<th style="display : none" id="skumkey_LOCA">[[#{md.mskuma.skumkey}]]</th>
+								<th id="skudesc_LOCA">[[#{md.mskuma.skudesc}]]</th>
+								<th id="stotqty_LOCA">[[#{wm.wmp50.stotqty}]]</th>
+								<th id="locakey_LOCA">[[#{md.mdo05.locanam}]]</th>								
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_LOCA"></tbody>
+					</table>
+				</div>
+				<div class="table-wrapper con-box row2 tab-pane active" id="wmp80_LOT">
+					<table class="mobile-table wmp80-table">
+						<thead id="thtb">
+							<tr>			
+								<th style="display : none" id="ownerky_LOT">[[#{wm.wmp.ownerky}]]</th>		
+								<th style="display : none" id="skumkey_LOT">[[#{md.mskuma.skumkey}]]</th>
+								<th id="skudesc_LOT">[[#{md.mskuma.skudesc}]]</th>
+								<th id="stotqty_LOT">[[#{wm.wmp50.stotqty}]]</th>	
+								<th id="locakey_LOT">[[#{md.mdo05.locanam}]]</th>	
+								<th id="lotnmky_LOT">[[#{wm.wmp80.lotnmky}]]</th>		
+							</tr>
+						</thead>
+						<tbody class="table-body" id="tBody_LOT"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<div class="spinner" id="wmp80Spinner"></div>
+		<div class="bg"></div> 
+	</main>
+	<script>
+		/*  wmp80 - 재고조회
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: PDA를 이용하여 창고안에 있는 부품(SKU)의 재고를 보여주는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		$(function() {
+			const pageId = 'wmp80';
+			let wmp80List;
+			const toggleArray = ['locakey','skumkey'];
+			let toggleIdx = 0;
+			let scanData = null;
+			
+			//바코드 찍을수있게 포커스
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});	
+			
+			tabGridInit();
+
+			//============================================================	 
+			//토글 버튼 클릭시 ASN코드(입고예정번호), 부품코드 바코드
+			//============================================================
+			document.querySelector('#'+pageId+'_toggle').addEventListener('click', function(){
+				if(toggleIdx === toggleArray.length){
+					toggleIdx = 0;
+				}
+				
+				if(toggleArray[toggleIdx] === 'skumkey'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+				}else if(toggleArray[toggleIdx] === 'locakey'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{md.mdo05.locanam}]]';
+				}
+				document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+				document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+				document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+				document.querySelector('#'+pageId+'_input').focus();
+				toggleIdx++;
+				scanData = null;
+			});
+			//============================================================				
+			//상품코드,로케이션 바코드 입력시 자동 검색
+			//============================================================	
+			document.querySelector('#wmp80_input').addEventListener('keyup', async function(event){
+				if(event.keyCode === 13){
+					await getWstkkyList(true);
+					
+					document.querySelector('#'+pageId+'_input').value = '';
+					document.querySelector('#'+pageId+'_input').focus();
+				}
+			});
+
+			//============================================================	 
+			//텝 메뉴 클릭 이벤트
+			//============================================================
+			document.querySelectorAll('#wmp80_tab .nav-item').forEach(function (element){
+				element.addEventListener('click', async function(){
+
+					setTimeout(async function(){
+						if(scanData){
+							await getWstkkyList(false);
+						}
+						document.querySelector('#'+pageId+'_input').focus();
+						document.querySelector('#'+pageId+'_input').value = '';
+					},100);
+					
+					document.querySelectorAll('.tab-content .tab-pane').forEach(function (elementTab){
+						elementTab.classList.remove('show');
+					});
+					document.querySelector(element.children[0].getAttribute('href')).classList.add('show');
+
+					tabGridInit();
+				});
+			});
+			
+		    $('.nav-item').on('click', function(){
+	        	$('.nav-item').removeClass('active');
+	        	$(this).addClass('active');
+	     	});
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function() {
+				confirmOpen('[[#{ms.listViewRollback}]]', function(result){
+					if(result){
+						location.reload();
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			});
+
+			//================================
+			//PDA 상품조회 값 불러오기
+			//================================
+			async function getWstkkyList(flag){
+				
+				document.querySelector('#wmp80Spinner').style.display = 'block';
+				
+				const tab = document.querySelector(".nav-item.active").children[0].dataset.tabType;
+// 				flag가 true면 input 이벤트로 온것, false면 탭 메뉴로 온것.
+				if(flag){
+					if(scanData !== document.querySelector('#'+pageId+'_input').value){
+						scanData = document.querySelector('#'+pageId+'_input').value;
+					}
+				}
+				
+				const toggleValue = document.querySelector('#'+pageId+'_toggle').value;
+				
+				if(!scanData){ //바코드 안찍고 탭만 눌렀을 때 조회 X
+					return;
+				}
+				
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						tab : tab
+					}
+				if(toggleValue === 'locakey'){
+					param['locakey'] = scanData;
+				}else if(toggleValue === 'skumkey'){
+					param['upccode'] = scanData;
+				}
+				const response = await fetchUtil('GET', '/wm/pda/wmp80/grid', param);
+				
+				wmp80List = await response.json();
+				
+				if(!wmp80List.length){
+					alertOpen('[[#{ms.getDataZero}]]', function(){
+						document.querySelectorAll('tbody[id*="tBody"]').forEach(function(element){
+							element.innerHTML = '';
+						});
+						document.querySelector('#wmp80Spinner').style.display = 'none';
+						scanData = null;
+					});
+					return;
+				}
+				document.querySelector('#tBody_'+tab).innerHTML = '';
+				let html = '';
+				if(tab === 'SKU'){
+					for(const wmp80Data of wmp80List){
+						html += '<tr>';
+						html += '<td style="display : none" class="ownerky">' + wmp80Data.ownerky + '</td>';
+						html += '<td style="display : none" class="skumkey">' + wmp80Data.skumkey + '</td>';
+						html += '<td class="skudesc">' + wmp80Data.skudesc +'</td>';	
+						html += '<td class="stotqty">' + wmp80Data.stotqty + '</td>';
+						html += '</tr>';						
+					}
+				}else if(tab === 'LOCA'){
+					for(const wmp80Data of wmp80List){
+						html += '<tr>';
+						html += '<td style="display : none" class="ownerky">' + wmp80Data.ownerky + '</td>';
+						html += '<td style="display : none" class="skumkey">' + wmp80Data.skumkey + '</td>';
+						html += '<td class="skudesc">' + wmp80Data.skudesc +'</td>';	
+						html += '<td class="stotqty">' + wmp80Data.stotqty + '</td>';
+						html += '<td class="locakey">' + wmp80Data.locanam + '</td>';
+						html += '</tr>';
+					}
+				}else if(tab === 'LOT'){
+					for(const wmp80Data of wmp80List){
+						html += '<tr>';
+						html += '<td style="display : none" class="ownerky">' + wmp80Data.ownerky + '</td>';
+						html += '<td style="display : none" class="skumkey">' + wmp80Data.skumkey + '</td>';
+						html += '<td class="skudesc">' + wmp80Data.skudesc +'</td>';	
+						html += '<td class="stotqty">' + wmp80Data.stotqty + '</td>';
+						html += '<td class="locakey">' + wmp80Data.locanam + '</td>';
+						html += '<td class="lotnmky">' + wmp80Data.lotnmky + '</td>';
+						html += '</tr>';
+					}
+				}
+				document.querySelector('#tBody_'+tab).insertAdjacentHTML('afterbegin',html);
+				document.querySelector('#wmp80Spinner').style.display = 'none';
+			}
+			
+			function tabGridInit(){
+				$(".tab-content .tab-pane").removeClass("active");
+				$(".tab-content .tab-pane.show").addClass("active");
+			}			
+		});
+	</script>
+</div>	
+</html>

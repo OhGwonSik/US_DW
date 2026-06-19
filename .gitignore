@@ -1,0 +1,41 @@
+# Sensitive files
+src/main/resources/application.properties
+src/main/resources/application-dev.properties
+src/main/resources/application-prod.properties
+src/main/resources/application-dw.properties
+src/main/resources/application-qa.properties
+src/main/resources/application-real.properties
+src/main/resources/application-msg.properties
+src/main/resources/nan-param.properties
+src/main/resources/webjis-param.properties
+src/main/resources/elasticapm.properties
+ayokeystore.pkcs12
+ayotrust.pkcs12
+
+# CI/CD (서버 정보 노출)
+Jenkinsfile
+
+# Internal docs
+US_DW_프로젝트정리.md
+commits_detail.txt
+src/main/resources/templates/tm/TM설계및개발정보.txt
+
+# Third-party commercial library (라이선스 문제로 제외)
+src/main/resources/static/vender/paramquery-pro 8.6/
+
+# Company asset (모바일 앱 설치 파일)
+src/main/resources/static/appapk/
+
+# Build
+target/
+*.class
+*.jar
+
+# IDE
+.idea/
+*.iml
+.gradle/
+
+# Logs
+logs/
+*.log

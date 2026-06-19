@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+
+<head>
+	<th:block th:replace="/main/fragment/comHead.html :: fragments-comHead"></th:block>
+	<th:block th:replace="/main/fragment/comScript.html :: fragments-comScript"></th:block>
+</head>
+<body>
+<div class="wrapper">
+	<!-- Header  -->
+	<header>
+		<th:block th:replace="/main/fragment/mainHeader.html :: fragments-mainHeader"></th:block>
+	</header>
+	<!-- Header  end -->
+	<!-- Page Content  -->
+	<div class="main-wrapper" id="mainContent">
+		<!-- Sidebar  -->
+		<th:block th:replace="/main/fragment/mainSideBar.html :: fragments-mainSideBar"></th:block>
+		<!-- Sidebar  end -->
+		 <!-- Main -->
+		<main id="content" class="main-content">
+			<div class="content-wrapper">
+				<th:block th:replace="/main/fragment/mainContent.html :: fragments-mainContent"></th:block>
+			</div>
+			<!-- Footer -->
+			<th:block th:replace="/main/fragment/mainFooter.html :: fragments-mainFooter"></th:block>
+			<!-- Footer end  -->
+		</main>
+		<!-- Main end -->
+	</div>
+	<!-- Page Content  end -->
+
+	<!-- spinner -->
+	<div class="spinner-wrapper">
+		<div class="spinner-background"></div>
+		<div class="spinner-border" role="status"></div>
+	</div>
+	<!-- spinner end -->
+</div>
+</body>
+</html>   
+ 
+ 

@@ -1,0 +1,1513 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent" class="tab-content">
+		<div class="tab-contents">
+            <div class="location"></div>
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<label for="tma2_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="tma02_towarky" name="tma02_towarky"
+							data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList">
+							</select>
+                        </div>
+                    </div>
+                    <label for="tma02_postdat" class="setting-grid-title">[[#{tm.tma2.postdat}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper">
+							<input type="date" id="tma02_postdat" onkeyup="setInputDateDel(this)">
+						</div>
+					</div>
+					<label for="tma02_salrqdt" class="setting-grid-title">[[#{tm.tma2.salrqdt}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-wrapper">
+							<input type="date" id="tma02_salrqdt" onkeyup="setInputDateDel(this)">
+						</div>
+					</div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-clear btn-white" id="tma02Reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button type="button" class="btn-navy btn-green" id="tma02Save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="tma02_pqgrid"></div>
+                </div>
+            </div>
+        </div>
+	<script>
+	/* *******************************************************
+	 * 최초 생성일시 : 2023-08-15
+	 * 최초 생성자 : 하주영
+	 * 설명 : 긴급으로 운송오더를 등록할 수 있는 화면입니다.
+	 *********************************************************/
+	let responseData;
+	const pageId = 'tma02';
+	const gridId = '#' + pageId + '_pqgrid';
+	let mskuwcList;
+	let destList;
+	let saatc05List;
+	let towarky;
+	let skuwcArr = [];
+	let destArr = [];
+	let mordmaList;
+	
+	$(function() {
+		//캘린더 날짜 제한
+		$('#' + pageId + '_postdat').attr('min', setDate());
+		$('#' + pageId + '_salrqdt').attr('min', setDate());
+
+		const tma02GridCM = [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: { all: false, header: true}
+			},
+			{ title: '[[#{tm.tma1.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable: false,
+				render: function(ui) {
+					if(mordmaList) {
+						let doctype;
+						mordmaList.find(function(element, index) {
+							if(ui.cellData === element.combovl) {
+								doctype = element.combonm;
+							}
+						});
+						return doctype;	
+					}
+				}
+			},
+			{ title: '[[#{tm.tma2.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'towarky', editable: false,
+				render: function(ui) {
+					let whnamlc;
+					responseData.warekeyList.find(function(element, index) {
+						if(ui.cellData === element.combovl) {
+							whnamlc = element.combonm
+						}
+					});
+
+					return whnamlc;
+				}
+			},
+			{ title: '[[#{tm.tma2.custkey}]]', dataType: 'string', dataIndx: 'custkey',
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				editor: {
+					type: 'select',
+					prepend: { '' : '' },
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				},
+				render: gridRenderAndValue
+			},
+			{ title: '[[#{tm.tma2.destkey}]]', dataType: 'string', dataIndx: 'destkey',
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				editor: {
+					type: 'select',
+					prepend: { '' : '' },
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				},
+				render: function(ui) {
+					let option;
+					if(ui.rowData.custkey && destArr[ui.rowData.custkey]) {
+						option = destArr[ui.rowData.custkey].find(function(obj) {
+							return (obj.destkey === ui.cellData);
+						});
+						ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+						return option ? option.denamlc : '';
+					}
+				}
+			},
+			{ title: '[[#{tm.tma2.rgitqty}]]', dataType: 'integer', dataIndx: 'rgitqty', format: '#,###', summary: { type: "sum" },
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' }		
+			},
+			{ title: '[[#{grid.ownamlc}]]', dataType: 'string', dataIndx: 'ownerky',
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				editor: {
+					type: 'select',
+					prepend: { '' : '' },
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				},
+				render: function(ui) {
+					let ownamlc;
+					responseData.ownerList.find(function(element) {
+						if(ui.cellData === element.combovl) {
+							return ownamlc = element.combonm;
+						}
+					});
+
+					return ownamlc;
+				}
+			},
+			{ title: '[[#{tm.tma2.skumkey}]]', dataType: 'string', dataIndx: 'skumkey',
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				editor: {
+					type: 'select',
+					attr: 'multiple="multiple"',
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect({checkbox : true});
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				},
+				render: function(ui) {
+					let option;
+					if(ui.rowData.ownerky && skuwcArr[ui.rowData.ownerky]) {
+						option = skuwcArr[ui.rowData.ownerky].find(function(obj) {
+							return (obj.skumkey === ui.cellData);
+						});
+				        ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+				        return option ? option.ocoskum : '';
+					}
+				}
+			},
+			{ title: '[[#{tm.tma2.salrqdt}]]', dataType: 'date', dataIndx: 'salrqdt', format:'yy-mm-dd',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+				editor: {
+					type: 'textbox',
+					init: dateEditor,
+					getData: function(ui) {
+						let dt = $.datepicker.parseDate(ui.column.format, ui.$cell.find("input").val());
+		                return $.datepicker.formatDate("yy-mm-dd", dt);
+					}
+				}
+			},
+			{ title: '[[#{tm.tma2.salrqtm}]]', dataType: 'string', dataIndx: 'salrqtm', format: 'HH:mm:ss',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+				editor: {
+					type: 'textbox',
+					init: timeEditor,
+					getData: function(ui) {
+						return ui.$cell.find('input').val();
+					}
+				}
+			},
+			{ title: '[[#{tm.tma2.saatc05}]]', dataType: 'string', dataIndx: 'saatc05',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+				editor: {
+					type: 'select',
+					prepend: { '' : '' },
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: []
+				}
+			},
+			{ title: '[[#{tm.tma2.saatc10}]]', dataType: 'string', dataIndx: 'saatc10',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	
+			},
+			{ title: '[[#{tm.tma2.saatc06}]]', dataType: 'string', dataIndx: 'saatc06',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	
+			},
+			{ title: '[[#{tm.tma2.saatc01}]]', dataType: 'string', dataIndx: 'saatc01',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	
+			},
+			{ title: '[[#{tm.tma2.saatc08}]]', dataType: 'string', dataIndx: 'saatc08',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	
+			},
+			{ title: '[[#{tm.tma2.saatc07}]]', dataType: 'string', dataIndx: 'saatc07',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	
+			},
+			{ title: '[[#{tm.tma2.saatc03}]]', dataType: 'string', dataIndx: 'saatc03',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	
+			},
+			{ title: '[[#{tm.tma2.salmemo}]]', dataType: 'string', dataIndx: 'salmemo',
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: '[[#{tm.tma2.skuskey}]]', dataType: 'string', dataIndx: 'skuskey', editable: false, hidden: true,
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' }		
+			},
+			{ title: '[[#{tm.tma2.skudesc}]]', dataType: 'string', dataIndx: 'skudesc', editable: false, hidden: true,
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' }		
+			},
+			{ title: '[[#{tm.tma2.suomkey}]]', dataType: 'string', dataIndx: 'suomkey', editable: false, hidden: true,
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' }		
+			}
+		]
+
+		const tma02Grid = new GridUtil(tma02GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+		tma02Grid.setFind();
+// 		tma02Grid.setReset();
+
+		//============================================================
+		//그리드 delete 이벤트
+		//============================================================
+		tma02Grid.setDelete(function(evt, ui) {
+			const checkList = this.Checkbox('state').getCheckedNodes();
+	       	if(!checkList.length) {
+	       		alert('[[#{ms.choiceRowZero}]]');
+	       		return;
+	       	}
+
+	   		if(confirm(checkList.length + '[[#{ms.allRowDelete}]]')) {
+	  			for(const checkData of checkList) {
+	  				this.deleteRow({ rowIndx: checkData.pq_ri });
+	  	   		}
+	   		}
+		});
+
+		//============================================================
+		//그리드 create 이벤트
+		//============================================================
+		tma02Grid.setCreate(async function (evt, ui) {
+			await _commonInit();
+			await tma02InitData();
+			await getPostdat();
+
+			//고객 comboBox
+			comboCreateData(pageId + '_pqgrid', 'custkey', responseData.custList, {combovl: 'ptnrkey', combonm: 'ptnamlc'});
+			//화주 comboBox
+			comboCreateData(pageId + '_pqgrid', 'ownerky', responseData.ownerList, {combovl: 'combovl', combonm: 'combonm'});
+		});
+
+		//============================================================
+		//그리드 add 이벤트
+		//============================================================
+		tma02Grid.setAdd(async function (evt, ui) {
+			if(!$('#' + pageId + '_towarky').val()) {
+				alert('[[#{tm.tma2.towarky}]]' + '[[#{ms.choiceValue}]]');
+			}else {
+				//문서유형 가져오기
+				await mordmaListData($('#' + pageId + '_towarky').val());
+
+				const rowData = {
+						state: true,
+						towarky: $('#' + pageId + '_towarky').val(),
+						postdat: $('#' + pageId + '_postdat').val(),
+						salrqdt: $('#' + pageId + '_salrqdt').val(),
+						doctype: '240',
+						custkey: responseData.custList.length === 1 ? responseData.custList[0].ptnrkey : ''
+				}
+				const rowIndx = this.addRow({
+					rowData: rowData,
+					checkEditable: false
+				});
+			}
+		});
+
+		//============================================================
+		//그리드 셀 더블클릭 이벤트
+		//============================================================
+		tma02Grid.setCellDblClick(function (evt, ui) {
+			const grid = pq.grid(gridId);
+
+			//상품키는 화주가 선택되어 있어야함(창고는 고정)
+			if(ui.dataIndx === 'skumkey') {
+				if(!ui.rowData.ownerky) {
+					alert('[[#{tm.tma2.choiceOwner}]]');
+					grid.editCell({rowIndx: ui.rowIndx, dataIndx: 'ownerky'});
+					return false;
+				}else {
+					mskuwcListData(ui.rowData.towarky, ui.rowData.ownerky, skuwcArr);
+				}
+			//도착키는 고객키가 선택되어 있어야함
+			}else if(ui.dataIndx === 'destkey') {
+				if(!ui.rowData.custkey) {
+					alert('[[#{tm.tma2.choiceCustkey}]]');
+					grid.editCell({rowIndx: ui.rowIndx, dataIndx: 'custkey'});
+					return false;
+				}else {
+					destkeyListData(ui.rowData.custkey, destArr);
+				}
+			//차종은 고객키와 도착지가 선택되어 있어야함
+			}else if(ui.dataIndx === 'saatc05') {
+				if(!ui.rowData.custkey) {
+					alert('[[#{tm.tma2.choiceCustkey}]]');
+					grid.editCell({rowIndx: ui.rowIndx, dataIndx: 'custkey'});
+					return false;
+				}else if(!ui.rowData.destkey) {
+					alert('[[#{tm.tma2.choiceDestkey}]]');
+					grid.editCell({rowIndx: ui.rowIndx, dataIndx: 'destkey'});
+					return false;
+				}else {
+					saatc05ListData(ui.rowData.custkey, ui.rowData.destkey);
+				}
+			}
+		});
+
+		tma02Grid.setCellKeyDown(function(evt, ui) {
+			const grid = pq.grid(gridId);
+
+			if(ui.dataIndx === 'destkey') {
+				if(evt.key === 'Enter' || evt.keyCode === 13) {
+					if(!ui.rowData.custkey || ui.rowData.custkey === '') {
+						alert('[[#{tm.tma2.choiceCustkey}]]');
+						grid.setSelection({ rowIndx : ui.rowIndx , dataIndx : 'custkey'});
+		           		ui.colIndx = grid.getColIndx({ rowIndx : ui.rowIndx , dataIndx : 'custkey'});
+						return;
+					}else {
+						destkeyListData(ui.rowData.custkey, destArr);
+					}
+				}
+			}else if(ui.dataIndx === 'saatc05') {
+				if(evt.key === 'Enter' || evt.keyCode === 13) {
+					if(!ui.rowData.custkey || ui.rowData.custkey === '') {
+						alert('[[#{tm.tma2.choiceCustkey}]]');
+						grid.setSelection({ rowIndx : ui.rowIndx , dataIndx : 'custkey'});
+		           		ui.colIndx = grid.getColIndx({ rowIndx : ui.rowIndx , dataIndx : 'custkey'});
+		           		return;
+					}else if(!ui.rowData.destkey || ui.rowData.destkey === '') {
+						alert('[[#{tm.tma2.choiceDestkey}]]');
+						grid.setSelection({ rowIndx : ui.rowIndx , dataIndx : 'destkey'});
+		           		ui.colIndx = grid.getColIndx({ rowIndx : ui.rowIndx , dataIndx : 'destkey'});
+		           		return;
+					}else {
+						saatc05ListData(ui.rowData.custkey, ui.rowData.destkey);
+					}
+				}
+			}else if(ui.dataIndx === 'skumkey') {
+				if(evt.key === 'Enter' || evt.keyCode === 13) {
+					if(!ui.rowData.ownerky || ui.rowData.ownerky === '') {
+						alert('[[#{tm.tma2.choiceOwner}]]');
+						grid.setSelection({ rowIndx : ui.rowIndx , dataIndx : 'ownerky'});
+		           		ui.colIndx = grid.getColIndx({ rowIndx : ui.rowIndx , dataIndx : 'ownerky'});
+		           		return;
+					}else {
+						mskuwcListData(ui.rowData.towarky, ui.rowData.ownerky, skuwcArr);
+					}
+				}
+			}
+		});
+
+		//============================================================
+		//그리드 change 이벤트
+		//============================================================
+		tma02Grid.setChange(function (evt, ui) {
+			const grid = pq.grid(gridId);
+
+			//============================================================
+			//change - edit 이벤트
+			//============================================================
+			//edit에서 updateList[0]인 이유는 eidt는 셀을 편집하고 값이 바뀌면 작동하는데
+			//여러 리스트를 동시에 편집할 수는 없어서 0으로 고정
+			if(ui.source === 'edit') {
+				//고객키를 편집했을 때
+				//도착지는 고객키에 의해서, 차종은 고객키와 도착지에 의해서 변경되는 값이니
+				//고객키가 변경되면 둘 다 리셋
+				if(ui.updateList[0].newRow.custkey) {
+					ui.updateList[0].rowData.destkey = '';
+					ui.updateList[0].rowData.saatc05 = '';
+				//부품코드를 편집했을 때
+				}else if(ui.updateList[0].newRow.skumkey) {
+					//부품코드는 화주가 있어야지만 값이 보여져야함
+					//화주가 없다면 부품코드 리셋
+					if(!ui.updateList[0].rowData.ownerky) {
+						ui.updateList[0].rowData.skumkey = '';
+						ui.updateList[0].rowData.skudesc = '';
+						ui.updateList[0].rowData.skuskey = '';
+						ui.updateList[0].rowData.suomkey = '';
+					}
+
+					//부품코드 따라서 skuskey, skudesc, suomkey 셋팅
+					let skumkeyData = ui.updateList[0].newRow.skumkey.split(',');
+					
+					let mskuwcData;
+					
+					for(let i=0; i<skumkeyData.length; i++) {
+						mskuwcData = mskuwcList.find(function(element) {
+							return element.skumkey === skumkeyData[i];
+						});
+						
+						if(i != 0) {
+							const newRow = {
+									state: true,
+									towarky: $('#' + pageId + '_towarky').val(),
+									postdat: $('#' + pageId + '_postdat').val(),
+									salrqdt: $('#' + pageId + '_salrqdt').val(),
+									doctype: '240',
+									ownerky: ui.updateList[0].rowData.ownerky,
+									skumkey: skumkeyData[i],
+									skuskey: mskuwcData.skuskey,
+									skudesc: mskuwcData.skudesc,
+									suomkey: mskuwcData.suomkey
+							}
+							
+							grid.addRow({
+								newRow: newRow,
+								checkEditable: false
+							});
+						}else {
+							const newRow = {
+									skuskey: mskuwcData.skuskey,
+									skudesc: mskuwcData.skudesc,
+									suomkey: mskuwcData.suomkey,
+									skumkey: skumkeyData[i],
+									ownerky: ui.updateList[0].rowData.ownerky
+							}
+
+							this.updateRow({
+								rowIndx: ui.updateList[0].rowIndx,
+								newRow: newRow,
+								checkEditable: false
+							});
+						}
+					}
+				//화주를 편집했을 때
+				}else if(ui.updateList[0].newRow.ownerky) {
+					//부품코드는 화주에 따라서 달라져야하기 때문에
+					//화주가 편집되면 부품코드 다시 셋팅
+
+					//부품코드 리셋
+					ui.updateList[0].rowData.skumkey = '';
+					ui.updateList[0].rowData.skudesc = '';
+					ui.updateList[0].rowData.suomkey = '';
+					ui.updateList[0].rowData.skuskey = '';
+
+				//도착지를 편집했을 때
+				}else if(ui.updateList[0].newRow.destkey) {
+					//기존 데이터에 고객키가 있다면
+					if(ui.updateList[0].rowData.custkey) {
+						//차종은 고객키, 도착지에 의해서 값이 바뀌므로 차종 리셋
+						ui.updateList[0].rowData.saatc05 = '';
+					}
+				}
+			//============================================================
+			//change - paste 이벤트 // 한글, 키값 둘다 복사해서 붙여넣었을 때 데이터가 잘 들어가야함
+			//============================================================
+			}else if(ui.source === 'paste') {
+
+				pasteEvt(ui.updateList);
+				pasteEvt(ui.addList);
+
+				//복사 붙여넣기 할 때 updateList와 addList가 같이 있을 경우
+				//자릿수 validation alert 띄워주기 위한 코드
+				if(ui.updateList.length > 0 && ui.addList.length > 0) {
+					//몇번 행들에서 틀렸는지 담기위한 변수
+					let saatc10RowIndx = [];
+					let saatc06RowIndx = [];
+					let saatc08RowIndx = [];
+					let saatc07RowIndx = [];
+					let saatc03RowIndx = [];
+					let rgitqtyRowIndx = [];
+
+					//updateList 체크
+					for(let i=0; i<ui.updateList.length; i++) {
+						//서열번호(saatc10) - 4자리
+						//PLT넘버(saatc06) - 20자리
+						//품목명(saatc08) - 100자리
+						//품목순번(saatc07) - 10자리
+						//ALC(saatc03) - 40자리
+						if(ui.updateList[i].newRow.saatc10) {
+							if(ui.updateList[i].newRow.saatc10.length > 4) {
+								saatc10RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc06) {
+							if(ui.updateList[i].newRow.saatc06.length > 20) {
+								saatc06RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc08) {
+							if(ui.updateList[i].newRow.saatc08.length > 100) {
+								saatc08RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc07) {
+							if(ui.updateList[i].newRow.saatc07.length > 10) {
+								saatc07RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc03) {
+							if(ui.updateList[i].newRow.saatc03.length > 40) {
+								saatc03RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.rgitqty) {
+							if(ui.updateList[i].newRow.rgitqty > 9999) {
+								rgitqtyRowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+					}
+
+					//addList
+					for(let i=0; i<ui.addList.length; i++) {
+						//서열번호(saatc10) - 4자리
+						//PLT넘버(saatc06) - 20자리
+						//품목명(saatc08) - 100자리
+						//품목순번(saatc07) - 10자리
+						//ALC(saatc03) - 40자리
+						if(ui.addList[i].newRow.saatc10) {
+							if(ui.addList[i].newRow.saatc10.length > 4) {
+								saatc10RowIndx.push(ui.addList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.addList[i].newRow.saatc06) {
+							if(ui.addList[i].newRow.saatc06.length > 20) {
+								saatc06RowIndx.push(ui.addList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.addList[i].newRow.saatc08) {
+							if(ui.addList[i].newRow.saatc08.length > 100) {
+								saatc08RowIndx.push(ui.addList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.addList[i].newRow.saatc07) {
+							if(ui.addList[i].newRow.saatc07.length > 10) {
+								saatc07RowIndx.push(ui.addList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.addList[i].newRow.saatc03) {
+							if(ui.addList[i].newRow.saatc03.length > 40) {
+								saatc03RowIndx.push(ui.addList[i].rowIndx + 1);
+							}
+						}
+					}
+
+					//서열번호 alert
+					if(saatc10RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + saatc10RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc10}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc10RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc10RowIndx[j] - 1,
+								newRow: {
+									saatc10: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//PLT넘버 alert
+					if(saatc06RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(20)}]]' + '\n' + saatc06RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc06}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc06RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc06RowIndx[j] - 1,
+								newRow: {
+									saatc06: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//품목명 alert
+					if(saatc08RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(100)}]]' + '\n' + saatc08RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc08}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc08RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc08RowIndx[j] - 1,
+								newRow: {
+									saatc08: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//품목순번 - alert
+					if(saatc07RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(10)}]]' + '\n' + saatc07RowIndx + '[[#{tm.tma2.rowNum}]]' + '[[#{tm.tma2.saatc07}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc07RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc07RowIndx[j] - 1,
+								newRow: {
+									saatc07: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//ALC - alert
+					if(saatc03RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(40)}]]' + '\n' + saatc03RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc03}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc03RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc03RowIndx[j] - 1,
+								newRow: {
+									saatc03: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//수량 - alert
+					if(rgitqtyRowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + rgitqtyRowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.rgitqty}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<rgitqtyRowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: rgitqtyRowIndx[j] - 1,
+								newRow: {
+									rgitqty: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+				}
+
+				//updateList만 있고 addList는 없음
+				//자릿수 validation alert 띄우기 위한 코드
+				if(ui.updateList.length > 0 && ui.addList.length <= 0) {
+					let saatc10RowIndx = [];
+					let saatc06RowIndx = [];
+					let saatc08RowIndx = [];
+					let saatc07RowIndx = [];
+					let saatc03RowIndx = [];
+					let rgitqtyRowIndx = [];
+
+					//updateList
+					for(let i=0; i<ui.updateList.length; i++) {
+						//서열번호(saatc10) - 4자리
+						//PLT넘버(saatc06) - 20자리
+						//품목명(saatc08) - 100자리
+						//품목순번(saatc07) - 10자리
+						//ALC(saatc03) - 40자리
+						if(ui.updateList[i].newRow.saatc10) {
+							if(ui.updateList[i].newRow.saatc10.length > 4) {
+								saatc10RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc06) {
+							if(ui.updateList[i].newRow.saatc06.length > 20) {
+								saatc06RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc08) {
+							if(ui.updateList[i].newRow.saatc08.length > 100) {
+								saatc08RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc07) {
+							if(ui.updateList[i].newRow.saatc07.length > 10) {
+								saatc07RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.saatc03) {
+							if(ui.updateList[i].newRow.saatc03.length > 40) {
+								saatc03RowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+
+						if(ui.updateList[i].newRow.rgitqty) {
+							if(ui.updateList[i].newRow.rgitqty > 9999) {
+								rgitqtyRowIndx.push(ui.updateList[i].rowIndx + 1);
+							}
+						}
+					}
+
+					//서열번호 alert
+					if(saatc10RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + saatc10RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc10}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc10RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc10RowIndx[j] - 1,
+								newRow: {
+									saatc10: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//PLT넘버 - alert
+					if(saatc06RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(20)}]]' + '\n' + saatc06RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc06}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc06RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc06RowIndx[j] - 1,
+								newRow: {
+									saatc06: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//품목명 - alert
+					if(saatc08RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(100)}]]' + '\n' + saatc08RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc08}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc08RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc08RowIndx[j] - 1,
+								newRow: {
+									saatc08: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//품목순번 - alert
+					if(saatc07RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(10)}]]' + '\n' + saatc07RowIndx + '[[#{tm.tma2.rowNum}]]' + '[[#{tm.tma2.saatc07}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc07RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc07RowIndx[j] - 1,
+								newRow: {
+									saatc07: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//ALC - alert
+					if(saatc03RowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(40)}]]' + '\n' + saatc03RowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc03}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<saatc03RowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: saatc03RowIndx[j] - 1,
+								newRow: {
+									saatc03: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+					//수량 - alert
+					if(rgitqtyRowIndx.length > 0) {
+						alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + rgitqtyRowIndx + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.rgitqty}]]' + '[[#{ms.checkValue}]]');
+
+						for(let j=0; j<rgitqtyRowIndx.length; j++) {
+							this.updateRow({
+								rowIndx: rgitqtyRowIndx[j] - 1,
+								newRow: {
+									rgitqty: ''
+								},
+								checkEditable: false
+							});
+						}
+						return false;
+					}
+
+				}
+			//============================================================
+			//change - clear 이벤트
+			//============================================================
+			}else if(ui.source === 'clear') {
+				//custkey를 지울 때 관련된 도착지, 차종 같이 지움
+				if(ui.updateList[0].newRow.hasOwnProperty('custkey')) {
+					this.updateRow({
+						rowIndx: ui.updateList[0].rowIndx,
+						newRow: {
+							destkey: '',
+							saatc05: '',
+						},
+						checkEditable: false
+					});
+				//화주 지울 때 관련된 skumkey, skudesc, skuskey, suomkey 다 지움
+				}else if(ui.updateList[0].newRow.hasOwnProperty('ownerky')) {
+					this.updateRow({
+						rowIndx: ui.updateList[0].rowIndx,
+						newRow: {
+							skumkey: '',
+							skudesc: '',
+							skuskey: '',
+							suomkey: ''
+						},
+						checkEditable: false
+					});
+				//도착지 지울 때 관련된 차종 지움
+				}else if(ui.updateList[0].newRow.hasOwnProperty('destkey')) {
+					this.updateRow({
+						rowIndx: ui.updateList[0].rowIndx,
+						newRow: {
+							saatc05: '',
+						},
+						checkEditable: false
+					});
+				}
+			}
+		});
+
+		//============================================================
+		//editorKeyUp 이벤트
+		//============================================================
+		//특정 dataIndx에서 값을 입력 받을 때 그에 해당하는 길이를 넘을 경우 그 데이터를 다 지움
+		tma02Grid.setEditorKeyUp(function(evt, ui) {
+			//서열번호 - 4자리
+			if(ui.dataIndx === 'saatc10') {
+				if(ui.$cell[0].innerText.length > 4) {
+					alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + '[[#{tm.tma2.saatc10}]]' + '[[#{ms.checkValue}]]');
+
+					ui.$cell[0].innerText = '';
+
+					this.updateRow({
+						rowIndx: ui.rowIndx,
+						newRow: {
+							saatc10: ''
+						},
+						checkEditable: false
+					});
+				}
+			//PLT넘버 - 20자리
+			}else if(ui.dataIndx === 'saatc06') {
+				if(ui.$cell[0].innerText.length > 20) {
+					alert('[[#{ms.validations.maxLenLength(20)}]]' + '\n' + '[[#{tm.tma2.saatc06}]]' + '[[#{ms.checkValue}]]');
+
+					ui.$cell[0].innerText = '';
+
+					this.updateRow({
+						rowIndx: ui.rowIndx,
+						newRow: {
+							saatc06: ''
+						},
+						checkEditable: false
+					});
+				}
+			//품목명 - 100자리
+			}else if(ui.dataIndx === 'saatc08') {
+				if(ui.$cell[0].innerText.length > 100) {
+					alert('[[#{ms.validations.maxLenLength(100)}]]' + '\n' + '[[#{tm.tma3.saatc08}]]' + '[[#{ms.checkValue}]]');
+
+					ui.$cell[0].innerText = '';
+
+					this.updateRow({
+						rowIndx: ui.rowIndx,
+						newRow: {
+							saatc08: ''
+						},
+						checkEditable: false
+					});
+				}
+			//품목순번 - 10자리
+			}else if(ui.dataIndx === 'saatc07') {
+				if(ui.$cell[0].innerText.length > 10) {
+					alert('[[#{ms.validations.maxLenLength(10)}]]' + '\n' + '[[#{tm.tma3.saatc07}]]' + '[[#{ms.checkValue}]]');
+
+					ui.$cell[0].innerText = '';
+
+					this.updateRow({
+						rowIndx: ui.rowIndx,
+						newRow: {
+							saatc07: ''
+						},
+						checkEditable: false
+					});
+				}
+			//ALC - 40자리
+			}else if(ui.dataIndx === 'saatc03') {
+				if(ui.$cell[0].innerText.length > 40) {
+					alert('[[#{ms.validations.maxLenLength(40)}]]' + '\n' + '[[#{tm.tma3.saatc03}]]' + '[[#{ms.checkValue}]]');
+
+					ui.$cell[0].innerText = '';
+
+					this.updateRow({
+						rowIndx: ui.rowIndx,
+						newRow: {
+							saatc03: ''
+						},
+						checkEditable: false
+					});
+				}
+			//수량 - 4자리(9999)
+			}else if(ui.dataIndx === 'rgitqty') {
+				if(ui.$cell[0].innerText.length > 4) {
+					alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + '[[#{tm.tma3.rgitqty}]]' + '[[#{ms.checkValue}]]');
+
+					ui.$cell[0].innerText = '';
+
+					this.updateRow({
+						rowIndx: ui.rowIndx,
+						newRow: {
+							rgitqty: ''
+						},
+						checkEditable: false
+					});
+				}
+			}
+		});
+
+		tma02Grid.open();
+
+
+		//============================================================
+		//창고 change 이벤트
+		//============================================================
+		$('#' + pageId + '_towarky').focus(function() {
+			towarky = $('#' + pageId + '_towarky').val();
+		}).change(async function() {
+			const grid = pq.grid(gridId);
+
+			if(grid.pdata.length > 0) {
+				const result = confirm('[[#{ms.listViewRollback}]]');
+				if(result) {
+					grid.option('dataModel', { data: [] });
+					grid.refreshDataAndView();
+
+					await getPostdat();
+				}else {
+					$('#' + pageId + '_towarky').val(towarky);
+				}
+			}else {
+				await getPostdat();
+			}
+		});
+
+		//============================================================
+		//검색조건 초기화 이벤트
+		//============================================================
+		$('#' + pageId + 'Reset').click(async function () {
+			$('#' + pageId + '_towarky option:eq(0)').prop('selected', true);
+			await getPostdat();
+
+			const grid = pq.grid(gridId);
+
+			//그리드 내에 데이터 있을 경우에만 alert 띄워줌
+			if(grid.pdata.length > 0) {
+				const result = confirm('[[#{ms.listViewRollback}]]');
+				if(result) {
+					grid.option('dataModel', { data: [] });
+					grid.refreshDataAndView();
+				}
+			}
+		});
+
+	});
+	
+	function pasteEvt(list) {
+		const grid = pq.grid(gridId);
+		
+		for(let i=0; i<list.length; i++) {
+			grid.updateRow({
+				rowIndx: list[i].rowIndx,
+				newRow: {
+					state: true,
+					towarky: $('#' + pageId + '_towarky').val(),
+					postdat: $('#' + pageId + '_postdat').val(),
+					salrqdt: $('#' + pageId + '_salrqdt').val(),
+					doctype: '240',
+					custkey: responseData.custList.length === 1 ? responseData.custList[0].ptnrkey : ''
+				},
+				checkEditable: false
+			});
+			
+			//고객키만 복사했을 때, 도착지와 차종은 복사 안함
+			if(list[i].newRow.custkey && !list[i].newRow.destkey && !list[i].newRow.saatc05) {
+				//도착지는 고객키에 의해서 변경되어야하고 차종은 도착지와 고객키에 의해서 변경되어야하기 때문에 둘다 리셋
+				list[i].rowData.destkey = '';
+				list[i].rowData.saatc05 = '';
+
+				//고객키를 한글로 복사했을 경우 그거에 해당하는 데이터가 있는지 or 고객키를 복사했을 때 그거에 해당하는 데이터가 있는지 확인
+				const custData = responseData.custList.find(function(element) {
+					if(element.custkey === list[i].newRow.custkey) {
+						return list[i].rowData.custkey = element.ptnrkey;
+					}else if(element.ptnrkey === list[i].newRow.custkey) {
+						return element;
+					}
+				});
+
+				//custData가 없는거면 고객리스트에 없는 데이터라는 말임.
+				//그래서 고객키 자체를 리셋
+				//destkey는 custkey에 의해서, saatc05는 custkey, destkey에 의해서 값이 바뀌므로 같이 리셋
+				if(!custData) {
+					list[i].rowData.custkey = '';
+					list[i].rowData.destkey = '';
+					list[i].rowData.saatc05 = '';
+				}
+			//도착지만 복사했을 때, 고객키와 차종은 복사 안함
+			}else if(list[i].newRow.destkey && !list[i].newRow.custkey && !list[i].newRow.saatc05) {
+				//기존 데이터에 고객키가 없다면 도착지와 차종은 리셋
+				if(!list[i].rowData.custkey) {
+					list[i].rowData.destkey = '';
+					list[i].rowData.saatc05 = '';
+				}else {
+					//기존 데이터에 고객키가 있다면 도착지 새로 셋팅
+					destkeyListData(list[i].rowData.custkey, destArr);
+
+					//도착지를 한글로 복사했을 경우 데이터가 있는지 or 키값을 복사했을 경우 데이터가 있는지 확인
+					const destkey = destList.find(function(element) {
+						if(element.destkey === list[i].newRow.destkey) {
+							return element;
+						}else if(element.denamlc === list[i].newRow.destkey) {
+							return list[i].rowData.destkey = element.destkey;
+						}
+					});
+
+					//없다면 도착지와 차종 둘 다 리셋(차종은 고객키와 도착지에 의해서 바뀌기 때문)
+					if(!destkey) {
+						list[i].rowData.destkey = '';
+						list[i].rowData.saatc05 = '';
+					}
+
+					list[i].rowData.saatc05 = '';
+				}
+			//고객키와 도착지를 복사해서 붙여넣었을 때
+			}else if(list[i].newRow.custkey && list[i].newRow.destkey) {
+				//고객키를 한글로 복사했을 때 데이터가 있는지 or 키값으로 복사했을 때도 데이터가 있는지 확인
+				const custData = responseData.custList.find(function(element) {
+					if(element.custkey === list[i].newRow.custkey) {
+						return list[i].rowData.custkey = element.ptnrkey;
+					}else if(element.ptnrkey === list[i].newRow.custkey) {
+						return element;
+					}
+				});
+
+				//custData가 없다는건 키값, 한글 둘 다 리스트에 없다는 것이니 리셋
+				//destkey는 custkey에 의해서, saatc05는 destkey, custkey에 의해서 값이 변하므로 같이 리셋
+				if(!custData) {
+					list[i].rowData.custkey = '';
+					list[i].rowData.destkey = '';
+					list[i].rowData.saatc05 = '';
+				}else {
+					//고객키가 바뀌었을 수도 있으니 도착지 comboBox 다시 셋팅
+					destkeyListData(list[i].rowData.custkey, destArr);
+
+					//도착지가 한글로 복사했을 때 데이터가 있는지 or 키값을 복사했을 때 데이터가 있는지 확인
+					const destkey = destList.find(function(element) {
+						if(element.destkey === list[i].newRow.destkey) {
+							return list[i].rowData.destkey = element.destkey;
+						}else if(element.denamlc === list[i].newRow.destkey) {
+							return list[i].rowData.destkey = element.destkey;
+						}
+					});
+
+					//destkey가 없다는 것은 한글, 키값 다 도착지 리스트에 없다는 말이기에 리셋
+					if(!destkey) {
+						list[i].rowData.destkey = '';
+						list[i].rowData.saatc05 = '';
+					}
+				}
+
+				if(!list[i].newRow.saatc05) {
+					list[i].rowData.saatc05 = '';
+				}
+			}
+
+			//차종을 복사해서 붙여넣었을 경우
+			if(list[i].newRow.saatc05) {
+				//도착지와 고객키가 새로 붙여넣은 값이나 기존 데이터에 원래 존재한다면
+				if(list[i].rowData.custkey && list[i].rowData.destkey){
+					saatc05ListData(list[i].rowData.custkey, list[i].rowData.destkey);
+
+					//차종 리스트에 차종 값이 존재하는지 확인
+					const saatc05Data = saatc05List.find(function(element) {
+						return element.saatc05 === list[i].newRow.saatc05;
+					});
+
+					//차종 리스트에 존재하지 않다면 차종 리셋
+					if(!saatc05Data) {
+						list[i].rowData.saatc05 = '';
+					}else {
+						list[i].rowData.saat05 = list[i].newRow.saatc05;
+					}
+
+				//custkey나 또는 destkey가 기존 데이터에 없을 경우 차종 리셋
+				//차종은 고객키와 도착지에 의해서 값이 셋팅되는 컬럼임
+				}else if(!list[i].rowData.custkey || !list[i].rowData.destkey) {
+					list[i].rowData.saatc05 = '';
+				}
+			}
+
+			//화주는 붙여넣었지만 부품코드는 붙여넣기 안했을 때
+			if(list[i].newRow.ownerky && !list[i].newRow.skumkey) {
+				//상품 관련된 skumkey, skudesc, skuskey, suomkey 다 리셋
+				list[i].rowData.skumkey = '';
+				list[i].rowData.skudesc = '';
+				list[i].rowData.skuskey = '';
+				list[i].rowData.suomkey = '';
+
+				//화주를 한글로 입력했을 때 데이터에 있는지 or 키값으로 입력했을 때도 데이터에 있는지 확인
+				const ownerData = responseData.ownerList.find(function(element) {
+					if(element.combonm === list[i].newRow.ownerky) {
+						return list[i].rowData.ownerky = element.combovl;
+					}else if(element.combovl === list[i].newRow.ownerky) {
+						return element;
+					}
+				});
+
+				//ownerky가 없다는 것은 한글, 키값 둘 다 데이터에 없다는 것임. 그래서 리셋
+				//부품은 위에서 해주므로 해줄 필요 없음
+				if(!ownerData) {
+					list[i].rowData.ownerky = '';
+				}else {
+					//화주가 바뀌었을 수도 있으니 부품 관련 comboBox 새로 셋팅
+					mskuwcListData(list[i].rowData.towarky, list[i].rowData.ownerky, skuwcArr);
+				}
+			//부품코드는 붙여넣었지만 화주는 붙여넣기 안했을 때
+			}else if(list[i].newRow.skumkey && !list[i].newRow.ownerky) {
+				//기존 데이터에 화주가 없다면 상품관련 skumkey, skudesc, skuskey, suomkey 다 리셋
+				if(!list[i].rowData.ownerky) {
+					list[i].rowData.skumkey = '';
+					list[i].rowData.skudesc = '';
+					list[i].rowData.skuskey = '';
+					list[i].rowData.suomkey = '';
+				//기존 데이터에 화주가 있다면
+				}else {
+					//상품관련 comboBox가 없을 수도 있으니 새로 셋팅
+					mskuwcListData(list[i].rowData.towarky, list[i].rowData.ownerky, skuwcArr);
+
+					//사용자가 붙여넣기한 skumkey가 리스트에 있는 데이터인지 확인
+					const mskuwcData = mskuwcList.find(function(element) {
+						return element.skumkey === list[i].newRow.skumkey
+					});
+
+					//mskuwcData가 없다는 것은 skumkey가 현재 리스트에 없다는 것임
+					//그래서 부품관련 skumkey, skudesc, skuskey, suomkey 리셋
+					if(!mskuwcData) {
+						list[i].rowData.skumkey = '';
+						list[i].rowData.skudesc = '';
+						list[i].rowData.skuskey = '';
+						list[i].rowData.suomkey = '';
+					//mskuwcData가 있다는 것은 사용자가 붙여넣기한 skumkey가 리스트에 있다는 것
+					//skumkey와 관련된 skuskey, skudesc, suomkey 자동 셋팅
+					}else {
+						const newRow = {
+								skuskey: mskuwcData.skuskey,
+								skudesc: mskuwcData.skudesc,
+								suomkey: mskuwcData.suomkey
+						}
+
+						grid.updateRow({
+							rowIndx: list[i].rowIndx,
+							newRow: newRow,
+							checkEditable: false
+						});
+					}
+				}
+			//화주와 부품코드를 붙여넣기 했을 때
+			}else if(list[i].newRow.ownerky && list[i].newRow.skumkey) {
+				//화주를 한글 또는 키값으로 입력했을 때 데이터에 값이 있는지 확인
+				const ownerData = responseData.ownerList.find(function(element) {
+					if(element.combonm === list[i].newRow.ownerky) {
+						return list[i].rowData.ownerky = element.combovl;
+					}else if(element.combovl === list[i].newRow.ownerky) {
+						return element;
+					}
+				});
+
+				//ownerData가 없다면 입력한 값이 데이터에 없다는 것이므로 화주, 상품관련된 것 삭제
+				if(!ownerData) {
+					list[i].rowData.ownerky = '';
+					list[i].rowData.skumkey = '';
+					list[i].rowData.skudesc = '';
+					list[i].rowData.skuskey = '';
+					list[i].rowData.suomkey = '';
+				}else {
+					//화주가 바뀌었을 수도 있으니 상품 comboBox 셋팅
+					mskuwcListData(list[i].rowData.towarky, list[i].rowData.ownerky, skuwcArr);
+
+					//사용자가 입력한 부품코드가 리스트에 있는지 확인
+					const mskuwcData = mskuwcList.find(function(element) {
+						return element.skumkey === list[i].newRow.skumkey
+					});
+
+					//리스트에 없다면 상품 관련된 skumkey, skusdesc, skuskey, suomkey 리셋
+					if(!mskuwcData) {
+						list[i].rowData.skumkey = '';
+						list[i].rowData.skudesc = '';
+						list[i].rowData.skuskey = '';
+						list[i].rowData.suomkey = '';
+
+					//리스트에 있다는 것은 skumkey가 리스트에 있다는 것임
+					//skumkey와 관련된 skuskey, skudesc, suomkey 셋팅
+					}else {
+						const newRow = {
+								skuskey: mskuwcData.skuskey,
+								skudesc: mskuwcData.skudesc,
+								suomkey: mskuwcData.suomkey
+						}
+
+						grid.updateRow({
+							rowIndx: list[i].rowIndx,
+							newRow: newRow,
+							checkEditable: false
+						});
+					}
+				}
+			}
+		}
+	}
+
+	//============================================================
+	//영업일 가져오기
+	//============================================================
+	async function getPostdat() {
+		const data = {
+				warekey: $('#' + pageId + '_towarky').val()
+		}
+
+		const postdatData = await fetchUtil('GET', '/tm/order/tma02/postdat', data);
+		const postdat = await postdatData.text();
+
+		$('#' + pageId + '_postdat').val(postdat);
+		$('#' + pageId + '_salrqdt').val(postdat);
+	}
+
+	//============================================================
+	//차종 가져오기
+	//============================================================
+	function saatc05ListData(custkey, destkey) {
+		const data = {
+				destkey: destkey,
+				custkey: custkey
+		}
+
+		saatc05List = callAjax('data', 'GET', '/tm/order/common/saatc05list', data);
+
+		comboCreateData(pageId + '_pqgrid', 'saatc05', saatc05List, {combovl: 'saatc05', combonm: 'saatc05'});
+	}
+
+	//============================================================
+	//도착지 가져오기
+	//============================================================
+	function destkeyListData(custkey, arr) {
+		const custData = {
+				ptnrkey: custkey
+		}
+		
+		if(arr[custkey]) {
+			destList = arr[custkey];
+		}else {
+			destList = callAjax('data', 'GET', '/tm/order/common/destList', custData);
+			arr[custkey] = destList;
+			comboCreateData(pageId + '_pqgrid', 'destkey', destList, {combovl: 'destkey', combonm: 'denamlc'});
+		}
+		
+		return destList;
+	}
+
+	//============================================================
+	//상품들 가져오기
+	//============================================================
+	function mskuwcListData(warekey, ownerky, arr) {
+		const grid = pq.grid(gridId);
+
+		const mskuwcData = {
+				warekey: warekey,
+				ownerky: ownerky
+		}
+		
+		if(arr[ownerky]) {
+			mskuwcList = arr[ownerky];
+		}else {
+			mskuwcList = callAjax('data', 'GET', '/tm/order/tma02/mskuwclist', mskuwcData);
+			arr[ownerky] = mskuwcList;
+		}
+		
+		comboCreateData(pageId + '_pqgrid', 'skumkey', mskuwcList, {combovl: 'skumkey', combonm: 'ocoskum'});
+		
+		return mskuwcList;
+	}
+
+	//============================================================
+	//문서유형 가져오기
+	//============================================================
+	async function mordmaListData(warekey) {
+		const data = {
+				warekey: warekey
+		}
+
+		mordmaList = await fetchUtil('GET', '/tm/order/tma02/mordmalist', data);
+		mordmaList = await mordmaList.json();
+	}
+
+	//============================================================
+	//데이터 조회
+	//============================================================
+	async function tma02InitData() {
+		responseData = await fetchUtil('GET', '/tm/order/tma02/init', {});
+		responseData = await responseData.json();
+
+		return responseData;
+	}
+
+	//============================================================
+	//캘린더 날짜 선택 제한
+	//============================================================
+	function setDate() {
+// 		const nowDate = Date.now();
+// 		const timeOff = new Date().getTimezoneOffset()*6000;
+// 		const today = new Date(nowDate-timeOff).toISOString().split('T')[0];
+// 		return today;
+	}
+
+	//============================================================
+	//저장
+	//============================================================
+	$('#' + pageId + 'Save').click(async function() {
+		const grid = pq.grid(gridId);
+		const gridCheck = grid.Checkbox('state').getCheckedNodes();
+		const gridChange = grid.getChanges({all : true});
+		const colModel = grid.getColModel();
+
+		if(gridCheck.length <= 0) {
+			alert('[[#{ms.saveErr}]]');
+			return false;
+		}
+
+		if(gridCheck.length > 0) {
+			for(let i=0; i<gridCheck.length; i++) {
+				//필수값 체크
+				if(!gridCheck[i].postdat) {
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'postdat'})].title + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'postdat' });
+					return false;
+				}
+				if(!gridCheck[i].towarky) {
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'towarky'})].title + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'towarky' });
+					return false;
+				}
+				if(!gridCheck[i].custkey) {
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'custkey'})].title + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'custkey' });
+					return false;
+				}
+				if(!gridCheck[i].destkey){
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'destkey'})].title + '[[#{ms.choiceValue}]]');
+					destkeyListData(gridCheck[i].custkey, destArr);
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'destkey' });
+					return false;
+				}
+				if(!gridCheck[i].ownerky) {
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'ownerky'})].title + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'ownerky' });
+					return false;
+				}
+				if(!gridCheck[i].skumkey) {
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'skumkey'})].title + '[[#{ms.choiceValue}]]');
+					mskuwcListData(gridCheck[i].towarky, gridCheck[i].ownerky, skuwcArr);
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'skumkey' });
+					return false;
+				}
+				if(!gridCheck[i].rgitqty) {
+					alert((gridCheck[i].pq_ri + 1) + '[[#{wm.wmo40.rowNum}]] ' + colModel[grid.getColIndx({dataIndx: 'rgitqty'})].title + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'rgitqty' });
+					return false;
+				}
+				//길이 체크
+				if(gridCheck[i].saatc10) {
+					if(gridCheck[i].saatc10.length > 4) {
+						alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + (gridCheck[i].pq_ri + 1) + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc10}]]' + '[[#{ms.checkValue}]]');
+						grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'saatc10' });
+						return false;
+					}
+				}
+				if(gridCheck[i].saatc06) {
+					if(gridCheck[i].saatc06.length > 20) {
+						alert('[[#{ms.validations.maxLenLength(20)}]]' + '\n' + (gridCheck[i].pq_ri + 1) + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc06}]]' + '[[#{ms.checkValue}]]');
+						grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'saatc06' });
+						return false;
+					}
+				}
+				if(gridCheck[i].saatc08) {
+					if(gridCheck[i].saatc08.length > 40) {
+						alert('[[#{ms.validations.maxLenLength(40)}]]' + '\n' + (gridCheck[i].pq_ri + 1) + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc08}]]' + '[[#{ms.checkValue}]]');
+						grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'saatc08' });
+						return false;
+					}
+				}
+				if(gridCheck[i].saatc07) {
+					if(gridCheck[i].saatc07.length > 10) {
+						alert('[[#{ms.validations.maxLenLength(10)}]]' + '\n' + (gridCheck[i].pq_ri + 1) + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc07}]]' + '[[#{ms.checkValue}]]');
+						grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'saatc07' });
+						return false;
+					}
+				}
+				if(gridCheck[i].saatc03) {
+					if(gridCheck[i].saatc03.length > 100) {
+						alert('[[#{ms.validations.maxLenLength(100)}]]' + '\n' + (gridCheck[i].pq_ri + 1) + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.saatc03}]]' + '[[#{ms.checkValue}]]');
+						grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'saatc03' });
+						return false;
+					}
+				}
+				if(gridCheck[i].rgitqty) {
+					if(gridCheck[i].rgitqty > 9999) {
+						alert('[[#{ms.validations.maxLenLength(4)}]]' + '\n' + (gridCheck[i].pq_ri + 1) + '[[#{tm.tma2.rowNum}]]' + ' ' + '[[#{tm.tma2.rgitqty}]]' + '[[#{ms.checkValue}]]');
+						grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'rgitqty' });
+						return false;
+					}
+				}
+			}
+		}
+
+		const result = confirm('[[#{ms.checksave}]]');
+
+		if(result === true) {
+			const data = {
+					addList: gridChange.addList
+			}
+
+			try {
+				grid.showLoading();
+				
+				const response = await fetchUtil('POST', '/tm/order/tma02/transordersave', data);
+
+				if(response.status === 200) {
+					grid.option('dataModel', {data: []});
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+				}else {
+					alert('[[#{ms.saveErr}]]');
+				}
+			}catch(err) {
+				alert('[[#{ms.saveErr}]]');
+			}finally {
+				grid.hideLoading();
+			}
+		}
+	});
+	</script>
+	</div>
+</html>

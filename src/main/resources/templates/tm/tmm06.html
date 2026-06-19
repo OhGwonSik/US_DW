@@ -1,0 +1,1145 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid" id="grid_search">
+				<label for="tmm06_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tmm06_warekey" name="tmm06_warekey"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse"
+							data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<label for="tmm06_trarenm" class="setting-grid-title">[[#{tm.tmm06.trarenm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper tmm06">
+						<input type="text" id="tmm06_trarenm"
+							th:placeholder="${#messages.msg('tm.tmm06.trarenm')}">
+					</div>
+				</div>
+				<label for="tmm06_postcod" class="setting-grid-title">[[#{tm.tmm06.postcod}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper tmm06">
+						<input type="text" id="tmm06_postcod"
+							th:placeholder="${#messages.msg('tm.tmm06.postcod')}">
+					</div>
+				</div>
+				<label for="tmm06_vhcsnam" class="setting-grid-title">[[#{tm.tvhcma.vhcsnam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper tmm06">
+						<input type="text" id="tmm06_vhcsnam"
+							th:placeholder="${#messages.msg('tm.tvhcma.vhcsnam')}">
+					</div>
+				</div>
+				<label for="tmm06_truseyn" class="setting-grid-title">[[#{tm.tmm06.truseyn}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tmm06_truseyn" name="tmm06_truseyn">
+							<option value="Y">[[#{tm.tmm06.Y}]]</option>
+							<option value="N">[[#{tm.tmm06.N}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="tmm06_search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="tmm06_reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="tab-contents-two">
+			<div class="search-list tab-content-right">
+				<div class="list-top">
+					<div class="list-title ic-title-mark">
+						<span th:text="${#messages.msg('menu.tm.tmm05')}"></span>
+					</div>
+					<div class="edit-btn-wrapper">
+						<button type="button" class="btn-navy btn-green" id="tmm06_save">
+							<img class="ic-bt-save">[[#{bt.save}]]
+						</button>
+					</div>
+				</div>
+				<div class="list-grid-wrapper con-box">
+					<div id="tmm06_pqgrid"></div>
+				</div>
+			</div>
+			<div class="search-list tab-content-left">
+				<div class="list-top">
+					<div class="list-title ic-title-mark">
+						<span th:text="${gnatitle}"></span>
+					</div>
+					<div class="edit-btn-wrapper">
+						<button class="btn-navy btn-green" id="tmm06_add">
+							<img class="ic-bt-add-g">[[#{bt.add}]]
+						</button>
+						<button class="btn-navy btn-green" id="tmm06_delete">
+							<img class="ic-bt-cancel-g">[[#{bt.delete}]]
+						</button>
+					</div>
+				</div>
+				<div class="list-grid-wrapper con-box">
+					<div id="tmm06_subGrid"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal fade modalTm" id="tmm06QtyModal" tabindex="-1"
+		role="dialog" aria-labelledby="tmm06QtyModalTitle" aria-hidden="true"
+		data-backdrop="static" data-keyboard="false">
+		<div class="modal-dialog modal-xl" role="document">
+			<div class="modal-content">
+				<div class="modal-top">
+					<h5 class="box-title" id="tmm06QtyModalTitle"></h5>
+					<button type="button" id="modalClose" class="close"
+						aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body col3">
+					<div class="search-conditions con-box">
+						<div class="setting-grid" id="tmm06ModalGrid_search">
+							<label for="tmm06_npck" class="setting-grid-title ic-title-nece">[[#{tm.tmm06.npck}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-group">
+									<select id="tmm06_npck" name="tmm06_npck" data-cb-val="combovl"
+										data-cb-name="combovl"
+										data-cb-url="/tm/area/tmm06/cdcate1list"
+										onchange="changeNpck(this)">
+									</select>
+								</div>
+							</div>
+							<label for="tmm06_ncak" class="setting-grid-title">[[#{tm.tmm06.ncak}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-group">
+									<select id="tmm06_ncak" name="tmm06_ncak" data-cb-val="combovl"
+										data-cb-name="combovl"
+										data-cb-url="/tm/area/tmm06/comcdtxlist?cdcate1=강원도">
+									</select>
+								</div>
+							</div>
+							<label for="tmm06_regichk" class="setting-grid-title">[[#{tm.tmm06.regichk}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-group">
+									<select id="tmm06_regichk" name="tmm06_regichk">
+										<option value="">[[#{tm.common.all}]]</option>
+										<option value="Y">[[#{tm.tmm06.Y}]]</option>
+										<option value="N">[[#{tm.tmm06.N}]]</option>
+									</select>
+								</div>
+							</div>
+							<label for="tmm06_nzipcd" class="setting-grid-title">[[#{tm.tmm06.postcod}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-wrapper tmm06">
+									<input type="text" id="tmm06_nzipcd"
+										th:placeholder="${#messages.msg('tm.tmm06.postcod')}">
+								</div>
+							</div>
+							<label for="tmm06_strnk" class="setting-grid-title">[[#{tm.tmm06.strnk}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-wrapper tmm06">
+									<input type="text" id="tmm06_strnk"
+										th:placeholder="${#messages.msg('tm.tmm06.strnk')}">
+								</div>
+							</div>
+							<label for="tmm06_ccadnm" class="setting-grid-title">[[#{tm.tmm06.ccadnm}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-wrapper tmm06">
+									<input type="text" id="tmm06_ccadnm"
+										th:placeholder="${#messages.msg('tm.tmm06.ccadnm')}">
+								</div>
+							</div>
+							<label for="tmm06_cabulnm" class="setting-grid-title">[[#{tm.tmm06.cabulnm}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-wrapper tmm06">
+									<input type="text" id="tmm06_cabulnm"
+										th:placeholder="${#messages.msg('tm.tmm06.cabulnm')}">
+								</div>
+							</div>
+							<label for="tmm06_bldmgno" class="setting-grid-title">[[#{tm.tmm06.bldmgno}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-wrapper tmm06">
+									<input type="text" id="tmm06_bldmgno"
+										th:placeholder="${#messages.msg('tm.tmm06.bldmgno')}">
+								</div>
+							</div>
+							<label for="tmm06_rdnm" class="setting-grid-title">[[#{tm.tmm06.rdnm}]]</label>
+							<div class="setting-grid-content">
+								<div class="input-wrapper tmm06">
+									<input type="text" id="tmm06_rdnm"
+										th:placeholder="${#messages.msg('tm.tmm06.rdnm')}">
+								</div>
+							</div>
+						</div>
+						<div class="search-btn-group">
+							<button id="tmm06_modalSearch"
+								class="btn-search btn-navy btn-green">
+								<img> <span>조회</span>
+							</button>
+						</div>
+					</div>
+					<div class="search-list">
+						<div class="list-top">
+							<div class="list-title ic-title-mark">
+								<span th:text="${gnatitle}"></span>
+							</div>
+						</div>
+						<div class="list-grid-wrapper con-box">
+							<div id="tmm06_modalGrid"></div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-bottom">
+					<button type="button" class="btn-white" id="tmm06_saveQtyModal">[[#{bt.add}]]</button>
+					<button type="button" class="btn-save btn-navy btn-green"
+						id="tmm06_closeQtyModal">[[#{bt.close}]]</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	/* *******************************************************
+	 * 최초 생성일시 : 2023-09-06
+	 * 최초 생성자 : 최재환
+	 * 설명 : 권역에 관해서 설정할 수 있는 마스터 화면입니다.
+	 *********************************************************/
+	 
+	const pageId = 'tmm06';
+	let grid;
+	let subGrid;
+	let tmm06GridUi;
+	let modalGrid;
+	let responseData;
+	let usernam;
+	let vehiList;
+	let warehouseList;
+	let trarekyList;
+	let groupList;
+	let warekey;
+	
+	$(function(){
+
+		_commonInit();
+
+		//============================================================
+		//그리드 CM
+		//============================================================
+		const tmm06GridCM = [
+			{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: { all: false, header: true}
+			},
+			{ title: '[[#{tm.tmm06.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tarehd.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true},
+			{ title: '[[#{grid.vhcsnam}]]' + ' ([[#{tm.tvhcma.vhcfnam}]])', dataType: 'string', dataIndx: 'trvehky',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				},
+				editor: {
+					type: 'select',
+					init: function(ui) {
+						ui.$cell.find('select').pqSelect();
+						setTimeout(function () {
+							ui.$cell.find('select').pqSelect('open');
+						}, 250);
+					},
+					options: function(ui){
+			            return vehiList;
+					},
+				},
+				render: function (ui) {
+					let option = vehiList.find(function (obj) {
+						return (obj.vehicky === ui.cellData);
+					});
+					ui.rowData.trvehky = option ? ui.cellData : '';
+					return option ? option.vhcsnam : '';
+				},
+			},
+			{ title: '[[#{tm.tarehd.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false},
+			{ title: '[[#{tm.tarehd.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false},
+			{ title: '[[#{tm.tarehd.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false},
+			{ title: '[[#{tm.tarehd.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false},
+			{ title: '[[#{tm.tarehd.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false},
+			{ title: '[[#{tm.tarehd.updtchk}]]', dataType: 'string', dataIndx: 'updtchk', editable: false, hidden: true},
+			{ title: '[[#{tm.tarehd.indibzl}]]', dataType: 'string', dataIndx: 'indibzl', editable: false, hidden: true},
+			{ title: '[[#{tm.tarehd.indiarc}]]', dataType: 'string', dataIndx: 'indiarc', editable: false, hidden: true},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'warekey', editable: false,
+				editor: {
+					type: 'select',
+					options: function(ui){
+			            return warehouseList;
+					},
+				},
+				render: function (ui) {
+					let option = warehouseList.find(function (obj) {
+						return (obj.combovl === ui.cellData);
+					});
+					ui.rowData.warekey = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				},
+			},
+			{ title: '[[#{tm.tmm06.trareky}]]', dataType: 'string', dataIndx: 'trareky', editable: false},
+			{ title: '[[#{tm.tmm06.trarenm}]]', dataType: 'string', dataIndx: 'trarenm',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead01}]]"
+				}
+			},
+			{ title: '[[#{tm.tmm06.tramemo}]]', dataType: 'string', dataIndx: 'tramemo',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				}
+			},
+			{ title: '[[#{tm.tmm06.truseyn}]]', dataType: 'string', dataIndx: 'truseyn',
+				styleHead: {
+					"background-color": "[[#{grid.styleHead02}]]"
+				},
+				align: 'center', type: 'checkbox', editor: false,
+				cb: {all: false, header: false, check: 'Y', uncheck: 'N'},
+				render: function(ui) {
+					let cb = ui.column.cb;
+					let cellData = ui.cellData;
+					let checked = cb.check === cellData ? 'checked' : '';
+				}
+			},
+			{ title: '[[#{tm.tarehd.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false}
+		]
+		
+		const tmm06SubGridCM = [
+			{title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: {all: false, header: true}
+			},
+			{ title: '[[#{tm.tmm06.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', hidden: true},
+			{ title: '[[#{tm.tareit.compkey}]]', dataType: 'string', dataIndx: 'compkey', hidden: true},
+			{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'warekey', hidden: true,
+				editor: {
+					type: 'select',
+					options: function(ui){
+			            return warehouseList;
+					},
+				},
+				render: function (ui) {
+					let option = warehouseList.find(function (obj) {
+						return (obj.combovl === ui.cellData);
+					});
+					ui.rowData.warekey = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				},
+			},
+			{ title: '[[#{tm.tarehd.trarenm}]]', dataType: 'string', dataIndx: 'trareky', hidden: true,
+				editor: {
+					type: 'select',
+					options: function(ui){
+			            return trarekyList;
+					},
+				},
+				render: function (ui) {
+					let option = trarekyList.find(function (obj) {
+						return (obj.combovl === ui.cellData && obj.warekey === ui.rowData.warekey);
+					});
+					ui.rowData.trareky = option ? ui.cellData : '';
+					return option ? option.combonm : '';
+				},
+			},
+			{ title: '[[#{tm.tareit.trareit}]]', dataType: 'string', dataIndx: 'trareit', hidden: true},
+			{ title: '[[#{tm.tmm06.postcod}]]', dataType: 'string', dataIndx: 'postcod', editable: false},
+			{ title: '[[#{tm.tmm06.npck}]]', dataType: 'string', dataIndx: 'npck', editable: false},
+			{ title: '[[#{tm.tmm06.ncak}]]', dataType: 'string', dataIndx: 'ncak', editable: false},
+			{ title: '[[#{tm.tmm06.strnk}]]', dataType: 'string', dataIndx: 'strnk', editable: false},
+			{ title: '[[#{tm.tmm06.ccadnm}]]', dataType: 'string', dataIndx: 'ccadnm', editable: false},
+			{ title: '[[#{tm.tmm06.admnm}]]', dataType: 'string', dataIndx: 'admnm', editable: false}
+		]
+
+		const tmm06ModalGridCM = [
+			{title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: {all: false, header: true}
+			},
+			{ title: '[[#{tm.tmm06.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', hidden: true},
+			{ title: '[[#{tm.tmm06.postcod}]]', dataType: 'string', dataIndx: 'nzipcd', editable: false},
+			{ title: '[[#{tm.tmm06.npck}]]', dataType: 'string', dataIndx: 'npck', editable: false},
+			{ title: '[[#{tm.tmm06.ncak}]]', dataType: 'string', dataIndx: 'ncak', editable: false},
+			{ title: '[[#{tm.tmm06.strnk}]]', dataType: 'string', dataIndx: 'strnk', editable: false},
+			{ title: '[[#{tm.tmm06.bldmgno}]]', dataType: 'string', dataIndx: 'bldmnBldsm', editable: false},
+			{ title: '[[#{tm.tmm06.ccadnm}]]', dataType: 'string', dataIndx: 'ccadnmAdmnmVtk', editable: false},
+			{ title: '[[#{tm.tmm06.rinm}]]', dataType: 'string', dataIndx: 'rinm', editable: false},
+			{ title: '[[#{tm.tmm06.sannm}]]', dataType: 'string', dataIndx: 'sannm', editable: false},
+			{ title: '[[#{tm.tmm06.rdnmRdsnm}]]', dataType: 'string', dataIndx: 'rdnmRdsnm', editable: false},
+			{ title: '[[#{tm.tmm06.admnm}]]', dataType: 'string', dataIndx: 'admnm', editable: false},
+			{ title: '[[#{tm.tmm06.cabulnm}]]', dataType: 'string', dataIndx: 'cabulnm', editable: false},
+			{ title: '[[#{tm.tmm06.trarenm}]]', dataType: 'string', dataIndx: 'trarenm', editable: false}
+		]
+
+		const tmm06Grid = new GridUtil(tmm06GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+		const tmm06SubGrid = new GridUtil(tmm06SubGridCM, '[[${gprogrid}]]', pageId + '_subGrid');
+		const tmm06ModalGrid = new GridUtil(tmm06ModalGridCM, '[[${gprogrid}]]', pageId + '_modalGrid');
+
+		tmm06Grid.setCheck(function(evt, ui){
+			subGrid = pq.grid('#' + pageId + '_subGrid');
+			if(ui.check){
+				tmm06GridUi = ui;
+				let count=0;
+				tmm06SubGrid.getGrid().getData().forEach(function(el){
+				    if(el.state){
+				    	count++;
+				    }
+				});
+				if(count){
+					if(confirm('[[#{ms.listViewRollback}]]')){
+						this.Checkbox('state').unCheckAll(); // 하나만 클릭
+						ui.rowData.state = true;
+						this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+					}else{
+						ui.rowData.state = false;
+						this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+					}
+				}
+				else{
+					this.Checkbox('state').unCheckAll(); // 하나만 클릭
+					ui.rowData.state = true;
+					this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+					tmm06_itemInitData(ui);
+				}
+			}else{
+				subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+				subGrid.refreshDataAndView();
+				subGrid.hideLoading();
+			}
+		});
+
+		tmm06Grid.setRowDblClick(function(event, ui) {
+			tmm06GridUi = ui;
+			tmm06_itemInitData(ui);
+		});
+
+		tmm06Grid.setChange(async function(event, ui){
+        	if(ui.source === 'edit'){
+        		this.updateRow( {
+		   			rowIndx : ui.updateList[0].rowIndx,
+		   		    newRow : { state : true },
+		   		    checkEditable: false
+		   		});
+
+        		if(ui.updateList[0].newRow.trarenm && ui.updateList[0].newRow.trarenm.length>60){
+        			alert('[[#{tm.tmm06.trarenm}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(60)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { trarenm : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'trarenm',
+					});
+					return;
+        		}
+        		if(ui.updateList[0].newRow.tramemo && ui.updateList[0].newRow.tramemo.length>100){
+        			alert('[[#{tm.tmm06.tramemo}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(100)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { tramemo : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'tramemo',
+					});
+					return;
+        		}
+        	}else if(ui.source === 'paste'){
+
+        		this.updateRow( {
+		   			rowIndx : ui.updateList[0].rowIndx,
+		   		    newRow : { state : true },
+		   		    checkEditable: false
+		   		});
+
+        		if(ui.updateList[0].newRow.trarenm && ui.updateList[0].newRow.trarenm.length>60){
+        			alert('[[#{tm.tmm06.trarenm}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(60)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { trarenm : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'trarenm',
+					});
+					return;
+        		}
+        		if(ui.updateList[0].newRow.tramemo && ui.updateList[0].newRow.tramemo.length>100){
+        			alert('[[#{tm.tmm06.tramemo}]]'+'[[#{ms.be1}]]' +' [[#{ms.validations.maxLenLength(100)}]]');
+					this.updateRow( {
+			   			rowIndx : ui.updateList[0].rowIndx,
+			   		    newRow : { tramemo : '' },
+			   		    checkEditable: false
+			   		});
+					this.editCell({
+						rowIndx: ui.updateList[0].rowIndx,
+						dataIndx: 'tramemo',
+					});
+					return;
+        		}
+
+        	}
+        });
+
+		//============================================================
+		//그리드 create 이벤트
+		//============================================================
+		tmm06Grid.setCreate(async function (evt, ui) {
+
+			await initData();
+		});
+
+		//============================================================
+		//그리드 add 이벤트
+		//============================================================
+		tmm06Grid.setAdd(async function (evt, ui) {
+				grid = pq.grid('#' + pageId + '_pqgrid');
+				await initData($('#' + pageId + '_warekey').val());
+				await usernamData();
+				const rowData = {
+						state: true,
+						compkey: '[[${userattr.compkey}]]',
+						warekey: $('#' + pageId + '_warekey').val(),
+						truseyn: 'Y',
+						creuser: usernam,
+						indibzl: 'N'
+				}
+				const rowIndx = this.addRow({
+					rowData: rowData,
+					checkEditable: false
+				});
+				grid.focus({rowIndxPage: grid.pdata.length-1, colIndx: $('#' + pageId + '_pqgrid').pqGrid( 'getColIndx', { dataIndx: 'state'} )});
+		});
+
+		tmm06Grid.setFind();
+		tmm06Grid.setReset();
+
+		tmm06SubGrid.setFind();
+		tmm06SubGrid.setReset();
+
+		tmm06ModalGrid.setFind();
+		tmm06ModalGrid.setReset();
+
+		tmm06Grid.open();
+		tmm06SubGrid.open();
+		tmm06ModalGrid.open();
+
+		$('#' + pageId + '_search').click(async function () {
+			// 검색버튼 클릭 시 데이터 조회
+			await tmm06_initData();
+		});
+		$('#' + pageId + '_reset').click(function() {
+
+			$('#' + pageId + '_trarenm').val('');
+			$('#' + pageId + '_postcod').val('');
+			$('#' + pageId + '_vhcsnam').val('');
+			$('#' + pageId + '_warekey').val($('#' + pageId + '_warekey option:first').val());
+			$('#' + pageId + '_truseyn').val($('#' + pageId + '_truseyn option:first').val());
+
+			grid = pq.grid('#' + pageId + '_pqgrid');
+			subGrid = pq.grid('#' + pageId + '_subGrid');
+
+			grid.showLoading();
+			subGrid.showLoading();
+
+			grid.option('dataModel', {data: []}); // 해당 그리드 초기화
+			subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+			subGrid.refreshDataAndView();
+			subGrid.hideLoading();
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+
+		});
+
+	});
+
+	//============================================================
+	//데이터 조회
+	//============================================================
+	async function tmm06_initData() {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+
+		const data = {
+				// 검색할 조건을 가지고 있는 변수
+				warekey: $('#' + pageId + '_warekey').val(),
+				trarenm: $('#' + pageId + '_trarenm').val().replace(/(\s*)/g, ''),
+				postcod: $('#' + pageId + '_postcod').val().replace(/(\s*)/g, ''),
+				vhcsnam: $('#' + pageId + '_vhcsnam').val().replace(/(\s*)/g, ''),
+				truseyn: $('#' + pageId + '_truseyn').val()
+		}
+		grid.showLoading();
+		try{
+			const response = await fetchUtil('GET', "/tm/area/tmm06/grids/1", data);
+
+	//============================================================
+	//그리드 Option
+	//============================================================
+			if(response.status === 200) {
+				const resContent = await response.json();
+
+				grid.option('dataModel', {
+					data: resContent,
+					recIndx: 'rowkey'
+				});
+
+				subGrid.option('dataModel', {data: []});
+
+				grid.refreshDataAndView();
+				grid.hideLoading();
+
+				subGrid.refreshDataAndView();
+				subGrid.hideLoading();
+			}
+		} catch(err){
+			alert('[[#{ms.fetchError}]]');
+		} finally{
+			grid.hideLoading();
+		}
+	}
+
+	//============================================================
+	//차량리스트 조회
+	//============================================================
+	async function initData(warekey) {
+		
+		warehouseList = await fetchUtil('GET', '/md/common/organization/warehouse-user', {});
+		warehouseList = await warehouseList.json();
+
+		vehiList = await fetchUtil('GET', '/tm/area/tmm06/vehilist', {warekey: $('#' + pageId + '_warekey').val()});
+		vehiList = await vehiList.json();
+
+		trarekyList = await fetchUtil('GET', '/tm/area/tmm06/trarekylist', {});
+		trarekyList = await trarekyList.json();
+
+		comboCreateData(pageId + '_pqgrid', 'trvehky', vehiList, {combovl: 'vehicky', combonm: 'vhcsnam'});
+	}
+
+	//============================================================
+	//USERNAM 생성
+	//============================================================
+	async function usernamData(){
+
+		usernam = await fetchUtil('GET', '/tm/area/common/usernam');
+		usernam = await usernam.text();
+	}
+
+	//============================================================
+	//그리드 render
+	//============================================================
+	function gridRender(ui) {
+
+		let option = ui.column.editor.options.find(function (obj) {
+			return (obj[ui.cellData] != null);
+		});
+		return option ? option[ui.cellData] : ui.rowData.trvehky;
+	}
+
+	//============================================================
+	// 권역 아이템조회
+	//============================================================
+	async function tmm06_itemInitData(ui){
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		if(ui.rowData.rowkey){
+			const data = {
+					compkey: '[[${userattr.compkey}]]',
+					trareky : ui.rowData.trareky,
+					warekey : ui.rowData.warekey
+					};
+
+			subGrid.showLoading();
+
+			try{
+				const response = await fetchUtil('GET', "/tm/area/tmm06/grids/2", data);
+
+				//============================================================
+				//그리드 Option
+				//============================================================
+				if(response.status === 200) {
+					const resContent = await response.json();
+
+					subGrid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+				}
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				subGrid.hideLoading();
+			}
+		}
+	}
+
+	//============================================================
+	//저장
+	//============================================================
+	$('#' + pageId + '_save').click(async function() {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+
+		const gridCheck = grid.Checkbox('state').getCheckedNodes();
+		const gridChange = grid.getChanges({all : true});
+
+		if(!gridCheck.length){
+			alert('[[#{ms.choiceRowZero}]]');
+			return false;
+		}
+
+		if(gridCheck.length) {
+			for(let i=0; i<gridCheck.length; i++) {
+				if(!gridCheck[i].compkey) {
+					alert('[[#{tm.tarehd.compkey}]] ' + '[[#{ms.requiredValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'compkey' });
+					return;
+				}
+				if(!gridCheck[i].warekey) {
+					alert('[[#{tm.tarehd.warekey}]] ' + '[[#{ms.choiceValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'warekey' });
+					return;
+				}
+				if(!gridCheck[i].trarenm) {
+					alert('[[#{tm.tarehd.trarenm}]] ' + '[[#{ms.requiredValue}]]');
+					grid.editCell( { rowIndx: gridCheck[i].pq_ri, dataIndx: 'trarenm' });
+					return;
+				}
+			}
+		}
+
+
+		if(confirm('[[#{ms.checksave}]]')) {
+
+			const checkAddList = gridChange.addList.filter(function(e) {
+				// 체크된 로우만 필터
+				return e.state;
+			});
+
+			const checkUpdateList = gridChange.updateList.filter(function(e) {
+				// 체크된 로우만 필터
+				return e.state;
+			});
+
+			const data = {
+					addList: checkAddList,
+					updateList: checkUpdateList
+			}
+			try {
+				const response = await fetchUtil('POST', '/tm/area/tmm06/tarehdsave', data);
+
+				if(response.status === 200) {
+
+					subGrid.option('dataModel', {data: []});
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+
+					await tmm06_initData();
+				}else {
+					alert('[[#{ms.saveErr}]]');
+				}
+			}catch(err) {
+				alert('[[#{ms.saveErr}]]');
+			}finally {
+				grid.hideLoading();
+			}
+		}
+	});
+
+	//============================================================
+	// 우편번호 조회
+	//============================================================
+	async function tmm06_initPostData() {
+		modalGrid = pq.grid('#' + pageId + '_modalGrid');
+
+		let rdnm = document.querySelector('#' + pageId + '_rdnm').value;
+
+		let rdnmSplit = rdnm.split('-');
+		if(rdnm){
+			// 지번주소 검색 시 validation
+		for(let i = 0;i<rdnmSplit.length;i++){
+			if(!rdnmSplit[i]){
+				alert('[[#{tm.tmm06.rdnm}]]'+'[[#{ms.checkValue}]]');
+				return false;
+			}
+		}
+		}
+		if(rdnmSplit.length>2){
+			alert('[[#{tm.tmm06.rdnm}]]'+'[[#{ms.checkValue}]]');
+			return false;
+		}
+
+		let bldmgno = document.querySelector('#' + pageId + '_bldmgno').value;
+		let bldmgnoSplit = bldmgno.split('-');
+		if(bldmgno){
+			// 건물번호 검색 시 validation
+		for(let i = 0;i<bldmgnoSplit.length;i++){
+			if(!bldmgnoSplit[i]){
+				alert('[[#{tm.tmm06.bldmgno}]]'+'[[#{ms.checkValue}]]');
+				return false;
+			}
+		}
+		}
+
+		if(bldmgnoSplit.length>2){
+			alert('[[#{tm.tmm06.bldmgno}]]'+'[[#{ms.checkValue}]]');
+			return false;
+		}
+
+		const data = {
+				// 검색할 조건을 가지고 있는 변수
+				npck: $('#' + pageId + '_npck').val(),
+				ncak: $('#' + pageId + '_ncak').val() ? $('#' + pageId + '_ncak').val() : '',
+				regichk: $('#' + pageId + '_regichk').val(),
+				nzipcd: $('#' + pageId + '_nzipcd').val().replace(/(\s*)/g, ''),
+				strnk: $('#' + pageId + '_strnk').val().replace(/(\s*)/g, ''),
+				ccadnmAdmnmVtk: $('#' + pageId + '_ccadnm').val().replace(/(\s*)/g, ''),
+				cabulnm: $('#' + pageId + '_cabulnm').val().replace(/(\s*)/g, ''),
+				bldmnBldsm: $('#' + pageId + '_bldmgno').val().replace(/(\s*)/g, ''),
+				rdnmRdsnm: $('#' + pageId + '_rdnm').val().replace(/(\s*)/g, '')
+		}
+		modalGrid.showLoading();
+		try{
+			const response = await fetchUtil('GET', "/tm/area/tmm06/mpostmlist", data);
+
+			//============================================================
+			//그리드 Option
+			//============================================================
+			if(response.status === 200) {
+				const resContent = await response.json();
+
+				modalGrid.option('dataModel', {
+					data: resContent,
+					recIndx: 'rowkey'
+				});
+
+				modalGrid.refreshDataAndView();
+				modalGrid.hideLoading();
+			}
+		} catch(err){
+			alert('[[#{ms.fetchError}]]');
+		} finally{
+			modalGrid.hideLoading();
+		}
+	}
+
+	//============================================================
+	//우편번호 삭제
+	//============================================================
+
+	$('#tmm06_delete').click(async function() {
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		const subGridCheck = subGrid.Checkbox('state').getCheckedNodes();
+
+		if(!subGridCheck.length){
+			alert('[[#{ms.choiceRowZero}]]');
+			return;
+		}
+
+		const result = confirm('[[#{ms.checkdele}]]');
+
+		if(result === true) {
+
+			const data = {
+				deleteList: subGridCheck
+			}
+			subGrid.showLoading();
+			try {
+				const response = await fetchUtil('POST', '/tm/area/tmm06/tareitdelete', data);
+
+				if(response.status === 200) {
+					// 저장 성공 후 데이터 조회
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+
+					await tmm06_itemInitData(tmm06GridUi);
+				}
+			}catch(err) {
+				alert('[[#{ms.saveErr}]]');
+			}finally {
+				subGrid.hideLoading();
+			}
+		}
+	});
+
+	$('#' + pageId + '_add').click(async function() {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+
+		const gridCheck = grid.Checkbox('state').getCheckedNodes();
+
+		if(!gridCheck.length){
+			alert('[[#{ms.choiceRowZero}]]');
+			return;
+		}
+
+		const rowkeyCheckList = gridCheck.filter(function(e) {
+			return e.rowkey;
+		});
+
+		if(!rowkeyCheckList.length){
+			alert('[[#{tm.tmm06.trareky}]]' + ' [[#{ms.datanotfound}]]');
+			return;
+		}
+
+		$('#' + pageId + 'QtyModal').modal('show');
+
+	});
+
+
+	async function changeNpck(obj){
+		// obj.value 로 await init 후
+		obj.removeAttribute('data-cb-val');
+		obj.removeAttribute('data-cb-name');
+		obj.removeAttribute('data-cb-url');
+		await tmm06_comboData(obj.value);
+	}
+
+	async function tmm06_comboData(cdcate1) {
+
+		document.querySelector('#tmm06_ncak').setAttribute('data-cb-val', 'combovl');
+		document.querySelector('#tmm06_ncak').setAttribute('data-cb-name', 'combovl');
+		document.querySelector('#tmm06_ncak').setAttribute('data-cb-url', '/tm/area/tmm06/comcdtxlist?cdcate1='+cdcate1);
+
+		await _commonInit();
+
+		return responseData;
+	}
+
+	//============================================================
+	//모달 오픈
+	//============================================================
+
+	function modalOpen(){
+
+		$('#' + pageId + 'QtyModal').modal('show');
+
+	};
+
+	//============================================================
+	//  모달 화면 이벤트
+	//============================================================
+
+	$('#' + pageId + '_saveQtyModal').click(async function () {
+		await tmm06QtyModalAction();
+	});
+
+	//모달 open 시 값 초기화
+	$('#' + pageId + 'QtyModal').on('shown.bs.modal', function() {
+		modalGrid = pq.grid('#' + pageId + '_modalGrid');
+		$('#' + pageId + '_npck').find('option:first').prop('selected', true);
+		$('#' + pageId + '_ncak').find('option:first').prop('selected', true);
+		$('#' + pageId + '_regichk').find('option:first').prop('selected', true);
+		$('#' + pageId + '_nzipcd').val('');
+		$('#' + pageId + '_strnk').val('');
+		$('#' + pageId + '_ccadnm').val('');
+		$('#' + pageId + '_cabulnm').val('');
+		$('#' + pageId + '_bldmgno').val('');
+		$('#' + pageId + '_rdnm').val('');
+
+		modalGrid.option('dataModel', {data: []});
+
+		modalGrid.refreshDataAndView();
+		modalGrid.hideLoading();
+	});
+
+	//modal close button click
+
+	$('#' + pageId + '_closeQtyModal, #modalClose').click(async function() {
+
+		$('#' + pageId + 'QtyModal').modal('hide');
+
+		$('#' + pageId + '_npck').find('option:first').prop('selected', true);
+		await changeNpck(document.querySelector('#tmm06_npck'));
+
+	});
+
+	$('#' + pageId + '_modalSearch').click(async function(){
+
+		await tmm06_initPostData();
+
+	});
+
+
+	//=======================================================
+  	// 모달 SAVE 후 실행하는 이벤트
+  	//=======================================================
+     async function tmm06QtyModalAction() {
+    	grid = pq.grid('#' + pageId + '_pqgrid');
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		modalGrid = pq.grid('#' + pageId + '_modalGrid');
+
+		const modalGridCheck = modalGrid.Checkbox('state').getCheckedNodes();
+		const subGridData = subGrid.getData();
+
+	    for(let i = 0;i<modalGridCheck.length;i++){
+	    	// 모달 내 우편번호가 해당 권역의 동일한 우편번호설정이 되어있는 경우
+	    	for(let j = 0;j<subGridData.length;j++){
+	    		if(modalGridCheck[i]['nzipcd']===subGridData[j]['postcod']){
+	    			alert('[[#{tm.tmm06.postcod}]] ' + modalGridCheck[i]['nzipcd'] +' [[#{ms.DuplicateKeyErr}]]');
+	    			return;
+	    		}
+	    	}
+		}
+
+		const gridCheck = grid.Checkbox('state').getCheckedNodes();
+
+		const gridChange = grid.getChanges({all: true});
+		const modalGridChange = modalGrid.getChanges({all: true});
+
+		if(!gridCheck.length || !modalGridCheck.length){
+			alert('[[#{ms.choiceRowZero}]]');
+			return;
+		}
+		const rowkeyCheckList = gridCheck.filter(function(e) {
+			return e.rowkey;
+		});
+
+		let lastIndxChkList = [];
+		lastIndxChkList.push(rowkeyCheckList[rowkeyCheckList.length-1]);
+
+		modalGridChange.addList = modalGridCheck;
+
+		gridChange.updateList = gridCheck;
+
+		const result = confirm(lastIndxChkList[0].trarenm +'[[#{ms.be4}]]'+' [[#{ms.checksave}]]');
+
+		if(result === true) {
+
+			const data = {
+				headGrid: gridChange,
+				itemGrid: modalGridChange
+			}
+			subGrid.showLoading();
+			modalGrid.showLoading();
+			try {
+				// fetchUtil 사용할 경우 메세지 처리 불가하여, 자바스크립트 내장 fetch 사용 후 화면에서 메세지 처리
+				// 우편번호가 다른권역에 존재할 경우 unique key exception 혹은 다른 db 경로 저장 오류 발생 -> '저장 실패 메세지 처리'
+				const response = await fetch(rPath+'/tm/area/tmm06/tareitsave', {
+					method: 'POST', // POST 메서드 설정
+					headers: {
+					    'Content-Type': 'application/json', // JSON 형식으로 데이터 전송을 나타냄
+					    // 기타 필요한 헤더 설정 가능
+					},
+					body: JSON.stringify(data), // 객체를 JSON 문자열로 변환하여 전송
+				});
+				if(!response.ok) {
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+					response.json();
+					// 저장 성공 후 데이터 조회
+					modalGrid.refreshDataAndView();
+					modalGrid.hideLoading();
+
+					modalGrid.option('dataModel', {data: []});
+
+					modalGrid.refreshDataAndView();
+					modalGrid.hideLoading();
+
+					$('#' + pageId + 'QtyModal').modal('hide');
+
+					await tmm06_itemInitData(tmm06GridUi);
+
+			}catch(error) {
+				alert('[[#{tm.tmm06.postcod}]]'+' [[#{ms.saveErr}]]');
+			}finally {
+				subGrid.hideLoading();
+				modalGrid.hideLoading();
+			}
+		}
+	};
+	//============================================================
+	//검색 엔터키 이벤트
+	//============================================================
+
+    async function enterKeySearch(event) {
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		modalGrid = pq.grid('#' + pageId + '_modalGrid');
+
+        if (event.key === 'Enter') {
+			if(event.target.parentNode.parentNode.parentNode === document.querySelector('div[id*="'+pageId+'Modal"]')){
+				// 이벤트 발생시 모달의 input-wrapper 인 경우
+				modalGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+				modalGrid.refreshDataAndView();
+				modalGrid.hideLoading();
+
+				await tmm06_initPostData();
+			}
+			else{
+				// 엔터키 이벤트가 모달이 아닌 input-wrapper 인경우
+				subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+				subGrid.refreshDataAndView();
+				subGrid.hideLoading();
+
+				await tmm06_initData(); // 헤드그리드 재조회
+			}
+
+        }
+    }
+
+    // 모든 input 요소 가져오기
+    const inputElements = document.querySelectorAll('.input-wrapper.' + pageId);
+    const gridSearchList = [];
+    const modalSearchList = [];
+    inputElements.forEach(inputElement => {
+    	// input-wrapper 에 pageId 로 구분(탭화면 및 모달 페이지 아이디로 구분)
+    	if(inputElement.parentNode.parentNode === document.querySelector('div[id*="'+pageId+'Modal"]')){
+    		modalSearchList.push(inputElement);
+    	}else{
+    		gridSearchList.push(inputElement);
+    	}
+    });
+
+    // 각 input 요소에 이벤트 리스너 추가
+    gridSearchList.forEach(input => {
+        input.addEventListener('keyup', enterKeySearch);
+    });
+    modalSearchList.forEach(input => {
+        input.addEventListener('keyup', enterKeySearch);
+    });
+
+    // warekey change event. 추가된 그리드 row 존재 시 초기화 여부 confirm. 확인 시 초기화, 취소 시 원래 값 보존.
+	document.querySelector('#tmm06_warekey').addEventListener('change', async function() {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		const gridData = grid.getData();
+		const gridCheckData = gridData.filter(function(e){
+			return e.state;
+		});
+		if(gridCheckData.length){
+			if(!confirm('[[#{ms.listViewRollback}]]')){
+				document.querySelector('#tmm06_warekey').value = warekey;
+				return;
+			}
+			grid.option('dataModel', { data: [] });
+			grid.refreshDataAndView();
+			subGrid.option('dataModel', { data: [] });
+			subGrid.refreshDataAndView();
+		}
+		warekey = document.querySelector('#tmm06_warekey').value;
+		await initData();
+	});
+
+	</script>
+</html>

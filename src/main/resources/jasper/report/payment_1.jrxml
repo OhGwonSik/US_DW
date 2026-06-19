@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.20.1.final using JasperReports Library version 6.20.1-7584acb244139816654f64e2fd57a00d3e31921e  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Blank_A4_3" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="10" uuid="c99bef8c-65d6-4b7e-8066-37cad0fd3fe3">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="Runtime"/>
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.unit." value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.topMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.bottomMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.leftMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.rightMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnSpacing" value="pixel"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="skumkey" class="java.lang.String"/>
+	<field name="skudesc" class="java.lang.String"/>
+	<field name="asndqty" class="java.lang.Integer"/>
+	<field name="skuat03" class="java.lang.String"/>
+	<field name="amount" class="java.lang.String"/>
+	<field name="asnmemo" class="java.lang.String"/>
+	<field name="eoasnky" class="java.lang.String"/>
+	<field name="copodky" class="java.lang.String"/>
+	<field name="ownerky" class="java.lang.String"/>
+	<field name="reqdate" class="java.lang.String"/>
+	<field name="denamlc" class="java.lang.String"/>
+	<field name="auomkey" class="java.lang.String"/>
+	<field name="rownum" class="java.lang.Integer"/>
+	<field name="truntyp" class="java.lang.String"/>
+	<group name="ReportCount" isStartNewPage="true">
+		<groupExpression><![CDATA[new Boolean($V{COLUMN_COUNT}<=8)]]></groupExpression>
+		<groupHeader>
+			<band height="30">
+				<staticText>
+					<reportElement x="0" y="0" width="30" height="30" uuid="b8099b63-85e2-4a76-a979-d8dcf0043408"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[순위]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="30" y="0" width="96" height="30" uuid="2a3c0021-f3a1-4434-bd0b-7330e9319fed"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[부품코드]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="126" y="0" width="96" height="30" uuid="e5f975fd-e1ab-4501-a1e6-8e161ddf3e00"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[부품명]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="222" y="0" width="48" height="30" uuid="4bc45c89-38d5-4457-8be4-2f770fae0338"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[납입수량]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="270" y="0" width="50" height="30" uuid="925f1e12-460b-4de4-9bd8-642c0a6c2a34"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[ALC]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="320" y="0" width="50" height="30" uuid="65321c86-7b0e-47a4-a6b7-4eb2f111cd4b"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[단위]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="421" y="0" width="64" height="30" uuid="84ba486f-819c-4986-896e-e3c57b892404"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[용기당수량]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="485" y="0" width="70" height="30" uuid="c4d79860-176f-4fc8-9d85-01cf6d70afc7"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[비고]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="370" y="0" width="51" height="30" uuid="7c4477b5-b2b3-471b-92d4-0888e1e104f6"/>
+					<box>
+						<pen lineWidth="0.25"/>
+						<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+						<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Jasper나눔고딕" size="8" isBold="true"/>
+					</textElement>
+					<text><![CDATA[용기]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<columnHeader>
+		<band height="111" splitType="Stretch">
+			<staticText>
+				<reportElement x="0" y="43" width="45" height="17" uuid="1caf6dce-27ae-4f1b-95da-a9e37a896b83"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<text><![CDATA[납품서NO : ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="60" width="30" height="17" uuid="2019d229-5847-47e5-a821-eafad4ac30b3"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<text><![CDATA[공급자 : ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="77" width="40" height="17" uuid="d0f6befb-23b4-4a78-a641-1126009c6ae9"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<text><![CDATA[납품일시 : ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="440" y="41" width="45" height="17" uuid="1fc4f296-a851-4336-97d6-51be257b023d"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<text><![CDATA[ASN 번호 : ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="94" width="30" height="17" uuid="31960766-8f68-4385-8c09-ad72ea5c0ff9"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<text><![CDATA[납품처 : ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="210" y="0" width="140" height="30" uuid="eca4c84c-4340-4336-ae72-3dc4532835fc"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[납입카드(갑) [현대인]]]></text>
+			</staticText>
+			<componentElement>
+				<reportElement x="480" y="60" width="68" height="50" uuid="db8ef457-0260-4657-a699-a614f7d83747"/>
+				<jr:QRCode xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<jr:codeExpression><![CDATA[$F{eoasnky}]]></jr:codeExpression>
+				</jr:QRCode>
+			</componentElement>
+			<textField>
+				<reportElement x="30" y="60" width="100" height="17" uuid="12b9b3fc-2922-4766-ad5b-07323c1e57fb"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ownerky}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="30" y="94" width="100" height="17" uuid="3fa099fc-fc13-4dbb-b8ec-34a44e507ad5"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{denamlc}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="485" y="41" width="70" height="17" uuid="d30b8a68-ee57-494d-b24c-f9675c0382e1"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{eoasnky}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="40" y="77" width="90" height="17" uuid="2cf23208-24eb-4784-a13b-adfa231d0764"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{reqdate}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="45" y="43" width="85" height="17" uuid="815ea135-4a2b-4bdb-b1b6-1257a13fc582"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{copodky}]]></textFieldExpression>
+			</textField>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="25" splitType="Stretch">
+			<textField>
+				<reportElement x="30" y="0" width="96" height="25" uuid="294f7fc2-5285-4504-b08f-a4e5fcbd2ce7">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="5f1374b7-8951-417a-b7a7-bb6dcc427637"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{skumkey}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="126" y="0" width="96" height="25" uuid="18249a83-78a7-4c91-b1dd-86421bf088a2">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="5a5096da-0b8f-4358-a8d0-684a9436d859"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{skudesc}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="222" y="0" width="48" height="25" uuid="a54411a7-9ca0-4dd1-9bb5-5c063f6f91ac">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="4cbbdd2b-4dde-4578-9641-9de3a28e4402"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{asndqty}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="270" y="0" width="50" height="25" uuid="6ff18f9d-d40a-4e50-b937-50296d74045c">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="7d1a52c1-d902-4d71-84da-29d01b72a9dd"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{skuat03}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="320" y="0" width="50" height="25" uuid="ecd0602a-add6-4fa9-bc97-4c5ae795b17a">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="ece79cbe-95f8-4f18-b475-158810f5c792"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{auomkey}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="421" y="0" width="64" height="25" uuid="a85e7b95-a377-401b-a270-6b2708068006">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="cf5d6233-f990-489a-8997-18640c1a22cd"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="485" y="0" width="70" height="25" uuid="6aec42c2-a2ae-4a4c-8cc9-8165f0ef7a9b">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="c797c183-7dd7-4aae-ba41-0d15ae4a0184"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{asnmemo}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="0" y="0" width="30" height="25" uuid="bc7ffb9d-0ed2-4253-9c24-73c3504684be">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="fd2cab74-15bc-40ea-a581-a339a9249ea6"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{rownum}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="370" y="0" width="51" height="25" uuid="15a52f91-c704-45c1-a7aa-23f936fe5316">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="ece79cbe-95f8-4f18-b475-158810f5c792"/>
+				</reportElement>
+				<box>
+					<pen lineWidth="0.25"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Jasper나눔고딕" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{truntyp}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

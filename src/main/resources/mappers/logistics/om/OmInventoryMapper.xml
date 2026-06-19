@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.om.mapper.OmInventoryMapper">
+	
+	<!-- OMI01(재고현황조회) 조회 -->
+	<select id="selectInventoryList" resultType="com.logistics.om.domain.OmInventoryVO">
+		/*selectInventoryList*/
+	      SELECT 
+	         CONCAT(WK.COMPKEY, WK.OWNERKY , WK.OWNERKY, WK.SKUMKEY) as ROWKEY
+	         ,WK.COMPKEY, WK.STOCKKY, MW.WHNAMLC as WAREKEY, MA.AREANAM as AREAKEY
+	         ,MZ.ZONENAM as ZONEKEY, ML.LOCANAM as LOCAKEY, WK.SUBSECT, WK.TRUNTYP
+	         ,WK.TRUNPID, WK.LOTNMKY, MO.OWNAMLC as OWNERKY, MS.SKUMKEY
+	         ,MS.SKUDESC, WK.VENDKEY, WK.SIRBCOD, WK.STOTQTY
+	         ,WK.SALLQTY, WK.SINBQTY, WK.SOUBQTY, WK.SBLOQTY
+	         ,MS.SUOMKEY, date_format(str_to_date(WK.PRODDAT, '%Y%m%d'), '%Y-%m-%d') as PRODDAT, WK.SHELIFE, WK.EXPIDAT
+	         , WK.LOTFRKY, WK.LOTAT01
+	         ,WK.LOTAT02, WK.LOTAT03, WK.LOTAT04, WK.LOTAT05
+	         ,WK.LOTAT06, WK.LOTAT07, WK.LOTAT08, WK.LOTAT09
+	         ,WK.LOTAT10, WK.LOTAT11, WK.LOTAT12, WK.LOTAT13
+	         ,WK.LOTAT14, WK.LOTAT15, WK.LOTAT16, WK.LOTAT17
+	         ,WK.LOTAT18, WK.LOTAT19, WK.LOTAT20, MC.COMCDTX as STKSTAT      
+	         ,WK.BLOCKID, WK.PHYSROW, WK.PHYSSEC, WK.PHYSFLO
+	         ,WK.RCVDCKY, WK.RCVDCIT, WK.TASKOKY, WK.TASKOIT
+	         ,WK.ADJSOKY, WK.ADJSOIT, WK.PHYSOKY, WK.PHYSOIT
+	         ,WK.STORFKY, WK.DOCCATE, WK.DOCTYPE, WK.CREDATE
+	         ,WK.CRETIME, WK.CREUSER, WK.LMODATE, WK.LMOTIME
+	         ,WK.LMOUSER, WK.INDIBZL, WK.INDIARC, WK.UPDTCHK
+	      FROM 
+	         WSTKKY WK
+	      INNER JOIN MSKUWC MS
+	         ON WK.COMPKEY = MS.COMPKEY
+	        AND WK.WAREKEY = MS.WAREKEY
+	        AND WK.OWNERKY = MS.OWNERKY
+	        AND WK.SKUMKEY = MS.SKUMKEY
+	      INNER JOIN MWARMA MW
+	         ON WK.COMPKEY = MW.COMPKEY
+	         AND WK.WAREKEY = MW.WAREKEY
+	      INNER JOIN MOWRMA MO
+	         ON WK.COMPKEY = MO.COMPKEY 
+	         AND WK.OWNERKY = MO.OWNERKY
+	      INNER JOIN V_MCODEM MC
+	         ON WK.COMPKEY = MC.COMPKEY
+	         AND WK.STKSTAT = MC.COMCDVL
+	         AND MC.COMCDKY = 'STKSTAT'
+	      INNER JOIN MAREMA MA
+	         ON WK.COMPKEY = MA.COMPKEY
+	         AND WK.WAREKEY = MA.WAREKEY
+	         AND WK.AREAKEY = MA.AREAKEY
+	      INNER JOIN MZONMA MZ
+	         ON WK.COMPKEY = MZ.COMPKEY
+	         AND WK.WAREKEY = MZ.WAREKEY 
+	         AND WK.AREAKEY = MZ.AREAKEY
+	         AND WK.ZONEKEY = MZ.ZONEKEY
+	      INNER JOIN    MLOCMA ML
+	         ON WK.COMPKEY = ML.COMPKEY
+	         AND WK.WAREKEY = ML.WAREKEY 
+	         AND WK.AREAKEY = ML.AREAKEY 
+	         AND WK.ZONEKEY = ML.ZONEKEY 
+	         AND WK.LOCAKEY = ML.LOCAKEY 
+	      WHERE
+	         WK.COMPKEY = #{compkey}
+	         AND (WK.STOTQTY != 0 or WK.SALLQTY != 0 or WK.SINBQTY != 0 or WK.SOUBQTY != 0 or WK.SBLOQTY != 0) 
+	         AND WK.WAREKEY = #{warekey}
+	         AND WK.AREAKEY NOT IN ('SYS','SHP')
+	         AND WK.STOTQTY > 0 
+		<if test='warekey != null and warekey != ""'>
+			AND WK.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND WK.OWNERKY = #{ownerky}
+		</if>	
+		<if test='areakey != null and areakey != ""'>
+			AND WK.AREAKEY = #{areakey}
+		</if>	
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(WK.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>					
+		<if test='stkstat != null and stkstat != ""'>
+			AND WK.STKSTAT = #{stkstat}
+		</if>	
+       	ORDER BY WK.OWNERKY, WK.WAREKEY, WK.SKUMKEY, WK.SKUDESC, WK.STOCKKY DESC 
+	</select>
+		<select id="selectGroupSkumkeyList" resultType="com.logistics.om.domain.OmInventoryVO">
+		/*selectGroupSkumKeyList*/
+		SELECT 
+			CONCAT(WK.COMPKEY, WK.WAREKEY ,WK.OWNERKY, WK.SKUMKEY) as ROWKEY
+			,WK.COMPKEY,  MW.WHNAMLC as WAREKEY, MO.OWNAMLC as OWNERKY, MS.SKUMKEY
+			,MS.SKUDESC
+			,SUM(WK.STOTQTY) as STOTQTY, SUM(WK.SALLQTY) as SALLQTY
+			,SUM(WK.SINBQTY) as SINBQTY, SUM(WK.SOUBQTY) as SOUBQTY
+			,SUM(WK.SBLOQTY) as SBLOQTY
+			,MC.COMCDTX as STKSTAT,  WK.VENDKEY, WK.SIRBCOD 
+	        ,MS.SUOMKEY
+	        , (
+	           SELECT SUM(STOTQTY) FROM WSTKKY 
+	           WHERE COMPKEY = WK.COMPKEY 
+	           AND WAREKEY = WK.WAREKEY 
+	           AND OWNERKY = WK.OWNERKY 
+	           AND SKUMKEY = WK.SKUMKEY 
+	           AND AREAKEY = 'RCV' 
+	           AND (WK.STOTQTY != 0 OR WK.SALLQTY != 0 OR WK.SINBQTY != 0 OR WK.SOUBQTY != 0 OR WK.SBLOQTY != 0) 
+	         ) AS RCVSQTY
+	        ,(
+	           SELECT SUM(STOTQTY) FROM WSTKKY 
+	           WHERE COMPKEY = WK.COMPKEY 
+	           AND WAREKEY = WK.WAREKEY 
+	           AND OWNERKY = WK.OWNERKY 
+	           AND SKUMKEY = WK.SKUMKEY 
+	           AND AREAKEY = 'STG' 
+	           AND (WK.STOTQTY != 0 OR WK.SALLQTY != 0 OR WK.SINBQTY != 0 OR WK.SOUBQTY != 0 OR WK.SBLOQTY != 0) 
+	          ) AS STGSQTY
+	        , 
+	         (
+	           SELECT SUM(STOTQTY) FROM WSTKKY 
+	           WHERE COMPKEY = WK.COMPKEY 
+	           AND WAREKEY = WK.WAREKEY 
+	           AND OWNERKY = WK.OWNERKY 
+	           AND SKUMKEY = WK.SKUMKEY 
+	           AND AREAKEY = 'TAK' 
+	           AND (WK.STOTQTY != 0 OR WK.SALLQTY != 0 OR WK.SINBQTY != 0 OR WK.SOUBQTY != 0 OR WK.SBLOQTY != 0) 
+	         ) AS TAKSQTY
+		FROM 
+			WSTKKY WK  
+		INNER JOIN MSKUWC MS
+		   on WK.COMPKEY = MS.COMPKEY
+		  and WK.WAREKEY = MS.WAREKEY
+		  and WK.OWNERKY = MS.OWNERKY
+		  and WK.SKUMKEY = MS.SKUMKEY
+		INNER JOIN MWARMA MW
+			ON WK.COMPKEY = MW.COMPKEY
+			AND WK.WAREKEY = MW.WAREKEY
+		INNER JOIN MOWRMA MO
+			ON WK.COMPKEY = MO.COMPKEY 
+			AND WK.OWNERKY = MO.OWNERKY
+		INNER JOIN V_MCODEM MC
+			ON WK.COMPKEY = MC.COMPKEY
+			AND WK.STKSTAT = MC.COMCDVL
+			AND MC.COMCDKY = 'STKSTAT'
+        INNER JOIN    MLOCMA ML
+           ON WK.COMPKEY = ML.COMPKEY
+           AND WK.WAREKEY = ML.WAREKEY 
+           AND WK.AREAKEY = ML.AREAKEY 
+           AND WK.ZONEKEY = ML.ZONEKEY 
+           AND WK.LOCAKEY = ML.LOCAKEY		
+		WHERE
+			WK.COMPKEY = #{compkey}
+			AND (WK.STOTQTY != 0 or WK.SALLQTY != 0 or WK.SINBQTY != 0 or WK.SOUBQTY != 0 or WK.SBLOQTY != 0) 
+			AND WK.AREAKEY NOT IN ('SYS','SHP')
+		<if test='warekey != null and warekey != ""'>
+			AND WK.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND WK.OWNERKY = #{ownerky}
+		</if>
+		<if test='areakey != null and areakey != ""'>
+			AND WK.AREAKEY = #{areakey}
+		</if>	
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(WK.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>						
+		<if test='stkstat != null and stkstat != ""'>
+			AND WK.STKSTAT = #{stkstat}
+		</if>				
+	      GROUP BY  
+	          WK.COMPKEY, MW.WHNAMLC
+	         ,MO.OWNAMLC, MS.SKUMKEY
+	         ,MS.SKUDESC, WK.VENDKEY, WK.SIRBCOD 
+	         ,MS.SUOMKEY 
+	         ,MC.COMCDTX 
+	</select>		
+	<select id="selectGroupLocationList" resultType="com.logistics.om.domain.OmInventoryVO">
+		/*selectGroupLocationList*/
+		SELECT 
+			CONCAT(WK.COMPKEY, WK.OWNERKY, WK.SKUMKEY) as ROWKEY
+			,WK.COMPKEY, MW.WHNAMLC as WAREKEY,MA.AREANAM as AREAKEY
+			,MZ.ZONENAM as ZONEKEY, ML.LOCANAM as LOCAKEY, MO.OWNAMLC as OWNERKY, MS.SKUMKEY
+			,MS.SKUDESC, SUM(WK.STOTQTY) as STOTQTY
+			,SUM(WK.SALLQTY) as SALLQTY, SUM(WK.SINBQTY) as SINBQTY, SUM(WK.SOUBQTY) as SOUBQTY, SUM(WK.SBLOQTY) as SBLOQTY
+			,MS.SUOMKEY, WK.PRODDAT, WK.SHELIFE, WK.EXPIDAT,MC.COMCDTX as STKSTAT
+		FROM 
+			WSTKKY WK
+		INNER JOIN MSKUWC MS
+		   ON WK.COMPKEY = MS.COMPKEY
+		  AND WK.WAREKEY = MS.WAREKEY
+		  AND WK.OWNERKY = MS.OWNERKY
+		  AND WK.SKUMKEY = MS.SKUMKEY
+		INNER JOIN MWARMA MW
+			ON WK.COMPKEY = MW.COMPKEY
+			AND WK.WAREKEY = MW.WAREKEY
+		INNER JOIN MOWRMA MO
+			ON WK.COMPKEY = MO.COMPKEY 
+			AND WK.OWNERKY = MO.OWNERKY
+		INNER JOIN V_MCODEM MC
+			ON WK.COMPKEY = MC.COMPKEY
+			AND WK.STKSTAT = MC.COMCDVL
+			AND MC.COMCDKY = 'STKSTAT'	
+		INNER JOIN MAREMA MA
+			ON WK.COMPKEY = MA.COMPKEY
+			AND WK.WAREKEY = MA.WAREKEY
+			AND WK.AREAKEY = MA.AREAKEY
+		INNER JOIN MZONMA MZ
+			ON WK.COMPKEY = MZ.COMPKEY
+			AND WK.WAREKEY = MZ.WAREKEY 
+			AND WK.AREAKEY = MZ.AREAKEY
+			AND WK.ZONEKEY = MZ.ZONEKEY
+		INNER JOIN 	MLOCMA ML
+			ON WK.COMPKEY = ML.COMPKEY
+			AND WK.WAREKEY = ML.WAREKEY 
+			AND WK.AREAKEY = ML.AREAKEY 
+			AND WK.ZONEKEY = ML.ZONEKEY 
+			AND WK.LOCAKEY = ML.LOCAKEY 			
+		WHERE
+			WK.COMPKEY = #{compkey}
+			AND (WK.STOTQTY != 0 or WK.SALLQTY != 0 or WK.SINBQTY != 0 or WK.SOUBQTY != 0 or WK.SBLOQTY != 0) 
+			AND WK.AREAKEY NOT IN ('SYS','SHP')
+		<if test='warekey != null and warekey != ""'>
+			AND WK.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND WK.OWNERKY = #{ownerky}
+		</if>
+		<if test='areakey != null and areakey != ""'>
+			AND WK.AREAKEY = #{areakey}
+		</if>				
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(WK.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>					
+		<if test='stkstat != null and stkstat != ""'>
+			AND WK.STKSTAT = #{stkstat}
+		</if>					
+      GROUP BY 
+          WK.COMPKEY, MW.WHNAMLC, MA.AREANAM, MZ.ZONENAM, ML.LOCANAM, MO.OWNAMLC, MS.SKUMKEY, MS.SKUDESC  
+
+	</select>
+	<!-- OMI02, OMI06(일시적) 사유코드 리스트 불러오기 -->
+	<select id="selectRsnCodeList" resultType="com.logistics.om.domain.OeadjiDTO">
+		/*selectRsnCodeList*/
+		SELECT
+			MR.DOCTYPE, MR.RSNCODE, MR.RSNCDNM 
+		FROM
+			MRSCMA MR
+		WHERE
+			MR.COMPKEY = #{userData.compkey}
+			AND MR.DOCCATE = #{doccate}
+			AND MR.RSCATE1 = #{rscate1}
+	</select>	
+	<!-- doctype -->
+	<select id="selectDoctypeSelectbox" resultType="com.logistics.om.domain.OeadjiDTO">
+ 		/*selectDoctypeSelectbox*/
+ 		SELECT
+ 			DOCTYPE, DOCTYNM
+ 		FROM
+ 			MDOCMA
+ 		WHERE
+			COMPKEY = #{userData.compkey}
+ 			AND DOCCATE = #{doccate}
+ 			AND DOCTYPE IN ('310','320')
+ 	</select>	
+	
+	<!-- OMI02 리스트 불러오기 -->
+	<select id="selectWstkkyList" resultType="com.logistics.om.domain.OmInventoryVO">
+		/*selectWstkkyList*/
+		SELECT 
+			CONCAT(WK.COMPKEY, WK.WAREKEY ,WK.OWNERKY, WK.SKUMKEY) as ROWKEY
+			,WK.COMPKEY, WK.STOCKKY, WK.WAREKEY, MW.WHNAMLC as WHNAMLC, WK.AREAKEY
+			,WK.ZONEKEY, WK.LOCAKEY, MA.AREANAM as AREANAM, MZ.ZONENAM as ZONENAM, ML.LOCANAM as LOCANAM
+			,WK.SUBSECT, WK.TRUNTYP ,WK.TRUNPID, WK.LOTNMKY
+			,WK.OWNERKY, MO.OWNAMLC as OWNAMLC, MS.SKUMKEY
+			,MS.SKUDESC, WK.VENDKEY, WK.SIRBCOD, WK.STOTQTY
+			,WK.SALLQTY, WK.SINBQTY, WK.SOUBQTY, WK.SBLOQTY
+			,MS.SUOMKEY, WK.PRODDAT, WK.SHELIFE, WK.EXPIDAT
+			,WK.RCVDCDT, WK.RCVFRDT, WK.LOTFRKY, WK.STKSTAT, MC.COMCDTX as COMCDTX
+			,WK.BLOCKID, WK.PHYSROW, WK.PHYSSEC, WK.PHYSFLO
+			,WK.RCVDCKY, WK.RCVDCIT, WK.TASKOKY, WK.TASKOIT
+			,WK.ADJSOKY, WK.ADJSOIT, WK.PHYSOKY, WK.PHYSOIT
+			,WK.STORFKY, WK.CREDATE, WK.CRETIME, WK.CREUSER
+			,WK.LMODATE, WK.LMOTIME ,WK.LMOUSER, WK.INDIBZL
+			,WK.INDIARC, WK.UPDTCHK , MR.COOTYPE as DOCTYPE, MR.COOTYNM
+			,MR.COOCATE as DOCCATE
+		FROM 
+			WSTKKY WK	
+		INNER JOIN MSKUWC MS
+		   on WK.COMPKEY = MS.COMPKEY
+		  and WK.WAREKEY = MS.WAREKEY
+		  and WK.OWNERKY = MS.OWNERKY
+		  and WK.SKUMKEY = MS.SKUMKEY
+		INNER JOIN MWARMA MW
+			ON WK.COMPKEY = MW.COMPKEY
+			AND WK.WAREKEY = MW.WAREKEY
+		INNER JOIN MOWRMA MO
+			ON WK.COMPKEY = MO.COMPKEY 
+			AND WK.OWNERKY = MO.OWNERKY
+		INNER JOIN V_MCODEM MC
+			ON WK.COMPKEY = MC.COMPKEY
+			AND WK.STKSTAT = MC.COMCDVL
+			AND MC.COMCDKY = 'STKSTAT'	
+		INNER JOIN MAREMA MA
+			ON WK.COMPKEY = MA.COMPKEY
+			AND WK.WAREKEY = MA.WAREKEY
+			AND WK.AREAKEY = MA.AREAKEY
+		INNER JOIN MZONMA MZ
+			ON WK.COMPKEY = MZ.COMPKEY
+			AND WK.WAREKEY = MZ.WAREKEY 
+			AND WK.AREAKEY = MZ.AREAKEY
+			AND WK.ZONEKEY = MZ.ZONEKEY
+		INNER JOIN 	MLOCMA ML
+			ON WK.COMPKEY = ML.COMPKEY
+			AND WK.WAREKEY = ML.WAREKEY 
+			AND WK.AREAKEY = ML.AREAKEY 
+			AND WK.ZONEKEY = ML.ZONEKEY 
+			AND WK.LOCAKEY = ML.LOCAKEY 
+		INNER JOIN MORDMA MR
+			ON WK.COMPKEY = ML.COMPKEY
+			AND WK.WAREKEY = ML.WAREKEY 
+		WHERE
+			WK.COMPKEY = #{compkey}
+			AND WK.STOTQTY > 0
+			AND WK.SALLQTY = 0
+			AND WK.SINBQTY = 0
+			AND WK.SOUBQTY = 0
+			AND WK.SBLOQTY = 0
+			AND WK.AREAKEY = 'STG'
+		 	AND WK.STOCKKY NOT IN(
+			 	SELECT
+					STOCKKY
+				FROM
+					OEADJI
+				WHERE
+					OEINSST = 'NEW'
+			 )
+			AND WK.STOCKKY NOT IN(
+			 	SELECT
+					STOCKKY
+				FROM
+					OERETI
+				WHERE
+					OEINSST = 'NEW'
+			 )	
+		<if test='warekey != null and warekey != ""'>
+			AND WK.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND WK.OWNERKY = #{ownerky}
+		</if>		
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(WK.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>					
+		<if test='stkstat != null and stkstat != ""'>
+			AND WK.STKSTAT = #{stkstat}
+		</if>
+		<if test='cootype != null and cootype != ""'>
+			AND MR.COOTYPE = #{cootype}
+		</if>
+	</select>
+	
+	<!-- OMI02 물류오더 문서번호 채번-->
+	<select id="selectOeadjky" resultType="String">
+		/* selectOeadjky */
+		SELECT fn_om_oeadjky() as oeadjky from dual
+	</select>
+	<!-- 조정지시 전송 -->
+	<select id="sp_om_oeadji" statementType="CALLABLE" resultType="com.logistics.om.domain.OeadjiDTO" parameterType="com.logistics.om.domain.OeadjiDTO">
+		/*sp_om_oeadji*/
+		 CALL sp_om_oeadji( #{userData.compkey}, #{oeadjky}, #{userData.useract},
+			#{omsgkey, mode=OUT, jdbcType=VARCHAR},
+			#{oresult, mode=OUT, jdbcType=INTEGER} )
+	</select>
+	
+	<!-- omi02 조정지시 save -->
+	<insert id="insertOmi02Save" parameterType="com.logistics.om.domain.OeadjiDTO">
+		/* insertOmi02Save */
+		INSERT
+			INTO OEADJI
+			 (
+				 COMPKEY, OEADJKY, OEADJIT, OEINSDT
+				 ,OEINSST, OEINSTM, RSNCODE, ADJSRMK
+				 ,WAREKEY, DOCCATE, DOCTYPE, STOCKKY
+				 ,AREAKEY, ZONEKEY, LOCAKEY, SUBSECT
+				 ,TRUNTYP, TRUNPID ,LOTNMKY, OWNERKY
+				 ,SKUMKEY, SKUDESC ,VENDKEY, SIRBCOD
+				 ,STOTQTY, SALLQTY ,SINBQTY, SOUBQTY
+				 ,SBLOQTY, SAVAQTY ,STKSTAT, SUOMKEY
+				 ,RTODQTY, ATKSTAT, CREDATE, CRETIME
+				 ,CREUSER, LMODATE, LMOTIME, LMOUSER
+							
+			)
+		VALUES
+		(
+			#{userData.compkey},#{oeadjky},fn_om_oeadjit(#{userData.compkey},#{oeadjky}), date_format(NOW() , '%Y%m%d')
+			,'NEW', date_format(NOW() , '%H%i%s'), #{rsncode}, #{adjsrmk}
+			,#{warekey}, #{doccate}, #{doctype}, #{stockky}
+			,#{areakey}, #{zonekey} ,#{locakey}, #{subsect}
+			,#{truntyp}, #{trunpid} ,#{lotnmky}, #{ownerky}
+			,#{skumkey}, #{skudesc} ,#{vendkey}, #{sirbcod}
+			,#{stotqty}, #{sallqty} ,#{sinbqty}, #{soubqty}
+			,#{sbloqty}, #{savaqty} ,#{stkstat}, #{suomkey}
+			,#{rtodqty}, #{atkstat}, date_format(NOW() , '%Y%m%d'), date_format(NOW() , '%H%i%s')
+			,#{userData.useract}, date_format(NOW() , '%Y%m%d'), date_format(NOW() , '%H%i%s')
+			,#{userData.useract}
+		)
+			
+	</insert>
+	<!-- OMI04 조정현황조회 -->
+	<select id="selectOeadjiList" resultType="com.logistics.om.domain.OeadjiVO">
+		/* selectOeadjiList */
+		SELECT
+			CONCAT(OJ.COMPKEY, OJ.OWNERKY, OJ.SKUMKEY) as ROWKEY,
+			OJ.COMPKEY, OJ.OEADJKY, OJ.OEADJIT, date_format(str_to_date(OJ.OEINSDT, '%Y%m%d'), '%Y-%m-%d') as OEINSDT
+			,date_format(str_to_date(OJ.OEINSTM, '%H%i%s'), '%H:%i:%s') as OEINSTM, MC1.COMCDTX as OEINSST ,MR.RSNCDNM as RSNCODE ,OJ.ADJSRMK
+			,MW.WHNAMLC as WAREKEY, OJ.DOCCATE, OJ.DOCTYPE, OJ.STOCKKY
+			,MA.AREANAM as AREAKEY, MZ.ZONENAM as ZONEKEY, ML.LOCANAM as LOCAKEY, OJ.SUBSECT
+			,OJ.TRUNTYP, OJ.TRUNPID, OJ.LOTNMKY, MO.OWNAMLC as OWNERKY
+			,MS.SKUMKEY, MS.SKUDESC, OJ.VENDKEY, OJ.SIRBCOD
+			,SUM(WS.STOTQTY) as STOTQTY , SUM(WS.SALLQTY) as SALLQTY, SUM(WS.SINBQTY) as SINBQTY, SUM(WS.SOUBQTY) as SOUBQTY
+			,SUM(WS.SBLOQTY) as SBLOQTY, MC2.COMCDTX AS STKSTAT, OJ.SUOMKEY
+			,OJ.RTODQTY, OJ.RTCFQTY, MC3.COMCDTX AS ATKSTAT, OJ.CREDATE
+			,OJ.CRETIME, OJ.CREUSER, OJ.LMODATE, OJ.LMOTIME
+			,OJ.LMOUSER, OJ.INDIBZL, OJ.INDIARC, OJ.UPDTCHK
+		FROM 
+			OEADJI OJ		
+		INNER JOIN WSTKKY WS
+			 ON OJ.COMPKEY = WS.COMPKEY
+			AND OJ.WAREKEY = WS.WAREKEY
+			AND OJ.OWNERKY = WS.OWNERKY
+			AND OJ.SKUMKEY = WS.SKUMKEY
+			AND OJ.LOCAKEY = WS.LOCAKEY
+		INNER JOIN MSKUWC MS
+			 ON OJ.COMPKEY = MS.COMPKEY
+			AND OJ.WAREKEY = MS.WAREKEY
+			AND OJ.OWNERKY = MS.OWNERKY
+			AND OJ.SKUMKEY = MS.SKUMKEY
+		INNER JOIN MRSCMA MR
+			ON OJ.COMPKEY = MR.COMPKEY
+			AND OJ.WAREKEY = MR.WAREKEY 
+			AND OJ.DOCCATE = MR.DOCCATE 
+			AND OJ.DOCTYPE = MR.DOCTYPE 
+			AND OJ.RSNCODE = MR.RSNCODE
+		INNER JOIN MWARMA MW
+			ON OJ.COMPKEY = MW.COMPKEY
+			AND OJ.WAREKEY = MW.WAREKEY
+		INNER JOIN MOWRMA MO
+			ON OJ.COMPKEY = MO.COMPKEY 
+			AND OJ.OWNERKY = MO.OWNERKY			
+		INNER JOIN V_MCODEM MC1
+			ON OJ.COMPKEY = MC1.COMPKEY
+			AND OJ.OEINSST = MC1.COMCDVL
+			AND MC1.COMCDKY = 'OEINSST'
+		INNER JOIN V_MCODEM MC2
+			ON OJ.COMPKEY = MC2.COMPKEY
+			AND OJ.STKSTAT = MC2.COMCDVL
+			AND MC2.COMCDKY = 'STKSTAT'
+		INNER JOIN V_MCODEM MC3
+			ON OJ.COMPKEY = MC3.COMPKEY
+			AND OJ.ATKSTAT = MC3.COMCDVL
+			AND MC3.COMCDKY = 'STKSTAT'
+		INNER JOIN MAREMA MA
+			ON OJ.COMPKEY = MA.COMPKEY
+			AND OJ.WAREKEY = MA.WAREKEY
+			AND OJ.AREAKEY = MA.AREAKEY	
+		INNER JOIN MZONMA MZ
+			ON OJ.COMPKEY = MZ.COMPKEY
+			AND OJ.WAREKEY = MZ.WAREKEY 
+			AND OJ.AREAKEY = MZ.AREAKEY
+			AND OJ.ZONEKEY = MZ.ZONEKEY	
+		INNER JOIN 	MLOCMA ML
+			ON OJ.COMPKEY = ML.COMPKEY
+			AND OJ.WAREKEY = ML.WAREKEY 
+			AND OJ.AREAKEY = ML.AREAKEY 
+			AND OJ.ZONEKEY = ML.ZONEKEY 
+			AND OJ.LOCAKEY = ML.LOCAKEY 
+		WHERE		  
+			OJ.COMPKEY = #{compkey}
+			AND (OJ.OEINSST = 'NEW' OR OJ.OEINSST = 'CMP')
+		<if test='warekey != null and warekey != ""'>
+			AND OJ.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND OJ.OWNERKY = #{ownerky}
+		</if>	
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(OJ.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(OJ.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>					
+		<if test='oeinsst != null and oeinsst != ""'>
+			AND OJ.OEINSST = #{oeinsst}
+		</if>
+       	<if test='fromOeinsdt != null and fromOeinsdt != ""'>
+			<![CDATA[ AND OJ.OEINSDT >= #{fromOeinsdt}]]>
+		</if>
+		<if test='toOeinsdt != null and toOeinsdt != ""'>
+			<![CDATA[ AND OJ.OEINSDT <= #{toOeinsdt} ]]>
+		</if>	
+		GROUP BY OJ.OEADJKY, OJ.OEADJIT 
+		ORDER BY OJ.OEADJKY DESC, OJ.OEADJIT DESC		
+	</select>
+	<!-- OMI05 취소조회 -->
+	<select id="selectOeadjiCancelList" resultType="com.logistics.om.domain.OeadjiVO">
+		/*selectOeadjiCancelList*/
+		SELECT
+			CONCAT(OJ.COMPKEY,OJ.WAREKEY ,OJ.OWNERKY, OJ.SKUMKEY) as ROWKEY,
+			OJ.COMPKEY, OJ.OEADJKY, OJ.OEADJIT, date_format(str_to_date(OJ.OEINSDT, '%Y%m%d'), '%Y-%m-%d') as OEINSDT
+			,date_format(str_to_date(OJ.OEINSTM, '%H%i%s'), '%H:%i:%s') as OEINSTM, MC1.COMCDTX as OEINSST ,MR.RSNCDNM as ADCRSCD ,OJ.ADCRSNM
+			,MW.WHNAMLC as WAREKEY, OJ.DOCCATE, OJ.DOCTYPE, OJ.STOCKKY
+			,MA.AREANAM as AREAKEY, MZ.ZONENAM as ZONEKEY, ML.LOCANAM as LOCAKEY, OJ.SUBSECT
+			,OJ.TRUNTYP, OJ.TRUNPID, OJ.LOTNMKY, MO.OWNAMLC as OWNERKY
+			,MS.SKUMKEY, MS.SKUDESC, OJ.VENDKEY, OJ.SIRBCOD
+			,SUM(WS.STOTQTY) as STOTQTY , SUM(WS.SALLQTY) as SALLQTY, SUM(WS.SINBQTY) as SINBQTY, SUM(WS.SOUBQTY) as SOUBQTY
+			,SUM(WS.SBLOQTY) as SBLOQTY, MC2.COMCDTX AS STKSTAT, OJ.SUOMKEY
+			,OJ.RTODQTY, OJ.RTCFQTY, MC3.COMCDTX AS ATKSTAT, OJ.CREDATE
+			,OJ.CRETIME, OJ.CREUSER, OJ.LMODATE, OJ.LMOTIME
+			,OJ.LMOUSER, OJ.INDIBZL, OJ.INDIARC, OJ.UPDTCHK
+		FROM 
+			OEADJI OJ
+		LEFT JOIN WSTKKY WS
+			 ON OJ.COMPKEY = WS.COMPKEY
+			AND OJ.WAREKEY = WS.WAREKEY
+			AND OJ.OWNERKY = WS.OWNERKY
+			AND OJ.SKUMKEY = WS.SKUMKEY
+			AND OJ.LOCAKEY = WS.LOCAKEY				
+		LEFT JOIN MSKUWC MS
+			 ON OJ.COMPKEY = MS.COMPKEY
+			AND OJ.WAREKEY = MS.WAREKEY
+			AND OJ.OWNERKY = MS.OWNERKY
+			AND OJ.SKUMKEY = MS.SKUMKEY
+		LEFT JOIN MRSCMA MR
+			ON OJ.COMPKEY = MR.COMPKEY
+			AND OJ.WAREKEY = MR.WAREKEY 
+			AND OJ.DOCCATE = MR.DOCCATE 
+			AND OJ.DOCTYPE = MR.DOCTYPE 
+			AND OJ.ADCRSCD = MR.RSNCODE
+		LEFT JOIN MWARMA MW
+			ON OJ.COMPKEY = MW.COMPKEY
+			AND OJ.WAREKEY = MW.WAREKEY
+		LEFT JOIN MOWRMA MO
+			ON OJ.COMPKEY = MO.COMPKEY 
+			AND OJ.OWNERKY = MO.OWNERKY			
+		LEFT JOIN V_MCODEM MC1
+			ON OJ.COMPKEY = MC1.COMPKEY
+			AND OJ.OEINSST = MC1.COMCDVL
+			AND MC1.COMCDKY = 'OEINSST'
+		LEFT JOIN V_MCODEM MC2
+			ON OJ.COMPKEY = MC2.COMPKEY
+			AND OJ.STKSTAT = MC2.COMCDVL
+			AND MC2.COMCDKY = 'STKSTAT'
+		LEFT JOIN V_MCODEM MC3
+			ON OJ.COMPKEY = MC3.COMPKEY
+			AND OJ.ATKSTAT = MC3.COMCDVL
+			AND MC3.COMCDKY = 'STKSTAT'
+		LEFT JOIN MAREMA MA
+			ON OJ.COMPKEY = MA.COMPKEY
+			AND OJ.WAREKEY = MA.WAREKEY
+			AND OJ.AREAKEY = MA.AREAKEY	
+		LEFT JOIN MZONMA MZ
+			ON OJ.COMPKEY = MZ.COMPKEY
+			AND OJ.WAREKEY = MZ.WAREKEY 
+			AND OJ.AREAKEY = MZ.AREAKEY
+			AND OJ.ZONEKEY = MZ.ZONEKEY	
+		LEFT JOIN 	MLOCMA ML
+			ON OJ.COMPKEY = ML.COMPKEY
+			AND OJ.WAREKEY = ML.WAREKEY 
+			AND OJ.AREAKEY = ML.AREAKEY 
+			AND OJ.ZONEKEY = ML.ZONEKEY 
+			AND OJ.LOCAKEY = ML.LOCAKEY 
+		WHERE		  
+			OJ.COMPKEY = #{compkey}
+			AND OJ.OEINSST = 'CAN'
+		<if test='warekey != null and warekey != ""'>
+			AND OJ.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND OJ.OWNERKY = #{ownerky}
+		</if>	
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(OJ.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>						
+		<if test='oeinsdt != null and oeinsdt != ""'>
+			AND OJ.OEINSDT = #{oeinsdt}
+		</if>
+		<if test='rsncdnm != null and rsncdnm != ""'>
+		 	AND (
+		    <foreach collection="rsncdnm.split(',')" item="code" separator=" OR ">
+		      UPPER(OJ.ADCRSCD) LIKE CONCAT('%', UPPER(#{code}), '%')
+		    </foreach>
+		  	)
+		</if>
+       	<if test='fromOeinsdt != null and fromOeinsdt != ""'>
+			<![CDATA[ AND OJ.OEINSDT >= #{fromOeinsdt}]]>
+		</if>
+		<if test='toOeinsdt != null and toOeinsdt != ""'>
+			<![CDATA[ AND OJ.OEINSDT <= #{toOeinsdt} ]]>
+		</if>	
+		GROUP BY OJ.OEADJKY, OJ.OEADJIT 		
+		ORDER BY OJ.OEADJKY DESC, OJ.OEADJIT DESC			
+	</select>
+	
+	<!-- OMI05 조정(취소)사유조회 -->
+	<select id="selectRsncdnmList"
+		resultType="com.logistics.om.domain.OeadjiVO">
+		/* selectRsncdnmList */
+		SELECT 
+	    rsncode as COMBOVL,
+	    rsncdnm as COMBONM
+		FROM 
+		    MRSCMA 
+		WHERE 
+		    COMPKEY = #{compkey}
+		    AND(doctype='310' OR doctype='320')
+		    AND doccate='300'
+		    AND rscate1= #{rscate1}
+	</select>
+	
+	<!-- OMI06 조정취소등록 리스트 -->
+	<select id="selectOeadjiCancelListByNew" resultType="com.logistics.om.domain.OeadjiVO">
+		/*selectOeadjiCancelListByNew*/
+		SELECT
+			CONCAT(OJ.COMPKEY, OJ.OWNERKY, OJ.SKUMKEY) as ROWKEY,
+			OJ.COMPKEY, OJ.OEADJKY, OJ.OEADJIT, date_format(str_to_date(OJ.OEINSDT, '%Y%m%d'), '%Y-%m-%d') as OEINSDT
+			,date_format(str_to_date(OJ.OEINSTM, '%H%i%s'), '%H:%i:%s') as OEINSTM, MC1.COMCDTX as OEINSST ,MR.RSNCDNM as RSNCODE ,OJ.ADJSRMK
+			,MW.WHNAMLC as WAREKEY, OJ.DOCCATE, OJ.DOCTYPE, OJ.STOCKKY
+			,OJ.AREAKEY, MA.AREANAM , OJ.ZONEKEY, MZ.ZONENAM, OJ.LOCAKEY, ML.LOCANAM, OJ.SUBSECT
+			,OJ.TRUNTYP, OJ.TRUNPID, OJ.LOTNMKY, MO.OWNAMLC, OJ.OWNERKY
+			,MS.SKUMKEY, MS.SKUDESC, OJ.VENDKEY, OJ.SIRBCOD
+			,SUM(WS.STOTQTY) as STOTQTY , SUM(WS.SALLQTY) as SALLQTY, SUM(WS.SINBQTY) as SINBQTY, SUM(WS.SOUBQTY) as SOUBQTY
+			,SUM(WS.SBLOQTY) as SBLOQTY, MC2.COMCDTX AS STKSTAT, OJ.SUOMKEY
+			,OJ.RTODQTY, OJ.RTCFQTY, MC3.COMCDTX AS ATKSTAT, OJ.CREDATE
+			,OJ.CRETIME, OJ.CREUSER, OJ.LMODATE, OJ.LMOTIME
+			,OJ.LMOUSER, OJ.INDIBZL, OJ.INDIARC, OJ.UPDTCHK
+		FROM 
+			OEADJI OJ
+		INNER JOIN WSTKKY WS
+			 ON OJ.COMPKEY = WS.COMPKEY
+			AND OJ.WAREKEY = WS.WAREKEY
+			AND OJ.OWNERKY = WS.OWNERKY
+			AND OJ.SKUMKEY = WS.SKUMKEY
+			AND OJ.LOCAKEY = WS.LOCAKEY			
+		INNER JOIN MSKUWC MS
+			 ON OJ.COMPKEY = MS.COMPKEY
+			AND OJ.WAREKEY = MS.WAREKEY
+			AND OJ.OWNERKY = MS.OWNERKY
+			AND OJ.SKUMKEY = MS.SKUMKEY
+		INNER JOIN MRSCMA MR
+			ON OJ.COMPKEY = MR.COMPKEY
+			AND OJ.WAREKEY = MR.WAREKEY 
+			AND OJ.DOCCATE = MR.DOCCATE 
+			AND OJ.DOCTYPE = MR.DOCTYPE 
+			AND OJ.RSNCODE = MR.RSNCODE
+		INNER JOIN MWARMA MW
+			ON OJ.COMPKEY = MW.COMPKEY
+			AND OJ.WAREKEY = MW.WAREKEY
+		INNER JOIN MOWRMA MO
+			ON OJ.COMPKEY = MO.COMPKEY 
+			AND OJ.OWNERKY = MO.OWNERKY			
+		INNER JOIN V_MCODEM MC1
+			ON OJ.COMPKEY = MC1.COMPKEY
+			AND OJ.OEINSST = MC1.COMCDVL
+			AND MC1.COMCDKY = 'OEINSST'
+		INNER JOIN V_MCODEM MC2
+			ON OJ.COMPKEY = MC2.COMPKEY
+			AND OJ.STKSTAT = MC2.COMCDVL
+			AND MC2.COMCDKY = 'STKSTAT'
+		INNER JOIN V_MCODEM MC3
+			ON OJ.COMPKEY = MC3.COMPKEY
+			AND OJ.ATKSTAT = MC3.COMCDVL
+			AND MC3.COMCDKY = 'STKSTAT'
+		INNER JOIN MAREMA MA
+			ON OJ.COMPKEY = MA.COMPKEY
+			AND OJ.WAREKEY = MA.WAREKEY
+			AND OJ.AREAKEY = MA.AREAKEY	
+		INNER JOIN MZONMA MZ
+			ON OJ.COMPKEY = MZ.COMPKEY
+			AND OJ.WAREKEY = MZ.WAREKEY 
+			AND OJ.AREAKEY = MZ.AREAKEY
+			AND OJ.ZONEKEY = MZ.ZONEKEY	
+		INNER JOIN 	MLOCMA ML
+			ON OJ.COMPKEY = ML.COMPKEY
+			AND OJ.WAREKEY = ML.WAREKEY 
+			AND OJ.AREAKEY = ML.AREAKEY 
+			AND OJ.ZONEKEY = ML.ZONEKEY 
+			AND OJ.LOCAKEY = ML.LOCAKEY 
+		WHERE
+			OJ.COMPKEY = #{compkey}
+			AND OJ.OEINSST = 'NEW'
+		<if test='warekey != null and warekey != ""'>
+			AND OJ.WAREKEY = #{warekey}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND OJ.OWNERKY = #{ownerky}
+		</if>	
+		<if test='skumkey != null and skumkey != ""'>
+			AND UPPER(OJ.SKUMKEY) LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			AND UPPER(WK.SKUDESC) LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+		</if>					
+		<if test='fromOeinsdt != null and fromOeinsdt != ""'>
+			<![CDATA[ AND OJ.OEINSDT >= #{fromOeinsdt}]]>
+		</if>
+		<if test='toOeinsdt != null and toOeinsdt != ""'>
+			<![CDATA[ AND OJ.OEINSDT <= #{toOeinsdt} ]]>
+		</if>
+		GROUP BY OJ.OEADJKY, OJ.OEADJIT 	
+		ORDER BY OJ.OEADJKY DESC, OJ.OEADJIT DESC			
+	</select>
+	<!-- OMI06 조정지시 취소 -->
+	<update id="updateOmi06Cancel" parameterType="com.logistics.om.domain.OeadjiDTO">
+		/*updateOmi06Cancel*/
+		UPDATE 
+			OEADJI
+		SET
+			ADCRSCD = #{adcrscd},
+			ADCRSNM = #{adcrsnm},
+			OEINSST = #{oeinsst},
+			LMODATE = date_format(NOW() , '%Y%m%d'),
+			LMOTIME = date_format(NOW() , '%H%i%s'),
+			LMOUSER = #{userData.useract},
+			UPDTCHK = #{updtchk}+1
+		WHERE
+			COMPKEY = #{userData.compkey}
+			AND OWNERKY = #{ownerky}
+			AND STOCKKY = #{stockky}
+			AND UPDTCHK = #{updtchk}
+	</update>
+	<!-- OMI06 조정지시 취소 전송 -->
+	<select id="sp_om_oeadji_cancel" statementType="CALLABLE" resultType="com.logistics.om.domain.OeadjiDTO" parameterType="com.logistics.om.domain.OeadjiDTO">
+		/*sp_om_oeadji_cancel*/
+		 CALL sp_om_oeadji_cancel( #{compkey}, #{oeadjky}, #{creuser},
+			#{omsgkey, mode=OUT, jdbcType=VARCHAR},
+			#{oresult, mode=OUT, jdbcType=INTEGER} )		
+	</select>
+</mapper>

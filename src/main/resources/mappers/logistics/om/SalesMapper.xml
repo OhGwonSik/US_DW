@@ -1,0 +1,1212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.logistics.om.mapper.SalesMapper">
+
+	<!-- *********************************************** -->
+	<!-- 납품오더 OMS02 추가 -->
+	<!-- *********************************************** -->
+	<!-- oms02 : 납품오더 상품코드 셀렉트박스 -->
+	<select id="selectOms02SkuwcSelectBox"
+		resultType="com.logistics.om.domain.SalesOrderDTO">
+		/* selectOms02SkuwcSelectBox */
+		select MS.COMPKEY as COMPKEY
+			, MS.WAREKEY as WAREKEY
+			, MS.OWNERKY as OWNERKY
+			, MS.SKUMKEY as SKUMKEY
+			, MS.SKUDESC as SKUDESC
+			, MS.SKUSKEY as SKUSKEY
+			, MS.SUOMKEY as SUOMKEY
+			, case when MS.SKUSTAT = 'OUT' then 'Y' else 'N' end as SKUSTAT
+			, MS.PACKKEY as PACKKEY
+			, MP.TRUNTYP as TRUNTYP 
+			, IFNULL(MP.PACKQTY, 0) as PACKQTY
+			, IFNULL(ST.STOTQTY , 0) as STOTQTY
+		from MSKUWC MS
+		left join (
+			select COMPKEY, OWNERKY, WAREKEY
+			, SKUMKEY, SKUDESC
+			, LOTAT17, LOTAT18, LOTAT19, LOTAT20
+			, (sum(STOTQTY)- sum(SBLOQTY)) as STOTQTY
+			from WSTKKY
+			where COMPKEY = #{userData.compkey}
+			and WAREKEY = #{warekey}
+			and AREAKEY = 'STG'
+			and SALLQTY = 0
+			and SINBQTY = 0
+			and SOUBQTY = 0
+			group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY , LOTAT17, LOTAT18, LOTAT19, LOTAT20
+		) ST
+			on ST.COMPKEY = MS.COMPKEY
+			and ST.WAREKEY = MS.WAREKEY
+			and ST.OWNERKY = MS.OWNERKY	
+			and ST.SKUMKEY = MS.SKUMKEY
+		left join MPAKMA MP
+			on MP.COMPKEY = MS.COMPKEY
+			and MP.WAREKEY = MS.WAREKEY
+			and MP.PACKKEY = MS.PACKKEY
+			and MP.TRUNTYP = MS.TRUNTYP
+			and MP.PKUSEYN = 'Y'
+		where MS.COMPKEY = #{userData.compkey}
+		and MS.WAREKEY = #{warekey}
+		and MS.OWNERKY = #{ownerky}
+		and MS.SKUSTAT = 'PRODUCT'
+		group by MS.SKUMKEY , MS.SKUDESC
+		order by MS.SKUDESC
+	</select>
+	
+	<!-- oms02 : 고객 init 셀렉트박스 정민경 추가 -->
+	<select id="selectCustomer" resultType="com.logistics.md.domain.MptnmaVO">
+		/* selectCustomer */
+		select
+			PT.COMPKEY
+			, PT.PTNRKEY
+			, PT.PTNAMLC
+		from MPTNMA PT
+		where PT.COMPKEY = #{userData.compkey}
+			and PT.PTNRTYP ='CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+	</select>
+
+	<!-- oms02 : 도착지 init 셀렉트박스 정민경 추가 -->
+	<select id="selectDestkey"
+		resultType="com.logistics.pt.MdesmaVO">
+		/* selectDestkey */
+		select
+			PT.COMPKEY
+			, PT.PTNRKEY
+			, DE.DESTKEY
+			, DE.DENAMLC
+		from MDESMA DE
+		left join MPTNMA PT
+			on DE.PTNRKEY = PT.PTNRKEY	
+			and DE.COMPKEY = PT.COMPKEY
+		where PT.COMPKEY = #{userData.compkey}
+			and PT.PTNRTYP = 'CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+			and DEUSEYN = 'Y'
+		<if test="ptnrkey != null and ptnrkey != ''">
+			and DE.PTNRKEY = #{ptnrkey}
+		</if>
+	</select>
+
+	<!-- OMR11 회수문서타입 SMA 230802 추가 -->
+	<select id="selectReturnDoctype"
+		resultType="com.logistics.md.domain.MdocmaVO">
+		select
+		DOCTYPE ,
+		DOCCATE ,
+		DOCCTNM ,
+		DOCTYNM
+		from MDOCMA w
+		where COMPKEY = #{userData.compkey}
+		<if test="doctype != null and doctype != ''">
+			and DOCTYPE = #{doctype}
+		</if>
+		<if test="doccate != null and doccate != ''">
+			and DOCCATE = #{doccate}
+		</if>
+		<if test="warekey != null and warekey != ''">
+			and WAREKEY = #{warekey}
+		</if>
+		and DOUSEYN = 'Y'
+		LIMIT 1
+	</select>
+
+	<!-- oms02 : 수주오더 등록 -->
+	<insert id="insertOcosal"
+		parameterType="com.logistics.om.domain.SalesOrderDTO">
+		/* insertOcosal */
+		insert into OCOSAL(
+			COMPKEY, COOUTKY, COOUTIT, DOCCATE, DOCTYPE,
+			POSTDAT, SALDATE, SALTIME, TOWARKY, CUSTKEY,
+			SALMEMO, SALRQDT, SALRQTM, DESTKEY, OWNERKY,
+			SKUSKEY, SKUMKEY, SKUDESC, SOITQTY, RGITQTY,
+			SHCFQTY, SUOMKEY, DCTCTYP, SALSTAT, SAATN01, 
+			SAATN02, SAATN03, SAATN04, SAATN05, SAATC01, 
+			SAATC02, SAATC03, SAATC04, SAATC05, SAATC06,
+			SAATC07, SAATC08, SAATC09, SAATC10, CREDATE, 
+			CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		(
+			#{userData.compkey}, #{cooutky}, FN_OM_COOUTIT(#{userData.compkey}, #{cooutky}),
+			#{doccate}, #{doctype},
+			DATE_FORMAT(#{postdat},'%Y%m%d'), DATE_FORMAT(NOW(),'%Y%m%d'), DATE_FORMAT(NOW(),'%H%i%s'), #{warekey}, #{custkey},
+			upper(ifnull(#{salmemo},'')), DATE_FORMAT(#{salrqdt},'%Y%m%d'), replace(#{salrqtm},':',''), #{destkey}, #{ownerky},
+			ifnull(#{skuskey},''), #{skumkey}, (select SKUDESC from MSKUWC where COMPKEY = #{userData.compkey} and OWNERKY = #{ownerky} and WAREKEY =#{warekey} and SKUMKEY= #{skumkey}), #{soitqty}, #{rgitqty},
+			#{shcfqty}, #{suomkey}, #{dctctyp}, #{salstat}, #{saatn01}, 
+			#{saatn02}, #{saatn03}, #{saatn04}, #{saatn05}, upper(ifnull(#{saatc01},'')), 
+			upper(ifnull(#{saatc02},'')), upper(ifnull(#{saatc03},'')), upper(ifnull(#{saatc04},'')), upper(ifnull(#{saatc05},'')), ifnull(trim(#{saatc06}),'NO DATA') , 
+			upper(ifnull(#{saatc07},'')), upper(ifnull(#{saatc08},'')), upper(ifnull(#{saatc09},'')), upper(ifnull(#{saatc10},'')), date_format(NOW(),'%Y%m%d'), 
+			date_format(NOW(),'%H%i%s'), #{userData.useract} , date_format(NOW(),'%Y%m%d'), date_format(NOW(),'%H%i%s'), #{userData.useract}
+		)
+	</insert>
+
+	<insert id="insertWshpitOrder"
+		parameterType="com.logistics.om.domain.SalesOrderDTO">
+		/* insertWshpitOrder */
+		insert into WSHPIT (
+		COMPKEY , SHPDCKY , SHPDCIT , WAREKEY , DOCCATE ,
+		DOCTYPE , PICKTYP , OWNERKY , SKUMKEY , SKUDESC ,
+		SALDATE , CUSTKEY , SALMEMO , SALRQDT , SALRQTM ,
+		SHCUQTY , RGITQTY , SUOMKEY , COOUTKY , COOUTIT ,
+		CREDATE , CRETIME , CREUSER , LMODATE , LMOTIME ,
+		LMOUSER
+		)
+		values (
+		#{userData.compkey} , #{shpdcky} , FN_WM_SHPDCIT(#{userData.compkey}, #{shpdcky}) ,
+		#{warekey} , #{doccate} ,
+		#{doctype} , #{picktyp} , #{ownerky} , #{skumkey} , #{skudesc} ,
+		DATE_FORMAT(NOW(),'%Y%m%d'), #{custkey} , #{salmemo} ,
+		DATE_FORMAT(#{salrqdt},'%Y%m%d'), replace(#{salrqtm},':','') ,
+		#{soitqty} , #{rgitqty} , #{suomkey} , #{cooutky} , (select
+		MAX(COOUTIT) from OCOSAL where COMPKEY = #{userData.compkey} and
+		COOUTKY = #{cooutky}) ,
+		date_format(NOW(),'%Y%m%d'), date_format(NOW(),'%H%i%s'), #{userData.useract} ,
+		date_format(NOW(),'%Y%m%d'), date_format(NOW(),'%H%i%s'),
+		#{userData.useract}
+		)
+	</insert>
+
+	<!-- oms02 : 수주 키 채번 Cooutky -->
+	<select id="getCooutky" resultType="String">	 <!-- 2023.07.07 정민경 추가 -->
+		select fn_om_cooutky() as cooutky from dual
+	</select>
+
+	<!-- oms02 : 영업일자 채번 Postdat -->
+	<select id="getPosdate" resultType="String"> 	<!-- 2023.07.07 정민경 추가 -->
+		select fn_wm_posdate(#{userData.compkey}, #{warekey}) as postdat from
+		dual
+	</select>
+
+	<select id="sp_om_ocosal" statementType="CALLABLE"
+		parameterType="com.logistics.om.domain.SalesOrderDTO">
+		CALL sp_om_ocosal( #{userData.compkey}, #{cooutky},
+		#{doccate}, #{userData.useract} ,
+		#{omsgkey, mode=OUT, jdbcType=VARCHAR},
+		#{oresult, mode=OUT, jdbcType=INTEGER})
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- 납품오더 OMS03 추가 -->
+	<!-- *********************************************** -->
+
+	<!-- oms03 : 납품취소조회 2023.07.12 -->
+	<select id="selectOms03CancelList" resultType="com.logistics.om.domain.SalesOrderDTO">
+		/* selectOms03CancelList */
+		select
+			OC.COMPKEY,
+			OC.COOUTKY,
+			OC.COOUTIT,
+			OC.DOCCATE,
+			MOR.COOTYNM as DOCTYPE,
+			fn_com_todate(OC.POSTDAT) as POSTDAT,
+			fn_com_todate(OC.SALDATE) as SALDATE,
+			fn_com_totime(OC.SALTIME) as SALTIME, 
+			fn_com_todate(OC.SALRQDT) as SALRQDT,
+			fn_com_totime(OC.SALRQTM) as SALRQTM,
+			MW.WHNAMLC as TOWARKY,
+			PT.PTNAMLC as CUSTKEY,
+			OC.SALMEMO,
+			DE.DENAMLC as DESTKEY,
+			MO.OWNAMLC as OWNERKY,
+			OC.SKUSKEY,
+			OC.SKUMKEY,
+			OC.SKUDESC,
+			OC.SOITQTY,
+			OC.RGITQTY,
+			OC.SHCFQTY,
+			OC.DIFFQTY,
+			OC.SUOMKEY,
+			OC.DCTCTYP,
+			(select RSNCDNM
+			 from   MRSCMA  where COMPKEY = #{userData.compkey}
+			        and WAREKEY = #{towarky}
+			        and DOCCATE = OC.DOCCATE
+			        and DOCTYPE = OC.DOCTYPE
+			        and RSCATE1 = OC.SALSTAT
+			        and RSNCODE = OC.RSNCODE
+			        and RSUSEYN = 'Y') as RSNCODE,
+			OC.RSNDESC,
+			(select COMCDTX from   V_MCODEM
+				where COMPKEY = #{userData.compkey}
+			        and COMCDKY = 'SALSTAT'
+			        and COMCDVL = OC.SALSTAT) as SALSTAT,
+			(select COMCDTX from   V_MCODEM
+				where COMPKEY = #{userData.compkey}
+			        and COMCDKY = 'OUBSTAT'
+			        and COMCDVL = OC.OUBSTAT) as OUBSTAT,
+			(select COMCDTX from V_MCODEM
+				where COMPKEY = #{userData.compkey}
+			        and COMCDKY = 'TRNSTAT'
+			        and COMCDVL = OC.TRNSTAT) as TRNSTAT,
+			OC.SAATN01,
+			OC.SAATN02,
+			OC.SAATN03,
+			OC.SAATN04,
+			OC.SAATN05,
+			OC.SAATC01,
+			OC.SAATC02,
+			OC.SAATC03,
+			OC.SAATC04,
+			OC.SAATC05,
+			OC.SAATC06,
+			OC.SAATC07,
+			OC.SAATC08,
+			OC.SAATC09,
+			OC.SAATC10,
+			OC.CLOSLYN,
+			fn_sy_usernam(OC.COMPKEY, OC.CREUSER) as CREUSER,
+			fn_com_todate(OC.CREDATE) AS CREDATE,
+			fn_com_totime(OC.CRETIME) AS CRETIME,
+			fn_sy_usernam(OC.COMPKEY, OC.LMOUSER) as LMOUSER,
+			fn_com_todate(OC.LMODATE) AS LMODATE,
+			fn_com_totime(OC.LMOTIME) AS LMOTIME,
+			OC.UPDTCHK
+		from   OCOSAL OC
+		FORCE INDEX(IX_OCOSAL04)
+		inner join MSKUWC MS
+			 on MS.COMPKEY = OC.COMPKEY
+		   and MS.WAREKEY = OC.TOWARKY
+		   and MS.OWNERKY = OC.OWNERKY
+		   and MS.SKUMKEY = OC.SKUMKEY
+		left join MPAKMA MP
+			on MP.COMPKEY = MS.COMPKEY 
+			and MP.PACKKEY = MS.PACKKEY
+			and MP.PUOMKEY = MS.SUOMKEY
+			and MP.TRUNTYP = MS.TRUNTYP
+			and MP.PKUSEYN = 'Y'
+		inner join MORDMA MOR
+			on MOR.COMPKEY= OC.COMPKEY
+			and MOR.COOTYPE = OC.DOCTYPE
+			and MOR.COOCATE = OC.DOCCATE
+			and MOR.WAREKEY = OC.TOWARKY
+			and MOR.COUSEYN = 'Y'
+		inner join MWARMA MW
+			on MW.COMPKEY = OC.COMPKEY
+			and MW.WAREKEY = OC.TOWARKY
+			and MW.WHUSEYN = 'Y'
+		inner join MOWRMA MO
+			on MO.COMPKEY = OC.COMPKEY
+			and MO.OWNERKY = OC.OWNERKY
+			and MO.OWUSEYN = 'Y'
+		inner join MPTNMA PT
+			on PT.COMPKEY = OC.COMPKEY
+			and PT.PTNRKEY = OC.CUSTKEY
+			and PT.PTNRTYP = 'CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+		inner join MDESMA DE
+			on DE.COMPKEY = OC.COMPKEY
+			and DE.PTNRKEY = PT.PTNRKEY
+			and DE.DESTKEY = OC.DESTKEY
+		where OC.COMPKEY = #{userData.compkey}
+		and OC.SALSTAT = 'CANCEL'
+			<choose>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo == ""'>
+					<![CDATA[ and OC.POSTDAT >= #{postdateFrom} ]]>
+				</when>
+				<when test='postdateTo != null and postdateTo != "" and postdateFrom == ""'>
+					<![CDATA[ and OC.POSTDAT <= #{postdateTo}]]>
+				</when>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo != null and postdateTo != ""'>
+					and OC.POSTDAT between #{postdateFrom} and #{postdateTo}
+				</when>
+			</choose>
+			<if test="ownerky != null and ownerky != ''">
+				and OC.OWNERKY =#{ownerky}
+			</if>
+			<if test="skumkey != null and skumkey != ''">
+				and upper(OC.SKUMKEY) like concat('%' , upper(#{skumkey}), '%')
+			</if>
+			<if test="skudesc != null and skudesc != ''">
+				and upper(OC.SKUDESC) like concat('%' , upper(#{skudesc}), '%')
+			</if>
+			<if test="cooutky != null and cooutky != ''">
+				and OC.COOUTKY like concat('%' , #{cooutky} , '%')
+			</if>
+			<if test="custkey != null and custkey != ''">
+				and OC.CUSTKEY =#{custkey}
+			</if>
+			<if test="towarky != null and towarky != ''">
+				and OC.TOWARKY = #{towarky}
+			</if>
+			<if  test="cootypes != null and cootypes.size > 0">
+				and OC.DOCTYPE in
+				<foreach collection="cootypes" item="item" open="(" separator="," close=")">
+					 #{item}
+				</foreach>
+			</if>
+		order by OC.COOUTKY desc, OC.COOUTIT asc
+	</select>
+
+
+	<!-- *********************************************** -->
+	<!-- 납품오더 OMS04 추가 -->
+	<!-- *********************************************** -->
+	<!-- oms04 : 납품취소 Head 리스트 조회 -->
+	<select id="selectOms04HeadList"
+		resultType="com.logistics.om.domain.SalesOrderDTO">
+		/* selectOms04HeadList */
+		select
+			concat(OC.COMPKEY,OC.COOUTKY) as ROWKEY
+			, OC.COMPKEY
+			, OC.COOUTKY
+			, OC.COOUTIT
+			, OC.DOCCATE
+			, MOR.COOTYPE
+			, MOR.COOTYNM AS DOCTYPE
+			, MW.WHNAMLC AS TOWARKY
+			, PT.PTNAMLC AS CUSTKEY
+			, DE.DENAMLC AS DESTKEY
+			, MO.OWNAMLC AS OWNERKY
+			, OC.SALMEMO
+			, FN_COM_TODATE(OC.POSTDAT) as POSTDAT
+			, FN_COM_TODATE(OC.SALDATE) as SALDATE
+			, FN_COM_TOTIME(OC.SALTIME) as SALTIME
+			, FN_COM_TODATE(OC.SALRQDT) as SALRQDT
+			, FN_COM_TOTIME(OC.SALRQTM) as SALRQTM
+			, OC.SKUSKEY
+			, OC.SKUMKEY
+			, OC.SKUDESC
+			, ifnull(OC.SOITQTY,0) as SOITQTY
+			, ifnull(OC.RGITQTY,0) as RGITQTY
+			, ifnull(OC.SHCFQTY,0) as SHCFQTY
+			, ifnull(OC.DIFFQTY,0) as DIFFQTY
+			, MP.PACKQTY
+			, ifnull(ceiling(OC.SOITQTY/ MP.PACKQTY), '0') as PACKBOX
+			, OC.SUOMKEY
+			, OC.DCTCTYP
+			, (select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='SALSTAT' AND COMCDVL = OC.SALSTAT) as SALSTAT
+			, (select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='INBSTAT' AND COMCDVL = OC.INBSTAT) as INBSTAT
+			, (select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='OUBSTAT' AND COMCDVL = OC.OUBSTAT) as OUBSTAT
+			, (select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='TRNSTAT' AND COMCDVL = OC.TRNSTAT) as TRNSTAT
+			, OC.SAATN01
+			, OC.SAATN02
+			, OC.SAATN03
+			, OC.SAATN04
+			, OC.SAATN05
+			, OC.SAATC01
+			, OC.SAATC02
+			, OC.SAATC03
+			, OC.SAATC04
+			, OC.SAATC05
+			, OC.SAATC06
+			, OC.SAATC07
+			, OC.SAATC08
+			, OC.SAATC09
+			, OC.SAATC10
+			, OC.CLOSLYN
+			, fn_com_todate(OC.CREDATE) as CREDATE
+			, fn_com_totime(OC.CRETIME) as CRETIME
+			, fn_sy_usernam(OC.COMPKEY , OC.CREUSER) as CREUSER
+			, fn_com_todate(OC.LMODATE) as LMODATE
+			, fn_com_totime(OC.LMOTIME) as LMOTIME
+			, fn_sy_usernam(OC.COMPKEY , OC.LMOUSER) as LMOUSER
+			, OC.UPDTCHK
+		from OCOSAL OC
+		FORCE INDEX(IX_OCOSAL04)
+		inner join MSKUWC MS
+			on MS.COMPKEY = OC.COMPKEY
+			and MS.WAREKEY = OC.TOWARKY
+			and MS.OWNERKY = OC.OWNERKY
+			and MS.SKUMKEY = OC.SKUMKEY
+		left join MPAKMA MP
+			on MP.COMPKEY = MS.COMPKEY 
+			and MP.PACKKEY = MS.PACKKEY
+			and MP.PUOMKEY = MS.SUOMKEY
+			and MP.TRUNTYP = MS.TRUNTYP
+			AND MP.PKUSEYN = 'Y'
+		inner join MORDMA MOR
+			on MOR.COMPKEY= OC.COMPKEY
+			and MOR.COOTYPE = OC.DOCTYPE
+			and MOR.COOCATE = OC.DOCCATE
+			and MOR.WAREKEY = OC.TOWARKY
+		inner join MWARMA MW
+			on MW.COMPKEY = OC.COMPKEY
+			and MW.WAREKEY = OC.TOWARKY
+			and MW.WHUSEYN = 'Y'
+		inner join MOWRMA MO
+			on MO.COMPKEY = OC.COMPKEY
+			and MO.OWNERKY = OC.OWNERKY
+			and MO.OWUSEYN = 'Y'
+		inner join MPTNMA PT
+			on PT.COMPKEY = OC.COMPKEY
+			and PT.PTNRKEY = OC.CUSTKEY
+			and PT.PTNRTYP = 'CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+		inner join MDESMA DE
+			on DE.COMPKEY = OC.COMPKEY
+			and DE.PTNRKEY = PT.PTNRKEY
+			and DE.DESTKEY = OC.DESTKEY
+			and DE.DEUSEYN = 'Y'
+		where OC.COMPKEY = #{userData.compkey}
+			<if test="towarky != null and towarky != ''">
+				and OC.TOWARKY =#{towarky}
+			</if>
+			<choose>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo == ""'>
+					<![CDATA[ and OC.POSTDAT >= #{postdateFrom} ]]>
+				</when>
+				<when test='postdateTo != null and postdateTo != "" and postdateFrom == ""'>
+					<![CDATA[ and OC.POSTDAT <= #{postdateTo}]]>
+				</when>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo != null and postdateTo != ""'>
+					and OC.POSTDAT between #{postdateFrom} and #{postdateTo}
+				</when>
+			</choose>
+		and OC.SALSTAT != 'CANCEL'
+		and OC.TRNSTAT = 'NEW'
+		and OC.OUBSTAT = 'NEW'
+		<if test="ownerky != null and ownerky != ''">
+			and OC.OWNERKY =#{ownerky}
+		</if>
+		<if test="skumkey != null and skumkey != ''">
+			and upper(OC.SKUMKEY) like concat('%' , upper(#{skumkey})
+			, '%')
+		</if>
+		<if test="skudesc != null and skudesc != ''">
+			and upper(OC.SKUDESC) like concat('%' , upper(#{skudesc})
+			, '%')
+		</if>
+		<if test="custkey != null and custkey != ''">
+			and OC.CUSTKEY =#{custkey}
+		</if>
+		<if test="towarky != null and towarky != ''">
+			and OC.TOWARKY =#{towarky}
+		</if>
+		<if test="cooutky != null and cooutky != ''">
+			and OC.COOUTKY like concat('%' , #{cooutky}, '%')
+		</if>
+		<if  test="cootypes != null and cootypes.size > 0">
+			and OC.DOCTYPE in
+			<foreach collection="cootypes" item="item" open="(" separator="," close=")">
+				 #{item}
+			</foreach>
+		</if>
+		order by OC.CREDATE desc , OC.COOUTKY desc , OC.COOUTIT asc
+	</select>
+
+	<!-- 취소 사유코드 select box -->
+	<select id="selectCancelRsncodeSb"
+		resultType="com.logistics.md.domain.MrscmaDTO">
+		select
+			RSNCODE as combovl ,
+			RSNCDNM as combonm
+		from MRSCMA
+		where COMPKEY = #{userData.compkey}
+			and DOCCATE = #{doccate}
+			and DOCTYPE = #{doctype}
+			and RSCATE1 = 'CANCEL'
+		<if test="warekey != null and warekey != ''">
+			and WAREKEY = #{warekey}
+		</if>
+	</select>
+
+	<!-- 회수사유코드 select box SMA 230802 추가 -->
+	<select id="selectReturnRsncodeSb"
+		resultType="com.logistics.md.domain.MrscmaDTO">
+		select
+		RSNCODE,
+		RSNCDNM
+		from MRSCMA
+		where compkey = #{userData.compkey}
+		and DOCCATE = #{doccate}
+		and DOCTYPE = '230'
+		and RSCATE1 = 'NORMAL'
+	</select>
+
+	<!-- 납품취소오더 전송 -->
+	<select id="sp_om_ocosal_cancel" statementType="CALLABLE"
+		parameterType="HashMap">
+		CALL sp_om_ocosal_cancel( #{userData.compkey},
+		#{cooutky}, #{cooutit}, #{rsncode}, #{rsndesc} ,#{userData.useract} ,
+		#{omsgkey, mode=OUT, jdbcType=VARCHAR},
+		#{oresult, mode=OUT, jdbcType=INTEGER} )
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- OMS06 : 출고오더조회 추가 -->
+	<!-- *********************************************** -->
+	<select id="selectOms06List"
+		resultType="com.logistics.om.domain.SalesOrderDTO">
+		/* selectOms06List */
+		select
+			OC.COMPKEY ,
+			OC.COOUTKY ,
+			OC.COOUTIT ,
+			fn_com_todate(OC.SALDATE) as SALDATE ,
+			fn_com_totime(OC.SALTIME) as SALTIME ,
+			OC.DOCCATE ,
+			MOR.COOTYNM as DOCTYPE ,
+			MW.WHNAMLC as TOWARKY ,
+			PT.PTNAMLC as CUSTKEY ,
+			DE.DENAMLC as DESTKEY ,
+			MO.OWNAMLC as OWNERKY ,
+			fn_com_todate(OC.SALRQDT) as SALRQDT ,
+			fn_com_totime(OC.SALRQTM) as SALRQTM ,
+			OC.SALMEMO ,
+			OC.SKUMKEY ,
+			OC.SOITQTY ,
+			OC.RGITQTY ,
+			OC.DIFFQTY ,
+			ifnull(MP.PACKQTY , 0) as PACKQTY,
+			ifnull(ceiling(OC.SOITQTY/ MP.PACKQTY), '0') as PACKBOX ,
+			OC.SHCFQTY ,
+			OC.SUOMKEY ,
+			OC.SKUDESC ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='SALSTAT' AND COMCDVL = OC.SALSTAT) as SALSTAT ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='OUBSTAT' AND COMCDVL = OC.OUBSTAT) as OUBSTAT ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='TRNSTAT' AND COMCDVL = OC.TRNSTAT) as TRNSTAT ,
+			OC.SAATN01 ,
+			OC.SAATN02 ,
+			OC.SAATN03 ,
+			OC.SAATN04 ,
+			OC.SAATN05 ,
+			OC.SAATC01 ,
+			OC.SAATC02 ,
+			OC.SAATC03 ,
+			OC.SAATC04 ,
+			OC.SAATC05 ,
+			OC.SAATC06 ,
+			OC.SAATC07 ,
+			OC.SAATC08 ,
+			OC.SAATC09 ,
+			OC.SAATC10 ,
+			fn_com_todate(OC.CREDATE) as CREDATE ,
+			fn_com_totime(OC.CRETIME) as CRETIME ,
+			( SELECT USERNAM 
+       		    FROM V_SUSRMA  
+      		   WHERE COMPKEY = #{userData.compkey}
+      		   AND USERACT = OC.CREUSER
+      		) as CREUSER ,
+			fn_com_todate(OC.LMODATE) as LMODATE ,
+			fn_com_totime(OC.LMOTIME) as LMOTIME ,
+			( SELECT USERNAM 
+      		    FROM V_SUSRMA  
+      	       WHERE COMPKEY = #{userData.compkey}
+      	       AND USERACT = OC.LMOUSER
+      	    ) as LMOUSER ,
+			OC.CLOSLYN ,
+			OC.UPDTCHK
+		from OCOSAL OC
+		FORCE INDEX (IX_OCOSAL04)
+		inner join MSKUWC MS
+			on MS.COMPKEY = OC.COMPKEY
+			and MS.WAREKEY = OC.TOWARKY
+			and MS.OWNERKY = OC.OWNERKY
+			and MS.SKUMKEY = OC.SKUMKEY
+		left join MPAKMA MP
+			on MP.COMPKEY = MS.COMPKEY 
+			and MP.PACKKEY = MS.PACKKEY
+			and MP.PUOMKEY = MS.SUOMKEY
+			and MP.TRUNTYP = MS.TRUNTYP
+		inner join MORDMA MOR
+			on MOR.COMPKEY= OC.COMPKEY
+			and MOR.COOTYPE = OC.DOCTYPE
+			and MOR.COOCATE = OC.DOCCATE
+			and MOR.WAREKEY = OC.TOWARKY
+		inner join MWARMA MW
+			on MW.COMPKEY = OC.COMPKEY
+			and MW.WAREKEY = OC.TOWARKY
+			and MW.WHUSEYN = 'Y'
+		inner join MOWRMA MO
+			on MO.COMPKEY = OC.COMPKEY
+			and MO.OWNERKY = OC.OWNERKY
+			and MO.OWUSEYN = 'Y'
+		inner join MPTNMA PT
+			on PT.COMPKEY = OC.COMPKEY
+			and PT.PTNRKEY = OC.CUSTKEY
+			and PT.PTNRTYP = 'CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+		inner join MDESMA DE
+			on DE.COMPKEY = OC.COMPKEY
+			and DE.PTNRKEY = PT.PTNRKEY
+			and DE.DESTKEY = OC.DESTKEY
+			and DE.DEUSEYN = 'Y'
+		where OC.COMPKEY = #{userData.compkey}
+		and OC.DOCTYPE = #{cootype}
+		<if test="towarky != null and towarky != ''">
+				and OC.TOWARKY =#{towarky}
+		</if>
+		<choose>
+			<when test='postdateFrom != null and postdateFrom != "" and postdateTo == ""'>
+				<![CDATA[ and OC.POSTDAT >= #{postdateFrom} ]]>
+			</when>
+			<when test='postdateTo != null and postdateTo != "" and postdateFrom == ""'>
+				<![CDATA[ and OC.POSTDAT <= #{postdateTo}]]>
+			</when>
+			<when test='postdateFrom != null and postdateFrom != "" and postdateTo != null and postdateTo != ""'>
+				and OC.POSTDAT between #{postdateFrom} and #{postdateTo}
+			</when>
+		</choose>
+		and OC.SALSTAT != 'CANCEL'
+		<if test='salstats != null and salstats.size > 0'>
+			and OC.SALSTAT IN
+			<foreach collection="salstats" item="item" index="index"
+				open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='oubstats != null and oubstats.size > 0'>
+			and OC.OUBSTAT IN
+			<foreach collection="oubstats" item="item" index="index"
+				open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+			and OC.OWNERKY =#{ownerky}
+		</if>
+		<if test="skumkey != null and skumkey != ''">
+			and upper(OC.SKUMKEY) like concat('%' , upper(#{skumkey}),
+			'%')
+		</if>
+		<if test="skudesc != null and skudesc != ''">
+			and upper(OC.SKUDESC) like concat('%' , upper(#{skudesc})
+			, '%')
+		</if>
+		<if test="custkey != null and custkey != ''">
+			and OC.CUSTKEY =#{custkey}
+		</if>
+		<if test="destkey != null and destkey != ''">
+			and OC.DESTKEY = #{destkey}
+		</if>
+		order by OC.COOUTKY desc , OC.COOUTIT asc
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- OMS08 : 운송오더조회 추가 -->
+	<!-- *********************************************** -->
+	<select id="selectOms08List"
+		resultType="com.logistics.om.domain.SalesOrderDTO">
+		/* selectOms08List */
+		select
+			OC.COMPKEY ,
+			OC.COOUTKY ,
+			OC.COOUTIT ,
+			fn_com_todate(OC.SALDATE) as SALDATE ,
+			fn_com_totime(OC.SALTIME) as SALTIME ,
+			OC.DOCCATE ,
+			MOR.COOTYNM as DOCTYPE ,
+			MW.WHNAMLC as TOWARKY ,
+			PT.PTNAMLC as CUSTKEY ,
+			DE.DENAMLC as DESTKEY ,
+			MO.OWNAMLC as OWNERKY ,
+			fn_com_todate(OC.SALRQDT) as SALRQDT ,
+			fn_com_totime(OC.SALRQTM) as SALRQTM ,
+			OC.SALMEMO ,
+			OC.SKUMKEY ,
+			OC.SOITQTY ,
+			OC.RGITQTY ,
+			ifnull(OC.DIFFQTY, 0) ,
+			ifnull(MP.PACKQTY , 0) as PACKQTY ,
+			ifnull(ceiling(OC.SOITQTY/ MP.PACKQTY), '0') as PACKBOX ,
+			OC.SHCFQTY ,
+			OC.SUOMKEY ,
+			OC.SKUDESC ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='SALSTAT' AND COMCDVL = OC.SALSTAT) as SALSTAT ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='OUBSTAT' AND COMCDVL = OC.OUBSTAT) as OUBSTAT ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='TRNSTAT' AND COMCDVL = OC.TRNSTAT) as TRNSTAT ,
+			OC.SAATN01 ,
+			OC.SAATN02 ,
+			OC.SAATN03 ,
+			OC.SAATN04 ,
+			OC.SAATN05 ,
+			OC.SAATC01 ,
+			OC.SAATC02 ,
+			OC.SAATC03 ,
+			OC.SAATC04 ,
+			OC.SAATC05 ,
+			OC.SAATC06 ,
+			OC.SAATC07 ,
+			OC.SAATC08 ,
+			OC.SAATC09 ,
+			OC.SAATC10 ,
+			fn_com_todate(OC.CREDATE) as CREDATE ,
+			fn_com_totime(OC.CRETIME) as CRETIME ,
+			( SELECT USERNAM 
+       		    FROM V_SUSRMA  
+      		   WHERE COMPKEY = #{userData.compkey}
+      		   AND USERACT = OC.CREUSER
+      		) as CREUSER ,
+			fn_com_todate(OC.LMODATE) as LMODATE ,
+			fn_com_totime(OC.LMOTIME) as LMOTIME ,
+			( SELECT USERNAM 
+      		    FROM V_SUSRMA  
+      	       WHERE COMPKEY = #{userData.compkey}
+      	       AND USERACT = OC.LMOUSER
+      	    ) as LMOUSER ,
+			OC.CLOSLYN ,
+			OC.UPDTCHK
+		from OCOSAL OC
+		FORCE INDEX (IX_OCOSAL04)
+		inner join MSKUWC MS
+			on MS.COMPKEY = OC.COMPKEY
+			and MS.WAREKEY = OC.TOWARKY
+			and MS.OWNERKY = OC.OWNERKY
+			and MS.SKUMKEY = OC.SKUMKEY
+		left join MPAKMA MP
+			on MP.COMPKEY = MS.COMPKEY 
+			and MP.PACKKEY = MS.PACKKEY
+			and MP.PUOMKEY = MS.SUOMKEY
+			and MP.TRUNTYP = MS.TRUNTYP
+		inner join MORDMA MOR
+			on MOR.COMPKEY= OC.COMPKEY
+			and MOR.COOTYPE = OC.DOCTYPE
+			and MOR.COOCATE = OC.DOCCATE
+			and MOR.WAREKEY = OC.TOWARKY
+		inner join MWARMA MW
+			on MW.COMPKEY = OC.COMPKEY
+			and MW.WAREKEY = OC.TOWARKY
+			and MW.WHUSEYN = 'Y'
+		inner join MOWRMA MO
+			on MO.COMPKEY = OC.COMPKEY
+			and MO.OWNERKY = OC.OWNERKY
+			and MO.OWUSEYN = 'Y'
+		inner join MPTNMA PT
+			on PT.COMPKEY = OC.COMPKEY
+			and PT.PTNRKEY = OC.CUSTKEY
+			and PT.PTNRTYP = 'CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+		inner join MDESMA DE
+			on DE.COMPKEY = OC.COMPKEY
+			and DE.PTNRKEY = PT.PTNRKEY
+			and DE.DESTKEY = OC.DESTKEY
+			and DE.DEUSEYN = 'Y'
+		where OC.COMPKEY = #{userData.compkey}
+		and OC.DOCTYPE = #{cootype}
+		and OC.SALSTAT != 'CANCEL'
+			<if test="towarky != null and towarky != ''">
+				and OC.TOWARKY =#{towarky}
+			</if>
+			<choose>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo == ""'>
+					<![CDATA[ and OC.POSTDAT >= #{postdateFrom} ]]>
+				</when>
+				<when test='postdateTo != null and postdateTo != "" and postdateFrom == ""'>
+					<![CDATA[ and OC.POSTDAT <= #{postdateTo}]]>
+				</when>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo != null and postdateTo != ""'>
+					and OC.POSTDAT between #{postdateFrom} and #{postdateTo}
+				</when>
+			</choose>
+		<if test='salstats != null and salstats.size > 0'>
+			and OC.SALSTAT IN
+			<foreach collection="salstats" item="item" index="index"
+				open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='trnstats != null and trnstats.size > 0'>
+			and OC.TRNSTAT IN
+			<foreach collection="trnstats" item="item" index="index"
+				open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+			and OC.OWNERKY =#{ownerky}
+		</if>
+		<if test="cooutky != null and cooutky != ''">
+			and OC.COOUTKY like concat('%' , #{cooutky}, '%')
+		</if>
+		<if test="skumkey != null and skumkey != ''">
+			and upper(OC.SKUMKEY) like concat('%' , upper(#{skumkey}),
+			'%')
+		</if>
+		<if test="skudesc != null and skudesc != ''">
+			and upper(OC.SKUDESC) like concat('%' , upper(#{skudesc})
+			, '%')
+		</if>
+		<if test="custkey != null and custkey != ''">
+			and OC.CUSTKEY =#{custkey}
+		</if>
+		<if test="destkey != null and destkey != ''">
+			and OC.DESTKEY = #{destkey}
+		</if>
+		order by OC.COOUTKY desc , OC.COOUTIT asc
+	</select>
+	<!-- *********************************************** -->
+	<!-- oms10 : 납품현황조회 추가 -->
+	<!-- *********************************************** -->
+	<select id="selectOms10List" resultType="com.logistics.om.domain.SalesOrderDTO">
+		/* selectOms10List */
+		select OC.COMPKEY
+		, OC.COOUTKY
+		, OC.COOUTIT
+		, MA.OCOCTNM AS DOCCATE
+		, MA.COOTYNM AS DOCTYPE
+		, date_format(str_to_date(OC.POSTDAT, '%Y%m%d'), '%Y-%m-%d') as POSTDAT
+		, date_format(str_to_date(CONCAT(OC.SALDATE, OC.SALTIME), '%Y%m%d %H%i%s'), '%Y-%m-%d %H:%i:%s') AS SALDTTM
+		, MW.WHNAMLC AS TOWARKY
+		, OC.SALMEMO
+		, date_format(str_to_date(OC.SALRQDT, '%Y%m%d'), '%Y-%m-%d') as SALRQDT
+		, date_format(str_to_date(OC.SALRQTM, '%H%i%s'), '%H:%i:%s') as SALRQTM
+		, MO.OWNAMLC AS OWNERKY
+		, MS.SKUSKEY
+		, MS.SKUMKEY
+		, MS.SKUDESC
+		, MS.SUOMKEY
+		, OC.SOITQTY
+		, OC.DIFFQTY
+		, MPA.PACKQTY
+		, IFNULL(CEILING(OC.SOITQTY / MPA.PACKQTY), '0') AS PACKBOX
+		, IFNULL(ST.STOTQTY , 0) as STOTQTY
+		, OC.RGITQTY
+		, OC.SHCFQTY
+		, MS.SUOMKEY
+		, OC.DCTCTYP
+	    , MP.PTNAMLC AS CUSTKEY
+		, (
+		    select MP.PTNAMLC
+		      from MPTNMA MP
+		     where MP.COMPKEY = OC.COMPKEY
+		       and MP.PTNRKEY = OC.CUSTKEY
+		       and MP.PTNRTYP = 'VENDER'
+		       and MP.PTUSEYN = 'Y'
+	      ) AS VENDKEY
+		, (
+		    select MD.DENAMLC 
+		      from MDESMA MD
+		     where MD.COMPKEY = OC.COMPKEY
+		       and MD.DESTKEY = OC.DESTKEY
+		       and MD.PTNRKEY = OC.CUSTKEY
+		       and MD.DEUSEYN = 'Y'
+          ) AS DESTKEY 
+		, (
+           	select MC.COMCDTX
+              from V_MCODEM MC
+             where MC.COMPKEY = OC.COMPKEY
+               and MC.COMCDVL = OC.SALSTAT
+               and MC.COMCDKY = 'SALSTAT'
+               and MC.COUSEYN = 'Y'
+		  ) AS SALSTAT
+		, (
+           	select MC.COMCDTX
+              from V_MCODEM MC
+             where MC.COMPKEY = OC.COMPKEY
+               and MC.COMCDVL = OC.INBSTAT
+               and MC.COMCDKY = 'INBSTAT'
+               and MC.COUSEYN = 'Y'
+		  ) AS INBSTAT
+		, (
+           	select MC.COMCDTX
+              from V_MCODEM MC
+             where MC.COMPKEY = OC.COMPKEY
+               and MC.COMCDVL = OC.OUBSTAT
+               and MC.COMCDKY = 'OUBSTAT'
+               and MC.COUSEYN = 'Y'
+		  ) AS OUBSTAT
+		, (
+           	select MC.COMCDTX
+              from V_MCODEM MC
+             where MC.COMPKEY = OC.COMPKEY
+               and MC.COMCDVL = OC.TRNSTAT
+               and MC.COMCDKY = 'TRNSTAT'
+               and MC.COUSEYN = 'Y'
+		  ) AS TRNSTAT
+		, OC.ORDGR01
+		, OC.ORDGR02
+		, OC.ORDGR03
+		, OC.SAATN01
+		, OC.SAATN02
+		, OC.SAATN03
+		, OC.SAATN04
+		, OC.SAATN05
+		, OC.SAATC01
+		, OC.SAATC02
+		, OC.SAATC03
+		, OC.SAATC04
+		, OC.SAATC05
+		, OC.SAATC06
+		, OT.SCATENM as SAATC07
+		, OT.MCATENM as SAATC08
+		, OC.SAATC09
+		, OC.SAATC10
+		, OC.CLOSLYN
+		, IF(OC.CLODATE IS NULL OR OC.CLODATE='', '', date_format(str_to_date(OC.CLODATE, '%Y%m%d'), '%Y-%m-%d')) as CLODATE
+		, IF(OC.CLOTIME IS NULL OR OC.CLOTIME='', '', date_format(str_to_date(OC.CLOTIME, '%H%i%s'), '%H:%i:%s')) as CLOTIME
+		, OC.CLOUSER
+		, OC.BTHDCKY
+		, OC.BTHDCIT
+		, date_format(str_to_date(OC.CREDATE, '%Y%m%d'), '%Y-%m-%d') as CREDATE
+		, date_format(str_to_date(OC.CRETIME, '%H%i%s'), '%H:%i:%s') as CRETIME
+		, ( SELECT USERNAM 
+       		  FROM V_SUSRMA  
+      		 WHERE COMPKEY = #{userData.compkey}
+      		 AND USERACT = OC.CREUSER
+      	  ) as CREUSER
+		, IF(OC.LMODATE IS NULL OR OC.LMODATE='', '', date_format(str_to_date(OC.LMODATE, '%Y%m%d'), '%Y-%m-%d')) as LMODATE	
+		, IF(OC.LMOTIME IS NULL OR OC.LMOTIME='', '', date_format(str_to_date(OC.LMOTIME, '%H%i%s'), '%H:%i:%s')) as LMOTIME
+		, ( SELECT USERNAM 
+       		  FROM V_SUSRMA  
+      		 WHERE COMPKEY = #{userData.compkey}
+      		 AND USERACT = OC.LMOUSER
+      	  ) as LMOUSER
+		, OC.INDIBZL
+		, OC.INDIARC
+		, OC.UPDTCHK
+		from OCOSAL OC
+		FORCE INDEX (IX_OCOSAL04)
+		INNER JOIN MSKUWC MS
+		   on MS.COMPKEY = OC.COMPKEY
+		  and MS.WAREKEY = OC.TOWARKY
+		  and MS.OWNERKY = OC.OWNERKY
+		  and MS.SKUMKEY = OC.SKUMKEY
+		INNER JOIN MORDMA MA
+		   on MA.COMPKEY = OC.COMPKEY
+		  and MA.WAREKEY = OC.TOWARKY
+		  and MA.COOTYPE = OC.DOCTYPE
+		  and MA.COOCATE = OC.DOCCATE 
+		  and MA.COUSEYN = 'Y'
+     	INNER JOIN MWARMA MW
+   	       on MW.COMPKEY = OC.COMPKEY
+   	      and MW.WAREKEY = OC.TOWARKY
+   	      and MW.WHUSEYN = 'Y'
+      	INNER JOIN MOWRMA MO
+      	   on MO.COMPKEY = OC.COMPKEY
+      	  and MO.OWNERKY = OC.OWNERKY
+      	  and MO.OWUSEYN = 'Y'
+      	INNER JOIN MPTNMA MP
+      	   on MP.COMPKEY = OC.COMPKEY
+	      and MP.PTNRKEY = OC.CUSTKEY
+	      and MP.PTNRTYP = 'CUSTOMER'
+	      and MP.PTUSEYN = 'Y'
+		LEFT JOIN 
+		(
+			select COMPKEY, OWNERKY, WAREKEY, SKUMKEY
+			     , (sum(STOTQTY)- sum(SBLOQTY)) as STOTQTY
+			  from WSTKKY
+			 where COMPKEY = #{userData.compkey}
+			   and WAREKEY = #{towarky}
+			   and AREAKEY = 'STG'
+			   and SALLQTY = 0
+			   and SINBQTY = 0
+			   and SOUBQTY = 0
+			 group by COMPKEY, WAREKEY, OWNERKY, SKUMKEY
+		) ST
+		  on ST.COMPKEY = MS.COMPKEY
+		 and ST.WAREKEY = MS.WAREKEY
+		 and ST.OWNERKY = MS.OWNERKY
+		 and ST.SKUMKEY = MS.SKUMKEY
+      	LEFT JOIN MPAKMA MPA
+          on MPA.COMPKEY = MS.COMPKEY
+         and MPA.PACKKEY = MS.PACKKEY
+         and MPA.WAREKEY = MS.WAREKEY
+         and MPA.TRUNTYP = MS.TRUNTYP
+         and MPA.PKUSEYN = 'Y'
+        LEFT JOIN OCATMA OT
+          on OC.COMPKEY = OT.COMPKEY
+         and OC.TOWARKY = OT.WAREKEY
+         and OC.DOCCATE = OT.DOCCATE
+         and OC.DOCTYPE = OT.DOCTYPE
+         and OC.SAATC07 = OT.SCATECD
+         and OT.CAUSEYN = 'Y'
+		<where>
+			and OC.COMPKEY = #{userData.compkey}
+			and OC.DOCTYPE = #{cootype}
+			<if test="towarky != null and towarky != ''">
+					and OC.TOWARKY = #{towarky}
+			</if>
+			<choose>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo == ""'>
+					<![CDATA[ and OC.POSTDAT >= #{postdateFrom} ]]>
+				</when>
+				<when test='postdateTo != null and postdateTo != "" and postdateFrom == ""'>
+					<![CDATA[ and OC.POSTDAT <= #{postdateTo}]]>
+				</when>
+				<when test='postdateFrom != null and postdateFrom != "" and postdateTo != null and postdateTo != ""'>
+					and OC.POSTDAT between #{postdateFrom} and #{postdateTo}
+				</when>
+			</choose>
+			<if test='cooutky != null and cooutky != ""'>
+				and OC.COOUTKY LIKE CONCAT('%', #{cooutky}, '%')
+			</if>
+			<if test='skumkey != null and skumkey != ""'>
+				and OC.SKUMKEY LIKE CONCAT('%', UPPER(#{skumkey}), '%')
+			</if>
+			<if test='skudesc != null and skudesc != ""'>
+				and OC.SKUDESC LIKE CONCAT('%', UPPER(#{skudesc}), '%')
+			</if>
+			<if test='custkey != null and custkey != ""'>
+				and OC.CUSTKEY LIKE CONCAT('%', #{custkey}, '%')
+			</if>
+			<if test='destkey != null and destkey != ""'>
+				and OC.DESTKEY LIKE CONCAT('%', #{destkey}, '%')
+			</if>
+			<if test="salstats == null or salstats.size == 0">
+				and OC.SALSTAT NOT IN ('CANCEL')
+			</if>
+			<if test='salstats != null and salstats.size > 0'>
+				and OC.SALSTAT IN
+				<foreach collection="salstats" item="item" index="index" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			<if test='oubstats != null and oubstats.size > 0'>
+				and OC.OUBSTAT IN
+				<foreach collection="oubstats" item="item" index="index" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			<if test='trnstats != null and trnstats.size > 0'>
+				and OC.TRNSTAT IN
+				<foreach collection="trnstats" item="item" index="index" open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			<if test='ownerky != null and ownerky != ""'>
+				and OC.OWNERKY = #{ownerky}
+			</if>
+			<if test='saatc01 != null and saatc01 != ""'>
+				and REPLACE(OC.SAATC01, ' ', '') LIKE CONCAT('%', REPLACE(#{saatc01}, ' ', ''), '%') <!-- SAATC01(BODY_NO)검색조건 추가 2024.01.08 최강호 -->
+			</if>
+		</where>
+	</select>
+
+	<!-- *********************************************** -->
+	<!-- OMR13 : 회수현황조회 추가 -->
+	<!-- *********************************************** -->
+	<select id="selectOmr13List" resultType="com.logistics.om.domain.SalesOrderDTO">
+	/* selectOmr13List */
+		select
+			OC.COMPKEY ,
+			OC.COOUTKY ,
+			OC.COOUTIT ,
+			FN_COM_TODATE(OC.POSTDAT) as POSTDAT ,
+			FN_COM_TODATE(OC.SALDATE) as SALDATE ,
+			FN_COM_TOTIME(OC.SALTIME) as SALTIME ,
+			FN_COM_TODATE(OC.SALRQDT) as SALRQDT ,
+			FN_COM_TOTIME(OC.SALRQTM) as SALRQTM ,
+			OC.DOCCATE ,
+			MOR.COOTYNM as DOCTYPE ,
+			MW.WHNAMLC as TOWARKY ,
+			PT.PTNAMLC as CUSTKEY ,
+			DE.DENAMLC as DESTKEY ,
+			MO.OWNAMLC as OWNERKY ,
+			OC.SKUMKEY ,
+			OC.SOITQTY ,
+			OC.RGITQTY ,
+			OC.SHCFQTY ,
+			OC.SUOMKEY ,
+			OC.SKUDESC ,
+			OC.SALMEMO ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='SALSTAT' AND COMCDVL = OC.SALSTAT) as SALSTAT ,
+			(select COMCDTX from V_MCODEM where COMPKEY = #{userData.compkey} and COMCDKY='TRNSTAT' AND COMCDVL = OC.TRNSTAT) as TRNSTAT ,
+			MP.PACKQTY ,
+			ifnull(ceiling(OC.SOITQTY/ MP.PACKQTY), '0') as PACKBOX ,
+			OC.SAATN01 ,
+			OC.SAATN02 ,
+			OC.SAATN03 ,
+			OC.SAATN04 ,
+			OC.SAATN05 ,
+			OC.SAATC01 ,
+			OC.SAATC02 ,
+			OC.SAATC03 ,
+			OC.SAATC04 ,
+			OC.SAATC05 ,
+			OC.SAATC06 ,
+			OC.SAATC07 ,
+			OC.SAATC08 ,
+			OC.SAATC09 ,
+			OC.SAATC10 ,
+			fn_com_todate(OC.CREDATE) as CREDATE ,
+			fn_com_totime(OC.CRETIME) as CRETIME ,
+			( SELECT USERNAM 
+       		    FROM V_SUSRMA  
+      		   WHERE COMPKEY = #{userData.compkey}
+      		   AND USERACT = OC.CREUSER
+      	    ) as CREUSER ,
+			fn_com_todate(OC.LMODATE) as LMODATE ,
+			fn_com_totime(OC.LMOTIME) as LMOTIME ,
+			( SELECT USERNAM 
+       		    FROM V_SUSRMA  
+      		   WHERE COMPKEY = #{userData.compkey}
+      		   AND USERACT = OC.LMOUSER
+      	    ) as LMOUSER ,
+			OC.CLOSLYN ,
+			OC.UPDTCHK
+		from OCOSAL OC
+		FORCE INDEX (IX_OCOSAL04)
+		inner join MSKUWC MS
+			on MS.COMPKEY = OC.COMPKEY
+			and MS.WAREKEY = OC.TOWARKY
+			and MS.SKUMKEY = OC.SKUMKEY
+			and MS.OWNERKY = OC.OWNERKY
+		inner join MPTNMA PT
+			on PT.COMPKEY = OC.COMPKEY
+			and PT.PTNRKEY = OC.CUSTKEY
+			and PT.PTNRTYP = 'CUSTOMER'
+			and PT.PTUSEYN = 'Y'
+		inner join MDESMA DE
+			on DE.COMPKEY = OC.COMPKEY
+			and DE.PTNRKEY = PT.PTNRKEY
+			and DE.DESTKEY = OC.DESTKEY
+			and DE.DEUSEYN = 'Y'
+		inner join MORDMA MOR
+			on MOR.COMPKEY= OC.COMPKEY
+			and MOR.COOTYPE = OC.DOCTYPE
+			and MOR.COOCATE = OC.DOCCATE
+			and MOR.WAREKEY = OC.TOWARKY
+		inner join MWARMA MW
+			on MW.COMPKEY = OC.COMPKEY
+			and MW.WAREKEY = OC.TOWARKY
+			and MW.WHUSEYN = 'Y'
+		inner join MOWRMA MO
+			on MO.COMPKEY = OC.COMPKEY
+			and MO.OWNERKY = OC.OWNERKY
+			and MO.OWUSEYN = 'Y'
+		left join MPAKMA MP
+			on MP.COMPKEY = MS.COMPKEY 
+			and MP.PACKKEY = MS.PACKKEY
+			and MP.PUOMKEY = MS.SUOMKEY
+			and MP.TRUNTYP = MS.TRUNTYP
+		where OC.COMPKEY = #{userData.compkey}
+		and OC.DOCTYPE = '230'
+		<choose>
+			<when test='postdateFrom != null and postdateFrom != "" and postdateTo == ""'>
+				<![CDATA[ and OC.POSTDAT >= replace(#{postdateFrom}, '-', '') ]]>
+			</when>
+			<when test='postdateTo != null and postdateTo != "" and postdateFrom == ""'>
+				<![CDATA[ and OC.POSTDAT <= replace(#{postdateTo}, '-', '')]]>
+			</when>
+			<when test='postdateFrom != null and postdateFrom != "" and postdateTo != null and postdateTo != ""'>
+				and OC.POSTDAT between replace(#{postdateFrom}, '-', '') and replace(#{postdateTo}, '-', '')  
+			</when>
+		</choose>
+		<if test="towarky != null and towarky != ''">
+			and OC.TOWARKY = #{towarky}
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+			and OC.OWNERKY = #{ownerky}
+		</if>
+		<if test='custkey != null and custkey != ""'>
+			and OC.CUSTKEY = #{custkey}
+		</if>
+		<if test='destkey != null and destkey != ""'>
+			and OC.DESTKEY = #{destkey}
+		</if>
+		<if test='skumkey != null and skumkey != ""'>
+			and OC.SKUMKEY like concat('%', upper(#{skumkey}), '%')
+		</if>
+		<if test='skudesc != null and skudesc != ""'>
+			and OC.SKUDESC like concat('%', upper(#{skudesc}), '%')
+		</if>
+		<if test='salstats != null and salstats.size > 0'>
+			and OC.SALSTAT IN
+			<foreach collection="salstats" item="item" index="index"
+				open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='trnstats != null and trnstats.size > 0'>
+			and OC.TRNSTAT IN
+			<foreach collection="trnstats" item="item" index="index"
+				open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		order by OC.COOUTKY desc, OC.COOUTIT asc
+	</select>
+</mapper>

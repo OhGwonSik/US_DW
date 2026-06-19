@@ -1,0 +1,1017 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.InboundMapper">
+
+    <!-- *********************************************** -->
+    <!--  입고  -->
+    <!-- *********************************************** -->  
+	<!-- wmr20 : 입하 Header List 조회 --> 
+    <select id="selectWmr20HeaderList" resultType="com.logistics.wm.domain.RecvDTO">
+     	 /* selectWmr20HeaderList */
+     	 
+     	 select WR.COMPKEY
+		 	  , WR.RCVDCKY
+		      , WR.WAREKEY
+		      , WR.DOCCATE
+		      , WR.DOCTYPE
+		      , WR.OWNERKY
+		      , WR.RCVDCST
+		      , WR.RCVITST
+		      , WR.VENDKEY
+		      , sum(WR.ASNDQTY) as ASNDQTY
+		      , sum(WR.RCVEQTY) as RCVEQTY
+		      , sum(WR.RCHSQTY) as RCHSQTY
+		      , COUNT(1) AS ITEMCNT
+		      , fn_com_todate(WR.RCVDCDT) as RCVDCDT
+		   from WRCVIT WR 
+		  inner join MSKUWC MS on MS.COMPKEY = WR.COMPKEY and MS.WAREKEY = WR.WAREKEY and MS.OWNERKY = WR.OWNERKY and MS.SKUMKEY = WR.SKUMKEY 
+		  <!-- inner join MPTNMA MP on MP.COMPKEY = WR.COMPKEY 데이터 조회를 위해 주석처리   -->
+		  where 1=1
+		    and WR.COMPKEY = #{userData.compkey}
+		    and WR.DOCCATE = '400'
+		<if test="warekey != null and  warekey != ''">
+		    and WR.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		    and WR.OWNERKY = #{ownerky} 
+		</if>
+		<if test="doctype != null and  doctype != ''">
+		    and WR.DOCTYPE = #{doctype} 
+		</if>
+		<choose>
+			<when test="rcvitsts == null or rcvitsts.size == 0">
+				and WR.RCVITST not in ('CANFULL', 'CANPART')
+			</when>
+			<when test='rcvitsts != null and rcvitsts.size >= 0'>
+				and WR.RCVITST in
+			   	<foreach collection="rcvitsts" item="item" index="index" open="(" close=")" separator=",">
+			   	 #{item}
+			   	</foreach>
+			</when>
+		</choose>
+		<!-- <if test="custkey != null and  custkey != ''">
+		    and MS.BRANDCD = #{custkey}
+		</if> -->
+		<!-- <if test="vendnam != null and  vendnam != ''">
+		    and upper(MP.PTNAMLC) like concat('%', upper(#{vendnam}), '%')
+		</if> -->
+		<choose>
+        	<when test='rcvdcdtfrom != null and rcvdcdtfrom != "" and rcvdcdtto == ""'>
+ <![CDATA[ and WR.RCVDCDT >= replace(#{rcvdcdtfrom}, '-', '') ]]>
+			</when>
+			<when test='rcvdcdtto != null and rcvdcdtto != "" and rcvdcdtfrom == ""'>
+ <![CDATA[ and WR.RCVDCDT <= replace(#{rcvdcdtto}, '-', '') ]]>
+			</when>
+			<when test='rcvdcdtfrom != null and rcvdcdtfrom != "" and rcvdcdtto != null and rcvdcdtto != ""'>
+		   and WR.RCVDCDT between replace(#{rcvdcdtfrom}, '-', '') and replace(#{rcvdcdtto}, '-', '')
+			</when>	
+		</choose>
+		  group by WR.COMPKEY
+		 	  , WR.RCVDCKY
+		      , WR.WAREKEY
+		      , WR.DOCCATE
+		      , WR.DOCTYPE
+		      , WR.OWNERKY
+		      , WR.RCVDCST
+		      , WR.RCVITST
+		      , WR.VENDKEY
+		      , WR.RCVITST
+		  order by WR.RCVDCKY, WR.RCVDCDT
+    </select>
+	
+	<!-- wmr20 : 입하 Item List 조회 --> 
+    <select id="selectWmr20ItemList" resultType="com.logistics.wm.domain.RecvDTO">
+		/* selectWmr20ItemList */
+		
+		select WR.COMPKEY
+		  	 , WR.RCVDCKY
+		  	 , WR.RCVDCIT
+		     , WR.WAREKEY
+		     , WR.DOCTYPE
+		     , WR.DOCCATE
+		     , WR.RCVDCST
+		     , WR.RCVITST
+		     , WR.LOTNMKY
+		     , WR.OWNERKY
+		     , WR.SKUMKEY
+		     , WR.SKUDESC
+		     , WR.ASNDQTY
+		     , WR.RCVEQTY
+		     , WR.RCHSQTY
+		     , WR.RVLOCKY
+		     , WR.SHELIFE
+		     , WR.VENDKEY
+		     , fn_com_todate(WR.EXPIDAT) as EXPIDAT
+		     <!-- , WR.PASTRKY
+		     , WR.PALOCKY -->
+		     , date_format(WR.RCVDCDT, '%Y-%m-%d') as RCVDCDT
+		     , WR.STKSTAT
+		     , WR.EOASNKY
+		     , WR.EOASNIT
+		     , WR.COPODKY
+		     , WR.COPODIT
+		     <!-- , WR.REFSODC
+		     , WR.REFSOIT -->
+		     , WR.RCVRSCD
+		     , MR.RSNCDNM 
+		     , WR.RCVRSNM
+		     <!-- , WR.RCVDCYN -->
+		     , WR.RCARSCD
+		     , fn_com_todate(WR.EXPIDAT)  as EXPIDAT
+		     <!-- , MR.RSNCDNM as RCARNAM -->
+		     , WR.RCARSNM
+		     , CASE WHEN WR.RCADATE = '' THEN '' ELSE FN_COM_TODATE(WR.RCADATE) END as RCADATE
+ 			 , CASE WHEN WR.RCATIME = '' THEN '' ELSE FN_COM_TOTIME(WR.RCATIME) END as RCATIME 
+		     , WR.RCAUSER
+		     , fn_com_todate(WR.CREDATE) as CREDATE, fn_com_totime(WR.CRETIME) as CRETIME, fn_sy_usernam(WR.COMPKEY, WR.CREUSER) as CREUSER
+		     , fn_com_todate(WR.LMODATE) as LMODATE, fn_com_totime(WR.LMOTIME) as LMOTIME, fn_sy_usernam(WR.COMPKEY, WR.LMOUSER) as LMOUSER
+		   from WRCVIT WR
+		  inner join MSKUWC MS on MS.COMPKEY = WR.COMPKEY and MS.WAREKEY = WR.WAREKEY and MS.OWNERKY = WR.OWNERKY and MS.SKUMKEY = WR.SKUMKEY 
+		  <!-- inner join MPTNMA MP on MP.COMPKEY = WR.COMPKEY and MP.PTNRKEY = WR.VENDKEY -->
+		   left join MRSCMA MR on MR.COMPKEY = WR.COMPKEY and MR.WAREKEY = WR.WAREKEY and MR.DOCCATE = '400' and MR.DOCTYPE = '420' and MR.RSNCODE = WR.RCARSCD and MR.RSCATE1 = 'CANCEL'
+		  where 1=1
+		    and WR.COMPKEY = #{compkey}
+		    and WR.OWNERKY = #{ownerky}
+		    and WR.RCVDCKY = #{rcvdcky}
+		    and WR.WAREKEY = #{warekey} 
+			and WR.DOCTYPE = #{doctype}
+			<if test="vendkey != null and vendkey != '' ">
+				and WR.VENDKEY = #{vendkey}
+			</if>
+			and WR.RCVDCDT = replace(#{rcvdcdt}, '-', '')
+			and WR.DOCCATE = '400'
+			and WR.RCVITST = #{rcvitst}
+		  order by WR.COMPKEY, WR.RCVDCKY, WR.RCVDCIT
+    </select>
+    
+    <!-- wmr22 : 입하 등록 Header List 조회 --> 
+    <select id="selectWmr22HeaderList" resultType="com.logistics.wm.domain.RecvDTO">
+    	/* selectWmr22HeaderList */
+    	
+    	select WA.COMPKEY
+    		 , WA.EOASNKY
+		 	 , WA.WAREKEY
+		 	 , WA.DOCCATE
+		 	 , WA.DOCTYPE
+		 	 , WA.ASNSTAT
+		     , fn_com_todate(WA.ASNDATE) as ASNDATE
+		     , WA.OWNERKY
+		     , COALESCE(WA.VENDKEY, ' ') AS VENDKEY
+		     , sum(WA.ASNDQTY) as ASNDQTY
+		     , sum(WA.ASNDQTY) - sum(WA.RCHSQTY)  as ASNDFTY
+		     , COUNT(1) AS ITEMCNT
+		  from WASNIF WA
+		 inner join MSKUWC MS on MS.COMPKEY = WA.COMPKEY and MS.WAREKEY = WA.WAREKEY and MS.OWNERKY = WA.OWNERKY and MS.SKUMKEY = WA.SKUMKEY 
+		 where WA.COMPKEY = #{userData.compkey}
+		   and WA.ASNSTAT != 'CMP' 
+		   and WA.DOCCATE = '400'
+		   and (WA.EOASNKY, WA.EOASNIT) not in (
+			        select W.EOASNKY, W.EOASNIT 
+			         from WRCVIT W
+			        where W.COMPKEY = #{userData.compkey}
+					<if test="warekey != null and  warekey != ''">
+					  and W.WAREKEY = #{warekey} 
+					</if>
+			        <if test="ownerky != null and  ownerky != ''">
+					  and W.OWNERKY = #{ownerky} 
+					</if>
+			          and W.RCVDCST = 'RVPART'
+			          and W.PMTINYN = 'Y'
+			)
+		<if test="warekey != null and  warekey != ''">
+		   and WA.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		   and WA.OWNERKY = #{ownerky} 
+		</if>
+		<if test="doctype != null and  doctype != ''">
+		   and WA.DOCTYPE = #{doctype} 
+		</if>
+		<if test="asnstats != null and asnstats.size > 0">
+		   and WA.ASNSTAT in
+		   	<foreach collection="asnstats" item="item" index="index" open="(" close=")" separator=",">
+		   	 #{item}
+		   	</foreach>
+		</if>
+		<!-- <if test="custkey != null and  custkey != ''">
+		   and WA.CUSTKEY = #{custkey}
+		</if>
+		<if test="vendnam != null and  vendnam != ''">
+		   and upper(MP.PTNAMLC) like concat('%', upper(#{vendnam}), '%')
+		</if> -->
+		<choose>
+        	<when test='asndatefrom != null and asndatefrom != "" and asndateto == ""'>
+ <![CDATA[ and WA.ASNDATE >= replace(#{asndatefrom}, '-', '') ]]>
+			</when>
+			<when test='asndateto != null and asndateto != "" and asndatefrom == ""'>
+ <![CDATA[ and WA.ASNDATE <= replace(#{asndateto}, '-', '') ]]>
+			</when>
+			<when test='asndatefrom != null and asndatefrom != "" and asndateto != null and asndateto != ""'>
+		   and WA.ASNDATE between replace(#{asndatefrom}, '-', '') and replace(#{asndateto}, '-', '')
+			</when>	
+		</choose>
+		 group by WA.COMPKEY, WA.WAREKEY, WA.EOASNKY
+		 	 , WA.DOCCATE, WA.DOCTYPE
+		     , WA.ASNSTAT, WA.ASNDATE, WA.OWNERKY
+		     , COALESCE(WA.VENDKEY, ' ')
+		  order by WA.EOASNKY desc , WA.ASNDATE desc
+    </select>
+    
+    <!-- wmr22 : 입하 등록 Item List 조회 --> 
+    <select id="selectWmr22ItemList" resultType="com.logistics.wm.domain.RecvDTO">
+ 		/* selectWmr22ItemList */
+ 		   
+    	select concat(WA.COMPKEY, WA.EOASNKY, WA.EOASNIT) as ROWKEY
+			 , WA.COMPKEY
+			 , WA.EOASNKY
+			 , WA.EOASNIT
+			 , WA.WAREKEY
+			 , WA.DOCCATE
+			 , WA.DOCTYPE
+			 , MD.DOCTYNM
+		     , WA.ASNSTAT
+		     , (select COMCDTX from V_MCODEM where COMPKEY = WA.COMPKEY and COMCDKY = 'ASNSTAT' and COMCDVL = WA.ASNSTAT ) as ASNSNAM
+		     , MD.FRLOCKY as RVLOCKY
+		     , date_format(WA.ASNDATE, '%Y-%m-%d') as ASNDATE
+		     , WA.OWNERKY
+		     , WA.SKUMKEY
+		     , WA.SKUDESC 
+		     , WA.POITQTY
+		     , WA.ASNDQTY
+		     , WA.RCHSQTY
+		     , WA.ASNDQTY - WA.RCHSQTY as RCVEQTY
+		     <!-- , WA.VENDKEY
+		     , WA.CUSTKEY -->
+		     , MS.SKUWABC
+		     , WA.COPODKY
+		     , WA.COPODIT 
+		     , WA.REFSODC
+		     , WA.REFSOIT
+		     , WA.LOTAT17
+		     , WA.LOTAT18
+		     , WA.RCVSRMK as RCVRSNM
+		     , date_format(WA.EXPIDAT, '%Y-%m-%d') as EXPIDAT
+		  from WASNIF WA
+		 inner join MSKUWC MS 
+		 	on MS.COMPKEY = WA.COMPKEY 
+		   and MS.WAREKEY = WA.WAREKEY 
+		   and MS.OWNERKY = WA.OWNERKY 
+		   and MS.SKUMKEY = WA.SKUMKEY
+		 inner join MDOCMA MD 
+		 	on MD.COMPKEY = WA.COMPKEY 
+		   and MD.WAREKEY = WA.WAREKEY 
+		   and MD.DOCCATE = WA.DOCCATE 
+		   and MD.DOCTYPE = WA.DOCTYPE
+		 where WA.COMPKEY = #{compkey}
+		   and (WA.EOASNKY, WA.EOASNIT) not in (
+			        select W.EOASNKY, W.EOASNIT 
+			         from WRCVIT W
+			        where W.COMPKEY = #{compkey}
+					  and W.WAREKEY = #{warekey}
+			          and W.OWNERKY = #{ownerky} 
+					  and W.RCVDCST = 'RVPART'
+			          and W.PMTINYN = 'Y'
+			)
+		   and WA.ASNSTAT = #{asnstat}
+		   and WA.DOCCATE = '400'
+		   and WA.WAREKEY = #{warekey}
+		   and WA.EOASNKY = #{eoasnky}
+		   and WA.DOCTYPE = #{doctype}
+		   and WA.ASNDATE = replace(#{asndate}, '-','')
+		   and WA.OWNERKY = #{ownerky}
+		   <if test= 'vendkey != null and vendkey != ""'>
+		   and WA.VENDKEY = #{vendkey}
+		   </if>
+ 		 order by WA.EOASNKY, WA.EOASNIT ,WA.ASNDATE asc, WA.SKUDESC asc; 
+    </select>
+    
+	<!-- wmr22, wmr30 : 입하 번호 채번 Rcvdcky --> 
+    <select id="selectRcvdcky" resultType="String">
+     	/* selectRcvdcky */
+     	
+     	select fn_wm_rcvdcky() as rcvdcky from dual
+    </select>
+    
+    <!-- wmr22 & wmp1 : 입하 등록 & 입하 등록(PDA) Procedure -->
+    <select id="saveCtrwrcvit" statementType="CALLABLE" parameterType="com.logistics.wm.domain.RecvDTO" resultType="com.logistics.wm.domain.RecvDTO"> 
+		 /* saveCtrwrcvit */
+		 CALL sp_wm_ctrwrcvit( #{userData.compkey}, #{warekey}, #{doctype}, #{rcvdcky}, fn_wm_rcvdcit(#{userData.compkey}, #{rcvdcky})
+			, #{eoasnky}, #{eoasnit}, #{rcveqty}, #{expidat}, #{rcvrscd}, #{rcvrsnm}, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER} )
+		
+	</select>
+	
+	<!-- wmr30 : ASN 번호 채번 Eoasnky --> 
+    <select id="selectEoasnky" resultType="String">
+     	/* selectEoasnky */
+     	
+     	select fn_wm_eoasnky() as eoasnky from dual
+    </select>
+    
+   <!-- wmr40: 반품등록 회수오더데이터 조회 -->
+   <select id="selectWmr40List" resultType="com.logistics.wm.domain.RecvEtcDTO">
+   		/* selectWmr40List */
+   		
+   		select PI.COMPKEY, 
+   		       PI.WAREKEY, 
+   		       PI.OWNERKY, 
+   		       PI.SKUMKEY,
+   		       PI.VHPLNKY, 
+   		       PI.VHPLNIT,
+			   (SELECT SKUDESC FROM MSKUWC WHERE COMPKEY = PI.COMPKEY AND WAREKEY = PI.WAREKEY AND OWNERKY = PI.OWNERKY AND SKUMKEY = PI.SKUMKEY) as SKUDESC, 
+			   PI.TRITQTY,
+			   fn_com_todate(PI.LMODATE) as lmodate,
+			   fn_com_totime(PI.LMOTIME) as lmotime,
+			   fn_sy_usernam(PI.COMPKEY, PI.LMOUSER) as LMOUSER,
+			   OC.SALMEMO as salmemo
+		  from TPLNIT PI
+		  inner join OCOSAL OC ON OC.COMPKEY = PI.COMPKEY 
+		  				   AND OC.COOUTKY = PI.COOUTKY 
+		  				   AND OC.COOUTIT = PI.COOUTIT
+		  where PI.COMPKEY = #{userData.compkey}
+			and PI.WAREKEY = #{warekey}
+			and PI.RETODYN = 'Y'               
+			and PI.SHTRSTS = 'UNLOADING'
+			and PI.RETINYN = 'N'
+			and PI.OWNERKY = #{ownerky}  
+   </select>
+    
+    <!-- wmr40: 반품등록 저장시 TPLNIT 업데이터 -->
+    <update id="saveWmr40Tplnit" parameterType="com.logistics.wm.domain.RecvEtcDTO">
+		update TPLNIT
+		   SET RETINYN = 'Y'
+		   	 , LMODATE = to_char(now() , 'YYYYMMDD')
+		     , LMOTIME = to_char(now() , 'hh24miss')
+		     , LMOUSER = #{userData.useract}
+		   WHERE COMPKEY = #{userData.compkey}
+			 AND WAREKEY = #{warekey}
+			 AND RETODYN = 'Y'               
+			 AND SHTRSTS = 'UNLOADING'
+			 AND RETINYN = 'N' 
+			 AND SKUMKEY = #{skumkey}
+			 AND VHPLNKY = #{vhplnky}
+			 AND VHPLNIT = #{vhplnit}
+	</update>
+    
+	<!-- wmr30/wmr40 : 기타 입하 등록/반품등록 Procedure -->
+    <select id="saveStoreReturnList" statementType="CALLABLE" parameterType="com.logistics.wm.domain.RecvEtcDTO" resultType="com.logistics.wm.domain.RecvEtcDTO"> 
+		 /* saveStoreReturnList */
+		 
+		 CALL sp_wm_ctrwasnif( #{userData.compkey}, #{eoasnky}, #{eoasnit}, #{rcvdcky}, #{rcvdcit}, #{copodky}, #{copodit}
+			, #{warekey}, #{doccate}, #{doctype}, #{ownerky}, #{skumkey}, #{rcveqty}, #{asndate}, #{expidat}
+			,#{vendkey} , #{rcvrscd}, #{rcvrsnm}, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER} )
+		
+	</select>
+	
+	
+	   <!-- wmr30: 기타 입하 물품 박스 수량 및 uom -->
+    <select id="selectInboundBoxQty" resultType="com.logistics.md.domain.MskuwcDTO">
+		/* selectInboundBoxQty */
+		
+		SELECT PACKKEY, PACKQTY
+		  FROM MPAKMA
+		WHERE COMPKEY = #{userData.compkey}
+		  AND WAREKEY = #{warekey}
+		  AND PACKKEY = #{packkey}
+		  AND TRUNTYP = #{truntyp}
+    </select>
+    
+	<!-- wmr30/wmr40: 기타입하/반품등록 발주오더 -->
+	<insert id="saveStoreReturnToOcopur" parameterType="com.logistics.wm.domain.RecvEtcDTO">
+		/* saveStoreReturnToOcopur */
+		
+		insert into OCOPUR (
+			COMPKEY, COPODKY, COPODIT, DOCCATE, DOCTYPE,
+			PURSTAT, PURDATE, PURTIME, VENDKEY, OWNERKY,
+			SKUSKEY, SKUMKEY, SKUDESC, RCHSQTY, POITQTY, RCVWHKY,
+			REQDATE, REQTIME, COOUTIT, VNDCFYN,
+			VNDCFDT, VNDCFTM, CREDATE, CRETIME, CREUSER,
+			LMODATE, LMOTIME, LMOUSER
+		)
+		values (
+			#{compkey}, #{copodky}, #{copodit}, #{doccate}, #{doctype},
+			#{purstat}, to_char(NOW(), 'YYYYMMDD'), to_char(NOW(), 'hh24miss'), #{vendkey}, #{ownerky},
+			#{skumkey}, #{skumkey}, (SELECT SKUDESC FROM MSKUWC WHERE WAREKEY = #{warekey} AND OWNERKY = #{ownerky} AND SKUMKEY = #{skumkey}), #{rcveqty}, #{rcveqty}, #{warekey},
+			to_char(NOW(), 'YYYYMMDD'), to_char(NOW(), 'hh24miss'), 0, 'Y',
+			to_char(NOW(), 'YYYYMMDD'), to_char(NOW(), 'hh24miss'), to_char(NOW(), 'YYYYMMDD'), to_char(NOW(), 'hh24miss'), #{userData.useract},
+			to_char(NOW(), 'YYYYMMDD'), to_char(NOW(), 'hh24miss'), #{userData.useract}
+		)
+
+	</insert>
+	
+	<!-- wmr50: 재고조회 List -->
+	<select id="selectWmr50List" resultType="com.logistics.wm.domain.RecvDTO">
+		/* selectWmr50List */
+		
+		select							
+			  concat(WS.OWNERKY , WS.STOCKKY) as rowkey
+			, WS.COMPKEY as compkey																				
+			, WS.OWNERKY as ownerky , WS.SKUMKEY as skumkey , WS.SKUDESC as skudesc , WS.WAREKEY as warekey 
+			, WS.AREAKEY as areakey , WS.ZONEKEY as zonekey , WS.LOCAKEY as locakey																	
+			, WS.STOCKKY as stockky
+			, WS.STOTQTY as stotqty
+			, WS.STOTQTY as fordqty																				
+			, WS.SALLQTY as sallqty 																			
+			, WS.SINBQTY as sinbqty 																			
+			, WS.SOUBQTY as soubqty 																				
+			, WS.SBLOQTY as sbloqty
+			, MS.PACKKEY as packkey
+			, MS.TRUNTYP as druntyp
+			, WS.TRUNPID as trunpid
+			, WS.STKSTAT as stkstat
+			, WS.LOTNMKY as lotnmky
+			, WS.RCVDCKY as rcvdcky
+			, WS.RCVDCIT as rcvdcit
+			, WS.TRUNTYP as truntyp
+			, WS.SHELIFE as shelife
+			, fn_com_todate(WS.EXPIDAT) as expidat
+			, date_format(WR.RCVDCDT, '%Y-%m-%d') as RCVDCDT
+			, '0' as paldqty
+			, 'N' as paletck
+			, fn_com_todate(WS.CREDATE) as CREDATE, fn_com_totime(WS.CRETIME) as CRETIME, fn_sy_usernam(WS.COMPKEY, WS.CREUSER) as CREUSER
+		 	, fn_com_todate(WS.LMODATE) as LMODATE, fn_com_totime(WS.LMOTIME) as LMOTIME, fn_sy_usernam(WS.COMPKEY, WS.LMOUSER) as LMOUSER
+		 	, WS.INDIBZL, WS.INDIARC, WS.UPDTCHK
+		from WSTKKY WS
+		inner join WRCVIT WR on WR.COMPKEY = WS.COMPKEY 
+			AND WR.WAREKEY = WS.WAREKEY 
+			AND WR.OWNERKY = WS.OWNERKY 
+			AND WR.RCVDCKY = WS.RCVDCKY 
+			AND WR.RCVDCIT = WS.RCVDCIT
+		inner join MSKUWC MS on MS.COMPKEY = WS.COMPKEY 
+			AND MS.WAREKEY = WR.WAREKEY 
+			AND MS.OWNERKY = WS.OWNERKY 
+			AND MS.SKUMKEY = WS.SKUMKEY 
+			AND MS.SKUDESC = WS.SKUDESC		
+		where 1=1
+			and WS.AREAKEY = 'RCV'
+			and WS.ZONEKEY = 'RCVZ'
+			and WS.COMPKEY = #{userData.compkey}						
+			and (WS.STOTQTY != 0 and WS.SALLQTY = 0 and WS.SINBQTY = 0 and WS.SOUBQTY = 0 and WS.SBLOQTY = 0) 							
+		<if test="ownerky != null and ownerky !='' "> 
+			and WS.OWNERKY = #{ownerky}
+		</if>
+		<if test="warekey != null and warekey !='' ">																					
+		 	and WS.WAREKEY = #{warekey}				
+		</if>
+		<if test="skudesc != null and skudesc !='' ">																
+		 	and WS.SKUDESC like concat( '%' , #{skudesc}  , '%')											
+		</if>
+		<choose>
+        	<when test='rcvdcdtfrom != null and rcvdcdtfrom != "" and rcvdcdtto == ""'>
+ 				<![CDATA[ and WR.RCVDCDT >= replace(#{rcvdcdtfrom}, '-', '') ]]>
+			</when>
+			<when test='rcvdcdtto != null and rcvdcdtto != "" and rcvdcdtfrom == ""'>
+ 				<![CDATA[ and WR.RCVDCDT <= replace(#{rcvdcdtto}, '-', '') ]]>
+			</when>
+			<when test='rcvdcdtfrom != null and rcvdcdtfrom != "" and rcvdcdtto != null and rcvdcdtto != ""'>
+		  		 and WR.RCVDCDT between replace(#{rcvdcdtfrom}, '-', '') and replace(#{rcvdcdtto}, '-', '')
+			</when>	
+		</choose>
+		 order by WS.RCVDCKY, WS.RCVDCIT
+	</select>
+	
+	<!-- wmr50: 팔렛타이징 입수량-->
+	<select id="selectWmr50Packqty" resultType="com.logistics.wm.domain.RecvDTO">
+		/* selectWmr50Packqty */
+		
+		select P.TRUNTYP as truntyp, P.PACKQTY AS packqty
+		 from MPAKMA P
+		 <!-- INNER JOIN MTUTMA T ON P.COMPKEY = T.COMPKEY AND P.TRUNTYP = T.TRUNTYP -->
+		 where P.COMPKEY = #{userData.compkey} 
+		   and P.WAREKEY = #{warekey} 
+		   and P.TRUNTYP = #{truntyp} 
+		 <if test="packkey != null and packkey != ''">
+		 	and P.PACKKEY = #{packkey}
+		 </if>
+		 group by P.TRUNTYP, P.PACKQTY<!-- , T.TRUNNAM -->;
+	</select>
+	
+	<!-- wmr50: 팔렛타이징 trunpid 채번 -->
+	<select id="selectPakblky" resultType="string">
+		/* selectPakblky */
+		select
+			fn_wm_paklbky()
+		from dual
+	</select>
+	
+	<!-- wmr61 : 적치 조회 및 취소 --> 
+    <select id="selectWmr61List" resultType="com.logistics.wm.domain.RecvPutDTO">
+    	/* selectWmr61List */
+    
+    	 select concat(WT.COMPKEY, WT.TASKOKY, WT.TASKOIT) as ROWKEY
+    	 	  , WT.COMPKEY, WT.TASKOKY, WT.TASKOIT
+		 	  , WT.TASKSTS, WT.WAREKEY, WT.DOCCATE
+		 	  , WT.DOCTYPE
+			  , IFNULL((SELECT DOCTYNM FROM MDOCMA WHERE COMPKEY = WT.COMPKEY AND WAREKEY = WT.WAREKEY AND DOCTYPE = WT.DOCTYPE), WT.DOCTYPE) as DOCTYNM		 
+		 	  , WT.TRUNTYP
+		 	  , WT.TRUNPID, WT.LOTNMKY, WT.OWNERKY
+		 	  , WT.SKUMKEY, WT.SKUDESC
+		 	  , WT.VENDKEY
+		 	  , WT.FRAREKY, WT.FRZONKY, WT.FRLOCKY		
+		 	  , WT.TOAREKY, WT.TOZONKY, WT.TOLOCKY		
+		 	  , WT.FORDQTY, WT.FUOMEKY, WT.TCMPQTY, WT.TUOMEKY 		
+			  , WS.STOTQTY, WS.SALLQTY, WS.SINBQTY, WS.SOUBQTY, WS.SBLOQTY	  	
+		 	  , WT.SIRBCOD, WT.PRODDAT, WT.SHELIFE, fn_com_todate(WT.EXPIDAT) as EXPIDAT, WT.RCVDCDT, WT.RCVFRDT, WT.LOTFRKY		
+		 	  , WT.LOTAT01, WT.LOTAT02, WT.LOTAT03, WT.LOTAT04, WT.LOTAT05, WT.LOTAT06, WT.LOTAT07, WT.LOTAT08, WT.LOTAT09, WT.LOTAT10		
+		 	  , WT.LOTAT11, WT.LOTAT12, WT.LOTAT13, WT.LOTAT14, WT.LOTAT15, WT.LOTAT16, WT.LOTAT17, WT.LOTAT18, WT.LOTAT19, WT.LOTAT20		
+		 	  , WT.STKSTAT
+		 	  , WT.TASKG01, WT.TASKG02, WT.TASKG03, WT.TASKG04, WT.TASKG05		
+		 	  , WT.PARSNCD, WT.PARSNNM		
+		 	  , WT.MOVTEAM, WT.MOVUSID, WT.MVSTDAT, WT.MVSTTIM, WT.MVEDDAT, WT.MVEDTIM, WT.EOASNKY, WT.EOASNIT, WT.RCVDCKY, WT.RCVDCIT, WT.SHPDCKY, WT.SHPDCIT		
+		 	  , WT.REFPODC, WT.REFPOIT, WT.REFSODC, WT.REFSOIT, WT.REFDNDC, WT.REFDNIT, WT.REFSDDC, WT.REFSDIT, WT.STORFKY		
+		 	  , fn_com_todate(WT.CREDATE) as CREDATE, fn_com_totime(WT.CRETIME) as CRETIME, fn_sy_usernam(WT.COMPKEY, WT.CREUSER) as CREUSER
+		 	  , fn_com_todate(WT.LMODATE) as LMODATE, fn_com_totime(WT.LMOTIME) as LMOTIME, fn_sy_usernam(WT.COMPKEY, WT.LMOUSER) as LMOUSER
+		 	  , WT.INDIBZL, WT.INDIARC, WT.UPDTCHK		
+		   from WTAKIT WT
+		  inner join MSKUWC MS on MS.COMPKEY = WT.COMPKEY and MS.WAREKEY = WT.WAREKEY and MS.OWNERKY = WT.OWNERKY and MS.SKUMKEY = WT.SKUMKEY
+		   left join (			
+				select COMPKEY, WAREKEY	
+					 , AREAKEY, ZONEKEY, LOCAKEY  
+				     , OWNERKY, SKUMKEY, LOTNMKY	
+				     , sum(STOTQTY) as STOTQTY, sum(SALLQTY) as SALLQTY
+				     , sum(SINBQTY) as SINBQTY, sum(SOUBQTY) as SOUBQTY
+				     , sum(SBLOQTY) as SBLOQTY 	
+				  from WSTKKY
+				 where COMPKEY = #{userData.compkey}	
+		   		<if test="warekey != null and  warekey != ''">
+		   		   and WAREKEY = #{warekey} 
+				</if>
+				<if test="ownerky != null and  ownerky != ''">
+		   		   and OWNERKY = #{ownerky} 
+				</if>
+				<if test="skudesc != null and  skudesc != ''">
+		   		   and upper(SKUDESC) like concat('%', upper(#{skudesc}), '%')
+				</if>
+				   and AREAKEY = 'STG'
+		   		   and (STOTQTY-SBLOQTY) > 0 /* 총 수량 */	
+		   		   and SALLQTY = 0   /* 할당 수량 */
+		   		   and SINBQTY = 0   /* 입고중 수량 */
+		   		   and SOUBQTY = 0   /* 출고중 수량 */
+				 group by COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, OWNERKY, SKUMKEY, LOTNMKY 	
+		       ) WS
+		    on WS.COMPKEY = WT.COMPKEY and WS.WAREKEY = WT.WAREKEY			
+		   and WS.AREAKEY = WT.TOAREKY and WS.ZONEKEY = WT.TOZONKY and WS.LOCAKEY = WT.TOLOCKY  			
+		   and WS.OWNERKY = WT.OWNERKY and WS.SKUMKEY = WT.SKUMKEY and WS.LOTNMKY = WT.LOTNMKY
+		 where WT.COMPKEY = #{userData.compkey}
+		   and WT.DOCCATE = '500'
+		   and WT.DOCTYPE in ('510', '520')
+		   /* and WT.TASKSTS = 'TSCOMP' */
+		   and WT.TOAREKY = 'STG'
+		<if test="warekey != null and  warekey != ''">
+		   and WT.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		   and WT.OWNERKY = #{ownerky} 
+		</if>
+		<if test='taskstss != null and taskstss.size > 0'>
+		   and WT.TASKSTS in
+		   	<foreach collection="taskstss" item="item" index="index" open="(" close=")" separator=",">
+		   	 #{item}
+		   	</foreach>
+		</if>
+		<if test="skudesc != null and  skudesc != ''">
+		   and upper(WT.SKUDESC) like concat('%', upper(#{skudesc}), '%')
+		</if>
+		<choose>
+        	<when test='docdatefrom != null and docdatefrom != "" and docdateto == ""'>
+ <![CDATA[ and WT.DOCDATE >= replace(#{docdatefrom}, '-', '') ]]>
+			</when>
+			<when test='docdateto != null and docdateto != "" and docdatefrom == ""'>
+ <![CDATA[ and WT.DOCDATE <= replace(#{docdateto}, '-', '') ]]>
+			</when>
+			<when test='docdatefrom != null and docdatefrom != "" and docdateto != null and docdateto != ""'>
+		   and WT.DOCDATE between replace(#{docdatefrom}, '-', '') and replace(#{docdateto}, '-', '')
+			</when>	
+		</choose>
+		 order by WT.COMPKEY, WT.TASKOKY, WT.TASKOIT
+    </select>
+    
+    <!-- wmr61 : 적치 취소 -->
+    <select id="saveTolockyCancel" statementType="CALLABLE" parameterType="com.logistics.wm.domain.RecvPutDTO"> 
+		/* saveTolockyCancel */
+		
+		 CALL sp_wm_ctrtolockycancel( #{userData.compkey}, #{warekey}, #{taskoky}, #{taskoit}, #{pkrsncd}, #{pkrsnnm}, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER} )
+		
+	</select>
+	
+	<!-- wmr63: 적치처리 List -->
+    <select id="selectWmr63List" resultType="com.logistics.wm.domain.RecvPutDTO">
+    	/* selectWmr63List */
+    
+    	 select concat(WT.COMPKEY, WT.TASKOKY, WT.TASKOIT) as ROWKEY
+    	 	  , WT.COMPKEY, WT.TASKOKY, WT.TASKOIT
+		 	  , WT.TASKSTS, WT.WAREKEY, WT.DOCCATE
+		 	  , WT.DOCTYPE
+		 	  , WT.TASKSTS
+			  , IFNULL((SELECT DOCTYNM FROM MDOCMA WHERE COMPKEY = WT.COMPKEY AND WAREKEY = WT.WAREKEY AND DOCTYPE = WT.DOCTYPE), WT.DOCTYPE) as DOCTYNM		 
+		 	  , WT.TRUNTYP
+		 	  , fn_com_todate(WT.EXPIDAT) as EXPIDAT
+		 	  , WT.TRUNPID, WT.LOTNMKY, WT.OWNERKY
+		 	  , WT.SKUMKEY, WT.SKUDESC
+		 	  , WT.VENDKEY
+		 	  , WT.FRAREKY, WT.FRZONKY, WT.FRLOCKY		
+		 	  , WT.TOAREKY, WT.TOZONKY, WT.TOLOCKY		
+		 	  , WT.FORDQTY, WT.FUOMEKY, WT.TCMPQTY, WT.TUOMEKY 		
+			  , WS.STOTQTY, WS.SALLQTY, WS.SINBQTY, WS.SOUBQTY, WS.SBLOQTY	  	
+		 	  , WT.SIRBCOD, WT.PRODDAT, WT.SHELIFE, WT.EXPIDAT, WT.RCVDCDT, WT.RCVFRDT, WT.LOTFRKY		
+		 	  , WT.LOTAT01, WT.LOTAT02, WT.LOTAT03, WT.LOTAT04, WT.LOTAT05, WT.LOTAT06, WT.LOTAT07, WT.LOTAT08, WT.LOTAT09, WT.LOTAT10		
+		 	  , WT.LOTAT11, WT.LOTAT12, WT.LOTAT13, WT.LOTAT14, WT.LOTAT15, WT.LOTAT16, WT.LOTAT17, WT.LOTAT18, WT.LOTAT19, WT.LOTAT20		
+		 	  , WT.STKSTAT
+		 	  , WT.TASKG01, WT.TASKG02, WT.TASKG03, WT.TASKG04, WT.TASKG05		
+		 	  , WT.MOVTEAM, WT.MOVUSID, WT.MVSTDAT, WT.MVSTTIM, WT.MVEDDAT, WT.MVEDTIM, WT.EOASNKY, WT.EOASNIT, WT.RCVDCKY, WT.RCVDCIT, WT.SHPDCKY, WT.SHPDCIT		
+		 	  , WT.REFPODC, WT.REFPOIT, WT.REFSODC, WT.REFSOIT, WT.REFDNDC, WT.REFDNIT, WT.REFSDDC, WT.REFSDIT, WT.STORFKY		
+		 	  , fn_com_todate(WT.CREDATE) as CREDATE, fn_com_totime(WT.CRETIME) as CRETIME, fn_sy_usernam(WT.COMPKEY, WT.CREUSER) as CREUSER
+		 	  , fn_com_todate(WT.LMODATE) as LMODATE, fn_com_totime(WT.LMOTIME) as LMOTIME, fn_sy_usernam(WT.COMPKEY, WT.LMOUSER) as LMOUSER
+		 	  , WT.INDIBZL, WT.INDIARC, WT.UPDTCHK		
+		   from WTAKIT WT
+		  inner join WRCVIT WR ON WR.RCVDCKY = WT.RCVDCKY AND WR.COMPKEY = WT.COMPKEY AND WR.WAREKEY = WT.WAREKEY AND WR.RCVDCIT = WT.RCVDCIT
+		  inner join MSKUWC MS on MS.COMPKEY = WT.COMPKEY and MS.WAREKEY = WT.WAREKEY and MS.OWNERKY = WT.OWNERKY and MS.SKUMKEY = WT.SKUMKEY
+		   left join (			
+				select COMPKEY, WAREKEY	
+					 , AREAKEY, ZONEKEY, LOCAKEY  
+				     , OWNERKY, SKUMKEY, LOTNMKY	
+				     , sum(STOTQTY) as STOTQTY, sum(SALLQTY) as SALLQTY
+				     , sum(SINBQTY) as SINBQTY, sum(SOUBQTY) as SOUBQTY
+				     , sum(SBLOQTY) as SBLOQTY 	
+				  from WSTKKY
+				 where COMPKEY = #{userData.compkey}	
+		   		<if test="warekey != null and  warekey != ''">
+		   		   and WAREKEY = #{warekey} 
+				</if>
+				<if test="ownerky != null and  ownerky != ''">
+		   		   and OWNERKY = #{ownerky} 
+				</if>
+				<if test="skudesc != null and  skudesc != ''">
+		   		   and upper(SKUDESC) like concat('%', upper(#{skudesc}), '%')
+				</if>
+		   		   and (STOTQTY-SBLOQTY) > 0 /* 총 수량 */	
+		   		   and SALLQTY = 0   /* 할당 수량 */
+		   		   and SINBQTY = 0   /* 입고중 수량 */
+		   		   and SOUBQTY = 0   /* 출고중 수량 */
+				 group by COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, OWNERKY, SKUMKEY, LOTNMKY 	
+		       ) WS
+		    on WS.COMPKEY = WT.COMPKEY and WS.WAREKEY = WT.WAREKEY			
+		   and WS.AREAKEY = WT.TOAREKY and WS.ZONEKEY = WT.TOZONKY and WS.LOCAKEY = WT.TOLOCKY  			
+		   and WS.OWNERKY = WT.OWNERKY and WS.SKUMKEY = WT.SKUMKEY and WS.LOTNMKY = WT.LOTNMKY
+		 where WT.COMPKEY = #{userData.compkey}
+		   and WT.DOCCATE = '500'
+		   and WT.DOCTYPE = '510'
+		   and WT.TASKSTS = 'TASK'
+		   and WT.TOAREKY = 'STG'
+		<if test="warekey != null and  warekey != ''">
+		   and WT.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		   and WT.OWNERKY = #{ownerky} 
+		</if>
+		<if test="skudesc != null and  skudesc != ''">
+		   and upper(WT.SKUDESC) like concat('%', upper(#{skudesc}), '%')
+		</if>
+		<choose>
+        	<when test='docdatefrom != null and docdatefrom != "" and docdateto == ""'>
+ <![CDATA[ and WT.DOCDATE >= replace(#{docdatefrom}, '-', '') ]]>
+			</when>
+			<when test='docdateto != null and docdateto != "" and docdatefrom == ""'>
+ <![CDATA[ and WT.DOCDATE <= replace(#{docdateto}, '-', '') ]]>
+			</when>
+			<when test='docdatefrom != null and docdatefrom != "" and docdateto != null and docdateto != ""'>
+		   and WT.DOCDATE between replace(#{docdatefrom}, '-', '') and replace(#{docdateto}, '-', '')
+			</when>	
+		</choose>
+		 order by WT.COMPKEY, WT.TASKOKY, WT.TASKOIT
+    </select>
+    
+    <!-- wmr63: 적치처리 이전 update -->
+	<update id="updateWmr63List" parameterType="com.logistics.wm.domain.TaskDTO">
+		/* updateWmr63List */
+		
+		update WTAKIT
+		 set TCMPQTY = #{fordqty}
+		  ,	 LMODATE = to_char(now() , 'YYYYMMDD') 
+		  ,  LMOTIME = to_char(now() , 'hh24miss') 
+		  ,  LMOUSER = #{userData.useract}
+		 where 1=1
+		  and COMPKEY = #{userData.compkey} 
+		  and TASKOKY = #{taskoky}
+		  and TASKOIT = #{taskoit}
+	</update>
+    
+    <!-- wmr60 : 적치 지시 List 조회 --> 
+    <select id="selectWmr60List" resultType="com.logistics.wm.domain.RecvPutDTO">
+    	/* selectWmr60List */
+    	
+    	select concat(WS.COMPKEY, WS.STOCKKY) as ROWKEY
+    	  	 , WS.COMPKEY
+		     , WS.STOCKKY
+		     , WS.DOCTYPE
+		     , WS.WAREKEY 
+		     , WS.LOCAKEY
+		     , WS.TRUNTYP
+		     , WS.TRUNPID
+		     , WS.LOTNMKY
+		     , WS.OWNERKY
+		     , WS.SKUMKEY
+		     , WS.SKUDESC
+		     , WS.STOTQTY
+		     , WS.STOTQTY as FORDQTY
+		     , WS.AREAKEY as FRAREKY
+		     , WS.ZONEKEY as FRZONKY
+		     , WS.LOCAKEY as FRLOCKY
+<!-- 		     , fn_wm_ctrtolocky( WS.COMPKEY, WS.WAREKEY, WS.STOCKKY, WS.STOTQTY) as TOLOCKY -->		     
+             , WS.SALLQTY
+		     , WS.SINBQTY
+		     , WS.SOUBQTY
+		     , WS.SBLOQTY
+		     , WS.SUOMKEY
+		     , MS.SKUWABC
+		     , MS.PACKKEY
+		     , date_format(WS.PRODDAT, '%Y-%m-%d') as PRODDAT
+		     , WS.SHELIFE
+		     , fn_com_todate(WS.EXPIDAT) as EXPIDAT
+		     , date_format(WS.RCVFRDT, '%Y-%m-%d') as RCVFRDT
+		     , WS.LOTFRKY
+		     , WS.STKSTAT
+		     , WS.RCVDCKY
+			 , WS.RCVDCIT
+			 , WS.LOTAT01, WS.LOTAT02, WS.LOTAT03, WS.LOTAT04, WS.LOTAT05
+			 , WS.LOTAT06, WS.LOTAT07, WS.LOTAT08, WS.LOTAT09, WS.LOTAT10
+			 , WS.LOTAT11, WS.LOTAT12, WS.LOTAT13, WS.LOTAT14, WS.LOTAT15
+			 , WS.LOTAT16, WS.LOTAT17, WS.LOTAT18, WS.LOTAT19, WS.LOTAT20
+		     , fn_com_todate(WS.CREDATE) as CREDATE, fn_com_totime(WS.CRETIME) as CRETIME, fn_sy_usernam(WS.COMPKEY, WS.CREUSER) as CREUSER
+		     , CASE WHEN WS.LMODATE = '' THEN '' ELSE fn_com_todate(WS.LMODATE) END as LMODATE
+		     , CASE WHEN WS.LMOTIME = '' THEN '' ELSE fn_com_totime(WS.LMOTIME) END as LMOTIME
+		     , fn_sy_usernam(WS.COMPKEY, WS.LMOUSER) as LMOUSER
+		     , WS.UPDTCHK
+		  from WSTKKY WS
+		 inner join MSKUWC MS on MS.COMPKEY = WS.COMPKEY and MS.WAREKEY = WS.WAREKEY and MS.OWNERKY = WS.OWNERKY and MS.SKUMKEY = WS.SKUMKEY
+		 where WS.COMPKEY = #{userData.compkey}
+		   and WS.AREAKEY = 'RCV'
+		   and WS.ZONEKEY = 'RCVZ' 
+		   and (WS.STOTQTY-WS.SBLOQTY) > 0 /* 총 수량 */
+		   and WS.SALLQTY = 0   /* 할당 수량 */
+		   and WS.SINBQTY = 0   /* 입고중 수량 */
+		   and WS.SOUBQTY = 0   /* 출고중 수량 */
+		<if test="warekey != null and  warekey != ''">
+		   and WS.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		   and WS.OWNERKY = #{ownerky} 
+		</if>
+		<if test="doctype != null and  doctype != ''">
+		   and WS.DOCTYPE = #{doctype} 
+		</if>   
+		<if test="skudesc != null and  skudesc != ''">
+		   and upper(WS.SKUDESC) like concat('%', upper(#{skudesc}), '%')
+		</if>
+		order by WS.RCVDCKY, WS.RCVDCIT
+    </select>
+    
+    <!-- wmr62 : 적치 지시 List 조회 --> 
+    <select id="selectWmr62List" resultType="com.logistics.wm.domain.RecvPutDTO">
+    	/* selectWmr62List */
+    	
+    	select concat(WS.COMPKEY, WS.STOCKKY) as ROWKEY
+    	  	 , WS.COMPKEY
+		     , WS.STOCKKY
+		     , WS.WAREKEY 
+		     , WS.TRUNTYP
+		     , WS.TRUNPID
+		     , WS.LOTNMKY
+		     , WS.OWNERKY
+		     , WS.SKUMKEY
+		     , WS.SKUDESC
+		     , WS.STOTQTY
+		     , WS.STOTQTY as FORDQTY
+		     , WS.AREAKEY
+		     , WS.ZONEKEY
+		     , WS.LOCAKEY
+<!-- 		     , fn_wm_ctrtolocky( WS.COMPKEY, WS.WAREKEY, WS.STOCKKY, WS.STOTQTY) as TOLOCKY -->		     
+             , WS.SALLQTY
+		     , WS.SINBQTY
+		     , WS.SOUBQTY
+		     , WS.SBLOQTY
+		     , WS.SUOMKEY as suomkey
+		     , MS.SKUWABC
+		     , MS.PACKKEY
+		     , date_format(WS.PRODDAT, '%Y-%m-%d') as PRODDAT
+		     , WS.SHELIFE
+		     , fn_com_todate(WS.EXPIDAT) as EXPIDAT
+		     , date_format(WS.RCVFRDT, '%Y-%m-%d') as RCVFRDT
+		     , WS.LOTFRKY
+		     , WS.STKSTAT
+		     , WS.RCVDCKY
+			 , WS.RCVDCIT
+			 , WS.LOTAT01, WS.LOTAT02, WS.LOTAT03, WS.LOTAT04, WS.LOTAT05
+			 , WS.LOTAT06, WS.LOTAT07, WS.LOTAT08, WS.LOTAT09, WS.LOTAT10
+			 , WS.LOTAT11, WS.LOTAT12, WS.LOTAT13, WS.LOTAT14, WS.LOTAT15
+			 , WS.LOTAT16, WS.LOTAT17, WS.LOTAT18, WS.LOTAT19, WS.LOTAT20
+		     , fn_com_todate(WS.CREDATE) as CREDATE, fn_com_totime(WS.CRETIME) as CRETIME, fn_sy_usernam(WS.COMPKEY, WS.CREUSER) as CREUSER
+		     , CASE WHEN WS.LMODATE = '' THEN '' ELSE fn_com_todate(WS.LMODATE) END as LMODATE
+		     , CASE WHEN WS.LMOTIME = '' THEN '' ELSE fn_com_totime(WS.LMOTIME) END as LMOTIME
+		     , fn_sy_usernam(WS.COMPKEY, WS.LMOUSER) as LMOUSER
+		     , WS.UPDTCHK
+		  from WSTKKY WS
+		 inner join MSKUWC MS on MS.COMPKEY = WS.COMPKEY and MS.WAREKEY = WS.WAREKEY and MS.OWNERKY = WS.OWNERKY and MS.SKUMKEY = WS.SKUMKEY
+		 where WS.COMPKEY = #{userData.compkey}
+		   and WS.AREAKEY = 'RCV'
+		   and WS.ZONEKEY = 'RCVZ' 
+		   and (WS.STOTQTY-WS.SBLOQTY) > 0 /* 총 수량 */
+		   and WS.SALLQTY = 0   /* 할당 수량 */
+		   and WS.SINBQTY = 0   /* 입고중 수량 */
+		   and WS.SOUBQTY = 0   /* 출고중 수량 */
+		<if test="warekey != null and  warekey != ''">
+		   and WS.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		   and WS.OWNERKY = #{ownerky} 
+		</if>
+		<if test="doctype != null and  doctype != ''">
+		   and WS.DOCTYPE = #{doctype} 
+		</if>   
+		<if test="skudesc != null and  skudesc != ''">
+		   and upper(WS.SKUDESC) like concat('%', upper(#{skudesc}), '%')
+		</if>
+		order by WS.RCVDCKY, WS.RCVDCIT
+    </select>
+    
+    <!--wmr60: 적치지시용 Location selectBox  -->
+    <select id="selectWmr60LocationSelectBox" resultType="com.logistics.common.dto.CommonDTO">
+		/* selectWmr60LocationSelectBox */    
+     
+		select ML.LOCAKEY as combovl
+		     , ML.LOCANAM as combonm
+	  	  from MLOCMA ML
+	  	  inner join MWARMA MW 
+		    on ML.COMPKEY = MW.COMPKEY 
+		   and ML.WAREKEY = MW.WAREKEY
+		 inner join MAREMA MA
+		    on ML.COMPKEY = MA.COMPKEY
+		   and ML.WAREKEY = MA.WAREKEY
+		   and ML.AREAKEY = MA.AREAKEY
+		 inner join MZONMA MZ
+		    on ML.COMPKEY = MZ.COMPKEY
+		   and ML.WAREKEY = MZ.WAREKEY
+		   and ML.AREAKEY = MZ.AREAKEY
+		   and ML.ZONEKEY = MZ.ZONEKEY
+	  	 where 1=1 
+	  	   and ML.COMPKEY = #{userData.compkey}
+	  	<if test='warekey != null and warekey != ""'>
+	  	   and ML.WAREKEY = #{warekey} 
+	  	</if>
+	  	<if test='areakey != null and areakey != ""'>
+	  		and ML.AREAKEY =#{areakey}
+	  	</if>
+	 	<if test='locakey != null and locakey != ""'>
+	  	 	and ML.LOCAKEY = #{locakey}
+	  	</if>
+	  	<if test='louseyn != null and louseyn != ""'>
+		 	and ML.LOUSEYN = #{louseyn}
+		</if>
+		<if test='loctype != null and loctype != ""'>
+		   and LOCTYPE = #{loctype}
+		</if>
+		<if test='locstat != null and locstat != ""'>
+		   and LOCSTAT = #{locstat}
+		</if>
+	  	 group by LOCAKEY, LOCANAM
+	 	 order by LOCAKEY, LOCANAM
+ 	</select>    
+    
+    
+    <!-- wmr60 : 작업 번호 채번 Taskoky --> 
+    <select id="selectTaskoky" resultType="String">
+     	/* selectTaskoky */
+     	
+     	select fn_wm_taskoky() as taskoky from dual
+    </select>
+    
+    <!-- wmr60 : 작업 아이템 번호 채번 Taskoit --> 
+    <select id="selectTaskoit" resultType="int" parameterType="hashMap">
+     	/* selectTaskoit */
+     	
+     	select fn_wm_taskoit(#{compkey}, #{taskoky}) as taskoit from dual
+    </select>
+    
+	<!-- wmr60 : 적치 지시 Procedure -->
+    <select id="saveWmrTolocky" statementType="CALLABLE" parameterType="com.logistics.wm.domain.RecvPutDTO"> 
+		/* saveWmrTolocky */
+		
+		 CALL sp_wm_ctrtolocky( #{userData.compkey}, #{warekey}, #{taskoky}, #{doccate}, #{doctype}, #{stockky}
+			, #{truntyp}, #{trunpid}, #{fordqty}, #{toareky}, #{tozonky}, #{tolocky}, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER} )
+		
+	</select>
+	
+	<!-- wmr62: 적치지시 procedure -->
+	<select id="saveWmr62Tolocky" statementType="CALLABLE" parameterType="com.logistics.wm.domain.RecvPutDTO">
+		/* saveWmr62Tolocky */
+		
+		CALL sp_wm_putaway(#{userData.compkey}, #{warekey}, #{taskoky}, #{doccate}, #{doctype}, #{stockky}
+			, #{truntyp}, #{trunpid}, #{fordqty}, #{toareky}, #{tozonky}, #{tolocky}, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER})
+		
+	</select>
+    
+	<!-- wmr21 : 입하 취소 List 조회 --> 
+    <select id="selectWmr21List" resultType="com.logistics.wm.domain.RecvDTO">
+    	/* selectWmr21List */
+    	
+		select concat(WR.COMPKEY, WR.RCVDCKY, WR.RCVDCIT) as ROWKEY
+		     , WR.COMPKEY, WR.RCVDCKY, WR.RCVDCIT
+		     , WR.WAREKEY, WR.DOCCATE, WR.DOCTYPE
+		     , WR.RCVDCST, WR.RCVITST
+		     <!-- , WR.VENDKEY, MP.PTNAMLC as VENDNAM -->
+		    <!--  , MS.BRANDCD as CUSTKEY
+		     , MC1.CUNAMLC as CUSTNAM -->
+		     , WR.LOTNMKY, WR.OWNERKY, WR.SKUMKEY, WR.SKUDESC
+		     , WR.ASNDQTY, WR.RCVEQTY, WR.RCHSQTY
+		     <!-- , format(WR.RCHSQTY / MS.ROINQTY,1) as GPAKCNT -->
+		     , WR.RVLOCKY, WS.STOTQTY
+		     <!-- , WR.RCVDCYN -->
+		     , WR.RCVRSCD, WR.RCVRSNM
+		     , WR.SHELIFE
+		     , fn_com_todate(WR.EXPIDAT) as EXPIDAT
+		     , fn_com_todate(WR.RCVDCDT) as RCVDCDT
+		     , WR.STKSTAT
+		     , WR.EOASNKY, WR.EOASNIT, WR.COPODKY, WR.COPODIT, WR.REFSODC, WR.REFSOIT
+		     , WR.PMTINYN
+		     , CASE WHEN PMTINDT = '' THEN '' ELSE fn_com_todate(WR.PMTINDT) END as PMTINDT
+		     , CASE WHEN PMTINTM = '' THEN '' ELSE fn_com_totime(WR.PMTINTM) END as PMTINTM
+		     , fn_sy_usernam(WR.COMPKEY, WR.PMTINUR) as PMTINUR
+		     , fn_com_todate(WR.CREDATE) as CREDATE, fn_com_totime(WR.CRETIME) as CRETIME, fn_sy_usernam(WR.COMPKEY, WR.CREUSER) as CREUSER			
+		     , fn_com_todate(WR.LMODATE) as LMODATE, fn_com_totime(WR.LMOTIME) as LMOTIME, fn_sy_usernam(WR.COMPKEY, WR.LMOUSER) as LMOUSER
+		     , WR.UPDTCHK
+		  from WRCVIT WR
+		  inner join (			
+				select COMPKEY, WAREKEY	
+					 , AREAKEY, ZONEKEY, LOCAKEY  
+				     , OWNERKY, SKUMKEY, LOTNMKY	
+				     , sum(STOTQTY) as STOTQTY 	
+				  from WSTKKY
+				 where COMPKEY = #{userData.compkey}	
+		   		<if test="warekey != null and  warekey != ''">
+		    	   and WAREKEY = #{warekey} 
+				</if>	
+		   		   and AREAKEY = 'RCV' /* 고정 */ 
+		   		   and ZONEKEY = 'RCVZ' /* 고정 */
+		   		   and (STOTQTY-SBLOQTY) > 0 /* 총 수량 */
+		   		   and SALLQTY = 0   /* 할당 수량 */
+		   		   and SINBQTY = 0   /* 입고중 수량 */
+		   		   and SOUBQTY = 0   /* 출고중 수량 */
+				 group by COMPKEY, WAREKEY, AREAKEY, ZONEKEY, LOCAKEY, OWNERKY, SKUMKEY, LOTNMKY 	
+		     ) WS
+		    on WS.COMPKEY = WR.COMPKEY 
+		   and WS.WAREKEY = WR.WAREKEY 
+		   and WS.AREAKEY = 'RCV' 
+		   and WS.ZONEKEY = 'RCVZ' 
+		   and WS.LOCAKEY = WR.RVLOCKY 
+		   and WS.OWNERKY = WR.OWNERKY 
+		   and WS.SKUMKEY = WR.SKUMKEY 
+		   and WS.LOTNMKY = WR.LOTNMKY   			
+		 inner join MSKUWC MS on MS.COMPKEY = WR.COMPKEY and MS.WAREKEY = WR.WAREKEY and MS.OWNERKY = WR.OWNERKY and MS.SKUMKEY = WR.SKUMKEY 			
+		 <!-- inner join MCUSMA MC1 on MC1.COMPKEY = WR.COMPKEY and MC1.OWNERKY = WR.OWNERKY			 -->
+		 <!-- inner join MPTNMA MP on MP.COMPKEY = WR.COMPKEY and MP.PTNRKEY = WR.VENDKEY and MP.PTNRTYP = 'VENDER' --> 			
+		 where WR.COMPKEY = #{userData.compkey}
+		   and WR.DOCCATE = '400'
+		   and WR.RCVITST != 'CANFULL'
+  		<if test="warekey != null and  warekey != ''">
+		   and WR.WAREKEY = #{warekey} 
+		</if>
+		<if test="ownerky != null and  ownerky != ''">
+		   and WR.OWNERKY = #{ownerky} 
+		</if>
+		<if test="doctype != null and  doctype != ''">
+		   and WR.DOCTYPE = #{doctype} 
+		</if>
+		<choose>
+        	<when test='rcvdcdtfrom != null and rcvdcdtfrom != "" and rcvdcdtto == ""'>
+ <![CDATA[ and WR.RCVDCDT >= replace(#{rcvdcdtfrom}, '-', '') ]]>
+			</when>
+			<when test='rcvdcdtto != null and rcvdcdtto != "" and rcvdcdtfrom == ""'>
+ <![CDATA[ and WR.RCVDCDT <= replace(#{rcvdcdtto}, '-', '') ]]>
+			</when>
+			<when test='rcvdcdtfrom != null and rcvdcdtfrom != "" and rcvdcdtto != null and rcvdcdtto != ""'>
+		   and WR.RCVDCDT between replace(#{rcvdcdtfrom}, '-', '') and replace(#{rcvdcdtto}, '-', '')
+			</when>	
+		</choose>
+		<!-- <if test="custkey != null and  custkey != ''">
+		   and MS.BRANDCD = #{custkey}
+		</if>
+		<if test="vendnam != null and  vendnam != ''">
+		   and upper(MP.PTNAMLC) like concat('%', upper(#{vendnam}), '%')
+		</if> -->
+		<if test="pmtinyn != null and  pmtinyn != ''">
+		   and WR.PMTINYN = #{pmtinyn}
+		</if>
+		 order by WR.COMPKEY, WR.RCVDCKY, WR.RCVDCIT
+    </select>
+    
+    <!-- wmr21 : 입하 취소 List 저장 Procedure -->
+    <select id="saveWmr21List" statementType="CALLABLE" parameterType="com.logistics.wm.domain.RecvDTO" resultType="com.logistics.wm.domain.RecvDTO"> 
+		 CALL sp_wm_ctrwrcvitcancel( #{userData.compkey}, #{warekey}, #{rcvdcky}, #{rcvdcit}, #{rcarscd}, #{rcarsnm}, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=INTEGER} )
+	</select>
+	
+</mapper>

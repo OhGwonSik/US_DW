@@ -1,0 +1,492 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdo03Warekey" class="setting-grid-title ic-title-nece">[[#{grid.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdo03Warekey"></select>
+					</div>
+				</div>
+				<label for="mdo03Areanam" class="setting-grid-title">[[#{md.marema.areanam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.marema.areanam')}" id="mdo03Areanam">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdo03Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdo03Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdo03Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdo03Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdo03
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.10
+	  - 설명 : 물류비검증처리
+	  ------------------------------------------
+	*/
+$(function(){
+	//----------- 전역변수 ------------//
+	let mdo03InitData;
+	let mdo03ComboData = {}; // combobox list 저장
+	let mdo03WarekeyCondition; // 현재 warekey 검색값 저장
+	//----------- 전역변수 end ------------//
+
+	//============================================================
+	//검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function(){
+		getMdo03List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all:true});
+
+		//===============================================================
+		// 체크된 데이터 필수 값 & 중복 체크
+		//===============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['warekey', 'areakey', 'areatyp', 'areanam'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+						rowIndxPage: gCheck.pq_ri,
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol } )
+					});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+				const keyCols = ['warekey', 'areakey'];
+
+				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData)
+										+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+					alert(alertTxt);
+	      			grid.focus({
+						rowIndxPage: (gCheck.pq_ri),
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'warekey' } )
+					});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdo03List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdo03Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdo03GridCM = [
+		{
+			title: '',
+			dataType: 'bool',
+			dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+            type: 'checkbox',
+            sortable: false,
+            editor: false,
+            align: 'center',
+            cb: {
+           		all: false,
+           		header: true
+            }
+     	},
+		{
+     		title: '[[#{common.grid.recIndx}]]',
+     		dataType: 'string',
+     		dataIndx: '[[#{common.grid.recIndx}]]',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.marema.compkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'compkey',
+     		hidden: true
+     	},
+		{
+     		title: '[[#{grid.whnamlc}]]',
+     		dataType: 'string',
+     		dataIndx: 'warekey',
+            render: ui => {
+                const option = mdo03ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	},
+         	editable: false
+		},
+    	{
+			title: '[[#{md.marema.areakey}]]',
+			dataType: 'string',
+			dataIndx: 'areakey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.marema.areatyp}]]',
+			dataType: 'string',
+			dataIndx: 'areatyp',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+				type: 'select',
+	            init: ui => {
+	            	ui.$cell.find('select').pqSelect({
+						search: false,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+                	ui.$cell.find('select').pqSelect('open');
+	            },
+                options: ui => mdo03ComboData[ui.dataIndx],
+                prepend: { '': ' ' }
+			},
+	        render: ui => {
+          		const option = mdo03ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+          		return { text: option ? option[ui.cellData] : ui.cellData };
+			},
+			editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.marema.areanam}]]',
+			dataType: 'string',
+			dataIndx: 'areanam',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 1,
+					msg: '[[#{ms.validations.minLenLength(1)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.marema.aruseyn}]]',
+			dataType: 'string',
+			dataIndx: 'aruseyn',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+            cb: {
+           		all: false,
+           		header: true,
+           		check: 'Y',
+           		uncheck: 'N'
+            }
+		},
+		{
+			title: '[[#{md.marema.syonlyn}]]',
+			dataIndx: 'syonlyn',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.marema.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.marema.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.marema.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.marema.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.marema.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.marema.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdo03Grid = new GridUtil(mdo03GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 초기화 세팅
+	mdo03Grid.setReset();
+
+	// Grid 검색 세팅
+	mdo03Grid.setFind();
+
+	// Grid 데이터 추가 이벤트
+	mdo03Grid.setAdd(function(evt, ui){
+		if(!mdo03WarekeyCondition){
+			alert('[[#{ms.noSearchError}]]');
+
+			return;
+		}
+
+		const rowData = {
+			state: true,
+			compkey: '[[${userattr.compkey}]]',
+			warekey: mdo03WarekeyCondition,
+			aruseyn: 'Y',
+			syonlyn: 'N'
+		};
+   		const rowIndx = this.addRow({
+			rowData: rowData,
+			checkEditable: false
+		});
+
+   		this.goToPage({ rowIndx: rowIndx });
+		this.focus({
+			rowIndxPage: rowIndx,
+			colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx } )
+		});
+    });
+
+	// Grid 생성시 이벤트
+	mdo03Grid.setCreate(async function(evt, ui) {
+		 const response = await initMdo03();
+
+		 mdo03InitData = response.item;
+
+		 for(let key of Object.keys(mdo03InitData)){
+			let gData = mdo03InitData[key];
+			const options = gData.map(obj => {
+	        	let rObj = {};
+
+	        	rObj[obj['combovl']] = obj['combonm'];
+
+	        	return rObj;
+			});
+
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+			}
+
+			if('' !== target){
+				$('#' + target + ' option').remove();
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'));
+			}
+
+			mdo03ComboData[key] = options;
+		}
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdo03Grid.setChange(async function (evt, ui) {
+	    if('edit' === ui.source || 'paste' === ui.source){
+	    	const updateRowList = [];
+
+	    	for(const updateData of ui.updateList) {
+		    	const newRow = { state: true }
+
+    			if(updateData.newRow.hasOwnProperty('areakey') && updateData.oldRow.hasOwnProperty('areakey')){
+    				newRow['areakey'] = updateData?.newRow?.areakey?.toUpperCase();
+    			}
+
+    			if(updateData.newRow.hasOwnProperty('areatyp') && updateData.oldRow.hasOwnProperty('areatyp')){
+              		const option = mdo03ComboData['areatyp'].find(obj => obj[updateData.rowData['areatyp']]);
+
+              		if(option){
+              			newRow['areatyp'] = updateData.rowData['areatyp'];
+              		} else {
+              			newRow['areatyp'] = null;
+              			newRow['areanam'] = null;
+              		}
+    			}
+
+    			updateRowList.push({
+    				rowIndx: updateData.rowIndx,
+    				newRow: newRow
+    			});
+	    	}
+
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+	    } else if('checkbox' === ui.source){
+	    	const updateRowList = [];
+
+	    	await ui.updateList.forEach( updateData => {
+		    	const newRow = { state: true }
+    			if(updateData.newRow.hasOwnProperty('aruseyn') || updateData.newRow.hasOwnProperty('syonlyn')){
+        			updateRowList.push({
+						rowIndx: updateData.rowIndx,
+						newRow: newRow
+					});
+   				}
+	    	});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+	    }
+
+	    if('paste' === ui.source){
+    		await ui.addList.forEach( addData =>
+      			addData.newRow = {
+					state: true,
+					compkey: '[[${userattr.compkey}]]',
+					warekey: mdo03WarekeyCondition,
+					aruseyn: addData?.newRow?.aruseyn || 'Y',
+					syonlyn: addData?.newRow?.syonlyn || 'N'
+ 			});
+			await this.updateRow({
+				rowList: ui.addList,
+				checkEditable: false
+			});
+	    }
+	});
+
+	// Grid 객체 생성
+	mdo03Grid.open();
+
+	// Grid 조회 함수
+	async function getMdo03List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const data =  {
+			warekey: $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val(),
+			areanam: $('#' + '[[${gprogrid}]]' + 'Areanam').val()
+		};
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+
+
+		mdo03WarekeyCondition = $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val();
+		grid.showLoading();
+
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// Grid 저장 함수
+	async function saveMdo03List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+
+		grid.showLoading();
+
+		const saveMdo03Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdo03Response.status === 200){
+			await getMdo03List();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 페이지 초기화 함수
+	async function initMdo03(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const initData = await fetchUtil('GET', url);
+
+		return initData.json();
+	}
+});
+</script>
+</div>
+</html>

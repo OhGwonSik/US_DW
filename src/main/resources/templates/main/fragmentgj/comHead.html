@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="fragments-comHead">
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Language" content="ko">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta http-equiv="Pragma" CONTENT="no-cache">
+	<meta http-equiv="Expires" CONTENT="-1">
+	<link id="rPath" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+ 	<!-- 파비콘 -->
+	<link rel="manifest" th:href="@{/manifest.json}" />
+	<link rel="apple-touch-icon" sizes="57x57" th:href="@{/v2/assets/favicon/apple-icon-57x57.png}">
+	<link rel="apple-touch-icon" sizes="60x60" th:href="@{/v2/assets/favicon/apple-icon-60x60.png}">
+	<link rel="apple-touch-icon" sizes="72x72" th:href="@{/v2/assets/favicon/apple-icon-72x72.png}">
+	<link rel="apple-touch-icon" sizes="76x76" th:href="@{/v2/assets/favicon/apple-icon-76x76.png}">
+	<link rel="apple-touch-icon" sizes="114x114" th:href="@{/v2/assets/favicon/apple-icon-114x114.png}">
+	<link rel="apple-touch-icon" sizes="120x120" th:href="@{/v2/assets/favicon/apple-icon-120x120.png}">
+	<link rel="apple-touch-icon" sizes="144x144" th:href="@{/v2/assets/favicon/apple-icon-144x144.png}">
+	<link rel="apple-touch-icon" sizes="152x152" th:href="@{/v2/assets/favicon/apple-icon-152x152.png}">
+	<link rel="apple-touch-icon" sizes="180x180" th:href="@{/v2/assets/favicon/apple-icon-180x180.png}">
+	<link rel="icon" type="image/png" sizes="192x192"  th:href="@{/v2/assets/favicon/android-icon-192x192.png}">
+	<link rel="icon" type="image/png" sizes="32x32" th:href="@{/v2/assets/favicon/favicon-32x32.png}">
+	<link rel="icon" type="image/png" sizes="96x96" th:href="@{/v2/assets/favicon/favicon-96x96.png}">
+	<link rel="icon" type="image/png" sizes="16x16" th:href="@{/v2/assets/favicon/favicon-16x16.png}">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/v2/assets/favicon/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+
+	<title> :: PLATFORM :: </title>
+	<script>
+		const rPath = document.querySelector('#rPath').getAttribute('data-contextPath')? document.querySelector('#rPath').getAttribute('data-contextPath'):'';
+	</script>
+	<!-- CSS : bootstrap   -->
+	<link rel="stylesheet" th:href="@{/vender/bootstrap/bootstrap-4.1.3/css/bootstrap.css}">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+	<link rel="stylesheet" th:href="@{/vender/bootstrap/bootstrap-icons.css}">
+
+	<!-- CSS : Scrollbar Custom -->
+	<link rel="stylesheet" th:href="@{/vender/malihu-custom-scrollbar-plugin-3.1.5/jquery.mCustomScrollbar.min.css}">
+
+	<!-- css : PQGrid  -->
+	<!-- 2023.08.24 기존 CSS-->
+	<link rel="stylesheet" th:href="@{/vender/paramquery-pro 8.6/themes/bootstrap/pqgrid.css}">
+	<link rel="stylesheet" th:href="@{/vender/paramquery-pro 8.6/pqgrid.min2.css}">
+	<link rel="stylesheet" th:href="@{/vender/paramquery-pro 8.6/pqgrid.ui.min.css}">
+	<link rel="stylesheet" th:href="@{/vender/paramquery-pro 8.6/pqSelect/pqselect.min.css}">
+
+	<!-- css : jQuery UI Theme -->
+	<link rel="stylesheet" th:href="@{/vender/jqueryui/jquery-ui-1.11.4/jquery-ui.css}" />
+
+	<!-- CSS : PLATFORM 프레임 -->
+	<link rel="stylesheet" th:href="@{/v2/css/main.css}">  <!-- main:공통 CSS -->
+	<link rel="stylesheet" th:href="@{/v2/css/common11.css}">  <!-- main:공통 CSS -->
+
+	<!-- JavaScript : jQuery, jQuery UI, swiper -->
+	<script th:src="@{/v2/scripts/jquery-3.6.0.min.js}"></script>
+	<script th:src="@{/v2/scripts/jquery-ui.min.js}"></script>
+	<script th:src="@{/v2/scripts/script.js}" defer></script>
+
+	<!-- 2023.08.01 하주영 추가 / grid에서 context를 불러와야해서 2.2.4 추가 -->
+	<script type="text/javascript" th:src="@{/vender/jquery/jquery-2.2.4.js}"></script>
+	<script th:src="@{/vender/jqueryui/jquery-ui-1.11.4/jquery-ui.js}"></script>
+
+	<!-- CSS : PLATFORM 프레임 END -->
+
+	<!-- JavaScript : jsZip for zip and xlsx import/export -->
+	<script th:src="@{/vender/pggrid/jsZip-2.5.0/jszip.min.js}"></script>
+
+	<!-- JavaScript : 클라이언트 측에서 파일을 저장하는 라이브러리 -->
+	<script th:src="@{/vender/pggrid/FileSaver.js}"></script>
+
+	<!-- JavaScript : Bootstrap Library -->
+	<script type="text/javascript" th:src="@{/vender/bootstrap/bootstrap-4.1.3/js/bootstrap.bundle.js}"></script>
+
+	<!-- JavaScript : 날짜 라이브러리 -->
+	<script th:src="@{/vender/daterangepicker/moment.js}"></script>
+
+	<!-- JavaScript : 시간 라이브러리 -->
+	<script th:src="@{/vender/timepicker/bootstrap-timepicker.js}"></script>
+	<link rel="stylesheet" th:href="@{/vender/timepicker/bootstrap-timepicker.css}">
+
+	<!-- JavaScript : Main 프레임  -->
+	<script type="text/javascript" th:src="@{/js/main/v2/jqueryTab.js}"></script>
+	<script type="text/javascript" th:src="@{/js/main/v2/mainSideBar.js}"></script>
+
+
+	<script th:src="@{/vender/MonthPicker/MonthPicker.js}"></script>
+	<link rel="stylesheet" th:href="@{/vender/MonthPicker/MonthPicker.css}">
+
+	<!-- JavaScript : pggrid -->
+	<script th:src="@{/vender/paramquery-pro 8.6/pqgrid.min2.js}"></script>
+	<script th:src="@{/vender/paramquery-pro 8.6/pqTouch/pqtouch.min.js}"></script><!--for touch devices-->
+	<script th:src="@{/vender/pggrid/pqselect.min.js}"></script>
+	<script th:src="@{/vender/paramquery-pro 8.6/localize/pq-localize-kr.js}"></script>
+
+	<!-- JavaScript : QR코드 라이브러리 -->
+	<script type="text/javascript" th:src="@{/vender/qr/jquery-qrcode-0.18.0.js}"></script>
+
+	<!-- JavaScript : jqueryPrint 라이브러리 -->
+	<script type="text/javascript" th:src="@{/vender/printThis/printThis.js}"></script>
+
+	<!-- JavaScript : 최신 jquery와 호환성 필요 -->
+	<script type="text/javascript" th:src="@{/vender/malihu-custom-scrollbar-plugin-3.1.5/jquery.mCustomScrollbar.js}"></script>
+
+	<!-- JavaScript : bootstrap 토글 라이브러리 -->
+	<link rel="stylesheet" th:href="@{/vender/bootstrap/bootstrap-4.1.3/css/bootstrap4-toggle.css}" />
+	<script type="text/javascript" th:src="@{/vender/bootstrap/bootstrap-4.1.3/js/bootstrap4-toggle.js}"></script>
+
+	<!-- JavaScript : 카카오 우편번호 -->
+	<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+</th:block>
+</html>

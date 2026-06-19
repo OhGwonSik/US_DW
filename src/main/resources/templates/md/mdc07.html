@@ -1,0 +1,346 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdc07Comcdvl" class="setting-grid-title">[[#{md.mcodem.comcdvl}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mcodem.comcdvl')}" id="mdc07Comcdvl">
+					</div>
+				</div>
+				<label for="mdc07Comkytx" class="setting-grid-title">[[#{md.mcodem.comkytx}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mcodem.comkytx')}" id="mdc07Comkytx">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdc07Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdc07Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdc07Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdc07Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdc07
+	  - 최초생성자  : Park T. S.
+	  - 최초생성일시 : 2023.07
+	  - 설명 : 공통코드
+	  ------------------------------------------
+	*/
+$(function(){
+	//----------- 전역변수 ------------//
+	let mdc07InitData;
+	const mdc07ComboData = {};
+	//----------- 전역변수 end ------------//
+
+	//============================================================
+	//검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function() {
+		getMdc07List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid')
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all:true});
+
+		//===============================================================
+		// 체크된 데이터 필수 값 & 중복 체크
+		//===============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['comcdky', 'comcdvl', 'comkytx', 'comcdtx', 'comcdor'];
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({rowIndxPage: gCheck.pq_ri, colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+   				const keyCols = ['comcdky', 'comcdvl'];
+   				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+   					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData)
+   										+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+   					alert(alertTxt);
+	      			grid.focus({rowIndxPage: gCheck.pq_ri, colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'comcdky' } )});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await confirm('[[#{ms.checksave}]]')){
+			saveMdc07(gridChange);
+		}
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdc07Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdc07GridCM = [
+		{ title: '', dataType: 'bool', dataIndx: '[[#{common.grid.checkBoxName.state}]]', align: 'center',
+            type: 'checkbox', sortable: false, editor: false,
+             cb: { all: false, header: true }
+     	},
+		{ title: '[[#{md.mcodem.rowkey}]]',  dataType: 'string', dataIndx: '[[#{common.grid.recIndx}]]',  hidden: true, editable: false },
+		{ title: '[[#{md.mcodem.compkey}]]', dataType: 'string', dataIndx: 'compkey', hidden: true, editable: false },
+		{ title: '[[#{md.mcodem.comcdky}]]', dataType: 'string', dataIndx: 'comcdky',	//Common code Key
+			styleHead: { 'background':'[[#{grid.styleHead01}]]' },
+			validations: [{ type: 'minLen', value: 1, msg: '[[#{ms.validations.minLenLength(1)}]]' },{ type: 'maxLen', value: 10, msg: '[[#{ms.validations.maxLenLength(10)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.comcdvl}]]', dataType: 'string', dataIndx: 'comcdvl',	//Common code value
+			styleHead: { 'background':'[[#{grid.styleHead01}]]' },
+			validations: [{ type: 'minLen', value: 1, msg: '[[#{ms.validations.minLenLength(1)}]]' },{ type: 'maxLen', value: 10, msg: '[[#{ms.validations.maxLenLength(10)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.comkytx}]]', dataType: 'string', dataIndx: 'comkytx',	//commcn code key Text
+			styleHead: { 'background':'[[#{grid.styleHead01}]]' },
+			validations: [{ type: 'minLen', value: 1, msg: '[[#{ms.validations.minLenLength(1)}]]' },{ type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.comcdtx}]]', dataType: 'string', dataIndx: 'comcdtx',	//Common code value Text
+			styleHead: { 'background':'[[#{grid.styleHead01}]]' },
+			validations: [{ type: 'minLen', value: 1, msg: '[[#{ms.validations.minLenLength(1)}]]' },{ type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.comcdor}]]', dataType: 'integer', dataIndx: 'comcdor',	//Code 표시 순서
+			styleHead: { 'background':'[[#{grid.styleHead01}]]' },
+			validations: [{ type: 'gte', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]' }, { type: 'lte', value: 1000000000, warn: true, msg: '[[#{ms.validations.maxLenLength(9)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.comcdsy}]]', dataIndx: 'comcdsy',		//Code 시스템 전용
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			align: 'center', type: 'checkbox', editor: false,
+            cb: { all: false, header: true, check: 'Y', uncheck: 'N' }
+		},
+		{ title: '[[#{md.mcodem.cdcate1}]]', dataType: 'string', dataIndx: 'cdcate1',	//Code 분류1
+			styleHead: { 'background':'[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]' }, { type: 'maxLen', value: 50, warn: true, msg: '[[#{ms.validations.maxLenLength(50)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.cdcate2}]]', dataType: 'string', dataIndx: 'cdcate2',	//Code 분류2
+			styleHead: { 'background':'[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]'}, { type: 'maxLen', value: 50, warn: true, msg: '[[#{ms.validations.maxLenLength(50)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.cdcate3}]]', dataType: 'string', dataIndx: 'cdcate3',	//Code 분류3
+			styleHead: { 'background':'[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]'}, { type: 'maxLen', value: 50, warn: true, msg: '[[#{ms.validations.maxLenLength(50)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.cdattr1}]]', dataType: 'string', dataIndx: 'cdattr1',	//Code Attribute1
+			styleHead: { 'background':'[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]' }, { type: 'maxLen', value: 50, warn: true, msg: '[[#{ms.validations.maxLenLength(50)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.cdattr2}]]', dataType: 'string', dataIndx: 'cdattr2',	//Code Attribute2
+			styleHead: { 'background':'[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]' }, { type: 'maxLen', value: 50, warn: true, msg: '[[#{ms.validations.maxLenLength(50)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.cdattr3}]]', dataType: 'string', dataIndx: 'cdattr3',	//Code Attribute3
+			styleHead: { 'background':'[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, warn: true, msg: '[[#{ms.validations.minLenLength(0)}]]' }, { type: 'maxLen', value: 50, warn: true, msg: '[[#{ms.validations.maxLenLength(50)}]]' }]
+		},
+		{ title: '[[#{md.mcodem.warekey}]]', dataType: 'string', dataIndx: 'warekey',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			editor: {
+				type: 'select',
+	            init: function(ui){
+	            	ui.$cell.find('select').pqSelect({ search: false, singlePlaceholder: '' });
+                	ui.$cell.find('select').pqSelect('open');
+	            },
+                options: function(ui){
+            		return mdc07ComboData[ui.dataIndx];
+                },
+                prepend: { '' : ' ' }
+			},
+            render: function (ui) {
+                const option = mdc07ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	}
+		},
+		{ title: '[[#{md.mcodem.couseyn}]]', dataIndx: 'couseyn',		//사용YN(Y=사용)
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			align: 'center', type: 'checkbox', editor: false,
+            cb: { all: false, header: true, check: 'Y', uncheck: 'N' }
+		},
+		{ title: '[[#{md.mcodem.credate}]]', dataType: 'string', dataIndx: 'credate',  editable: false },
+		{ title: '[[#{md.mcodem.cretime}]]', dataType: 'string', dataIndx: 'cretime',  editable: false },
+		{ title: '[[#{md.mcodem.creuser}]]', dataType: 'string', dataIndx: 'creuser',  editable: false },
+		{ title: '[[#{md.mcodem.lmodate}]]', dataType: 'string', dataIndx: 'lmodate',  editable: false },
+		{ title: '[[#{md.mcodem.lmotime}]]', dataType: 'string', dataIndx: 'lmotime',  editable: false },
+		{ title: '[[#{md.mcodem.lmouser}]]', dataType: 'string', dataIndx: 'lmouser',  editable: false },
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdc07Grid = new GridUtil(mdc07GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+	mdc07Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdc07Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+	mdc07Grid.setAdd(function(evt, ui){
+		const rowData = { state : true, compkey: '[[${userattr.compkey}]]' , comcdsy : 'N', couseyn : 'Y' };
+   		const rowIndx = this.addRow({ rowData: rowData, checkEditable: false });
+
+   		this.goToPage({ rowIndx: rowIndx });
+		this.focus({rowIndxPage: rowIndx, colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )});
+    });
+
+	// Grid 생성시 이벤트
+	mdc07Grid.setCreate(async function(evt, ui){
+		const response = await initMdc07Data();
+
+		mdc07InitData = response.item;
+
+		for(let key of Object.keys(mdc07InitData)){
+			const gData = mdc07InitData[key];
+			const options = gData.map(function(obj){
+						        	let rObj = {};
+						        	rObj[obj['combovl']] = obj['combonm'];
+						        	return rObj;
+								});
+
+			mdc07ComboData[key] = options;
+		}
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdc07Grid.setChange(async function (evt, ui) {
+	    if('edit' === ui.source || 'paste' === ui.source){
+    		const updateRowList = [];
+    		await ui.updateList.forEach(async updateData => {
+	    		let newRow = {state: true};
+	    		const toUpperCols = ['comcdky', 'comcdvl'];
+	    		await toUpperCols.forEach(cols => {
+	    			if(updateData.newRow.hasOwnProperty(cols) && updateData.oldRow.hasOwnProperty(cols)){
+	    				newRow[cols] = updateData.newRow[cols]?.toUpperCase();
+	    			}
+	    		});
+
+    			if(updateData.newRow.hasOwnProperty('warekey') && updateData.oldRow.hasOwnProperty('warekey')){
+                	const option = mdc07ComboData['warekey'].find(obj => obj[updateData.rowData['warekey']]);
+   					newRow['warekey'] = option ? updateData.rowData['warekey'] : null;
+    			}
+    			updateRowList.push({rowIndx: updateData.rowIndx, newRow : newRow});
+	    	});
+			await this.updateRow({rowList: updateRowList, checkEditable: false, refresh: true});
+	    } else if('checkbox' === ui.source){
+    		const updateRowList = [];
+    		await ui.updateList.forEach(updateData => {
+    			let newRow = {state : true};
+    			if(updateData.newRow.hasOwnProperty('comcdsy') || updateData.newRow.hasOwnProperty('couseyn'))
+        			updateRowList.push({rowIndx: updateData.rowIndx, newRow : newRow});
+    		});
+			this.updateRow({rowList: updateRowList, checkEditable: false, refresh: true});
+	    }
+	    if('paste' === ui.source){
+	    	await ui.addList.forEach(addData =>
+    			addData.newRow ={
+       					state : true,
+       					compkey : '[[${userattr.compkey}]]',
+       					comcdsy : 'N',
+       					couseyn : 'Y'
+      		});
+			await this.updateRow({rowList: ui.addList, checkEditable: false, refresh: true});
+	    }
+	});
+
+	// Grid 객체 생성
+	mdc07Grid.open();
+
+	// Grid 저장 함수
+	async function saveMdc07(saveData){
+		if(!saveData){
+			return;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+	    grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdc07Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdc07Response.status === 200){
+			await getMdc07List();
+//			alert('[[#{ms.saveSuccess}]]');
+		}
+
+		grid.hideLoading();
+	}
+
+	// Grid 조회 함수
+	async function getMdc07List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const data = { comcdvl : $('#' + '[[${gprogrid}]]' + 'Comcdvl').val(), comkytx : $('#' + '[[${gprogrid}]]' + 'Comkytx').val() };
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', { data: resContent, recIndx: '[[#{common.grid.recIndx}]]' } );
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 페이지 init
+	async function initMdc07Data(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.code}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const initData = await fetchUtil('GET', url);
+
+		return initData.json();
+	}
+});
+</script>
+</div>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div class="header" id="mainHeader" th:fragment="fragments-mainHeader">
+    <div class="header-logo">
+        <img th:src="@{/v1/assets/img_logo@3x.png}" alt="" width="19" height="19">
+        스마트물류플랫폼
+    </div>
+    <div class="header-center">
+        <ul class="main-menu">
+            <li class="active">물류납품</li>
+            <li>물류창고</li>
+            <li>물류운송</li>
+            <li>물류관제</li>
+            <li>물류공유</li>
+            <li>운영관리</li>
+            <li>시스템관리</li>
+        </ul>
+        <div class="header-info">
+            <div class="user-info" th:text="${session.usernam}">회사명 · 홍길동님</div>
+
+            <button class="btn-logout" onclick='location.href=rPath+"/logout"'>로그아웃</button>
+        </div>
+    </div>
+    <div class="header-favorite">
+        <img th:src="@{/v1/assets/ic_bookmark_on@3x.png}" alt="" width="16" height="16">
+        즐겨찾기
+    </div>
+</div>
+</html>

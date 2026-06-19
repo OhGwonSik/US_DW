@@ -1,0 +1,906 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="wmr40_warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr40_warekey"></select>
+					</div>
+				</div>
+				<label for="wmr40_ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr40_ownerky">
+							<option value="" selected>[[#{ms.select}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="wmr40_save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmr40_grid"></div>
+			</div>
+		</div>
+	</div>
+	
+<script>
+$(function(){
+	/*  wmr40 - 반품등록
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 최강호 
+	*   설명			: 반품된 재고를 등록하는 페이지
+	*   수정 내역		:
+	*   수정일시		:
+	*	수정자		: 
+	*	변경 사항		: 
+	*/
+	let wmr40InitData = wmr40Init();
+	let wmr40List = wmr40SkuList();
+	let wmr40ChangeInit; //전체 SKU를 담을 변수
+	
+	$("#wmr40_save").click(async function () {
+		let grid = pq.grid("#wmr40_grid"); 
+		let gridCheck = grid.getChanges({ all: true });
+			gridCheck.addList = gridCheck.addList.filter(function(item) {
+				  return item.state !== false;
+			});//state가 true인 값만 가져오기
+		
+		let gridCheckLength = gridCheck.addList.filter(item => item.state === true);
+		
+		if(gridCheck.addList.length>0){
+			//============================================================	 
+	    	//체크된 데이터 값 체크
+	    	//============================================================
+			for(i=0;i<gridCheck.addList.length;i++){
+				if(!gridCheck.addList[i].warekey){
+					alert("[[#{wm.wasnif.warekey}]]" + "[[#{ms.choiceValue}]]");	//창고를/을 선택해주세요.
+					grid.setSelection( {rowIndx: gridCheck.addList[i].pq_ri, dataIndx: 'warekey'} );
+					return false;
+				}
+				if(!gridCheck.addList[i].ownerky){
+					alert("[[#{wm.wasnif.ownerky}]]" + "[[#{ms.choiceValue}]]");	//화주를/을 선택해주세요.
+					grid.setSelection( {rowIndx: gridCheck.addList[i].pq_ri, dataIndx: 'ownerky'} );
+					return false;
+				}
+				if(!gridCheck.addList[i].skumkey){
+					alert("[[#{wm.wasnif.skumkey}]]" + "[[#{ms.choiceValue}]]");	//상품를/을 선택해주세요.
+					grid.setSelection( {rowIndx: gridCheck.addList[i].pq_ri, dataIndx: 'skumkey'} );
+					return false;
+				}
+				if(!gridCheck.addList[i].rcveqty){
+					alert("[[#{wm.wmr40.rcveqty}]]" + "[[#{ms.inputValue}]]");		//입하대상 수량를/을 입력해주세요.
+					grid.editCell( { rowIndx: gridCheck.addList[i].pq_ri, dataIndx: "rcveqty" } );
+					return false;
+				}
+				if(!gridCheck.addList[i].rcvrscd){
+					alert("[[#{wm.wmr40.rcvrscd}]]" + "[[#{ms.choiceValue}]]");	//입고 사유코드를/을 선택해주세요.
+					grid.setSelection( {rowIndx: gridCheck.addList[i].pq_ri, dataIndx: 'rcvrscd'} );
+					return false;
+				}
+			}
+			
+			let result = confirm("[[#{ms.checksave}]]");
+			if(result == true){
+				grid.showLoading();
+				try{
+					let response = await fetchUtil('POST', "/wm/inbound/wmr40/grids/1", gridCheck);
+					if(response.status === 200){
+	          			//alert("[[#{ms.saveSuccess}]]"); //저장 성공하였습니다.
+						grid.option( "dataModel", { data: [] } );
+	        			grid.refreshDataAndView();
+	        			grid.hideLoading();
+		        	}
+				} catch(err){
+					console.log(err);
+				} finally{
+					grid.hideLoading();
+				}
+			}
+		}else{
+			alert("[[#{ms.choiceRowZero}]]");//선택된 row가 없습니다
+		}
+	});
+	
+	let wmr40GridCM = [
+		{ title: "", dataType: 'bool', dataIndx: "state", maxWidth: 30, minWidth: 30,
+            type: 'checkbox', sortable: false, editor: false,
+            cb: { all: false, header: true }
+     	},
+		{ title: "[[#{wm.wasnif.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false, hidden: true },	//Company Key
+		{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx: "warekey", editable: false,
+			editor: {
+				type: "select",
+				init: function(ui){
+					 ui.$cell.find("select").pqSelect({ search:false, singlePlaceholder: ''});
+					 setTimeout(function () {
+	                	 ui.$cell.find("select").pqSelect('open'); 
+	                 }, 250); 
+				   },
+				options: [],
+				prepend : { "" : '[[#{ms.selectOption}]]' }
+				},
+				render: gridRenderAndValue
+				
+		},	//창고
+		{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx: "ownerky", editable: false,
+			editor: {
+				type: "select",
+				init: function(ui){
+					 ui.$cell.find("select").pqSelect({ search:false, singlePlaceholder: '' });
+					 setTimeout(function () {
+	                	 ui.$cell.find("select").pqSelect('open'); 
+	                 }, 250); 
+				   },
+				options: [],
+				prepend : { "" : '[[#{ms.selectOption}]]' }
+				},
+				render: gridRenderAndValue
+		},	//화주
+		{ title: "[[#{wm.wasnif.doccate}]]", dataType: "string",  dataIndx: "doccate", editable: false,
+			editor: {
+                type: "text",
+            },
+		 render : gridRenderAndValue
+		},	//문서유형
+		{ title: "[[#{wm.wasnif.doctype}]]", dataType: "string",  dataIndx: "doctype", editable: false,
+			editor: {
+                type: "text",
+            },
+		 render : gridRenderAndValue
+		},	//문서타입
+		{ title: "[[#{wm.wmr40.vendkey}]]", dataType: "string",  dataIndx: "vendkey",
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editor: {
+                type: "select",
+                init: function (ui) {
+                	ui.$cell.find("select").pqSelect({search: false, multiplePlaceholder: '' });
+                	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+                },
+                options: [],
+                prepend : { "" : '[[#{ms.selectOption}]]' }
+            },
+			 render : gridRenderAndValue
+		},
+		{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx: "skumkey",	//부품
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+                type: "select",
+                attr: "multiple='multiple'",
+                init: function (ui) {
+                	ui.$cell.find("select").pqSelect({ multiplePlaceholder: '', checkbox :true, searchId : "wmr40_skumkey" });
+                	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+                },
+                options: []
+            },
+			render: gridRenderAndValue
+		},
+		{ title: "[[#{wm.wmr40.rcveqty}]]", dataType: "integer", dataIndx: "rcveqty",	//입하대상 수량
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			summary: { type: "sum" },
+			format :  "#,###",
+			validations : [{ type: 'gte', value: 0, msg: '[[#{ms.validations.minLenLength(1)}]]'},
+						   { type: 'lte', value: 1000000000, msg: "[[#{ms.validations.maxLenLength(9)}]]" },
+						   { type : 'regexp', value : /^[0-9]{1,9}$/, msg: '[[#{ms.validations.maxLenLength(9)}]]'}]
+		},
+		{ title: "[[#{wm.wmi10.avalqty}]]", dataType: "integer",  dataIndx: "stotqty", format: '###,###,###', editable: false }, //가용수량
+		{ title: "[[#{wm.wasnif.auomkey}]]", dataType: "string",  dataIndx: "auomkey", editable: false },
+		{ title: "[[#{wm.wmr40.rcvrscd}]]", dataType: "string",  dataIndx: "rcvrscd",	//입고 사유코드
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+				init: function (ui) { 
+					ui.$cell.find("select").pqSelect({ search:false, singlePlaceholder: '' });
+					setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+				},
+				options: [],
+				prepend : { "" : '[[#{ms.selectOption}]]' }
+			},
+			render: gridRenderAndValue
+		},
+		{ title: "[[#{wm.wmr40.rcvrsnm}]]", dataType: "string",  dataIndx: "rcvrsnm",	//입고 내용
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			validations : [{ type: 'minLen', value: 0, warn: true }, { type: 'maxLen', value: 200, msg: "[[#{ms.validations.maxLenLength(200)}]]" }]
+		},
+		{ title: "[[#{wm.wasnif.asndate}]]", dataType: "string",  dataIndx: "asndate", editable: false }, //일자
+		{ title: "[[#{wm.wstkky.expidat}]]", dataType: "date", format:"yy-mm-dd",  dataIndx: "expidat", hidden: true,	//입고 내용
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			cls: 'pq-calendar pq-side-icon',
+			editor: {
+				type: 'textbox',
+				init: dateEditor,
+				getData: function (ui) {
+					return ui.$cell.find("input").val();
+				}
+			},
+			validations: [ { type: 'regexp', value: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$', msg: 'Not in date format' } ]
+		},//유통기간
+		{ title: "[[#{wm.wmr40.boxqty}]]", dataType: "integer",  dataIndx: "boxqty", editable: false }, //박스갯수
+		{ title: "[[#{tm.tplnit.vhplnky}]]", dataType: "string",  dataIndx: "vhplnky", editable: false }, //박스갯수
+		{ title: "[[#{tm.tplnit.vhplnit}]]", dataType: "integer",  dataIndx: "vhplnit", editable: false }, //박스갯수
+		{ title: "[[#{wm.wmr40.lmodate}]]", dataType: "string",  dataIndx: "lmodate", editable: false }, //박스갯수
+		{ title: "[[#{wm.wmr40.lmotime}]]", dataType: "string",  dataIndx: "lmotime", editable: false }, //박스갯수
+		{ title: "[[#{wm.wmr40.lmouser}]]", dataType: "string",  dataIndx: "lmouser", editable: false }, //박스갯수
+		{ title: "[[#{om.ocosal.salmemo}]]", dataType: "string",  dataIndx: "salmemo", editable: false }, //박스갯수
+		{ title: "[[#{tm.tplnit.retodyn}]]", dataType: "string",  dataIndx: "retinyn", editable: false, hidden: true ,
+			type: 'checkbox', editor: false,  cb: { all: false, header: false, check: "Y", uncheck: "N" },
+		}, //TPLNIT데이터 여부
+	];
+	
+	let wmr40Grid = new GridUtil(wmr40GridCM, '[[${gprogrid}]]', 'wmr40_grid');
+	
+	wmr40Grid.setCreate(async function (evt, ui) {
+		let grid = pq.grid('#wmr40_grid');
+		grid.showLoading();
+		let wmr40InitList = await wmr40InitData;
+		$('#wmr40_ownerky').pqSelect({
+			deselect: false
+		});
+		if(wmr40InitList.warekeyList){
+			let column = this.getColumn({ dataIndx: "warekey" });
+			let options = wmr40InitList.warekeyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+			});
+			column.editor.options = options;
+		}
+		if(wmr40InitList.ownerkyList){
+			let column = this.getColumn({ dataIndx: "ownerky" });
+			let options = wmr40InitList.ownerkyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+			});
+			column.editor.options = options;
+		}
+		if(wmr40InitList.ownerkyList){
+			let column = this.getColumn({ dataIndx: "vendkey" });
+			let options = wmr40InitList.ownerkyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+			});
+			column.editor.options = options;
+		}
+		if(wmr40InitList.doccateList){
+			let column = this.getColumn({ dataIndx: "doccate" });
+			let options = wmr40InitList.doccateList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.doccate] = obj.docctnm;
+            	return rObj;
+			});
+			column.editor.options = options;
+		}
+		if(wmr40InitList.doctypeList){
+			let column = this.getColumn({ dataIndx: "doctype" });
+			let options = wmr40InitList.doctypeList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+			});
+			column.editor.options = options;
+		}
+		let vendkeyList = await fetchUtil('GET', '/md/common/partner/vender', {ptnrtyp: 'VENDER'});
+		let wmr40Vendkey = await vendkeyList.json();
+		if(wmr40Vendkey){
+		    let column = this.getColumn({  dataIndx: "vendkey"});
+			let options = wmr40Vendkey.map(function(obj){
+	           	let rObj = {};
+	           	rObj[obj.combovl] = obj.combonm;
+	           	return rObj;
+	   		});
+	       		column.editor.options = options;
+   		}
+		wmr40ChangeInit = await wmr40List;
+		if(wmr40ChangeInit){
+			let column = this.getColumn({  dataIndx: "skumkey"});
+			let options = wmr40ChangeInit.map(function(obj){
+	           	let rObj = {};
+	           	rObj[obj.combovl] = '[' + obj.combovl + ']' + obj.combonm + '([[#{wm.wmi10.avalqty}]] :' + obj.stotqty + ')';
+	           	return rObj;
+	   		});
+	       	column.editor.options = options;
+		}
+		grid.hideLoading();
+	});
+
+	
+	wmr40Grid.setCellClick(function(evt, ui){
+		let grid = pq.grid('#wmr40_grid');
+		let data = {
+				warekey : ui.rowData.warekey
+			   ,ownerky : ui.rowData.ownerky
+			   ,doccate : ui.rowData.doccate
+			   ,doctype : ui.rowData.doctype
+			   ,rscate1 : "NORMAL"
+			};
+		if((ui.dataIndx === "skumkey" && data.warekey) && data.ownerky !== ''){
+			const skuList = wmr40ChangeInit.filter(item => item.warekey === data.warekey && item.ownerky === data.ownerky);
+			if(skuList){
+				let column = this.getColumn({ dataIndx: "skumkey"});
+				let options = skuList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = '[' + obj.combovl + ']' + obj.combonm+ '([[#{wm.wmi10.avalqty}]] :' + obj.stotqty + ')';
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+			}
+		} else if(ui.dataIndx === "skumkey" && data.ownerky === ''){
+			alert("[[#{wm.wasnif.ownerky}]]" + "[[#{ms.choiceValue}]]");	//화주를/을 선택해주세요.
+			grid.setSelection( {rowIndx: ui.rowData.pq_ri, dataIndx: 'ownerky'} );
+        	return;
+		}
+	});
+	
+	wmr40Grid.setCellKeyDown(function(evt, ui){ //enter 이벤트
+		if(evt.key === 'Enter'){
+			let grid = pq.grid('#wmr40_grid');
+			let data = {
+					warekey : ui.rowData.warekey
+				   ,ownerky : ui.rowData.ownerky
+				   ,doccate : ui.rowData.doccate
+				   ,doctype : ui.rowData.doctype
+				   ,rscate1 : "NORMAL"
+				};
+			if(ui.dataIndx == "skumkey" && data.warekey && data.ownerky !== ''){
+				const skuList = wmr40ChangeInit.filter(item => item.warekey === data.warekey && item.ownerky === data.ownerky);
+				if(skuList){
+					let column = this.getColumn({ dataIndx: "skumkey"});
+					let options = skuList.map(function(obj){
+		            	let rObj = {};
+		            	rObj[obj.combovl] = '[' + obj.combovl + ']' + obj.combonm + '([[#{wm.wmi10.avalqty}]] :' + obj.stotqty + ')';
+		            	return rObj;
+		    		});
+		        	column.editor.options = options;
+				}
+			} else if( ui.dataIndx == "skumkey" && data.ownerky === ''){
+				alert("[[#{wm.wasnif.ownerky}]]" + "[[#{ms.choiceValue}]]");	//화주를/을 선택해주세요.
+				grid.setSelection({rowIndx: ui.rowData.pq_ri, dataIndx: 'ownerky'} );
+				
+				let column = this.getColumn({ dataIndx: "skumkey"});
+				let options = [];
+	        	column.editor.options = options;
+				return false;
+			}
+		}
+	});
+	
+	wmr40Grid.setAdd(function(evt, ui){
+		wmr40WindowKeyAddRow();
+	});
+	
+	wmr40Grid.setDelete(function(evt, ui){
+		wmr40WindowKeyDeleteRow();
+	});
+	
+	//창고명과 화주가 이전 Row의 값과 다를경우 제거하는 이벤트
+	wmr40Grid.setCellSave(function(evt, ui){
+		if(ui.newVal !== null){
+			if(ui.dataIndx === 'warekey' || ui.dataIndx === 'ownerky'){
+				let gridList = this.getData().filter((obj) => {
+					return obj.state === true && (obj.pq_ri !== ui.rowIndx);	
+				});
+				
+				if(gridList){
+					for(const checkList of gridList){
+						if(checkList[ui.dataIndx] !== '' && checkList[ui.dataIndx] !== null){
+							if(checkList[ui.dataIndx] !== ui.newVal){
+								alert('[[#{wm.wmr40.warekeyAndOwnerky}]]');//이전 데이터와 창고, 화주가 다르면 데이터가 초기화 됩니다.
+								this.deleteRow({ rowIndx: ui.rowIndx});
+								return;
+							}
+						}
+					}
+				}
+			}
+		}
+	});
+	
+		
+	wmr40Grid.setChange(function (evt, ui) {
+		if(ui.source === 'edit'){
+			let grid = pq.grid('#wmr40_grid');
+			let skumkeyArr;
+			if(ui.updateList[0]){
+				if(ui.updateList[0].rowData.skumkey){
+					skumkeyArr = ui.updateList[0].rowData.skumkey.split(',');
+					if(skumkeyArr.length >= 1){
+						ui.updateList[0].rowData.skumkey = skumkeyArr[0];
+					}
+				}
+			}
+		} else if(ui.source === 'paste'){
+			if(ui.addList.length > 0){
+				let formattedDate = getTodayDate();
+				let boxqty = 0;
+				let boxqtyList;
+				let data;
+				let todayDate = getTodayDate();
+				let updateTodayDate = todayDate.replace(/-/g, '');
+				
+				for(i=0; i<ui.addList.length; i++){
+					boxqtyList = wmr40ChangeInit.filter(obj => obj.warekey ===  $('#wmr40_warekey option:selected').val()
+	           				&& obj.ownerky === $('#wmr40_ownerky option:selected').val()
+	           				&& obj.combovl === ui.addList[i].rowData.skumkey
+	           		);
+					
+					if(boxqtyList.length >= 1){
+						data = { 
+		       					warekey : $('#wmr40_warekey option:selected').val(), 
+		          				ownerky : $('#wmr40_ownerky option:selected').val(), 
+		   	            		packkey : boxqtyList[0].packkey,
+		   	            		truntyp : boxqtyList[0].truntyp
+		   	        		};
+					}
+					
+					ui.addList[i].newRow.state = true;
+					ui.addList[i].newRow.compkey = "[[${userattr.compkey}]]";
+					ui.addList[i].newRow.warekey = $('#wmr40_warekey option:selected').val(); 
+					ui.addList[i].newRow.ownerky = $('#wmr40_ownerky option:selected').val(); 
+					ui.addList[i].newRow.doccate = '400'; 
+					ui.addList[i].newRow.doctype = '480'; 
+					ui.addList[i].newRow.asndate = formattedDate;
+					ui.addList[i].newRow.retinyn = 'N';
+					
+					let box;
+					
+					if(boxqtyList.length >= 1){
+						ui.addList[i].newRow.skumkey = boxqtyList[0].combovl;
+						ui.addList[i].newRow.stotqty = boxqtyList[0].stotqty;
+           				ui.addList[i].newRow.auomkey = boxqtyList[0].suomkey;
+					}
+					
+					if(ui.addList[i].newRow.rcveqty){
+						box = callAjax('data', 'GET', "/wm/inbound/boxqty", data);
+           				
+						if(box.length !==0){
+							let result = Math.ceil(Math.ceil(Number(ui.addList[i].newRow.rcveqty) / box[0].packqty ));
+	           				if(Number.isInteger(result)){
+	           					boxqty = result;
+	           				} else {
+	           					boxqty = 1;
+	           				}
+						} else boxqty = 1;
+						
+	           		}
+					
+					ui.addList[i].rowData.boxqty = boxqty;
+				}
+			}
+		}
+		
+	});
+	
+	wmr40Grid.setBeforeValidate(function (evt, ui) {
+		
+       	if (ui.source == 'edit'){
+	  		let updateNewRow 		= ui.updateList[0].newRow;
+  			let updateOldRow 		= ui.updateList[0].oldRow;
+  			let updateRowData 		= ui.updateList[0].rowData;
+  			let skumkeyList 		= ui.updateList[0].newRow.skumkey == undefined ? updateRowData.skumkey : ui.updateList[0].newRow.skumkey;
+  			let boxqty = 0;
+  			
+           	ui.updateList[0].rowData.state = true;
+            //state 값은 true로 변경되었음에도 화면에 반영되지 않아 추가
+			let grid = pq.grid('#wmr40_grid');
+			for(let i = 0; i<ui.updateList.length; i++){
+				if(ui.updateList[i].newRow){
+					grid.refreshCell({rowIndx: ui.updateList[i].rowIndx, dataIndx: 'state'});
+				}
+			}
+           	
+           	let result;
+           	let boxResult;
+           	
+           	if(updateRowData.skumkey && updateNewRow.rcveqty){
+           		let boxqtyList = wmr40ChangeInit.filter(obj => obj.warekey ===  ui.updateList[0].rowData.warekey
+           				&& obj.ownerky === ui.updateList[0].rowData.ownerky
+           				&& obj.combovl === skumkeyList
+           		);
+           		
+           		let data = {
+            			ownerky : ui.updateList[0].rowData.ownerky, 
+            			warekey : ui.updateList[0].rowData.warekey, 
+            			packkey : boxqtyList[0].packkey,
+            			truntyp : boxqtyList[0].truntyp
+       				  };
+           		
+	       		let box = callAjax('data', 'GET', "/wm/inbound/boxqty", data);
+	           	
+	       		if(box.length !== 0){
+	           		boxResult = Math.ceil(Number(updateNewRow.rcveqty) / box[0].packqty );
+	           		boxqty = Number.isInteger(boxResult) ? boxResult : 1;
+	       		} else{
+	       			boxqty = 1;
+	       		}
+	           	
+	           	this.updateRow({
+	           		rowIndx : ui.updateList[0].rowData.pq_ri,
+              		newRow : {	state   : true,
+              					boxqty  : boxqty
+              				 },
+	           		checkEditable: false
+	           	});
+           	}
+           	
+          	//list Update, Add Row
+           	if(Array.isArray(skumkeyList)){
+           		for(let i=0; i<skumkeyList.length; i++){
+               		let avalqtyList = wmr40ChangeInit.find((obj) => obj['warekey'] ===  ui.updateList[0].rowData.warekey
+               				&& obj['ownerky'] === ui.updateList[0].rowData.ownerky
+               				&& obj['combovl'] === skumkeyList[i]
+               			);
+                   	
+               		if(i==0){
+               			this.updateRow( {
+                      		rowIndx : ui.updateList[0].rowData.pq_ri,
+                      		newRow : { 
+                      			state   : true,
+              					compkey : "[[${userattr.compkey}]]",
+              					warekey : updateRowData.warekey, 
+              					ownerky : updateRowData.ownerky,
+              					doccate : '400', 
+              					doctype : '480', 
+              					skumkey : skumkeyList[i],
+              					stotqty : avalqtyList.stotqty,
+              					auomkey : avalqtyList.suomkey,
+              					vendkey : updateRowData.vendkey,
+              					asndate : updateRowData.asndate,
+              					rcvrscd : updateRowData.rcvrscd,
+              					boxqty : boxqty,
+              					expidat : updateRowData.expidat
+              				}, 
+              				checkEditable: false
+                      	});
+               		}
+               		else{
+               			this.addRow({
+              				rowIndx : ui.updateList[0].rowData.pq_ri+1,
+              				newRow: { 
+              					state   : true,
+              					compkey : "[[${userattr.compkey}]]",
+              					warekey : updateRowData.warekey, 
+              					ownerky : updateRowData.ownerky,
+              					doccate : '400', 
+              					doctype : '480', 
+              					skumkey : skumkeyList[i],
+              					stotqty : avalqtyList.stotqty,
+              					auomkey : avalqtyList.suomkey,
+              					vendkey : updateRowData.vendkey,
+              					asndate : updateRowData.asndate,
+              					rcvrscd : updateRowData.rcvrscd,
+              					boxqty : boxqty,
+              					expidat : updateRowData.expidat,
+              					retinyn : 'N'
+              				}, 
+              				checkEditable: false
+              			});
+               		}
+               	}
+           	}
+		}else if(ui.source == 'paste'){
+			let result = [];
+  			let boxqty = 0;
+  			let avalqtyList;
+  			
+  			//기존 row에 붙여넣기 할 때
+			if(ui.updateList.length > 0){
+       			let data;
+        		for(let j=0; j<ui.updateList.length; j++){
+        			let updateNewRow = ui.updateList[j].newRow;
+          			let updateOldRow = ui.updateList[j].oldRow;
+          			let updateRowData = ui.updateList[j].rowData;
+          			let skumkeyList = ui.updateList[j].newRow.skumkey == undefined ? updateRowData.skumkey : ui.updateList[j].newRow.skumkey;
+          			result.push(skumkeyList);
+          			
+           			if(Array.isArray(result)){
+           				avalqtyList = wmr40ChangeInit.find((obj) =>  
+	       					obj['warekey'] === updateRowData.warekey
+	       					&& obj['ownerky'] === updateRowData.ownerky
+	       					&& obj['combovl'] === result[j]
+       					);
+           			}
+       				
+           			if(avalqtyList !== undefined){
+           				data = {
+               					warekey: ui.updateList[j].rowData.warekey,
+               					packkey: avalqtyList.packkey,
+               					truntyp: avalqtyList.truntyp
+               				}
+           			}
+           			
+           			//반품수량이 입력될 경우 박스수량을 가져옴
+           			if(ui.updateList[j].newRow.rcveqty){
+           				box = callAjax('data', 'GET', "/wm/inbound/boxqty", data);
+           				if(box.length !== 0){
+           					let result = Math.ceil(Number(ui.updateList[j].newRow.rcveqty) / Number(box[0].packqty) );
+               				if(Number.isInteger(result)){
+    	           				boxqty = result;
+               				} else {
+               					boxqty = 1;
+               				}
+           				} else {
+           					boxqty = 1;
+           				}
+           				ui.updateList[j].rowData.boxqty = boxqty;
+	           		}
+           			
+           			if(updateNewRow.skumkey){
+           				ui.updateList[j].rowData.stotqty = avalqtyList.stotqty;
+           				ui.updateList[j].rowData.auomkey = avalqtyList.suomkey;
+           				
+           				this.updateRow( {
+           					rowIndx : ui.updateList[j].rowIndx,
+	                      	newRow : {
+	                      		state   : true,
+	                      		state   : true,
+	                      		warekey : ui.updateList[j].rowData.warekey,
+	                      		ownerky : ui.updateList[j].rowData.ownerky,
+	                      		skumkey : ui.updateList[j].rowData.skumkey,
+	                      		asndate : ui.updateList[j].rowData.asndate,
+	                      		stotqty : avalqtyList.stotqty,
+	                      		rcveqty : ui.updateList[j].rowData.rcveqty,
+	                      		rcvrscd : ui.updateList[j].rowData.rcvrscd,
+	                      		auomkey : avalqtyList.suomkey,
+	                      		expidat : ui.updateList[j].rowData.expidat
+	              			},
+	                       	checkEditable: false
+                       	});
+           			}else{
+						this.updateRow( {
+	               			rowIndx : ui.updateList[j].rowIndx,
+	               		    newRow : {
+	               		    	state   : true,
+	               		    	warekey : ui.updateList[j].rowData.warekey,
+	                      		ownerky : ui.updateList[j].rowData.ownerky,
+	                      		skumkey : ui.updateList[j].rowData.skumkey,
+	                      		asndate : ui.updateList[j].rowData.asndate,
+	                      		rcveqty : ui.updateList[j].newRow.rcveqty,
+	                      		rcvrscd : ui.updateList[j].rowData.rcvrscd,
+	                      		expidat : ui.updateList[j].rowData.expidat
+	          				},
+	                	    checkEditable: false
+	                	});
+          			}
+        		}
+           	}
+		}
+	});
+	
+	async function wmr40Init(){
+		let wmr40Init = await fetchUtil('GET', "/wm/inbound/wmr40/init/1");
+		let wmr40InitData = await wmr40Init.json();
+		
+		// 창고 리스트
+		if(wmr40InitData.warekeyList){
+			$("#wmr40_warekey option").not("[value='']").remove();
+			$.each(wmr40InitData.warekeyList, function(key, value) {
+				$('#wmr40_warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+		//화주
+		if(wmr40InitData.ownerkyList){
+			$("#wmr40_ownerky option").not("[value='']").remove();
+			$.each(wmr40InitData.ownerkyList, function(key, value) {
+				$('#wmr40_ownerky').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+			});
+		}
+		
+		let prevWarekey = $('#wmr40_warekey').val();
+		let prevOwnerky = $('#wmr40_ownerky').val();
+		
+		$("#wmr40_warekey").on('change', async function(){
+			let grid = pq.grid("#wmr40_grid");
+			if(grid.getData().length >=1){
+				if(confirm('[[#{ms.listViewRollback}]]')){
+					grid.option('dataModel', { data: [] });
+					grid.refreshDataAndView();
+					grid.showLoading();
+					await getWmr40List();
+				} else{
+					document.querySelector('#wmr40_warekey').value = prevWarekey;
+				}
+			} else{
+				prevWarekey = $('#wmr40_warekey').val();
+				grid.showLoading();
+				await getWmr40List();
+			}
+		});
+		
+		$("#wmr40_ownerky").on('change', async function(){
+			let grid = pq.grid("#wmr40_grid");
+			if(grid.getData().length >=1){
+				if(confirm('[[#{ms.listViewRollback}]]')){
+					grid.option('dataModel', { data: [] });
+					grid.refreshDataAndView();
+					grid.showLoading();
+					await getWmr40List();
+				} else{
+					document.querySelector('#wmr40_ownerky').value = prevOwnerky;
+					$('#wmr40_ownerky').pqSelect('refreshData');
+				}
+			} else{
+				prevOwnerky = $('#wmr40_ownerky').val();
+				grid.showLoading();
+				await getWmr40List();
+			}
+		});
+		
+		return wmr40InitData;
+	}
+	
+	//============================================================	
+	//전체 SKU 조회 이벤트
+	//============================================================
+	async function wmr40SkuList(){
+		let wmr40List = await fetchUtil('GET', "/md/common/unit/skuwc-inbound");
+		let wmr40SkuList = await wmr40List.json();
+		
+		return wmr40SkuList;
+	}
+
+	//============================================================	
+	//창고/화주 변경시 회수오더 조회 이벤트
+	//============================================================
+	async function getWmr40List(){
+		let grid = pq.grid("#wmr40_grid");
+		let wmr40List = await fetchUtil('GET', '/wm/inbound/wmr40/grids/1', {warekey: $('#wmr40_warekey').val(), ownerky: $('#wmr40_ownerky').val()});
+		let resContent = await wmr40List.json();
+		
+		let wmr40ReasonList = await fetchUtil('GET', "/md/common/code/reason-code", {doccate: '400', doctype: '480', warekey: $('#wmr40_warekey').val()})
+		wmr40Rcvrscd = await wmr40ReasonList.json();
+		if(wmr40Rcvrscd){
+			let column = grid.getColumn({  dataIndx: "rcvrscd"});
+			let options = wmr40Rcvrscd.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+		
+		for(let i = 0; i<resContent.length; i++){
+			let avalqtyList = wmr40ChangeInit.find((item) => item['warekey'] === resContent[i].warekey
+														  && item['ownerky'] === resContent[i].ownerky
+														  && item['combovl'] === resContent[i].skumkey);
+			
+			if(avalqtyList === undefined || !avalqtyList){
+				grid.hideLoading();
+				return false;
+			}
+			
+			let addBoxqty = await fetchUtil('GET', "/wm/inbound/boxqty", avalqtyList);
+			let addBoxqtyList = await addBoxqty.json();
+			let boxqty = 0;
+			if(!Number.isInteger(addBoxqtyList.pqckqty) || addBoxqtyList.packqty <= 0){
+				boxqty = 1;
+			}else{
+				boxqty = addBoxqtyList.packqty;
+			}
+			let rowData = { 
+					state   : false,
+					warekey : $('#wmr40_warekey').val(),
+					ownerky : $('#wmr40_ownerky').val(),
+					compkey : "[[${userattr.compkey}]]",
+					skumkey : avalqtyList.combovl,
+					doccate : '400', 
+					doctype : '480', 
+					asndate : getTodayDate(),
+					stotqty : avalqtyList.stotqty,
+					auomkey : avalqtyList.suomkey,
+					rcveqty : resContent[i].tritqty,
+					boxqty  : boxqty,
+					rcvrscd : 'A1',
+					retinyn : 'Y',
+					vhplnky : resContent[i].vhplnky,
+					vhplnit : resContent[i].vhplnit,
+					lmodate	: resContent[i].lmodate,
+					lmotime : resContent[i].lmotime,
+					lmouser : resContent[i].lmouser,
+					salmemo : resContent[i].salmemo
+				};
+			let rowIndx = grid.addRow({ rowData: rowData, checkEditable: false });
+			grid.goToPage({ rowIndx: rowIndx });
+		}
+		
+		grid.hideLoading();
+	}
+	
+	wmr40Grid.open();
+});
+
+
+//============================================================	
+//window key add row 이벤트
+//============================================================
+function wmr40WindowKeyAddRow(){
+	let grid = pq.grid("#wmr40_grid");
+	
+	if($('#wmr40_ownerky option:selected').val() === ''){
+		alert('[[#{md.mowrma.ownamlc}]][[#{ms.choiceValue}]]');
+		return false;
+	}
+	
+	let formattedDate = getTodayDate();
+	let addRowWarekey = $('#wmr40_warekey option:selected').val();
+	let addRowOwnerky = $('#wmr40_ownerky option:selected').val();
+	
+	let rowData = { 
+		state   : true,
+		warekey : addRowWarekey,
+		ownerky : addRowOwnerky,
+		compkey : "[[${userattr.compkey}]]",
+		doccate : '400', 
+		doctype : '480', 
+		asndate : formattedDate,
+		boxqty  : 0,
+		retinyn : 'N'
+	};
+	let rowIndx = grid.addRow({ rowData: rowData, checkEditable: false });
+	grid.goToPage({ rowIndx: rowIndx });
+}
+
+//============================================================	
+//window key delete row 이벤트
+//============================================================
+function wmr40WindowKeyDeleteRow(){
+	let grid = pq.grid("#wmr40_grid"), checkList = grid.Checkbox('state').getCheckedNodes(), rows = [];
+	
+	if(checkList.length > 0){
+		for(let i=0; i<checkList.length; i++){
+			rows.push({rowIndx : checkList[i].pq_ri});
+        }
+
+		setTimeout(function () {
+    		let ans = window.confirm("[[#{ms.rowDelete}]]");	//행을 삭제하시겠습니까?
+    		if (ans) {
+            	grid.deleteRow({ rowList: rows });
+            	grid.setSelection(null);
+            }
+		});
+	}else if(checkList.length == 0){
+		alert("[[#{ms.choiceRowZero}]]");	//선택된 Row가 없습니다.
+	}
+}
+
+//================================
+//ASN Date
+//================================
+function getTodayDate(){
+	let today = new Date();
+	let year = today.getFullYear();
+	let month = today.getMonth() + 1;
+	let date = today.getDate();
+	
+		if (month < 10) {
+		  month = '0' + month;
+		}
+		if (date < 10) {
+		  date = '0' + date;
+		}
+	let formattedDate =  year + '-' + month + '-' + date;
+	return formattedDate;
+}
+</script>
+	 
+</div>
+</html>

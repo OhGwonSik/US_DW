@@ -1,0 +1,637 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+   <main class="mobile-content">
+      <div class="search-list flex-1">
+         <ul class="nav nav-tabs" id="wmp92_tab">
+            <li class="nav-item active">
+               <a class="nav-link manual" data-toggle="tab" href="#wmp92Manual" data-tab-type="manual">[[#{menu.wm.wmp92}]]</a>
+            </li>           
+         </ul>
+         <div class="tab-pane show active" id="wmp92Manual">
+            <div class="row k">
+               <button class="btn-home" id="wmp92Logout" disabled><img></button>
+               <div class="row k">
+                  <button type="button" class="btn-delete btn-white col k" id="wmp92Delete"  onclick="deleteRow()" disabled>[[#{bt.delete}]]</button>
+                  <button type="button" class="btn-add btn-white col k" id="wmp92Add" onclick="addRow()" disabled>[[#{bt.add}]]</button>
+                  <button type="button" class="btn-save btn-main col k" id="wmp92Save" disabled>[[#{bt.save}]]</button>
+               </div>
+            </div>         
+            <div class="search-condition">
+               <div class="row">
+                  <div class="condition-title col">
+                     <label for="inputGroupSelect01">[[#{search.whnamlc}]]</label>
+                  </div>
+                  <div class="select-group k">
+                     <select id="wmp92Warekey"
+                        data-cb-val="combovl"
+                        data-cb-name="combonm"
+                        data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList"
+                        data-cb-select=""
+                     ></select>
+                  </div>
+               </div>
+            </div>
+            <div class="table-wrapper con-box flex-1">
+               <table class="mobile-table x2">
+                  <thead id="thtb_manual">
+                     <tr id="thColumn">      
+                        <th><input type="checkbox" id="wmp92HeadCheck" onclick="isHeadChecked(this)"></th>
+                        <th>[[#{wm.wmp92.rowkey}]]</th>
+                        <th class="d-none">[[#{search.whnamlc}]]</th>
+                        <th>[[#{search.ownamlc}]]</th>
+                        <th>[[#{wm.wshpit.shppday}]]</th>   
+                        <th class="d-none">[[#{md.mdocma.doccate}]]</th>   
+                        <th class="d-none">[[#{md.mdocma.doctype}]]</th>   
+                        <th>[[#{wm.wshpit.custkey}]]</th>      
+                        <th>[[#{om.ocosal.destkey}]]</th>            
+                        <th class="d-none">[[#{md.mskuwc.skuskey}]]</th>      
+                        <th>[[#{search.skunm}]]</th>            
+                        <th class="d-none">[[#{search.skuCode}]]</th>
+                        <th class="d-none">[[#{wm.wmp93.saatc03}]]</th>
+                        <th class="d-none">[[#{wm.wshpit.suomkey}]]</th>   
+                        <th>[[#{wm.wstkky.stotqty}]]</th>
+                        <th>[[#{wm.wshpit.rgitqty}]]</th>
+                        <th>[[#{om.ocosal.saatc06}]]</th>   
+                     </tr>
+                  </thead>
+                  <tbody class="table-body" id="tBody"></tbody>
+               </table>
+      		   <div class="spinner-border" id="spinner"></div>
+               <div class="spinner-background"></div>
+           </div>
+      	</div>
+      </div>
+   </main>
+   <script>
+	/*  wmp92 - 키오스크 - 긴급출고
+	*   최초 생성일시   : 2023-12-12 10:30
+	*   최초 생성자    : 오권식
+	*   설명      	: 키오스크를 이용하여 수동으로 긴급으로 출고할 부품(SKU)정보들을 입력하여 출고등록하는 화면
+	*   수정 내역  	:
+	*   수정일시	    :
+	*   수정자	    :
+	*   변경 사항      :
+	*/
+   $(function() {
+	      const pageId = 'wmp92';
+	      const defaultCnt = 8;
+	      let itemList;
+	      
+		  //로그인을 안하는 페이지라서 기본값 200 - 인터넷이 끊겨 있어도 쿠키에 유저 compkey는 남아있다.
+		  window.addEventListener('offline',function(){
+			  document.querySelector('#spinner').style.display='none';
+			  document.querySelector('.bg').style.display='none';
+	          alertOpen('[[#{wm.wmp90.internetFail}]]', function(){
+	          	const tempCompkey = '[[${userattr.compkey}]]' ? '[[${userattr.compkey}]]' : '200';
+	              fetchUtil('GET','/logout').finally(() => {
+	                 location.href= rPath + '/kiosklogin?gprogcmd=/wm/wmp92&gprogrid=wmp92&account_code='+tempCompkey;
+	              });
+	          });
+		  });
+
+         //쿠키 만료 됐을 경우
+         if(!'[[${userattr.useract}]]'){
+            $('.spinner-background').css('display', 'none');
+            $('#spinner').css('display', 'none');
+
+            alertOpen('[[#{sy.main.auth.sessionout}]]', function(){
+            	const tempCompkey = '[[${userattr.compkey}]]' ? '[[${userattr.compkey}]]' : '200';
+                fetchUtil('GET','/logout').finally(() => {
+                   location.href= rPath + '/kiosklogin?gprogcmd=/wm/wmp92&gprogrid=wmp92&account_code='+tempCompkey;
+                });
+            });
+            return;
+         }
+
+	      wmp92Init();
+	      
+	      //=============================================
+	      //================= save event ================
+	      //=============================================  
+	      document.querySelector('#' + pageId + 'Save').addEventListener('click', async function() {
+	    	  
+			if(!navigator.onLine){
+				document.querySelector('#spinner').style.display='none';
+				document.querySelector('.bg').style.display='none';
+				alertOpen('[[#{wm.wmp90.internetFail}]]',function(){
+					location.href= rPath + '/kiosk?account_code=200';
+				});
+				return;
+			}
+	    	  
+	         let trDom = document.querySelectorAll('#tBody tr');
+	         let addList = new Array();
+	         let addArr = new Array();
+	         
+	         let trCheckedDom = new Array(); // check된 tr 찾기
+	         let trIndx;
+	         trDom.forEach((obj) => {
+	        	 if(obj.querySelector('.wmp92Checkbox').checked === true){
+	        		 trCheckedDom.push(obj.children);
+	        	 }
+	         });
+	         
+	         if(!trCheckedDom.length){
+	        	 alertOpen("[[#{ms.choiceRowZero}]]");
+	             return;
+	         }
+	         
+	         for(let index = 0 ; index < trCheckedDom.length ; index++) {
+				let tdObj  = trCheckedDom[index];
+				let addObj = new Object();
+	            for(let i = 0 ; i < tdObj.length ; i++) {
+	               let tdChild 	  = tdObj[i];
+	               let firstChild = tdChild.firstElementChild;
+	               if(tdChild.querySelector('span[data-id="rowkey"]')) {
+						trIndx = tdChild.querySelector('span').innerText; 
+	                }else {
+						let column = firstChild.dataset.id;
+						if(column) {
+							let key = firstChild.dataset.column;
+							let validateColumn = firstChild.id;
+							if(validateColumn) {
+								let msg = trIndx + "[[#{wm.wmp92.rowNum}]]" + " ";
+								msg += firstChild.type === 'number' || firstChild.type === 'text' ? 
+										key + "[[#{ms.inputValue}]]" : key + "[[#{ms.choiceValue}]]";
+								let firstChildVal = firstChild.type === 'number' ? Number(firstChild.value) : firstChild.value;
+								
+								if((!firstChildVal && !firstChildVal.length) || firstChildVal < 0 ) {
+									alertOpen(msg,function(){
+										firstChild.value='';
+										firstChild.focus();
+									});
+									return false;
+								}
+							}
+							addObj[firstChild.dataset.id] = firstChild.value;            
+						}
+	                }
+	            }
+	            addList.push(addObj);
+	         };
+	         
+	         const result = await confirmOpenAsync("[[#{ms.checksave}]]");
+	         
+	         if(result){
+	            try{
+					$('.spinner-background').css('display', 'block');
+					$('#spinner').css('display', 'block');
+					const res =  await fetchUtil('POST', '/wm/pda/' + pageId + '/save', { addList : addList } );
+
+	               if(res.status === 200){
+	            	   alertOpen("[[#{ms.saveSuccess}]]", async function(){
+	            		   document.querySelectorAll('#tBody tr').forEach(function(element){
+	            			   element.remove(); 
+	            		   });
+	            		   await setDefaultRow();
+	            	   });
+	               }
+	            }catch(err){
+	            	alertOpen("[[#{ms.saveErr}]]");
+	            	return;
+	            }finally{
+					$('.spinner-background').css('display', 'none');
+					$('#spinner').css('display', 'none');
+	            }
+	         }
+	      });
+
+	      //init
+	      async function wmp92Init() {
+	    	  await wmp92CommonInit();
+	      }
+	      
+	      async function wmp92CommonInit() {
+	         await _commonInit();   
+	         const res = await fetchUtil('GET', '/wm/pda/' + pageId + '/init' , { warekey : $('#' + pageId + 'Warekey option:selected').val() });
+	         try {
+					if(res.status === 200) {
+				        const jsonData  = await res.json();
+				        itemList = jsonData.item;
+				        await setDefaultRow();
+					}
+
+			 } catch(err) {
+				 alertOpen('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+				 return;
+			 }finally{
+		         $('.spinner-background').css('display', 'none');
+		         $('#spinner').css('display', 'none');
+		         $('#' + pageId + 'Logout').attr('disabled', false);
+		         $('#' + pageId + 'Delete').attr('disabled', false);
+		         $('#' + pageId + 'Add').attr('disabled', false);
+		         $('#' + pageId + 'Save').attr('disabled', false);
+			 }
+	      }
+	      
+	      document.querySelector('#' + pageId + 'Logout').addEventListener('click', async function(){
+	    	  const result = await confirmOpenAsync('[[#{wm.wmp91.goHome}]]');
+	    	  
+				if(result){
+					const response = await fetchUtil('GET','/logout');
+					if(response.status){
+						location.href= rPath + '/kiosk?account_code=' + '[[${userattr.compkey}]]';
+					}
+				}
+	      });
+	      
+	      
+	      //=============================================
+	      //=================== 행 추가 ===================
+	      //=============================================
+	      addRow = async function() {
+	         let html = '';
+	         const tbody = document.querySelector('#tBody');
+	         const tbodyLastChild = document.querySelector('#tBody').lastElementChild;
+	         let warekeyVal = $('#' + pageId + 'Warekey option:selected').val();
+	         let rowIndex = tbody.childElementCount ? Number(tbodyLastChild.querySelector('td span').innerText)+1 : tbody.childElementCount+1 ;
+	         html += '<tr>';
+	         html += '<td>';
+	         html += '<input type="checkbox" class="wmp92Checkbox" onchange="isChecked()">';
+	         html += '</td>';
+	         html += '<td>';
+	         html += '<span data-id="rowkey" disabled />' + rowIndex;
+	         html += '</td>';
+	         html += '<td class="d-none">';
+	         html += '<input type="text" data-id="warekey" value="' + warekeyVal + '"/>';
+	         html += '</td>';
+	         html += '<td>'; 
+	         html += '<select data-column="' + "[[#{md.mowrma.ownerky}]]" + '" id="ownerkyList" data-id="ownerky" onchange="setSkuByOwnerky(this, event)">';
+	         html += '</select>'; 
+	         html += '</td>';
+	         html += '<td>'; 
+	         html += '<input type="text" data-id="shppday" disabled value=' + currentDate() + '>'; 
+	         html += '</td>';
+	         html += '<td class="d-none">';
+	         html += '<input type="text" data-id="doccate" value="' + '[[#{wm.wmp92.doccate}]]' + '" disabled>';
+	         html += '</td>';
+	         html += '<td class="d-none">'; 
+	         html += '<input type="text" data-id="doctype" value="' + '[[#{wm.wmp92.doctype}]]' + '" disabled>'; 
+	         html += '</td>';
+	         html += '<td>'; 
+	         html += '<select data-column="' + "[[#{wm.wshpit.custkey}]]" + '" id="custkeyList" data-id="custkey" onchange="setDestkeyByCustkey(this)">';
+	         html += '</td>';
+	         html += '<td>'; 
+	         html += '<select data-column="' + "[[#{om.ocosal.destkey}]]" + '" id="destkeyList" data-id="destkey" onchange="setCustkeyList(this)" onclick="setCustkeyList(this)">';
+	         html += '</select>'; 
+	         html += '</td>';
+	         html += '<td class="d-none">'; 
+	         html += '<input type="text" data-id="skuskey" disabled />'; 
+	         html += '</td>';
+	         html += '<td>'; 
+	         html += '<select data-column="' + "[[#{md.mskuwc.skumkey}]]" + '" id="skumkeyList" data-id="skudesc" onchange="insertSkuAndElse(this)" disabled>';
+	         html += '<option value="">[[#{wm.wmp92.all}]]</option>'; 
+	         html += '</td>';
+	         html += '<td class="d-none">'; 
+	         html += '<input type="text" data-id="skumkey" disabled />'; 
+	         html += '</td>';
+	         html += '<td class="d-none">'; 
+	         html += '<input type="text" data-id="saatc03" disabled />'; 
+	         html += '</td>';	         
+	         html += '<td class="d-none">'; 
+	         html += '<input type="text" data-id="suomkey" disabled />';
+	         html += '</td>';
+	         html += '<td>';
+	         html += '<input type="text" class="text-end" data-id="stotqty" disabled/>';
+	         html += '</td>';
+	         html += '<td>';
+	         html += '<input type="number" class="text-end rgitqty" data-column="' + "[[#{wm.wshpit.rgitqty}]]" + '"data-id="rgitqty" id="rgitqty" min="0" value="1" oninput="onlyNumberPlus(this)" onclick="valueSelect(this)" onmousedown="moveCursorToEnd(this)">';
+	         html += '</td>';
+	         html += '<td>';
+	         html += '<input type="text" data-id="saatc06" />';
+	         html += '</td>';
+	         html += '</tr>';
+	         
+	         tbody.insertAdjacentHTML('beforeend', html);
+	         setList(tbody.id);
+	         
+	         if(itemList.ownerkyList.length === 1){
+		         tbody.lastElementChild.querySelector('#ownerkyList').dispatchEvent(new CustomEvent('change', { detail: { forced: true } }));
+	         }
+	         if(itemList.custkeyList.length === 1){
+	        	 tbody.lastElementChild.querySelector('#custkeyList').dispatchEvent(new Event('change'));
+	         }
+	         if(itemList.destkeyList.length === 1){
+	        	 tbody.lastElementChild.querySelector('#destkeyList').dispatchEvent(new Event('change'));
+	         }
+	         
+	         let lastTr = tbody.lastElementChild.querySelector('#ownerkyList');
+	       	 $(lastTr).select2({ width : 'style' , matcher: function(params, data) {
+	       		if ($.trim(params.term) === '') {
+	       	      return data;
+	       	    }
+
+	       	    if (typeof data.text === 'undefined') {
+	       	      return null;
+	       	    }
+	       	    
+	       	    if(params.term){
+	       	    	let param = params.term.toUpperCase();
+		    	    if (data.text.indexOf(param) > -1 || data.id.indexOf(param) > -1) {
+		       	      let modifiedData = $.extend({}, data, true);
+		       	      return modifiedData;
+		       	    }
+	       	    }
+	       	    return null;
+	       	 }});
+	       	 
+	         let destkeyLastTr = tbody.lastElementChild.querySelector('#destkeyList');
+	       	 $(destkeyLastTr).select2({ width : 'style' , matcher: function(params, data) {
+	       		if ($.trim(params.term) === '') {
+	       	      return data;
+	       	    }
+
+	       	    if (typeof data.text === 'undefined') {
+	       	      return null;
+	       	    }
+	       	    
+	       	    if(params.term){
+	       	    	let param = params.term.toUpperCase();
+		    	    if (data.text.indexOf(param) > -1 || data.id.indexOf(param) > -1) {
+		       	      let modifiedData = $.extend({}, data, true);
+		       	      return modifiedData;
+		       	    }
+	       	    }
+	       	    return null;
+	       	 }});
+	       	 
+	         let custkeyLastTr = tbody.lastElementChild.querySelector('#custkeyList');
+	       	 $(custkeyLastTr).select2({ width : 'style' , matcher: function(params, data) {
+	       		if ($.trim(params.term) === '') {
+	       	      return data;
+	       	    }
+
+	       	    if (typeof data.text === 'undefined') {
+	       	      return null;
+	       	    }
+	       	    
+	       	    if(params.term){
+	       	    	let param = params.term.toUpperCase();
+		    	    if (data.text.indexOf(param) > -1 || data.id.indexOf(param) > -1) {
+		       	      let modifiedData = $.extend({}, data, true);
+		       	      return modifiedData;
+		       	    }
+	       	    }
+	       	    return null;
+	       	 }});
+	       	 
+	       	$('.rgitqty').keyboard({type : 'numpad'});
+	      }
+	      
+		  moveCursorToEnd = function (inputElement) {
+			  inputElement.value='';
+		  }
+	      //=============================================
+	      //=========== SelectBox data Init =============
+	      //=============================================
+	      setList = function(param) {
+	         let tbodyLastChild = document.querySelector('#' + param).lastElementChild;
+	         let td = tbodyLastChild.querySelectorAll('td select:not([data-id="skudesc"])');
+	         for(let element of td) {
+	            let elementId = element.id;
+	            if(itemList[elementId]) {
+	            	let optionStr = '';
+	            	if(itemList[elementId].length === 1){
+	 	               itemList[elementId].forEach((obj) => {
+	 	                  optionStr += '<option value="' + obj.combovl + '"selected>' + obj.combonm + '</option>';
+	 	               });
+	            	}else{
+	            		optionStr += '<option value="">[[#{wm.wmp92.all}]]</option>'; 
+	 	                itemList[elementId].forEach((obj) => {
+	 	                   optionStr += '<option value="' + obj.combovl + '">' + obj.combonm + '</option>';
+	 	                });
+	            	}
+	               element.insertAdjacentHTML('beforeend', optionStr);
+	            }
+	         }
+	      }
+	      //=============================================
+	      //============ 화주에 따른 부품 SKU List ===========
+	      //=============================================
+	      setSkuByOwnerky = function(e, event) {
+	         // 같은 행의 SKU 초기화
+	         let trTag               = e.parentElement.parentElement;
+	         let skuSelectDom        = trTag.querySelector('td select[data-id="skudesc"]');
+	         let ownerkyVal     	 = e.value;
+	         let warekeyVal   	  	 = $('#' + pageId + 'Warekey option:selected').val();
+	         let optionStr     		 = '';
+	         
+	         if(skuSelectDom.value.length) {
+	            skuSelectDom.value = '';
+	            skuSelectDom.closest('tr').querySelector('input[data-id="skuskey"]').value = '';
+	            skuSelectDom.closest('tr').querySelector('select[data-id="skudesc"]').value = '';
+	            skuSelectDom.closest('tr').querySelector('input[data-id="suomkey"]').value = '';
+	            skuSelectDom.closest('tr').querySelector('input[data-id="stotqty"]').value = '';
+	         }
+
+	         $(skuSelectDom.children).not(':first-child').remove();
+	         
+	         if(ownerkyVal) {
+		         let skuByOwnerky = itemList[skuSelectDom.id].filter((obj) => {
+		            return obj.warekey === warekeyVal && obj.ownerky === ownerkyVal;
+		         });
+
+		         skuByOwnerky.forEach((obj) => {
+		            optionStr += '<option value="' + obj.combonm + '">' + '['+ obj.combovl + '] ' + obj.combonm + '</option>';
+		         });
+		         if(!optionStr.length){
+		        	 let ownerName = e.selectedOptions[0].innerText;
+		        	 alertOpen(ownerName + " " + '[[#{wm.wmp92.noData}]]', function(){
+			        	 $(e).val('').trigger('change');
+				         trTag.querySelector('#skumkeyList').setAttribute('disabled' , true);
+		        	 });
+		        	 return;
+		         }
+
+		         skuSelectDom.insertAdjacentHTML('beforeend', optionStr);
+		         skuSelectDom.removeAttribute('disabled');
+		         
+		         if(!(event?.detail?.forced)){
+		        	 trTag.querySelector('.wmp92Checkbox').checked = true;
+		        	 isChecked();
+		         }
+		         
+		       	 $(skuSelectDom).select2({ width : 'style' , matcher: function(params, data) {
+		       		if ($.trim(params.term) === '') {
+		       	      return data;
+		       	    }
+
+		       	    if (typeof data.text === 'undefined') {
+		       	      return null;
+		       	    }
+		       	    
+		       	    if(params.term){
+		       	 		let param = params.term.toUpperCase();
+			    	    if (data.text.indexOf(param) > -1 || data.id.indexOf(param) > -1) {
+			       	      let modifiedData = $.extend({}, data, true);
+			       	      return modifiedData;
+			       	    }
+		       	    }
+		       	    return null;
+		       	 }});
+	         }else{
+	        	 trTag.querySelector('#skumkeyList').setAttribute('disabled' , true);
+	         }
+	      }
+
+	      //=============================================
+	      //============= 화주 click Event ===============
+	      //=============================================
+	      setSkuDataList = function(e){
+	         let ownerkyDom = e.closest('tr').querySelector('select[data-id="ownerky"]');
+	         if(!ownerkyDom.value) {
+	        	 alertOpen('[[#{wm.wmp92.ownerkyCheck}]]');
+	            return;
+	         }
+	      }
+	      
+	      //=============================================
+	      //======== SKU 선택 시 , SKU 정보 값 매핑 ==========
+	      //=============================================
+	      insertSkuAndElse = function(e){
+	         let elementId  = e.parentElement.firstElementChild.id;
+	         let elementValue  = e.value;
+	         let trTag = e.closest('tr');
+	         let warekeyVal = $('#' + pageId + 'Warekey option:selected').val();
+	         let ownerDom =   trTag.querySelector('select[data-id="ownerky"]');
+	         let returnData = findSkuInfo(elementId , elementValue , ownerDom.value , warekeyVal);
+	         
+	         let skuskey = returnData.length ? returnData[0].skuskey : ''; 
+	         let skumkey = returnData.length ? returnData[0].combovl : '';
+	         let skuat03 = returnData.length ? (returnData[0].skuat03 != undefined ? returnData[0].skuat03 : '') : '';
+	         let suomkey = returnData.length ? returnData[0].suomkey : '';
+	         let stotqty = returnData.length ? returnData[0].stotqty : '';
+	         
+	         e.closest('tr').querySelector('input[data-id="skuskey"]').value = skuskey;
+	         e.closest('tr').querySelector('input[data-id="skumkey"]').value = skumkey;
+	         e.closest('tr').querySelector('input[data-id="saatc03"]').value = skuat03;
+	         e.closest('tr').querySelector('input[data-id="suomkey"]').value = suomkey;
+	         e.closest('tr').querySelector('input[data-id="stotqty"]').value = stotqty;
+	         
+	         trTag.querySelector('.wmp92Checkbox').checked = true;
+	         isChecked();
+	      }
+	      
+	      //=============================================
+	      //============= 선택한 SKU 외 정보 ================
+	      //=============================================
+	      function findSkuInfo(elementId , skumkey , ownerky , warekey){
+	         let skuInfo = itemList[elementId].filter((obj) => {
+	            return obj.ownerky === ownerky && obj.warekey === warekey && obj.skudesc === skumkey  
+	         });
+	         
+	         return skuInfo;
+	      }
+	      
+	      //=============================================
+	      //========= 선택한 고객에 따른 도착지 List ===========
+	      //=============================================
+	      setDestkeyByCustkey = function(e) {
+	         let destDom   = e.closest('tr').querySelector('select[data-id="destkey"]');
+	         let custVal   = e.value;
+	         let destDomId = destDom.id;
+	         if(destDom.value.length) {
+	            destDom.children.remove();
+	         }
+	         
+	         let removeDom = itemList[destDomId].filter((obj) => {
+	            return obj.ptnrkey !== custVal;
+	         });
+	         
+	         for(let removeElement of removeDom) {
+	            for(let destElement of destDom){
+	               if(destElement.value && removeElement.combovl === destElement.value){
+	                  let removeVal = removeElement.combovl;
+	                  let optionStr = 'option[value="' + removeVal + '"]';
+	                  $(destDom).children(optionStr).remove();
+	               }
+	            }
+	         }
+	      }
+	      
+	      //=============================================
+	      //============ 도착지 click event ===============
+	      //=============================================
+	      setCustkeyList = function(e) {
+	         let custkeyDom = e.closest('tr').querySelector('select[data-id="custkey"]');
+	         if(!custkeyDom.value) {
+	        	 alertOpen('[[#{wm.wmp92.custkeyCheck}]]');
+	            return;
+	         }
+	         if(e.value){
+	        	 e.closest('tr').querySelector('.wmp92Checkbox').checked = true;
+	         }
+	         isChecked();
+	      }
+	      
+	      valueSelect = function(e) {
+	         return e.select();
+	      }
+	      
+	      //=============================================
+	      //================== 행 삭제 ====================
+	      //=============================================
+	      deleteRow = async function() {
+	          const deleteCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="wmp92Checkbox"]:checked');
+	          const trTagList = Array.from(deleteCheckedList).map(function(deleteCheckedList){
+	               return deleteCheckedList.closest('tr');
+	          });
+	          
+	          if(!trTagList.length){
+	        	  alertOpen('[[#{ms.choiceRowZero}]]');
+	             return;
+	          }
+	          const result = await confirmOpenAsync('[[#{ms.rowDelete}]]');
+	          if(result){
+	             for(const trTagObj of trTagList){
+		                trTagObj.remove();
+		         }
+	             isChecked();
+	          }
+	       }
+
+	      //=============================================
+	      //================== row check ================
+	      //=============================================
+	       isChecked = function() {
+	          let isCheck = '';
+	          let headCheck = document.querySelector('#wmp92HeadCheck');
+	          
+	          document.querySelectorAll('input[class*="wmp92Checkbox"]').forEach(function(obj){
+	               isCheck += obj.checked;
+	          });
+	          
+	          return headCheck.checked = isCheck.includes("false") ? false : true;
+	       }
+	       
+		
+	       //=============================================
+	       //================= head check ================
+	       //=============================================
+	       isHeadChecked = function(e) {
+	          document.querySelectorAll('input[class*="wmp92Checkbox"]').forEach(function(element){
+	             return element.checked = e.checked
+	          });
+	       }
+	       
+	       function currentDate() {
+	          const today = new Date();
+	          const year = today.getFullYear();//년도
+	          const month = today.getMonth()+1 >= 10 ? today.getMonth()+1 : '0' + (today.getMonth()+1);//월
+	          const day = today.getDate() >=10 ? today.getDate() : '0' + today.getDate();//요일
+	          
+	          return year+'-'+month+'-'+day;
+	       }
+	       
+			//============================================
+			//============= 디폴트 row 8개 ==================
+			//============================================
+			async function setDefaultRow(){
+				for(let i=0; i<defaultCnt ;i++){
+					await addRow();
+				}
+			}
+	   });
+   </script>
+</div>   
+</html>

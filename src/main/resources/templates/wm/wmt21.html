@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang='ko' xmlns:th='http://www.thymeleaf.org'>
+	<div th:fragment='fragments-mainContent' class='tab-content'>
+		<div class="tab-contents">
+            <div class="search-conditions con-box">
+                <div class="setting-grid" id="wmt21Dom">
+					<label for="wmt21Warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id='wmt21Warekey'></select>
+                        </div>
+                    </div>
+					<label for="wmt21Ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id='wmt21Ownerky'>
+                            	<option value="">[[#{wm.wmt21.all}]]</option>
+                            </select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title" for="wmt21Taskoky">[[#{wm.wtakit.taskoky}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt21Taskoky' name='wmt21Taskoky' th:placeholder="${#messages.msg('wm.wtakit.taskoky')}">
+                        </div>
+                    </div>
+					<label class="setting-grid-title" for="wmt21Skumkey">[[#{md.mskust.skumkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt21Skumkey' name='wmt21Skumkey' th:placeholder="${#messages.msg('md.mskust.skumkey')}">
+                        </div>
+                    </div>
+					<label class="setting-grid-title" for="wmt21Skudesc">[[#{md.mskuwc.skudesc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt21Skudesc' name='wmt21Skudesc' th:placeholder="${#messages.msg('md.mskuwc.skudesc')}">
+                        </div>
+                    </div>
+                    <label for="wmt21Tasksts" class="setting-grid-title">[[#{wm.wtakit.tasksts}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                        	 <select id='wmt21Tasksts'>
+                        	 	<option value="NEW">[[#{wm.wmt21.new}]]</option>
+                        	 	<option value="TSCOMP">[[#{wm.wmt21.tscomp}]]</option>
+                        	 </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" id='wmt21Search'><img>[[#{bt.search}]]</button>
+                    <button type="button" class="btn-clear btn-white" id="wmt21Reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button class="btn-white d-flex" id='wmt21Cancel'><img class="ic-bt-cancel">[[#{bt.cancel}]]</button>
+                        <button class="btn-navy btn-green d-flex" id='wmt21Save'><img class="ic-bt-save">[[#{bt.save}]]</button>
+
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="wmt21HeadGrid"></div>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-grid-wrapper con-box">
+                    <div id="wmt21ItemGrid"></div>
+                </div>
+            </div>
+        </div>
+		<script>
+		$(function(){
+			const pageId = '[[${gprogrid}]]';
+			const wmt21HeadGridId = '#' + pageId + 'HeadGrid';
+			const wmt21ItemGridId = '#' + pageId + 'ItemGrid'
+			const saveDom = '#' + pageId + 'Save' + ','+ '#' + pageId + 'Cancel';
+			
+			let wmt21HeadGrid;
+			let wmt21ItemGrid;
+
+			$(saveDom).on('click', async function(e){
+				let targetId = this.id.substring(pageId.length);
+				await saveFunc(targetId.toLowerCase());
+			});
+			
+			$('#' + pageId + 'Search').click(async function(){
+				let res = await getWmt21HeadList();
+			});
+			
+			$('#' + pageId + 'Tasksts').change(async function(){
+				if(this.value === "[[#{wm.wmt21.tscompVal}]]"){
+		      	 	$('#' + pageId + 'Save').removeClass('d-flex');
+		      	 	$('#' + pageId + 'Save').addClass('d-none');
+				 	$('#' + pageId + 'Cancel').removeClass('d-flex');
+		      	 	$('#' + pageId + 'Cancel').addClass('d-none');
+				}else{
+				 	$('#' + pageId + 'Save').removeClass('d-none');
+		      	 	$('#' + pageId + 'Save').addClass('d-flex');
+					$('#' + pageId + 'Cancel').removeClass('d-none');
+		      	 	$('#' + pageId + 'Cancel').addClass('d-flex');
+				}
+			});
+			
+			$('#' + pageId + 'Reset').click(function(){
+				resetSearchConditions();
+				$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+				wmt21HeadGrid.searchList([]);
+				wmt21ItemGrid.searchList([]);
+			});
+			
+			const wmt21HeadGridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+		            type: 'checkbox', sortable: false, editor: false,
+		            cb: { all: false, header: true } ,
+// 		            editable : function(ui){
+// 		            	return editable = ui.rowData.psbtqty == 0 ? false : true;
+// 		            }
+		     	},
+		     	{ title: '[[#{wm.wtakit.rowkey}]]', dataType: 'string',  dataIndx: 'rowkey', hidden : true , editable: false ,},	
+				{ title: '[[#{wm.wtakit.compkey}]]', dataType: 'string',  dataIndx: 'compkey', hidden : true , editable: false ,},	
+				{ title: '[[#{wm.wtakit.taskoky}]]', dataType: 'string', dataIndx: 'taskoky' , editable : false },	
+				{ title: '[[#{wm.wtakit.taskoit}]]', dataType: 'string', dataIndx: 'taskoit' , hidden : true , editable : false },	
+				{ title: '[[#{wm.wtakit.warekey}]]', dataType: 'string',  dataIndx: 'warekey', hidden: true , editable: false },	
+				{ title: '[[#{wm.wtakit.ownerky}]]', dataType: 'string',  dataIndx: 'ownerky', hidden: true , editable: false },	
+				{ title: '[[#{md.mowrma.ownamlc}]]', dataType: 'string',  dataIndx: 'ownamlc', editable: false },	
+				{ title: '[[#{md.mskust.skumkey}]]', dataType: 'string',  dataIndx: 'skumkey' , editable : false },	
+				{ title: '[[#{md.mskuwc.skudesc}]]', dataType: 'string',  dataIndx: 'skudesc' , editable : false },
+				{ title: '[[#{wm.wtakit.doccate}]]', dataType: 'string',  dataIndx: 'doccate' , editable: false },
+				{ title: '[[#{wm.wtakit.doctype}]]', dataType: 'string',  dataIndx: 'doctype' , editable : false},	
+				{ title: '[[#{md.mdocma.doctynm}]]', dataType: 'string',  dataIndx: 'doctynm' ,  editable: false },
+				{ title: '[[#{wm.wstkky.stotqty}]]', dataType: 'integer',  dataIndx: 'stotqty' , editable : false },
+				{ title: '[[#{wm.wtakit.fordqty}]]', dataType: 'integer',  dataIndx: 'fordqty' , editable : false },	
+				{ title: '[[#{wm.wmt21.ltotqty}]]', dataType: 'integer',  dataIndx: 'ltotqty' ,  editable: false },
+				{ title: '[[#{wm.wmt21.psbtqty}]]', dataType: 'integer',  dataIndx: 'psbtqty', editable: false },
+				{ title: '[[#{wm.wmt21.tcmpqty}]]', dataType: 'integer',  dataIndx: 'tcmpqty' ,
+					styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },	  
+					editable: function(ui){
+						return editable = ui.rowData.psbtqty == 0 ? false : true;
+					} 
+				},
+			];
+			
+			wmt21HeadGrid = new GridUtil(wmt21HeadGridCM, pageId , pageId + 'HeadGrid');
+			
+			wmt21HeadGrid.setRowDblClick(async function(evt, ui){
+				let itemRes = await getWmt21ItemList(ui);
+				if(itemRes.length == 0){
+					// TYPE이 SET인 SKU만 만들고 실제 세트는 만들지 않은 상태
+					return alert("[[#{wm.wmt21.checkqty}]]");
+				}
+			});
+			
+			wmt21HeadGrid.setRowInit(function(ui){
+// 				if(ui.rowData.psbtqty == 0){
+// 					return { style : 'background:#e4e4eb'};
+// 				}
+			});
+			
+			wmt21HeadGrid.setBeforeCheck(function(evt , ui){
+				return ui.check = ui.rowData.psbtqty == 0 ? false : true;
+			});
+			
+			wmt21HeadGrid.setChange(function(evt, ui){
+				const updateList = ui.updateList;
+				if(ui.source === 'edit' || ui.source === 'update'){
+					updateList.forEach((obj) => {
+						let newRow = obj.newRow;
+						let rowData = obj.rowData;
+						let psbtqty = rowData.psbtqty;
+						let fordqty = rowData.fordqty;
+						let compqty = psbtqty > fordqty ? fordqty : fordqty;
+						if(newRow.hasOwnProperty('tcmpqty')){
+							if(compqty < newRow.tcmpqty){
+								// 세트zone 수량 or 작업가능수량 중 최소값으로 비교할 것.
+								alert('[[#{wm.wmt21.minQtyMsg}]]' + " " + compqty + '[[#{wm.wmt21.countMsg}]]');
+								newRow.tcmpqty = rowData.fordqty;
+							}
+							
+							this.updateRow({
+								rowIndx : obj.rowIndx ,
+								newRow : { state : true , tcmpqty : newRow.tcmpqty } ,
+								checkEditable : false
+							});
+						}
+					});
+				}
+			});
+			
+			wmt21HeadGrid.setFind();
+			
+			wmt21HeadGrid.setReset();
+			
+			wmt21HeadGrid.open();
+			
+			const wmt21ItemGridCM = [
+				{ title: '[[#{wm.wtakit.compkey}]]', dataType: 'string',  dataIndx: 'compkey', hidden : true , editable: false ,},	
+				{ title: '[[#{md.mskuwc.warekey}]]', dataType: 'string',  dataIndx: 'warekey' ,hidden: true , editable : false },	
+				{ title: '[[#{md.mskuwc.ownerky}]]', dataType: 'string',  dataIndx: 'ownerky', hidden: true , editable: false },	
+				{ title: '[[#{md.mskust.skumkey}]]', dataType: 'string',  dataIndx: 'skumkey', editable: false },	
+				{ title: '[[#{md.mskust.sbskuky}]]', dataType: 'string',  dataIndx: 'sbskuky' , editable : false },	
+				{ title: '[[#{wm.wmt21.skudesc}]]', dataType: 'string',  dataIndx: 'skudesc' , editable : false },
+				{ title: '[[#{wm.wstkky.stotqty}]]', dataType: 'integer',  dataIndx: 'stotqty' , editable : false },	
+				{ title: '[[#{wm.wmt21.ltotqty}]]', dataType: 'integer',  dataIndx: 'ltotqty' ,  editable: false },	
+				{ title: '[[#{md.mskust.sbstqty}]]', dataType: 'integer',  dataIndx: 'sbstqty' , editable: false },
+				{ title: '[[#{md.mskust.credate}]]', dataType: 'string',  dataIndx: 'credate', editable: false },
+				{ title: '[[#{md.mskust.cretime}]]', dataType: 'string',  dataIndx: 'cretime', editable: false },
+				{ title: '[[#{md.mskust.creuser}]]', dataType: 'string',  dataIndx: 'creuser', editable: false },
+				{ title: '[[#{md.mskust.lmodate}]]', dataType: 'string',  dataIndx: 'lmodate', editable: false },
+				{ title: '[[#{md.mskust.lmotime}]]', dataType: 'string',  dataIndx: 'lmotime', editable: false },
+				{ title: '[[#{md.mskust.lmouser}]]', dataType: 'string',  dataIndx: 'lmouser', editable: false },
+			];
+			
+			wmt21ItemGrid = new GridUtil(wmt21ItemGridCM, pageId , pageId + 'ItemGrid');
+			wmt21ItemGrid.setFind();
+			
+			wmt21ItemGrid.setCreate(function(evt , ui){
+				wmt21Init();
+			});
+			
+			wmt21ItemGrid.open();
+			
+			async function wmt21Init(){
+				let initRes = await getWmt21Init();
+				await setWmt21Combo(initRes.item);
+// 				await getWmt21HeadList();
+			}
+			
+			async function getWmt21Init() {
+				let res = await fetchUtil('GET', '/wm/task/' + pageId + '/init');
+				try{
+					if(res.status !==200){
+						throw new Error('[[#{ms.fetchError}]]');
+					}
+					return res.json();
+				}catch(err){
+					alert('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+				}
+			}
+			
+			function setWmt21Combo(res){
+				let comboDom = $('#' + pageId + 'Dom .input-group').find('select');
+				let comboKeys = Object.keys(res);
+				let ownerkyValue = "[[#{wm.wmt21.ownerkyValue}]]";
+				comboDom.each((index , element) => {
+					let comboId = element.id.substring(pageId.length).toLowerCase();
+					let comboKey = comboKeys[index];
+					if(comboKey && comboKey.toLowerCase().indexOf(comboId) != -1){
+						res[comboKey].forEach((obj) => {
+							$(element).append('<option value="' + obj.combovl + '">' + obj.combonm + '</option>');
+						});
+
+						if(comboId === ownerkyValue){
+							$(element).pqSelect({
+								deselect : false
+							});
+						}
+					}
+				});
+			}
+			
+			async function getWmt21HeadList(){
+				const headGrid = pq.grid(wmt21HeadGridId);
+				const itemGrid = pq.grid(wmt21ItemGridId);
+				
+				let param = {
+					warekey : $('#' + pageId + 'Warekey').val(),
+					ownerky : $('#' + pageId + 'Ownerky').val(),
+					skumkey : $('#' + pageId + 'Skumkey').val(),
+					skudesc : $('#' + pageId + 'Skudesc').val(),
+					taskoky : $('#' + pageId + 'Taskoky').val(),
+					tasksts : $('#' + pageId + 'Tasksts').val()
+				};
+				
+				headGrid.showLoading();
+				itemGrid.showLoading();
+				
+				let res = await fetchUtil('GET', '/wm/task/' + pageId + '/grids/1', param);
+				try{
+					if(res.status !==200){
+						throw new Error('[[#{ms.fetchError}]]');
+					}
+					
+					const rData = await res.json();
+					wmt21HeadGrid.searchList(rData);
+					wmt21ItemGrid.searchList([]);
+					
+					headGrid.hideLoading();
+					itemGrid.hideLoading();
+				}catch(err){
+					alert('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+					
+					headGrid.hideLoading();
+					itemGrid.hideLoading();
+				}
+			}
+			
+			async function getWmt21ItemList(param){
+				const itemGrid = pq.grid(wmt21ItemGridId);
+				
+				itemGrid.showLoading();
+				
+				let res = await fetchUtil('GET', '/wm/task/'  + pageId + '/grids/2', param.rowData);
+				try{
+					if(res.status !==200){
+						throw new Error('[[#{ms.fetchError}]]');
+					}
+
+					const rData = await res.json();
+					wmt21ItemGrid.searchList(rData);
+					
+					itemGrid.hideLoading();
+					return await rData;
+				}catch(err){
+					alert('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+					itemGrid.hideLoading();
+				}
+			}
+			
+			async function saveFunc(func){
+				const saveWmt21HeadGrid = pq.grid(wmt21HeadGridId);
+				const wmt21CheckedList = saveWmt21HeadGrid.Checkbox('state').getCheckedNodes().filter((obj) => obj.state == true);
+				let alertMsg   = func === "[[#{wm.wmt21.save}]]" ? "[[#{ms.checksave}]]" : "[[#{ms.checkCancel}]]"; // 알림 문구
+// 				let successMsg = func === "[[#{wm.wmt21.save}]]" ? "[[#{ms.saveSuccess}]]" : "[[#{ms.cancelComplete}]]"; // 성공 시 알림 문구
+				if(wmt21CheckedList.length){
+					const wmt21GridList = saveWmt21HeadGrid.getChanges({all:true});
+					
+					for(let wmt21CheckedRow of wmt21CheckedList) {
+						if(func === "[[#{wm.wmt21.save}]]" && !wmt21CheckedRow.tcmpqty) {
+							alert(Number(wmt21CheckedRow.pq_ri + 1) + "[[#{wm.wmt21.rownum}]]" + " " + "[[#{wm.wmt21.tcmpqty}]]"  + "[[#{ms.choiceValue}]]"); 
+							saveWmt21HeadGrid.editCell({rowIndx : wmt21CheckedRow.pq_ri , dataIndx : 'tcmpqty'});
+		                    return;   
+						}
+					}
+					
+					wmt21GridList.updateList = wmt21CheckedList;
+					if(confirm(alertMsg)){
+						let wmt21ResData = await fetchUtil('POST' , '/wm/task/' + pageId + '/' + func, wmt21GridList);
+						try{
+							if(wmt21ResData.status != 200) {
+								throw new Error("[[#{ms.saveErr}]]");
+							}
+// 							alert(successMsg);
+							let res = await getWmt21HeadList();
+						}catch(err){
+							alert('code : ' + wmt21ResData.status + '\n' + err + '\n' + wmt21ResData.statusText); // get method 통신의 경우 
+							wmt21HeadGrid.hideLoading();
+						}
+					}
+				} else {
+					alert("[[#{ms.choiceRowZero}]]");
+					return;
+				}
+			}
+		});
+		</script>
+	</div>
+</html>

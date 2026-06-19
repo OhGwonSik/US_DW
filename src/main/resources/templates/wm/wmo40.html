@@ -1,0 +1,564 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+	 	<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<div class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</div>
+				<div class="setting-grid-content">
+					<div class="input-group text-edit">
+						<select id="wmo40Warekey"
+								data-cb-val="combovl"
+								data-cb-name="combonm"
+								data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList"
+								data-cb-select=""
+						></select>
+					</div>
+				</div>
+			</div>
+		</div>
+	    <div class="search-list">
+	       <div class="list-top">
+	          <div class="list-title ic-title-mark">
+	             <span th:text="${gnatitle}"></span>
+	          </div>
+	          <div class="edit-btn-wrapper">
+	             <button class="btn-navy btn-green" id="wmo40Save" disabled><img class="ic-bt-save">[[#{bt.save}]]</button>
+	         </div>
+	      </div>
+	      <div class="list-grid-wrapper con-box">
+	         <div id="wmo40Grid"></div>
+	      </div>
+	      <div class="spinner d-flex" id="wmo40Spinner"></div>
+	      <div class="bg" id="wmo40Bg"></div>
+	   </div>
+	</div>
+	<script>
+	$(function(){
+	   const pageId = "[[${gprogrid}]]";
+	   const prepend = { '' : ' ' };
+	   const list    = "List";
+	   let dataList = new Array(); // 그리드 마스터 데이터
+	   let prevVal; // 검색영역 이전 창고 value
+	   let addRowBtnData; // addRow를 담기위한 변수
+       
+	   $('#' + pageId + 'Warekey').focus(function(e) {
+		  prevVal = this.value;   
+	   }).change(function (e) {
+		   const grid = pq.grid('#' + pageId + 'Grid');
+		   let gridData = grid.getData();
+		   if(gridData.length && prevVal !== $('#' + pageId + 'Warekey option:selected').val()){
+			   if(confirm("[[#{ms.listViewRollback}]]")){
+				   grid.rollback();
+			   }else{
+				   this.value = prevVal;
+				   return false;
+			   }
+		   }
+	   });
+	   
+	   $('#' + pageId + 'Save').click(async function () {
+	      const grid = pq.grid('#' + pageId + 'Grid');
+	      const gridList = grid.getChanges({all : true});
+	      let gridCheck = grid.Checkbox('state').getCheckedNodes().filter((obj) => obj.state === true );
+	      if(gridCheck.length) {
+	         const columns = grid.columns;
+	         const columnKeys = Object.keys(grid.columns);
+				for(let gridRow of gridCheck) {
+					for(let columnKey of columnKeys) {
+						if(columns[columnKey].styleHead?.['background-color'] === "[[#{grid.styleHead01}]]" && !gridRow[columnKey]){
+							if(typeof columnKey === 'string'){
+				                alert(Number(gridRow.pq_ri + 1) + "[[#{wm.wmo40.rowNum}]]" + columns[columnKey].title + "[[#{ms.choiceValue}]]");   
+				                return;
+							} else if(typeof columnKey === 'Number') {
+								if(!Number(gridRow[columnKey])) {
+				                    alert(Number(gridRow.pq_ri + 1) + "[[#{wm.wmo40.rowNum}]]" + columns[columnKey].title + "[[#{ms.choiceValue}]]");   
+									return;
+		               			}
+							}
+						}
+	   			  	}
+	         	}
+	         
+				if(confirm("[[#{ms.checksave}]]")) {
+					gridList.addList = gridCheck;
+					grid.showLoading();
+					const res = await fetchUtil( 'POST' , '/wm/outbound/' + pageId + '/save', gridList );
+// 					    alert("[[#{ms.saveSuccess}]]");
+					if(res.ok){
+					    grid.option( 'dataModel', { data: [], recIndx: 'rowkey' } );
+					    grid.refreshDataAndView();
+					}
+				    grid.hideLoading();
+			 }
+      	  }else{
+	         alert("[[#{ms.choiceRowZero}]]");
+	   	  }	
+	   });
+	   
+	   let wmo40GridCM = [
+	      { title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+	            type: 'checkbox', sortable: false, editor: false,
+	            cb: { all: false, header: true }
+	        },
+	      { title: "[[#{wm.wshpit.compkey}]]", dataType: 'string',  dataIndx: 'compkey', editable: false , hidden : true},   
+	      { title: "[[#{wm.wshpit.warekey}]]", dataType: 'string',  dataIndx: 'warekey', hidden : true },   
+	      { title: "[[#{md.mwarma.whnamlc}]]", dataType: 'string',  dataIndx: 'whnamlc' , editable : false ,
+	          styleHead: { 'background-color':"[[#{grid.styleHead01}]]" } ,
+	      }, 
+	      { title: "[[#{grid.ownamlc}]]", dataType: 'string',  dataIndx: 'ownerky', filter : 'ownerky' , 
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },
+	         editor: {
+	                type: 'select',
+	                init: function (ui) {
+	                   ui.$cell.find('select').pqSelect({ search:true, singlePlaceholder: '' });
+	                   setTimeout(function () {
+	                      ui.$cell.find('select').pqSelect('open'); 
+	                   }, 250);
+	                },
+	                options: [],
+	                prepend : {'' : ''}
+	            },
+	            render: function (ui) {
+	               if(ui.cellData){
+		               let option = ui.column.editor.options.find(function (obj) {
+		                    return (obj[ui.cellData] != null);
+		                });
+		               return option ? option[ui.cellData] : '';
+	               }
+	            },
+	      },   
+	      { title: "[[#{wm.wshpit.shppday}]]", dataType: 'date', dataIndx: 'shppday' , format:'yy-mm-dd',
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },   
+	         cls: 'pq-calendar',
+	           editor: {
+	               type: 'textbox',
+	               init: dateEditor,
+	               getData: function (ui) {
+	                   var dt = $.datepicker.parseDate(ui.column.format, ui.$cell.find('input').val());
+	                   return $.datepicker.formatDate("yy-mm-dd", dt);
+	               }
+	           }, 
+	      },
+	      { title: "[[#{wm.wshpit.doccate}]]", dataType: 'string',  dataIndx: 'doccate', editable: false },   
+	      { title: "[[#{wm.wshpit.doctype}]]", dataType: 'string',  dataIndx: 'doctype', editable: false },   
+	      { title: "[[#{wm.wshpit.custkey}]]", dataType: 'string',  dataIndx: 'custkey', filter : 'custkey' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },
+	         editor: {
+	                type: 'select',
+	                init: function (ui) {
+	                   ui.$cell.find('select').pqSelect({ search:false, singlePlaceholder: '' });
+	               setTimeout(function(){
+	                      ui.$cell.find('select').pqSelect('open'); 
+	                   },200);
+	                },
+	                options:[],
+	                prepend : {'' : ''}
+	            },
+	            render: function (ui) {
+	               if(ui.cellData){
+		              let option = ui.column.editor.options.find(function (obj) {
+		                   return (obj[ui.cellData] != null);
+		               });
+		              return option ? option[ui.cellData] : '';
+	               }
+	            },   
+	      },
+	      { title: "[[#{om.ocosal.destkey}]]", dataType: 'string',  dataIndx: 'destkey', filter : 'destkey' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },
+	         editor: {
+	            type: 'select',
+	            init: function (ui) { 
+	               ui.$cell.find('select').pqSelect({ search:true, singlePlaceholder: '' });
+	               setTimeout(function () {
+	                      ui.$cell.find('select').pqSelect('open'); 
+                   }, 250);
+	            },
+	            options:[],
+	            prepend : {'' : ''}
+	         },
+	         render: function (ui) {
+	        	 if(ui.rowData.custkey && ui.cellData) {
+	                 let rObj = [];
+	                 let option = dataList['destkeyList'].find(function (obj) {
+	                	 return (ui.rowData.custkey === obj.ptnrkey && obj.combovl === ui.cellData);
+	                 });
+	                 if(option){
+	                 	rObj[ui.cellData] = option.combonm;
+	                 }
+	                 return option ? rObj[ui.cellData] : '';
+	        	 }
+			 },
+	      },
+	      { title: "[[#{md.mskuwc.skuskey}]]", dataType: 'string',  dataIndx: 'skuskey' , hidden:true } ,
+	      { title: "[[#{grid.skuCode}]]", dataType: 'string',  dataIndx: 'skumkey', filter : 'skumkey' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },
+	         editor: {
+	                type: 'select',
+	                attr: 'multiple="multiple"',
+	                init: function (ui) {
+	                   ui.$cell.find('select').pqSelect({ multiplePlaceholder: '', checkbox :true });
+	               	   setTimeout(function(){
+	                      	 ui.$cell.find('select').pqSelect('open'); 
+	                   }, 250);
+	                },
+	                options:[],
+            },
+            render: function (ui) {
+	        	 if(ui.rowData.ownerky && ui.cellData) {
+	                 let option = dataList['skumkeyList'].find(function (obj) {
+	                      return (ui.rowData.ownerky === obj.ownerky && ui.rowData.skumkey === obj.skumkey);
+	                  });
+	                 return option ? option[ui.dataIndx]  : '';
+	        	 }
+        		 return '';
+	         },   
+	      },
+	      { title: "[[#{grid.skunm}]]", dataType: 'string',  dataIndx: 'skudesc' , editable : false },
+	      { title: "[[#{wm.wshpit.suomkey}]]", dataType: 'string',  dataIndx: 'suomkey' , editable : false },
+	      { title: "[[#{wm.wstkky.stotqty}]]", dataType: 'integer',  dataIndx: 'stotqty' , editable : false ,
+	    	  summary: { type: 'sum' }, format: "#,###" ,  
+	      },
+	      { title: "[[#{wm.wshpit.rgitqty}]]", dataType: 'integer',  dataIndx: 'rgitqty' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },
+	         summary: { type: 'sum' }, format: "#,###" ,   
+	         validations: [
+            	{ type: 'lte', value: 1000000000, msg: "[[#{ms.validations.maxLenLength(9)}]]" },
+             	{ type: 'regexp', value: /^[0-9]{1,9}$/, msg: "[[#{ms.validations.maxLenLength(9)}]]"}
+             ]
+	      },   
+	      { title: "[[#{wm.wtakit.parsncd}]]", dataType: 'string',  dataIndx: 'shprscd', filter : 'shprscd' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead01}]]" },
+	         editor: {
+	            type: 'select',
+	            init: function (ui) { 
+	               ui.$cell.find('select').pqSelect({ search:false, singlePlaceholder: '' });
+	               setTimeout(function () {
+	                      ui.$cell.find('select').pqSelect('open'); 
+	                   }, 250);
+	            },
+	            options: []
+	         },
+	         render: function (ui) {
+	        	if(ui.cellData){
+		            let option = ui.column.editor.options.find(function (obj) {
+		                 return (obj[ui.cellData] != null);
+		             });
+		            return option ? option[ui.cellData] : '';
+	        	 }
+	         },
+	      },
+	      { title: "[[#{wm.wtakit.parsnnm}]]", dataType: 'string', dataIndx: 'shprsnm' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead02}]]" },   
+	      },
+	      { title: "[[#{om.ocosal.salmemo}]]", dataType: 'string', dataIndx: 'salmemo' ,
+	         styleHead: { 'background-color':"[[#{grid.styleHead02}]]" },   
+	      },
+	      { title: "[[#{om.ocosal.saatc06}]]", dataType: 'string', dataIndx: 'saatc06' ,
+	          styleHead: { 'background-color':"[[#{grid.styleHead02}]]" },   
+	       },
+	   ];
+	   
+	   const wmo40Grid = new GridUtil(wmo40GridCM, pageId, pageId + 'Grid');
+	   
+	   wmo40Grid.setCreate(function (evt, ui) {
+		   wmo40GridDataInit(this.colModel);
+	   });
+	   
+	   wmo40Grid.setAdd(function(evt, ui){
+	      wmo40AddRow();
+	   });
+	   
+	   wmo40Grid.setDelete(function(evt, ui){
+	      wmo40DeleteRow();
+	   });
+	   
+	   wmo40Grid.setCellDblClick(function (evt, ui) {
+		  const dataIndx = ui.dataIndx;
+		  const ownerky = ui.rowData.ownerky;
+		  const custkey = ui.rowData.custkey;
+	      if(dataIndx === 'skumkey'){
+	         if(!ownerky){
+	            alert("[[#{wm.wmo40.ownerkyCheck}]]");
+	            return false;
+	         }
+	      }else if(dataIndx === 'destkey'){
+	          // 고객사별 도착지
+	          if(!custkey){
+	        	  alert("[[#{wm.wmo40.custkeyCheck}]]");
+	              return false;
+	          }
+	       }
+	      
+	      if(dataIndx === 'skumkey' || dataIndx === 'destkey'){
+		      const gridColumn   = this.getColumn({ dataIndx : dataIndx });
+		      const listName     = dataIndx + list;
+		      const targetList   = dataList[listName];
+		      const dataIndxList = getGroupByDataIndx(ui , targetList);
+		      const comboListKey = ui.rowData.ownerky;
+		      let options = dataIndxList.map(function(obj){
+		          let rObj = {};
+		    	  let targetKey = dataIndx === 'skumkey' ? obj[dataIndx] : obj.combovl;
+			      let targetVal = dataIndx === 'skumkey' ? 
+		           				'[' + obj.skumkey + ']' + obj.skudesc + '(' + obj.stotqty + ')' : obj.combonm;
+		           rObj[targetKey] = targetVal;
+		           return rObj;
+	           });
+	           gridColumn.editor.options = options;
+	       }
+	   });
+	   
+	   wmo40Grid.setChange(function (evt, ui) {
+			if(ui.source === 'edit'){
+				let updateList = ui.updateList;	
+		  		let updateNewRow = updateList[0].newRow;
+	  			let updateOldRow = updateList[0].oldRow;
+	  			let updateRowData = updateList[0].rowData;
+	  			let findData;
+	  			let dataIndx = Object.keys(updateNewRow).toString() + list;
+				// 부품
+	  			if(updateNewRow['skumkey']){
+		  			let splitSkumkeys = updateNewRow['skumkey'].split(',');
+	  				splitSkumkeys.forEach((obj, index) => {
+ 		   				// multi select 시 updateList는 1줄 ( delete -> add )
+						if(updateList.length-1 == index){
+							this.deleteRow({ rowIndx : updateRowData.pq_ri });
+						}
+ 		   		   		findData = findSkuData(updateRowData , obj);
+	             	    if(findData) {
+							let newRow = Object.assign({}, updateRowData , findData );
+							let addRow = JSON.parse(JSON.stringify(newRow));
+							this.addRow({
+						    	 rowIndx : newRow.pq_ri ,
+						      	 newRow  : addRow , 
+						      	 checkEditable : false
+							});
+						 }
+	 	 		  	 });
+	  	       	// 출고지시수량
+	  		  	}else if(updateNewRow.rgitqty){
+	  			  if(updateNewRow['rgitqty']){
+						this.updateRow({
+	   						rowIndx : updateRowData.pq_ri,
+	   		       		    newRow : { 
+	   		       				rgitqty : updateNewRow['rgitqty'] ,
+	   		       		    },
+	   		       			checkEditable : false
+	   					});	
+					}
+	  			// 고객사 & 도착지  
+	  			}else if(updateNewRow.custkey) {
+	  				if(updateOldRow['custkey']) {
+	  					this.updateRow({
+	  						rowIndx : updateRowData.pq_ri ,
+	  						newRow : {
+	  							destkey : ''
+	  						}, checkEditable : false
+	  					});
+	  				}
+	  			}else if(updateNewRow.ownerky) {
+	  				if(updateOldRow['ownerky'] || updateRowData.skumkey) {
+	  					this.updateRow({
+	  						rowIndx : updateRowData.pq_ri ,
+	  						newRow : {
+	  							skumkey : '' ,
+	  							skudesc : '' ,
+	  							suomkey : '' ,
+	  							stotqty : '' 
+	  						}, checkEditable : false
+	  					})
+	  				}
+	  			}
+			}else if(ui.source === 'paste') {
+				let grid = pq.grid('#' + pageId + 'Grid');
+				let updateList    = ui.updateList;	
+				let addList       = ui.addList;	
+				let addRow;
+  				updateList.forEach(function(updateRow) {
+			  		let updateNewRow  = updateRow.newRow;
+		  			let updateRowData = updateRow.rowData;
+  					let updatePasteData = { pq_ri : updateRowData.pq_ri };
+					if(updateNewRow.hasOwnProperty('skumkey')){
+						findData = findSkuData(updateRowData , updateNewRow.skumkey);
+						
+						if(findData) {
+							let newRow = Object.assign({} , addRowBtnData , updateRowData , findData);
+							addRow = JSON.parse(JSON.stringify(newRow));
+	             	    }else{
+	             	    	updatePasteData.ownerky = updateRowData.ownerky;
+	             	    	let newRow = Object.assign({} , addRowBtnData , updatePasteData , updateNewRow);
+							addRow = JSON.parse(JSON.stringify(newRow));
+	             	    }
+					}else if(updateNewRow.hasOwnProperty('destkey')){
+						if(!updateRowData.custkey) {
+							alert("[[#{wm.wmo40.custkeyCheck}]]");
+							updateNewRow.destkey = '';
+							addRowBtnData.destkey = '';
+						}
+						let newRow = Object.assign({} , addRowBtnData , updateRowData , updateNewRow);
+						addRow = JSON.parse(JSON.stringify(newRow));
+					}else {
+						let newRow = Object.assign({} , addRowBtnData , updateRowData , updateNewRow);
+						addRow = JSON.parse(JSON.stringify(newRow));
+					}
+					grid.deleteRow({ rowIndx : addRow.pq_ri });
+					grid.addRow({
+				    	 rowIndx : addRow.pq_ri ,
+				      	 newRow  : addRow , 
+				      	 checkEditable : false
+					});
+  				});
+  			
+				addList.forEach(function(addRow) {
+					let addNewRow = addRow.newRow;
+					let addRowData = addRow.rowData;
+					let addPasteData = { state : true };
+					if(addRowData.skumkey){
+	  					findData = findSkuData(addRowData , addNewRow.skumkey);
+	             	    if(findData) {
+	             	    	let newRow = Object.assign({} , addRowBtnData , addRowData , findData , addPasteData);
+	             	    	addRow = JSON.parse(JSON.stringify(newRow));
+	             	    }
+  					}else{ 
+  						let addPasteData = { 
+  	    						state   : true,
+				           	    warekey : $('#' + pageId + 'Warekey option:selected').val(),
+				           	    whnamlc : $('#' + pageId + 'Warekey option:selected').text(),
+				           	    rgitqty : '0',
+				           	    doccate : addRowData.doccate, 
+				           	    doctype : addRowData.doctype, 
+				           	    shppday : addRowBtnData.shppday   
+			           	   };
+  						let newRow = Object.assign({} , addRowBtnData , addNewRow , addPasteData);
+  						addRow = JSON.parse(JSON.stringify(newRow));
+  					}
+             	    grid.deleteRow({ rowIndx : addRow.pq_ri });
+  					grid.addRow({
+  						rowIndx : addRow.pq_ri ,
+  						newRow  : addRow ,
+  						checkEditable : false
+					});	
+				});
+  			}
+	 	});
+		
+	    wmo40Grid.open();
+	   
+	    
+	  //============================================================
+	  // Data init
+	  //============================================================
+	    async function wmo40GridDataInit(param){
+	    	await _commonInit();
+		    const initData = await wmo40Init();
+		   	dataList = await initData.item;
+		    const selectBoxColModel = param.filter((column) => column.filter).forEach((element, index) => {
+	    	   let keyName = element.dataIndx + list;
+	    	   let options = dataList[keyName].map(function(obj){
+                  let rObj = {};
+                  rObj[obj.combovl] = obj.combonm;
+                  return rObj;
+               });
+	    	   element.editor.options = options;
+		    });
+		    let grid = pq.grid('#' + pageId + 'Grid');
+	    	$('#'+ pageId + 'Spinner').removeClass('d-flex');
+	    	$('#'+ pageId + 'Bg').addClass('d-none');
+	    	$('#'+ pageId + 'Save').attr('disabled' , false);
+	    }
+	    
+	  //============================================================
+	  // 검색영역 init
+	  //============================================================
+	   async function wmo40Init(){
+	      const res = await fetchUtil('GET','/wm/outbound/' + pageId + '/init' , { warekey : $('#' + pageId + 'Warekey').val() });
+	      if(res.ok){
+	      	return res.json();
+	      }
+	      return;
+	   };
+	
+	  //============================================================
+	  // 부품(SKU) init - 현재 미사용 ( 2023.12.13기준 )
+	  //============================================================
+	  function wmo40SkuData(param){
+	      let skuParam = new Object();
+	      if(!param.ownerky){
+	    	  alert("[[#{wm.wmo40.ownerkyCheck}]]");
+	    	  return;
+	      }
+	      skuParam = { compkey : param.compkey , warekey : param.warekey };
+	      return callAjax('data' , 'GET' , '/md/common/unit/skuwc-outbound' , skuParam);
+	   }
+	   
+	   function wmo40Custkey(param){
+		   alert("[[#{wm.wmo40.custkeyCheck}]]")
+		   return;
+	   }
+	   
+	  //============================================================   
+	  // window key add row 이벤트
+	  //============================================================
+	   function wmo40AddRow(){
+	      addRowBtnData = { 
+	         state   : true,
+	         compkey : "[[${userattr.compkey}]]",
+	         warekey : $('#' + pageId + 'Warekey option:selected').val(),
+	         whnamlc : $('#' + pageId + 'Warekey option:selected').text(),
+	         doccate : '700', 
+	         doctype : '790', 
+	         rgitqty : '0' ,
+	         shppday : moment().format('YYYY-MM-DD')
+	      };
+	      
+	      if(dataList['custkeyList'].length == 1){
+	    	  addRowBtnData['custkey'] = dataList['custkeyList'][0].combovl
+	      }   
+	      
+	      let grid = pq.grid('#' + pageId + 'Grid');
+	      let rowIndx = grid.addRow({ rowData: addRowBtnData, checkEditable: false });
+	   }
+	   
+	  //============================================================   
+	  // window key delete row 이벤트
+	  //============================================================
+	   function wmo40DeleteRow(){
+	      const grid = pq.grid('#' + pageId + 'Grid');
+	      let checkList = grid.Checkbox('state').getCheckedNodes();
+	      if(checkList.length){
+	         let rows = [];
+	         for(let checkRow of checkList){
+	            rows.push({rowIndx : checkRow.pq_ri});
+	           }
+	           if (confirm("[[#{ms.rowDelete}]]")) {
+	              grid.deleteRow({ rowList: rows });
+	              grid.setSelection(null);
+	           }
+	      }else {
+	         alert("[[#{ms.choiceRowZero}]]");   //선택된 Row가 없습니다.
+	      }
+	   }
+	   
+	  //============================================================   
+	  // 부품 찾기
+	  //============================================================
+	   function findSkuData(rowData, param) {
+	 		findData = dataList['skumkeyList'].find((comboObj) => {
+	            return comboObj.ownerky === rowData.ownerky && comboObj.skumkey === param
+	        });
+	 		 
+	 		return findData;
+  		 }	
+	  
+	 	//============================================================   
+	 	// group by SKU or destkey
+		 //============================================================
+	    function getGroupByDataIndx(param , list){
+	    	let paramDataIndx = param.dataIndx === 'skumkey' ? 'ownerky' : 'custkey';
+	 		let targetDataIndx = param.dataIndx === 'skumkey' ? 'ownerky' : 'ptnrkey';
+	    	let returnData = list.filter((obj) => obj[targetDataIndx] === param.rowData[paramDataIndx]);
+	    	return returnData;
+	    }
+	});
+	</script>
+</div>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="fragments-mainContent"  >
+
+<script>
+$(function(){
+	//============================================================	 
+	//menu 헤더
+	//============================================================
+	var head = {
+			hwrap: false,
+            rowHt: 32,
+            rowBorders: false,
+            trackModel: { on: true },
+            toolbar: {
+                items: [
+                    {
+                        type: 'button', icon: 'ui-icon-plus', label: 'Add', listener: function () {
+                            var rowData = { compkey: "000" };
+                            var rowIndx = this.addRow({ rowData: rowData, checkEditable: true });
+                            this.goToPage({ rowIndx: rowIndx });
+                            this.editFirstCellInRow({ rowIndx: rowIndx });
+                        }
+                    },
+                    {
+                        type: 'button', icon: 'ui-icon-scissors', label: 'delete', listener: function () {
+                        	var grid = this, checkList = this.Checkbox('state').getCheckedNodes(), ch = [];
+                        	
+                        	for(i=0; i<checkList.length; i++){
+                    			if(checkList[i].rowkey == undefined){
+                    				ch = checkList.splice(i, 1);
+                    				grid.deleteRow({ rowIndx: ch[i].pq_ri });
+                    			}
+                    		}
+                        	
+                        	if(checkList.length > 0){
+                        		var data = { data : checkList };
+                        		grid.showLoading();
+                        		var aul = new AjaxUtil_Order("/sy/deleteHeaderMenu.do", data, "DELETE");
+                    	    	aul.setCallbackSuccess(function (data){
+                    	    		grid.hideLoading();
+                    	    		if(data.code == '200'){
+                    	    			$.each(checkList,function(index,item){
+                                			grid.deleteRow({ rowIndx: item.pq_ri });
+                                		});
+                    	    			alert("[[#{sy.syu2.deleteSuccess}]]");	//삭제 성공하였습니다.
+                    	    		}else{
+                    	    			alert(data.code + ":" + data.message);
+                    	    		}
+                    	    	});
+                    	    	aul.send();
+                        	}else if(checkList.length == 0 && ch.length == 0){
+                        		alert("[[#{sy.syu2.checkZero}]]");	//선택된 Row가 없습니다.
+                        	}
+                        }
+                    },
+                    { type: 'separator' },
+                    {
+                        type: 'button', icon: 'ui-icon-disk', label: 'Save Changes', cls: 'changes', listener: function () {
+                        	var headGrid = this
+                        	  , headCheck = headGrid.Checkbox('state').getCheckedNodes()	//선택한 리스트
+                        	  , headChang = headGrid.getChanges({ format: "byVal" });	//변경된 리스트
+                        	var itemGrid = pq.grid("#syu2_i_pqgrid")
+                        	  , itemCheck = itemGrid.Checkbox('state').getCheckedNodes()	//선택한 리스트
+                        	  , itemChang = itemGrid.getChanges({ format: "byVal" });	//변경된 리스트
+                        	
+                        	return;
+                        	if(headCheck.length > 0){
+                        		var data = { data : headCheck };
+   	                        	var aul = new AjaxUtil_Order("/sy/menuSave.do", data);
+                           	    aul.setCallbackSuccess(function(data){
+                           	    	
+                           	 		if(data.code == '200'){
+                           	 			for(i=0; i<checkList.length; i++){
+                           	 				var insert = [];
+                           	 				for(j=0; j<changes.addList.length; j++){
+                           	 					if(checkList[i].rowkey == undefined && changes.addList[j].rowkey == undefined &&
+                           	 					  	checkList[i].compkey == changes.addList[j].compkey && checkList[i].menukey == changes.addList[j].menukey && checkList[i].menuiky == changes.addList[j].menuiky ){
+                           	 						var rowdata = grid.getRowData({rowIndx: checkList[i].pq_ri});
+                   	 								rowdata.rowkey = checkList[i].compkey+checkList[i].menukey+checkList[i].menuiky;
+                   	 								grid.refreshRow({ rowIndx: checkList[i].pq_ri});
+                   	 								insert.push(changes.addList[j]);
+	                   	 						}
+                           	 				}
+                           	 				grid.commit({ type: 'add', row: insert });
+                           	 				
+                           	 				var update = [];
+                           	 				for(z=0; z<changes.updateList.length; z++){
+                           	 					if(checkList[i].rowkey != undefined && changes.updateList[z].rowkey != undefined &&
+                           	 						checkList[i].compkey == changes.updateList[z].compkey && checkList[i].menukey == changes.updateList[z].menukey && checkList[i].menuiky == changes.updateList[z].menuiky ){
+                           	 						update.push(changes.updateList[z]);
+                           	 					}
+                           	 				}
+                           	 				grid.commit({ type: 'update', rows: update });
+	                            		};
+                           	 		    alert("[[#{sy.syu2.saveSuccess}]]");	//저장 성공하였습니다.
+	                           	 	}else{
+	                           	 		alert(data.code + ":" + data.message);
+	                           	 	}
+                           	    });
+                           	    aul.send();
+                        	}else{
+                        		alert("[[#{sy.syu2.checkZero}]]");	//선택된 Row가 없습니다.
+                        	}
+                        }
+                    },
+                    {
+                        type: 'button', icon: 'ui-icon-cancel', label: 'Reject Changes', cls: 'changes', listener: function () {
+                            this.rollback();
+                            this.history({ method: 'resetUndo' });
+                        }
+                    }
+                ]
+            },
+            scrollModel: { autoFit: true },
+            swipeModel: { on: false },
+            editor: { select: true },
+            cellBeforeSave: function( event, ui ) {
+            	var dataIndx = ui.dataIndx, newVal = ui.newVal, exCnt = 0;
+            },
+            rowDblClick: function( event, ui ) {
+            	if(ui.rowData.rowkey){
+            		var grid = pq.grid("#syu2_i_pqgrid");
+            		var data = { compkey : ui.rowData.compkey, menukey : ui.rowData.menukey };
+            		grid.showLoading();
+            		var aul = new AjaxUtil_Order("/sy/selectItemMenu.do", data, "GET");
+            		aul.setCallbackSuccess(function (data){
+            			grid.hideLoading();
+            			if(data.code == '200'){
+            				if(data.itemList.length == 0){
+            					alert("[[#{md.mdo3.getDataZero}]]");	//데이터 조회 결과 0 건 입니다.
+            					return;
+            				}
+            				grid.option( "dataModel", { data: data.itemList, recIndx: "menuiky" } );
+            				grid.refreshDataAndView();
+            			}else{
+            				alert(data.code + ":" + data.message);
+            			}
+            		});
+            		aul.send();
+            	}else{
+            		var grid = pq.grid("#syu2_i_pqgrid");
+            		grid.option( "dataModel", { data: [], recIndx: "menuiky" } );
+            		grid.refreshDataAndView();
+            	}
+            },
+            title: "<b>Menu Header</b>",
+            history: function (evt, ui) {
+                var $tb = this.toolbar();
+            },
+            check: function( event, ui ) {
+            	if(ui.check){
+            		var grid = this, checkList = pq.grid("#syu2_h_pqgrid").Checkbox('state').getCheckedNodes();
+                	for(i=0; i<checkList.length; i++){
+                		if(checkList[i].pq_ri != ui.rowIndx){
+                			checkList[i].state = false;
+                			grid.refreshRow({ rowIndx: checkList[i].pq_ri});
+                		}
+        			}
+            	}
+            },
+            colModel: [
+            	{ title: "", maxWidth: 30, minWidth: 30, dataIndx: "state", align: "center", resizable: false,
+                    menuIcon: false,
+                    type: 'checkBoxSelection', cls: 'ui-state-default', sortable: false, editor: false,
+                    dataType: 'bool',
+                    cb: { all: false, header: false }
+                },
+                { title: "rowkey", width: 100, datatype: "string", dataIndx: "rowkey", hidden: true , editable: false },
+                { title: "[[#{sy.smnuhd.compkey}]]", width: 100, datatype: "string", dataIndx: "compkey", hidden: true , editable: false }, 
+    			{ title: "[[#{sy.smnuhd.menukey}]]", width: 100, datatype: "string", dataIndx: "menukey",
+                	render: function (ui) {                            
+            			if(ui.rowData.rowkey != undefined){
+            				ui.rowData.disabled = true;
+            			}else{
+            				ui.rowData.disabled = false;
+            			}
+                    },
+              		editable: function (ui) {
+             			if(ui.rowData){
+             				return !ui.rowData.disabled;
+             			}else{
+             				return false;
+             			}
+            		},
+            		validations: [
+                        { type: 'minLen', value: 1, msg: "Required" },
+                        { type: 'maxLen', value: 20, msg: "length should be <= 20" }
+                    ]
+    			}, 
+    			{ title: "[[#{sy.smnuhd.menunam}]]", width: 100, datatype: "string", dataIndx: "menunam"},
+    			{ title: "[[#{sy.smnuhd.credate}]]", width: 100, datatype: "date", format:"yy-mm-dd", dataIndx: "credate", editable: false},
+    			{ title: "[[#{sy.smnuhd.cretime}]]", width: 100, datatype: "string", dataIndx: "cretime", editable: false},
+    			{ title: "[[#{sy.smnuhd.creuser}]]", width: 100, datatype: "string", dataIndx: "creuser", editable: false},
+    			{ title: "[[#{sy.smnuhd.lmodate}]]", width: 100, datatype: "date", format:"yy-mm-dd", dataIndx: "lmodate", editable: false},
+    			{ title: "[[#{sy.smnuhd.lmotime}]]", width: 100, datatype: "string", dataIndx: "lmotime", editable: false},
+    			{ title: "[[#{sy.smnuhd.lmouser}]]", width: 100, datatype: "string", dataIndx: "lmouser", editable: false}
+            ],
+            postRenderInterval: -1, //call postRender synchronously.
+            pageModel: { type: "local", rPP: 10, strRpp: "{0}", strDisplay: "{0} to {1} of {2}" }, 
+            create: function (evt, ui) {
+            	this.widget().pqTooltip();
+            },
+            editModel: {
+                saveKey: $.ui.keyCode.ENTER,
+                keyUpDown: false,
+                clicksToEdit: 1
+            },
+            historyModel:{ checkEditable: true },
+            numberCell: { show: true }
+        };
+	
+	pq.grid("#syu2_h_pqgrid", head);
+	
+	//============================================================	 
+	//menu 아이템
+	//============================================================
+	var item = {
+			hwrap: false,
+            rowHt: 32,
+            trackModel: { on: true },
+            toolbar: {
+                items: [
+                    {
+                        type: 'button', icon: 'ui-icon-plus', label: 'Add', listener: function () {
+                            var rowData = { state: true };
+                            var rowIndx = this.addRow({ rowData: rowData, checkEditable: true });
+                            this.goToPage({ rowIndx: rowIndx });
+                            this.editFirstCellInRow({ rowIndx: rowIndx });
+                        }
+                    },
+                    {
+                        type: 'button', icon: 'ui-icon-scissors', label: 'delete', listener: function (ui) {
+                        	var grid = pq.grid("#syu2_i_pqgrid"),
+                        	    rows = grid.SelectRow().getSelection();
+                        	
+                        	setTimeout(function () {
+                            	var ans = window.confirm("[[#{sy.syu2.allDelete}]]");	//행을 모두 삭제하시겠습니까?
+                                if (ans) {	
+                                	grid.deleteRow({ rowList: rows });
+                                }
+                            })
+                        }
+                    },
+                    {
+                        type: 'button', icon: 'ui-icon-cancel', label: 'Reject Changes', cls: 'changes', listener: function () {
+                            this.rollback();
+                            this.history({ method: 'resetUndo' });
+                        }
+                    }
+                ]
+            },
+            scrollModel: { autoFit: false },
+            cellBeforeSave: function( event, ui ) {
+            	var dataIndx = ui.dataIndx, newVal = ui.newVal, exCnt = 0;
+            },
+            title: "<b>Menu Item</b>",
+            history: function (evt, ui) {
+                var $tb = this.toolbar();
+            },
+            selectionModel: {
+            	type: 'row', mode: 'block'
+            },
+            colModel: [
+            	{ title: "[[#{sy.smnuit.menuiky}]]", width: 100, datatype: "string", dataIndx: "menuiky",
+    				render: function (ui) {                            
+            			if(ui.rowData.rowkey != undefined){
+            				ui.rowData.disabled = true;
+            			}else{
+            				ui.rowData.disabled = false;
+            			}
+                    },
+              		editable: function (ui) {
+             			if(ui.rowData){
+             				return !ui.rowData.disabled;
+             			}else{
+             				return false;
+             			}
+            		},
+    				validations: [
+                        { type: 'minLen', value: 1, msg: "Required" },
+                        { type: 'maxLen', value: 10, msg: "length should be <= 10" }
+                    ]	
+    			}, 
+    			{ title: "[[#{sy.smnuit.menugbn}]]", width: 100, datatype: "string", dataIndx: "menugbn", editable: false, hidden: true },
+    			{ title: "[[#{sy.smnuit.menugbn}]]", width: 100, datatype: "string", dataIndx: "menugbntext",
+    				editor: {
+    		            type: 'select',
+    		            init: function (ui) {
+    		                ui.$cell.find("select").pqSelect();
+    		                setTimeout(function () { ui.$cell.find("select").pqSelect('open'); })},
+    		            valueIndx: "comcdvl",
+    		            labelIndx: "comcdtx",
+    		            options: [],
+    		            mapIndices: { "comcdtx": "menugbntext", "comcdvl": "menugbn" }
+    		        },
+    		        validations: [{ type: 'minLen', value: 1, msg: "Required"}]
+    			}, 
+    			{ title: "[[#{sy.smnuit.progrid}]]", width: 100, datatype: "string", dataIndx: "progrid"}, 
+    			{ title: "[[#{sy.smnuit.menulky}]]", width: 200, datatype: "string", dataIndx: "menulky"}, 
+    			{ title: "[[#{sy.smnuit.menulvl}]]", width: 100, datatype: "integer", dataIndx:"menulvl"}, 
+    			{ title: "[[#{sy.smnuit.menunam}]]", width: 300, datatype: "string", dataIndx: "menunam"}, 
+    			{ title: "[[#{sy.smnuit.menuord}]]", width: 100, datatype: "string", dataIndx: "menuord"}, 
+    			{ title: "[[#{sy.smnuit.menuico}]]", width: 100, datatype: "string", dataIndx: "menuico"},
+    			{ title: "[[#{sy.smnuit.opentyp}]]", width: 100, datatype: "string", dataIndx: "opentyp", editable: false, hidden: true},
+    			{ title: "[[#{sy.smnuit.opentyp}]]", width: 100, datatype: "string", dataIndx: "opentyptext",
+    				editor: {
+    		            type: 'select',
+    		            init: function (ui) {
+    		                ui.$cell.find("select").pqSelect();
+    		                setTimeout(function () { ui.$cell.find("select").pqSelect('open'); })},
+    		            valueIndx: "comcdvl",
+    		            labelIndx: "comcdtx",
+    		            options: [],
+    		            mapIndices: { "comcdtx": "opentyptext", "comcdvl": "opentyp" }
+    		        },
+    		        validations: [{ type: 'minLen', value: 1, msg: "Required"}]
+    			},
+    			{ title: "[[#{sy.smnuit.credate}]]", width: 100, datatype: "date", format:"yy-mm-dd", dataIndx: "credate", editable: false},
+    			{ title: "[[#{sy.smnuit.cretime}]]", width: 100, datatype: "string", dataIndx: "cretime", editable: false},
+    			{ title: "[[#{sy.smnuit.creuser}]]", width: 100, datatype: "string", dataIndx: "creuser", editable: false},
+    			{ title: "[[#{sy.smnuit.lmodate}]]", width: 100, datatype: "date", format:"yy-mm-dd", dataIndx: "lmodate", editable: false},
+    			{ title: "[[#{sy.smnuit.lmotime}]]", width: 100, datatype: "string", dataIndx: "lmotime", editable: false},
+    			{ title: "[[#{sy.smnuit.lmouser}]]", width: 100, datatype: "string", dataIndx: "lmouser", editable: false}
+            ],
+            postRenderInterval: -1, //call postRender synchronously.
+            pageModel: { type: "local", rPP: 100, strRpp: "{0}", strDisplay: "{0} to {1} of {2}" }, 
+            create: function (evt, ui) {
+            	this.widget().pqTooltip();
+            	
+            	//getSelectCode();
+            	var grid = this, column;
+            	$.getJSON("/md/mdc7code.do", {comcdky: "MENUGBN"}, function (response) {
+                    column = grid.getColumn({ dataIndx: 'menugbntext' });
+                    response.item.unshift({comcdvl:'',comcdtx:''});
+                    column.editor.options = response.item;
+                });
+            	
+            	$.getJSON("/md/mdc7code.do", {comcdky: "OPENTYP"}, function (response) {
+                    column = grid.getColumn({ dataIndx: 'opentyptext' });
+                    response.item.unshift({comcdvl:'',comcdtx:''});
+                    column.editor.options = response.item;
+                });
+            },
+            editModel: {
+                saveKey: $.ui.keyCode.ENTER,
+                keyUpDown: false,
+                clicksToEdit: 2
+            },
+            historyModel:{ checkEditable: true },
+            numberCell: { show: true }
+        };
+	
+	pq.grid("#syu2_i_pqgrid", item);
+	
+});
+//============================================================	
+//검색 버튼 이벤트
+//============================================================	
+function syu2_search(){
+	var grid = pq.grid("#syu2_h_pqgrid");
+	var data = { menukey : $('#syu2_menukey').val(), menunam : $('#syu2_menunam').val() };
+	grid.showLoading();
+	var aul = new AjaxUtil_Order("/sy/selectHeaderMenu.do", data, "GET");
+	aul.setCallbackSuccess(function (data){
+		grid.hideLoading();
+		if(data.code == '200'){
+			if(data.headerList.length == 0){
+				alert("[[#{md.mdo3.getDataZero}]]");	//데이터 조회 결과 0 건 입니다.
+				return;
+			}
+			grid.option( "dataModel", { data: data.headerList, recIndx: "rowkey" } );
+			grid.refreshDataAndView();
+		}else{
+			alert(data.code + ":" + data.message);
+		}
+	});
+	aul.send();
+}
+
+</script>
+		 
+	<div class="row">
+		<div class="col">
+    		<a class="navbar-brand">Menu Info</a>
+  		</div>
+  	</div>
+  	<div class="form-group">
+		<div class="col">
+			<label for="title" class="control-label" th:text="${#messages.msg('sy.smnuhd.menukey')}"></label>
+			<input type="text" placeholder="Menu Key" id="syu2_menukey"/>
+			
+			<label for="title" class="control-label" th:text="${#messages.msg('sy.smnuhd.menunam')}"></label>
+			<input type="text" placeholder="메뉴설명" id="syu2_menunam"/>
+  		</div>
+	</div>
+	<div class="col">
+		<button id="syu2_btnSearch"  onclick="syu2_search();" Method="GET" class="btn btn-outline-success" th:text="${#messages.msg('md.mdo3.searchBtn')}"></button>
+		<button id="syu2_btnSearch2" onclick="syu2_search();" Method="GET" class="btn btn-outline-success" th:text="${#messages.msg('md.mdo3.searchBtn')}"></button>
+	</div>
+	<div class="container-fluid pb-3">
+		<div class="d-grid gap-3" style="grid-template-columns: 3fr;font-size:12px;height:100%;">
+			<div class="bg-light border rounded-3">
+				<div id="syu2_h_pqgrid" ></div>
+			</div>
+		</div>
+		<div class="d-grid gap-3" style="grid-template-columns: 2fr 1fr;font-size:12px;height:100%;">
+		  	<div class="bg-light border rounded-3">
+		    	<div id="syu2_i_pqgrid"></div>
+		  	</div>
+		</div>
+	</div>
+	 
+<script>
+	getRoleElements("[[${param.progrid}]]","");
+</script>	
+	 
+</div>
+</html>
+		 

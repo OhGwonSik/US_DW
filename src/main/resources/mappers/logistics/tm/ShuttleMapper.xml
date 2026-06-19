@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.tm.mapper.ShuttleMapper">
+	<select id="getTmp1ListCount" resultType="int">
+		select
+			count(1) as datacnt
+		from TVHCPL P
+		 inner join MSHRHD M on M.COMPKEY = P.COMPKEY and M.SHTRTKY = P.SHTRTKY
+		 where P.COMPKEY = #{compkey}
+		   and P.VEHICKY = #{vehicky}
+		   and P.SHTRTKY = #{shtrtky}
+		   and P.DOCCATE = '800'
+		   and P.DOCTYPE = '830'
+		   and P.SHTRSTS != 'CMP'
+ 		 <!-- group by P.VHPLNKY, P.VEHICKY, P.SHTRTKY, M.SHTRTNM -->
+		 order by P.VHPLNKY desc
+	</select>
+
+
+	<select id="getTmp1HeaderList" resultType="hashMap">
+		select P.VHPLNKY as vhplnky, P.VEHICKY as vehicky , P.SHTRTKY as shtrtky , M.SHTRTNM as shtrtnm
+		     , date_format(min(P.VHPDATE) , '%Y-%m-%d') as vhpdate
+		     , date_format(min(P.VHPTIME) , '%H:%i:%s') as vhptime
+		     , fn_sy_usernam(P.COMPKEY , min(P.CREUSER))	as creuser
+		  from TVHCPL P
+		 inner join MSHRHD M on M.COMPKEY = P.COMPKEY and M.SHTRTKY = P.SHTRTKY
+		 where P.COMPKEY = #{compkey}
+		   and P.DOCCATE = '800'
+		   and P.DOCTYPE = '830'
+		   and P.VHPLNKY =  #{vhplnky}
+		 group by P.VHPLNKY, P.VEHICKY, P.SHTRTKY, M.SHTRTNM
+	</select>
+
+
+	<select id="getTmp1ListWithVhplnky" resultType="string">
+		select P.VHPLNKY as vhplnky
+		from TVHCPL P
+		where P.COMPKEY = #{compkey}
+		  and P.SHTRTKY = #{shtrtky}
+		  and P.VEHICKY = #{vehicky}
+		  and P.SHTRSTS != 'CMP'
+		group by P.VHPLNKY
+	</select>
+
+
+	<select id="getTmp1ItemList" resultType="hashMap">
+		select P.COMPKEY as compkey , P.VHPLNKY as vhplnky , P.VHPLNIT as vhplnit
+			 , P.DOCCATE as doccate , P.DOCTYPE as doctype
+			 , P.SHTRSTS as shtrsts , P.VEHICKY as vehicky
+			 , P.SHTRTKY as shtrtky , P.SHTRTIT as shtrtit
+			 , M.CUSTKEY as custkey , M.CUNAMLC as cunamlc
+			 , T.SHTRPTY as shtrpty , (select COMCDTX from V_MCODEM C where C.COMPKEY = #{compkey} and C.COMCDKY='SHTRPTY' and COMCDVL=T.SHTRPTY)	 as shtrpnm
+			 , if(P.REPITDT = "", P.REPITDT , date_format(P.REPITDT, '%Y-%m-%d')) as repitdt
+			 , concat(SUBSTR(P.REPITTM,1,2), ':' , SUBSTR(P.REPITTM,3,2) , ':', SUBSTR(P.REPITTM,4,2)) as repittm
+			 , P.RSNCODE as rsncode , P.RSNREMK as rsnremk
+			 , P.VHPLNKY as vhplnky
+		  from TVHCPL P
+		 inner join MSHRIT T on T.COMPKEY = P.COMPKEY and T.SHTRTKY = P.SHTRTKY and T.SHTRTIT = P.SHTRTIT
+		 inner join MCUSMA M on M.COMPKEY = T.COMPKEY and M.CUSTKEY = T.CUSTKEY
+		 where P.COMPKEY = #{compkey}
+		   and P.VHPLNKY = #{vhplnky}
+		 order by P.SHTRTIT , P.SHTRTKY
+	</select>
+
+
+
+	<select id="getTmp1HeaderListWithVhplnky" resultType="string">
+		select fn_tm_vhplnky() from dual
+<!-- 		select CONCAT( '8' , LPAD(NEXTVAL(MAX(VHPLNKY)),9,'0')) from TVHCPL -->
+	</select>
+
+
+	<select id="getVehicky" resultType="string">
+		select VHCFNAM
+		  from MVHCMA
+		 where COMPKEY = #{compkey}
+		   and VEHICKY = #{vehicky}
+	</select>
+
+
+	<insert id="getTmp1SaveList" parameterType="hashMap">
+		insert into TVHCPL
+			(   COMPKEY, VHPLNKY, VHPLNIT
+			  , VHPDATE, VHPTIME
+			  , DOCCATE, DOCTYPE
+			  , SHTRSTS, VEHICKY
+			  , SHTRTKY, SHTRTIT
+			  , REPITDT, REPITTM, RSNCODE, RSNREMK
+			  , CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER
+			)
+		select T.COMPKEY as compkey , #{vhplnky} as vhplnky , ROW_NUMBER() OVER( ORDER by SHTRTKY,  SHTRTIT asc ) as vhplnit
+		     , to_char(now(), 'YYYYMMDD') as credate, to_char(now(), 'hh24miss') as cretime
+			 , '800' as doccate , '830' as doctype
+		 	 , 'NEW'			, #{vehicky} as	vhcfnam
+		 	 , T.SHTRTKY as shtrtky , T.SHTRTIT as shtrtit
+			 , ' ' as repitdt, ' ' as repittm , ' ' as rsncode, ' ' as rsnremk
+		     , to_char(now(), 'YYYYMMDD') as credate, to_char(now(), 'hh24miss') as cretime, #{creuser} as creuser
+			 , to_char(now(), 'YYYYMMDD') as lmodate, to_char(now(), 'hh24miss') as lmotime, #{lmouser} as lmouser
+		  from MSHRIT T
+		 where T.COMPKEY = #{compkey}
+		   and T.SHTRTKY = #{shtrtky}
+		 order by T.SHTRTKY, T.SHTRTIT
+	</insert>
+
+	<update id="updateShtrsts" parameterType="hashMap">
+		update TVHCPL
+		   set SHTRSTS = 'CMP'
+		     , LMODATE = TO_CHAR(NOW(), 'YYYYMMDD')
+		     , LMOTIME = TO_CHAR(NOW(), 'hh24miss')
+		     , LMOUSER = #{lmouser}
+		 where 1=1
+		   and COMPKEY = #{compkey}
+		   and VHPLNKY = #{vhplnky}
+	</update>
+
+
+	<select id="getCmpCount" resultType="com.logistics.tm.domain.TvhcplVO">
+	 select count(1) as cntdata
+	      , sum(case when T.SHTRSTS = 'NEW' then 1 else 0 end) as cntsnew
+	      , sum(case when T.SHTRSTS = 'ING' then 1 else 0 end) as cntsing
+	      , sum(case when T.SHTRSTS = 'CMP' then 1 else 0 end) as cntscmp
+	   from TVHCPL T
+	  where T.COMPKEY = #{compkey}
+	    and T.VHPLNKY = #{vhplnky}
+	</select>
+
+	<select id="selectDestList" resultType="com.logistics.md.domain.MdesmaDTO">
+		SELECT DESTKEY, DENAMLC FROM MDESMA DES
+		WHERE DES.COMPKEY = #{userInfo.compkey}
+
+	</select>
+
+
+	<update id="updateShipTranPl" parameterType="hashMap">
+		update TVHCPL
+		 set SHTRSTS = 'ING'
+		  ,  RSNCODE = #{rsncode}
+		  ,  RSNREMK = #{rsnremk}
+		  ,  REPITDT = TO_CHAR(NOW(), 'YYYYMMDD')
+		  ,  REPITTM = TO_CHAR(NOW(), 'hh24miss')
+		  ,  LMODATE = TO_CHAR(NOW(), 'YYYYMMDD')
+		  ,  LMOTIME = TO_CHAR(NOW(), 'hh24miss')
+		  ,  LMOUSER = #{lmouser}
+		 where 1=1
+		  and COMPKEY = #{compkey}
+		  and VHPLNKY = #{vhplnky}
+		  and VHPLNIT = #{vhplnit}
+	</update>
+
+
+	<select id="getTransRound" resultType="hashMap">
+		 select
+		 	date_format(P.VHPDATE ,'%Y-%m-%d') as vhpdate , concat(SUBSTR(P.VHPTIME,1,2), ':' , SUBSTR(P.VHPTIME,3,2) , ':', SUBSTR(P.VHPTIME,4,2)) as vhptime , P.VEHICKY as vehicky ,
+		 	P.VHPLNKY, ifnull(T.LABRLTX,'') as labrltx, ifnull(T.DABONYN,'N') as dabonyn,
+		 	group_concat(case P.VHPLNIT when 1 then M.CUSTKEY end) as pos01ct ,
+		 	group_concat(case P.VHPLNIT when 2 then M.CUSTKEY end) as pos02ct ,
+		 	group_concat(case P.VHPLNIT when 3 then M.CUSTKEY end) as pos03ct ,
+		 	group_concat(case P.VHPLNIT when 4 then M.CUSTKEY end) as pos04ct ,
+		 	group_concat(case P.VHPLNIT when 5 then M.CUSTKEY end) as pos05ct ,
+		 	group_concat(case P.VHPLNIT when 6 then M.CUSTKEY end) as pos06ct ,
+		 	group_concat(case P.VHPLNIT when 7 then M.CUSTKEY end) as pos07ct ,
+		 	group_concat(case P.VHPLNIT when 8 then M.CUSTKEY end) as pos08ct ,
+		 	group_concat(case P.VHPLNIT when 1 then P.SHTRSTS end) as pos01st ,
+		 	group_concat(case P.VHPLNIT when 2 then P.SHTRSTS end) as pos02st ,
+		 	group_concat(case P.VHPLNIT when 3 then P.SHTRSTS end) as pos03st ,
+		 	group_concat(case P.VHPLNIT when 4 then P.SHTRSTS end) as pos04st ,
+		 	group_concat(case P.VHPLNIT when 5 then P.SHTRSTS end) as pos05st ,
+		 	group_concat(case P.VHPLNIT when 6 then P.SHTRSTS end) as pos06st ,
+		 	group_concat(case P.VHPLNIT when 7 then P.SHTRSTS end) as pos07st ,
+		 	group_concat(case P.VHPLNIT when 8 then P.SHTRSTS end) as pos08st ,
+		 	group_concat(case P.VHPLNIT when 1 then H.CUNAMLC end) as pos01nm ,
+		 	group_concat(case P.VHPLNIT when 2 then H.CUNAMLC end) as pos02nm ,
+		 	group_concat(case P.VHPLNIT when 3 then H.CUNAMLC end) as pos03nm ,
+		 	group_concat(case P.VHPLNIT when 4 then H.CUNAMLC end) as pos04nm ,
+		 	group_concat(case P.VHPLNIT when 5 then H.CUNAMLC end) as pos05nm ,
+		 	group_concat(case P.VHPLNIT when 6 then H.CUNAMLC end) as pos06nm ,
+		 	group_concat(case P.VHPLNIT when 7 then H.CUNAMLC end) as pos07nm ,
+		 	group_concat(case P.VHPLNIT when 8 then H.CUNAMLC end) as pos08nm ,
+		 	group_concat(case P.VHPLNIT when 1 then C.COMCDTX end) as pos01ty ,
+		 	group_concat(case P.VHPLNIT when 2 then C.COMCDTX end) as pos02ty ,
+		 	group_concat(case P.VHPLNIT when 3 then C.COMCDTX end) as pos03ty ,
+		 	group_concat(case P.VHPLNIT when 4 then C.COMCDTX end) as pos04ty ,
+		 	group_concat(case P.VHPLNIT when 5 then C.COMCDTX end) as pos05ty ,
+		 	group_concat(case P.VHPLNIT when 6 then C.COMCDTX end) as pos06ty ,
+		 	group_concat(case P.VHPLNIT when 7 then C.COMCDTX end) as pos07ty ,
+		 	group_concat(case P.VHPLNIT when 8 then C.COMCDTX end) as pos08ty ,
+		 	count(1) as coldcnt ,
+		 	(select COMCDTX from V_MCODEM c where C.COMPKEY = #{userInfo.compkey}   and C.COMCDKY='SHTRPTY' and COMCDVL=M.SHTRPTY) as shtrpnm
+		   from TVHCPL P
+		  inner join MSHRIT M on M.COMPKEY = P.COMPKEY and M.SHTRTKY = P.SHTRTKY and M.SHTRTIT = P.SHTRTIT
+		  inner join MCUSMA H on H.COMPKEY = M.COMPKEY and H.CUSTKEY = M.CUSTKEY
+		  inner join V_MCODEM C on C.COMPKEY = M.COMPKEY and C.COMCDKY = 'SHTRPTY' and C.COMCDVL = M.SHTRPTY
+           left join (
+                        select A.COMPKEY, A.VHPLNKY
+                             , GROUP_CONCAT(A.LABRLTX) as LABRLTX
+                             , A.DABONYN
+                          from (
+                        select WL.COMPKEY, WL.VHPLNKY
+                             , concat(' ', WL.CUNAMLC , ' ' , count(1), ' ' ) as LABRLTX
+                             , (case when count(1) > 0 then 'Y' else 'N' end) as DABONYN
+                          from WSLBMA WL
+                         where WL.COMPKEY = #{userInfo.compkey}
+                           and WL.CUSTKEY in (
+                           <choose>
+                           	<when test='userInfo.userTyp != null and userInfo.userTyp.equals("CUSTOMER")'>
+		                      select CUSTKEY from SUSRMA SU where SU.COMPKEY = #{userInfo.compkey} and SU.USERACT = #{userInfo.useract}
+                           	</when>
+                           	<when test='userInfo.userTyp != null and userInfo.userTyp.equals("OWNER")'>
+		                      select CUSTKEY
+		                        from MCUSMA M
+		                       where M.COMPKEY = #{userInfo.compkey}
+		                         and M.OWNERKY in (select OWNERKY from SUSRMA SU where SU.COMPKEY = #{userInfo.compkey} and SU.USERACT =  #{userInfo.useract})
+		                         and M.CUSTTYP = 'WHOLESALE'
+                           	</when>
+                           	<otherwise>
+		                      select CUSTKEY
+		                        from MCUSMA M
+		                       where M.COMPKEY = #{userInfo.compkey}
+		                         and M.CUSTTYP = 'WHOLESALE'
+                           	</otherwise>
+                           </choose>
+                             )
+                         group by WL.COMPKEY, WL.VHPLNKY, WL.CUNAMLC
+                        ) A
+                    where 1=1
+                    group by A.COMPKEY, A.VHPLNKY
+              ) T on T.COMPKEY = P.COMPKEY and T.VHPLNKY = P.VHPLNKY
+		  where P.COMPKEY = #{userInfo.compkey}
+ 		   <if test="vhpStrDate != null and vhpStrDate != '' and vhpEndDate != null and vhpEndDate != ''">
+ 		   	and P.VHPDATE between replace(#{vhpStrDate}, '-' , '') and replace(#{vhpEndDate}, '-' , '')
+ 		   </if>
+		   <if test="vehicky != null and vehicky != ''">
+		   	and P.VEHICKY = #{vehicky}
+		   </if>
+		   <if test="shtrtnm != null and shtrtnm != ''">
+		   	and M.SHTRTKY = #{shtrtnm}
+		   </if>
+		  group by P.VHPDATE , P.VHPTIME , P.VEHICKY
+		  order by P.VHPDATE desc , P.VHPTIME desc , P.VEHICKY
+	</select>
+
+
+  <!-- customer list for Select box -->
+  <!-- <select id="selectCustomerList" resultType="HashMap">
+    SELECT * from MCUSMA
+			/* MCUSMA_bakdel */
+    WHERE 1=1
+			AND COMPKEY = #{compkey}
+
+  </select> -->
+</mapper>

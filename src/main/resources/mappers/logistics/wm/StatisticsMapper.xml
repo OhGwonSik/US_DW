@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.StatisticsMapper">
+	<!-- *********************************************** -->
+	<!-- wms10 : 조회 -->
+	<select id="selectReasonCodeStatisticsList" resultType="com.logistics.wm.domain.StatisticsDTO">
+		/* selectReasonCodeStatisticsList */
+		select concat(ST.COMPKEY, ST.WAREKEY, ST.DOCCATE, ST.DOCTYPE, ST.RSNCODE ) as ROWKEY
+		, ST.COMPKEY, ST.WAREKEY, ST.WTABLES, ST.DOCCATE, ST.DOCTYPE, ST.RSNCODE
+		, ST.RSCOUNT, ST.CRMONTH, DA.DOCCTNM, DA.DOCTYNM, RA.RSNCDNM
+		from
+		(
+		-- 발주 ASN
+			select
+			'발주' as WTABLES
+			, COMPKEY, WAREKEY, DOCCATE, DOCTYPE, RSNCODE,
+			count(1) as RSCOUNT, substring(CREDATE, 1, 6) as CRMONTH
+			-- RSNCODE 입고예정 사유코드
+			from	WASNIF
+			where trim(RSNCODE) != ''
+			group by COMPKEY, WAREKEY, DOCCATE, DOCTYPE, RSNCODE, SUBSTRING(CREDATE, 1, 6)
+		-- 입하
+		union all
+			select
+			'입하' as WTABLES, COMPKEY, WAREKEY, DOCCATE, DOCTYPE, RCARSCD as RSNCODE, COUNT(1) as RSCOUNT,
+			substring(CREDATE, 1, 6) as CRMONTH
+			-- RCARSCD 입하 취소 사유코드
+			from 	WRCVIT
+			where trim(RCARSCD) != ''
+			group by COMPKEY, WAREKEY, DOCCATE, DOCTYPE, RCARSCD, substring(CREDATE, 1, 6)
+		-- 출고
+		union all
+			select
+			'출고' as WTABLES, COMPKEY, WAREKEY,	DOCCATE,	DOCTYPE,	SHPRSCD as RSNCODE, count(1) as RSCOUNT,	substring(CREDATE, 1, 6) as CRMONTH
+		-- SHPRSCD 출고사유 코드
+			from 	WSHPIT
+			where trim(SHPRSCD) != ''
+			group by COMPKEY, WAREKEY, DOCCATE, DOCTYPE, SHPRSCD, substring(CREDATE, 1, 6)
+		-- 작업
+		union all
+			select
+			'작업' as WTABLES, COMPKEY, WAREKEY, DOCCATE, DOCTYPE, PARSNCD as RSNCODE, count(1) as RSCOUNT, substring(CREDATE, 1, 6) as CRMONTH
+		-- PARSNCD 작업 사유 코드
+			from WTAKIT
+			where trim(PARSNCD) != ''
+			group by COMPKEY, WAREKEY, DOCCATE, DOCTYPE, PARSNCD, substring(CREDATE, 1, 6)
+		union all
+			select
+		'작업취소' AS WTABLES, COMPKEY, WAREKEY, DOCCATE, DOCTYPE, PKRSNCD as RSNCODE, count(1) as RSCOUNT, substring(CREDATE, 1, 6) as CRMONTH
+		-- PKRSNCD 작업취소 사유 코드
+			from WTAKIT
+			where trim(PKRSNCD) != ''
+			group by COMPKEY, WAREKEY, DOCCATE, DOCTYPE, PKRSNCD, substring(CREDATE, 1, 6)
+		) as ST
+		inner join MDOCMA DA
+		on(
+				ST.COMPKEY = DA.COMPKEY
+				and ST.WAREKEY = DA.WAREKEY
+				and ST.DOCCATE = DA.DOCCATE
+				and ST.DOCTYPE = DA.DOCTYPE
+				and DA.DOUSEYN = 'Y'
+			)
+		inner join MRSCMA RA
+		on(
+				ST.COMPKEY = RA.COMPKEY
+				and ST.WAREKEY = RA.WAREKEY
+				and ST.DOCCATE = RA.DOCCATE
+				and ST.DOCTYPE = RA.DOCTYPE
+				and ST.RSNCODE = RA.RSNCODE
+				and RA.RSUSEYN = 'Y'
+		)
+		where
+		ST.COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey!="" '>
+			and ST.WAREKEY = #{warekey}
+		</if>
+		<if test='doccate != null and doccate !="" '>
+			and ST.DOCCATE = #{doccate}
+		</if>
+		<if test='doctype != null and doctype !="" '>
+			and ST.DOCTYPE = #{doctype}
+		</if>
+		<if test='rsncode != null and rsncode !="" '>
+			and ST.RSNCODE = #{rsncode}
+		</if>
+		<if test='crMonthFrom != null and crMonthFrom !=""'>
+			and DATE_FORMAT(STR_TO_DATE(ST.CRMONTH, '%Y%m'), '%Y-%m') <![CDATA[>=]]>
+			#{crMonthFrom}
+		</if>
+		<if test='crMonthTo != null and crMonthTo !=""'>
+			and DATE_FORMAT(STR_TO_DATE(ST.CRMONTH, '%Y%m'), '%Y-%m') <![CDATA[<=]]>
+			#{crMonthTo}
+		</if>
+		order by ST.WTABLES, ST.DOCCATE, ST.DOCTYPE, ST.CRMONTH, ST.RSNCODE asc
+	</select>
+</mapper>

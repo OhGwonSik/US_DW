@@ -1,0 +1,463 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="wmr21_warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr21_warekey"></select>
+					</div>
+				</div>
+				<label for="wmr21_ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr21_ownerky">
+							<option value="" selected>[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wmr21_doctype" class="setting-grid-title">[[#{wm.wrcvit.doctype}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr21_doctype">
+							<option value="" selected>[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wrcvit.rcvdcdt}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmr21_rcvdcdt_from" onkeyup="setInputDateDel(this)"/>
+						<span>~</span>
+						<input type="date" max="2999-12-31" id="wmr21_rcvdcdt_to"   onkeyup="setInputDateDel(this)"/>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wrcvit.pmtinyn}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group single-row">
+						<div class="check-box">
+							<input type="checkbox" id="wmr21_pmtinyn">
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="wmr21_search" onclick="wmr21Search()"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="wmr21_reset" onclick="wmr21Refresh()"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button type="button" class="btn-clear btn-white" id="wmr21_cancel"><img class="ic-bt-delete">[[#{bt.cancel}]]</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmr21_grid"></div>
+			</div>
+		</div>
+	</div>
+	
+<script>
+$(function(){
+	/*  wmr21 - 입하취소처리
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 최강호 
+	*   설명			: 입하등록된 재고의 입하를취소하는 페이지
+	*   수정 내역		:
+	*   수정일시		:
+	*	수정자		: 
+	*	변경 사항		: 
+	*/
+	
+	let wmr21InitData = wmr21Init();
+	
+	//사유코드 가져옴
+	wmr21Reason();
+	
+	$("#wmr21_cancel").click(async function () {
+		let grid = pq.grid("#wmr21_grid")
+		//let gridCheck = grid.Checkbox('state').getCheckedNodes();
+		let gridCheck = grid.getChanges({all: true});
+			gridCheck.updateList = gridCheck.updateList.filter(function(item){
+				return item.state === true;
+			});//state가 true인 값만 가져오기
+		
+			if(gridCheck.updateList.length > 0){
+			//============================================================	 
+	    	//체크된 데이터 값 체크
+	    	//============================================================
+			for(i=0;i<gridCheck.updateList.length;i++){
+				let gridRcarscd = wmr21ReasonList.find(obj => obj['warekey'] === gridCheck.updateList[i].warekey
+						&& obj['doccate'] === gridCheck.updateList[i].doccate 
+						&& obj['doctype'] === gridCheck.updateList[i].doctype
+						&& obj['combovl'] === gridCheck.updateList[i].rcarscd);
+				
+				if(!gridCheck.updateList[i].rcarscd 
+					|| !gridRcarscd ){
+					alert("[[#{wm.wrcvit.rcarscd}]]" + "[[#{ms.choiceValue}]]");	//입고취소 사유코드를/을 선택해주세요.
+					grid.setSelection( {rowIndx: gridCheck.updateList[i].pq_ri, dataIndx: 'rcarscd'} );
+					return false;
+				}
+			}
+			
+			let result = confirm("[[#{ms.checkCancel}]]");
+			if(result == true){
+				let data = gridCheck;
+				grid.showLoading();
+				try{
+					let response = await fetchUtil('POST', "/wm/inbound/wmr21/grids/1", data);
+					if(response.status === 200){
+						//alert("[[#{ms.saveSuccess}]]");
+						grid.hideLoading();
+						wmr21Search();
+					}
+				} catch(err){
+					console.log(err);
+				} finally{
+					grid.hideLoading();
+				}
+			}
+		}else{
+			alert("[[#{ms.choiceRowZero}]]");
+		}
+	});
+	
+	let wmr21GridCM = [
+		{ title: "", dataType: 'bool', dataIndx: "state", maxWidth: 30, minWidth: 30,
+            type: 'checkbox', sortable: false, editor: false,
+            cb: { all: false, header: true },
+            editable: function (ui) {
+				return editable = (ui.rowData.pmtinyn === 'N') ? true : false;
+			}
+     	},
+     	{ title: "rowkey", dataType: "string", dataIndx: "rowkey", editable: false, hidden: true },
+		{ title: "[[#{wm.wrcvit.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false, hidden: true },	//Company Key
+		{ title: "[[#{wm.wrcvit.rcvdcky}]]", dataType: "string",  dataIndx: "rcvdcky", editable: false },	//입고문서 번호
+		{ title: "[[#{wm.wrcvit.rcvdcit}]]", dataType: "integer", dataIndx: "rcvdcit", editable: false },	//입고문서 아이템
+		{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx: "warekey", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//창고
+		{ title: "[[#{wm.wrcvit.doccate}]]", dataType: "string",  dataIndx: "doccate", editable: false, hidden: true },	//문서유형
+		{ title: "[[#{wm.wrcvit.doctype}]]", dataType: "string",  dataIndx: "doctype", editable: false, hidden: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//문서타입
+		{ title: "[[#{wm.wrcvit.rcvdcst}]]", dataType: "string",  dataIndx: "rcvdcst", editable: false,		//입고문서 상태
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	
+		{ title: "[[#{wm.wrcvit.rcvitst}]]", dataType: "string",  dataIndx: "rcvitst", editable: false, hidden: true },		//입고문서 아이템 상태	
+		{ title: "[[#{wm.wrcvit.lotnmky}]]", dataType: "string",  dataIndx: "lotnmky", editable: false },	//LOT NUMBER
+		{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx: "ownerky", editable: false, 	//화주
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},
+		{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx: "skumkey", editable: false, hidden: false },	//부품
+		{ title: "[[#{grid.skunm}]]", dataType: "string",  dataIndx: "skudesc", editable: false },	//부품명
+		{ title: "[[#{wm.wrcvit.asndqty}]]", dataType: "integer", dataIndx: "asndqty", editable: false, 
+			summary: { type: "sum" },
+			format :  "#,###"},	//입고예정 수량
+		{ title: "[[#{wm.wrcvit.rcveqty}]]", dataType: "integer", dataIndx: "rcveqty", editable: false, 
+			summary: { type: "sum" },
+			format :  "#,###"},	//입하대상 수량
+		{ title: "[[#{wm.wrcvit.rchsqty}]]", dataType: "integer", dataIndx: "rchsqty", editable: false, 
+			summary: { type: "sum" },
+			format :  "#,###"},	//적치완료 수량
+		{ title: "[[#{wm.wrcvit.rvlocky}]]", dataType: "string",  dataIndx: "rvlocky", editable: false, hidden: true,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue	
+		},	//입하 Loc Key
+		{ title: "[[#{wm.wrcvit.rcvdcdt}]]", dataType: "string",  dataIndx: "rcvdcdt", editable: false },	//입고일자
+		{ title: "[[#{wm.wrcvit.eoasnky}]]", dataType: "string",  dataIndx: "eoasnky", editable: false },	//ASN No
+		{ title: "[[#{wm.wrcvit.eoasnit}]]", dataType: "integer", dataIndx: "eoasnit", editable: false },	//ASN item number
+		{ title: "[[#{wm.wrcvit.rcarscd}]]", dataType: "string",  dataIndx: "rcarscd",	//입고취소 사유코드 
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editor: {
+				type: "select",
+				init: function (ui) {
+					ui.$cell.find("select").pqSelect({ search:false, singlePlaceholder: '' });
+					setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250); 
+				},
+				options: function(ui){
+					return wmr21ReasonList.map((obj) => {
+						if(obj['warekey'] === ui.rowData.warekey && 
+						   obj['doccate'] === ui.rowData.doccate && 
+						   obj['doctype'] === ui.rowData.doctype){
+							let rObj = new Object;
+							rObj[obj[ui.dataIndx]] = obj['combonm'];
+							return rObj;
+						}
+					}).filter(e => e);
+				},
+				prepend : { "" : '[[#{ms.selectOption}]]' }
+			},
+			editable: function (ui) {
+				return editable = (ui.rowData.pmtinyn === 'N') ? true : false;
+			},
+			render: function (ui) {
+				const content = wmr21ReasonList.find(obj => obj['warekey'] === ui.rowData.warekey
+						&& obj['doccate'] === ui.rowData.doccate 
+						&& obj['doctype'] === ui.rowData.doctype
+						&& obj[ui.dataIndx] === ui.cellData);
+                return {text: content && ui.cellData ? content['combonm'] : ''};
+			}
+		},
+		{ title: "[[#{wm.wrcvit.rcarsnm}]]", dataType: "string",  dataIndx: "rcarsnm",	//입고취소 사유내용
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editable: function (ui) {
+				return editable = (ui.rowData.pmtinyn === 'N') ? true : false;
+			},
+			validations : [{ type: 'minLen', value: 0, warn: true }, { type: 'maxLen', value: 200, msg: "[[#{ms.validations.maxLenLength(200)}]]" }],
+		},
+		{ title: "[[#{wm.wrcvit.pmtinyn}]]", dataType: "string", align: 'center', dataIndx: "pmtinyn", editable: false,		//입고수불마감여부
+			type: 'checkbox', editor: false,  cb: { all: false, header: false, check: "Y", uncheck: "N" },
+			render: function (ui) {                    
+                let cb = ui.column.cb, cellData = ui.cellData, checked = cb.check === cellData ? 'checked' : '';
+            }
+		},
+		{ title: "[[#{wm.wrcvit.expidat}]]", dataType: "string",  dataIndx: "expidat", editable: false, hidden: true},	//유통기간
+		{ title: "[[#{wm.wrcvit.pmtindt}]]", dataType: "string",  dataIndx: "pmtindt", editable: false},	//입고수불마감일자
+		{ title: "[[#{wm.wrcvit.pmtintm}]]", dataType: "string",  dataIndx: "pmtintm", editable: false},	//입고수불마감시간
+		{ title: "[[#{wm.wrcvit.credate}]]", dataType: "string",  dataIndx: "credate", editable: false },	//생성일자
+		{ title: "[[#{wm.wrcvit.cretime}]]", dataType: "string",  dataIndx: "cretime", editable: false },	//생성시간
+		{ title: "[[#{wm.wrcvit.creuser}]]", dataType: "string",  dataIndx: "creuser", editable: false },	//생성자
+		{ title: "[[#{wm.wrcvit.lmodate}]]", dataType: "string",  dataIndx: "lmodate", editable: false },	//수정일자
+		{ title: "[[#{wm.wrcvit.lmotime}]]", dataType: "string",  dataIndx: "lmotime", editable: false },	//수정시간
+		{ title: "[[#{wm.wrcvit.lmouser}]]", dataType: "string",  dataIndx: "lmouser", editable: false }	//수정자
+	];
+	
+	let wmr21Grid = new GridUtil(wmr21GridCM, '[[${gprogrid}]]', 'wmr21_grid');
+	wmr21Grid.setFind();
+	
+	wmr21Grid.setReset();
+	
+	wmr21Grid.setCreate(function (evt, ui) {
+		if(wmr21InitData.warekeyList){
+			let column = this.getColumn({ dataIndx: "warekey" });
+        	let options = wmr21InitData.warekeyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+		if(wmr21InitData.ownerkyList){
+    		let column = this.getColumn({ dataIndx: "ownerky" });
+        	let options = wmr21InitData.ownerkyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(wmr21InitData.rcvdcstList){
+    		let column = this.getColumn({ dataIndx: "rcvdcst" });
+        	let options = wmr21InitData.rcvdcstList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		$('#wmr21_ownerky').pqSelect({
+			deselect: false
+		});
+	});
+	
+	wmr21Grid.setChange(function (evt, ui) {
+    	if(ui.source === 'edit' || ui.source === 'paste'){
+    		for(i=0; i<ui.updateList.length; i++){
+    			let newRow = ui.updateList[i].newRow;
+    			if(newRow.rcarscd || newRow.rcarsnm){
+    				this.updateRow( {
+               			rowIndx : ui.updateList[i].rowIndx,
+               		    newRow : { state : true },
+               		    checkEditable: false
+               		});
+    			}
+    		}
+    		ui.addList = [];
+    	}
+    	
+	});
+	
+	wmr21Grid.setRowInit(function(ui){
+		if(ui.rowData.pmtinyn === 'Y'){
+			return { style: 'background-color: #e4e4eb' , cls : 'pq-cell-disable' };
+		}
+	});
+	
+	wmr21Grid.open();
+	
+	//============================================================
+	// 입하취소 사유코드
+	//============================================================
+	async function wmr21Reason(){
+		let reason = await fetchUtil('GET', '/wm/inbound/wmr21/reason', {rscate1: 'CANCEL', doccate: '400'});
+		let resContent = await reason.json();
+		wmr21ReasonList = resContent;
+		return wmr21ReasonList;
+	}
+	
+	
+});
+
+function wmr21Init(){
+	$('#wmr21_rcvdcdt_from').val(moment().subtract(1, "d").format("YYYY-MM-DD"));	// 어제
+	$('#wmr21_rcvdcdt_to').val(moment().format("YYYY-MM-DD"));	//오늘
+	
+	let wmr21InitData = callAjax('data', 'GET', "/wm/inbound/wmr21/inits/1");
+	
+	// 창고 리스트
+	if(wmr21InitData.warekeyList){
+		$("#wmr21_warekey option").not("[value='']").remove();
+		$.each(wmr21InitData.warekeyList, function(key, value) {
+			$('#wmr21_warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	}
+	
+	// 화주 리스트
+	if(wmr21InitData.ownerkyList){
+		$("#wmr21_ownerky option").not("[value='']").remove();
+		$.each(wmr21InitData.ownerkyList, function(key, value) { 
+			$('#wmr21_ownerky').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	}
+	
+	// doctype 리스트
+	if(wmr21InitData.doctypeList){
+		$("#wmr21_doctype option").not("[value='']").remove();
+	    function matchingDocType(obj) {
+	        return obj['warekey'] === wmr21InitData.warekeyList[0]?.combovl && obj['doccate'] === '400';
+	    }
+
+	    let findList = wmr21InitData.doctypeList.filter(matchingDocType);
+
+	    $.each(findList, function(key, value) {
+	        $('#wmr21_doctype').append($("<option></option>").attr("value", value.doctype).text(value.doctynm)); 
+	    });
+	}
+	
+	
+	//============================================================
+	// 창고 Change 이벤트
+	//============================================================
+	$('#wmr21_warekey').on('change', function(){
+		let wmr21ChangeInit = callAjax('data', 'GET', "/md/common/code/doctype", {warekey: $(this).val(), doccate: '400'});
+		$("#wmr21_doctype option").not("[value='']").remove();
+		$.each(wmr21ChangeInit, function(key, value) { 
+			$('#wmr21_doctype').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	});
+	
+	return wmr21InitData;
+}
+
+//============================================================
+//input 키보드 엔터 이벤트
+//============================================================
+function wmr21Keyup(){
+	let key = this.event.key || this.event.keyCode;
+	if (key === 'Enter' || key === 13) {
+		wmr21Search();
+	}
+}
+
+async function wmr21Search(){
+	let grid = pq.grid("#wmr21_grid");
+	let data = { 
+		warekey : $('#wmr21_warekey').val()
+	  , ownerky : $('#wmr21_ownerky').val()
+	  , doctype : $('#wmr21_doctype').val()
+	  , rcvdcdtfrom : $('#wmr21_rcvdcdt_from').val()
+	  , rcvdcdtto : $('#wmr21_rcvdcdt_to').val()
+	  , pmtinyn : $('#wmr21_pmtinyn').is(':checked') ? "Y" : "N"
+	};
+	
+	grid.showLoading();
+	let searchInit = await fetchUtil("GET", "/wm/inbound/wmr21/inits/1", {warekey: data.warekey, doccate: '400'})
+	
+	
+	let response = await fetchUtil("GET", "/wm/inbound/wmr21/grids/1", data);
+	try{
+		if(response.status === 200){
+			let wmr21SearchInit = await searchInit.json();
+			if(wmr21SearchInit.lockyList){
+	    		let column = grid.getColumn({ dataIndx: "rvlocky" });
+	        	let options = wmr21SearchInit.lockyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			
+			if(wmr21SearchInit.gridDoctypeList){
+	    		let column = grid.getColumn({ dataIndx: "doctype" });
+	        	let options = wmr21SearchInit.gridDoctypeList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			
+			resContent = await response.json();
+			if(resContent.length===0){
+				grid.hideLoading();
+			}
+			grid.option( "dataModel", { data: resContent, recIndx: "rowkey" } );
+			grid.refreshDataAndView();
+		}
+	}catch(err){
+		console.log(err);
+	}finally{
+		grid.hideLoading();
+	}
+}
+
+//============================================================
+//검색조건 초기화
+//============================================================
+function wmr21Refresh(){
+	let grid = pq.grid('#wmr21_grid');
+	
+	document.getElementById("wmr21_warekey").value = $('#wmr21_warekey option:first').val();
+	
+	$('#wmr21_ownerky').pqSelect();
+
+	let pqSelectElement = $('#wmr21_ownerky')[0];
+	pqSelectElement.selectedIndex = 0;
+
+	$('#wmr21_ownerky').pqSelect('refreshData');
+
+	let wmr21ChangeInit = callAjax('data', 'GET', "/md/common/code/doctype", {warekey:$('#wmr21_warekey option:first').val(), doccate: '400'});
+	$("#wmr21_doctype option").not("[value='']").remove();
+	$.each(wmr21ChangeInit, function(key, value) { 
+		$('#wmr21_doctype').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+	});
+	
+	document.getElementById("wmr21_doctype").value = $('#wmr21_doctype option:first').val();
+	
+	$('.check-box input[id="wmr21_pmtinyn"]').prop('checked', false);
+	
+	$('#wmr21_rcvdcdt_from').val(moment().subtract(1, "d").format("YYYY-MM-DD"));
+	$('#wmr21_rcvdcdt_to').val(moment().format("YYYY-MM-DD"));
+	
+	grid.option('dataModel', { data : [] });
+	grid.refreshDataAndView();
+}
+
+</script>
+	 
+</div>
+</html>

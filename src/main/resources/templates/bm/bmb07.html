@@ -1,0 +1,405 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 창고 -->
+				<label for="bmb07Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="bmb07Warekey" name="bmb07Warekey"
+								data-cb-val="combovl" data-cb-name="combonm"
+								data-cb-url="/md/common/organization/warehouse-user"
+								data-cb-select="" data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<!-- 정산년월 -->
+				<label class="setting-grid-title ic-title-nece">[[#{bm.btgthd.bthyymm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" max="2999-12" id="bmb07BthyymmFrom" onkeyup="setInputDateDel(this)"/>
+						<span>~</span>
+						<input type="month" max="2999-12" id="bmb07BthyymmTo" onkeyup="setInputDateDel(this)"/>
+					</div>
+				</div>
+	  		</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="bmb07Search"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="bmb07Reset"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark"><span th:text="${gnatitle}"></span></div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-white" id="bmb07Receipt"><img class="ic-bt-print">[[#{bt.bm.receipt}]]</button>
+					<button class="btn-navy btn-green" id="bmb07Confirm"><img class="ic-bt-save">[[#{bt.bm.confirm}]]</button>
+				</div>
+			</div>
+			<!-- Head Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb07HeadPqgrid"></div>
+				</div>
+			</div>
+			<!-- Item Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb07ItemPqgrid"></div>
+				</div>
+			</div>
+			<!-- 로딩 이미지 부분 -->
+			<div class="spinner" id="spinner">
+			</div>
+		</div>
+	</div>
+
+	<script>
+	
+	/*  bmb07 - 운송비정산확정
+	*   최초 생성일시   : 2023-12-12 10:30
+	*   최초 생성자      : 최강호
+	*   설명      	: 마감처리된 운송비를 정산확정 하고 거래명세서 출력 가능한 화면 
+	*   수정 내역  	:
+	*   수정일시		:
+	*   수정자		:
+	*   변경 사항		:
+	*/
+
+	$(function () {
+		const pageId = "[[${gprogrid}]]";
+		let initData;
+		let bmb07Warekey;
+		let bmb07HeadGridObject;
+		let bmb07ItemGridObject;
+
+		$('#'+pageId+'BthyymmFrom').val(moment().subtract(6, 'month').format('YYYY-MM')); //당월-6개월
+		$('#'+pageId+'BthyymmTo').val(moment().format('YYYY-MM')); //당월
+
+		$('#'+pageId+'Search').click(function() {
+			searchbmb07List();
+		});
+
+		$('#'+pageId+'Confirm').click(function() {
+			confirmbmb07List();
+		});
+
+		$('#'+pageId+'Receipt').click(async function() {
+			// 거래명세표 출력
+			let grid = bmb07HeadGridObject.getGrid();
+			let gridCheck = grid.Checkbox('state').getCheckedNodes();
+			
+			if(gridCheck.length < 1){
+				alert("[[#{ms.choiceRowZero}]]");
+		    	return false;
+			}
+			
+			if(confirm('[[#{ms.print.receipt}]]')){
+				$('#spinner').css('display', '');
+				let report = [];
+				bmb07HeadGridObject.getGrid().showLoading();
+				bmb07ItemGridObject.getGrid().showLoading();
+				
+				for(let i= 0; i<gridCheck.length; i++){
+					let param ={
+							compkey :'[[${userattr.compkey}]]',
+							warekey : bmb07Warekey,
+							bthdcky : gridCheck[i].bthdcky
+					}
+					
+					//대금구분과 대금구분업체를 가져오기위해 체크한 row에 해당하는 itemList를 불러옴
+					let rData = await fetchUtil("GET", "/bm/billing/"+ pageId + "/grid-item", param);
+					let itemData = await rData.json();
+					
+					if(itemData.length !== 0){
+						//itemData 길이만큼 반복
+						itemData.forEach((current) => {
+							//report에서 findIndex
+							if(report.findIndex(e => e['compkey'] === current['compkey'] && e['warekey'] === current['warekey']
+												  && e['bthdcky'] === current['bthdcky'] && e['ptnrkey'] === current['ptnrkey']
+												  && e['btrpmgb'] === current['btrpmgb']) === -1){
+								//findIndex가 -1인경우: report 배열에 조건을 만족하는 값이 없기 때문에 배열에 추가(중복된 값 방지)
+								report.push({
+									compkey: current['compkey'],
+							        warekey: current['warekey'],
+							        bthdcky: current['bthdcky'],
+							        ptnrkey: current['ptnrkey'],
+							        btrpmgb: current['btrpmgb'],
+							        type: 'bmb20'
+							    });
+							}
+						});
+					}
+				}
+				const sendReport = {
+						reportList : report,
+						progrid : '[[${gprogrid}]]',
+						warekey : bmb07Warekey,
+						type: 'bmb20'
+				}
+				await reportPrint(sendReport, 'bm');
+				bmb07HeadGridObject.getGrid().hideLoading();
+				bmb07ItemGridObject.getGrid().hideLoading();
+			}
+		});
+
+		$('#'+pageId+'Reset').click(function(){
+			resetSearchConditions();
+			makeEmptyGrid(bmb07HeadGridObject);
+			makeEmptyGrid(bmb07ItemGridObject);
+			$('#'+pageId+'BthyymmFrom').val(moment().subtract(6, 'month').format('YYYY-MM')); //당월-6개월
+		});
+
+		const bmb07HeadGridColModel = [
+			{ title: "", dataType: "String",  dataIndx: "state", type: "checkBoxSelection"
+				, align: "center"
+				, maxWidth:"30", maxHeight:"30"
+				, menuIcon: false
+				, sortable: false, editor: false,
+				cb: {all: false, header: true, check:"Y", uncheck:"N"}
+			},
+			{ title: "[[#{bm.btgthd.compkey}]]", dataType: "string", dataIndx: "compkey", editable:false, hidden:true },
+			{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			},
+			{ title: "[[#{bm.btgthd.bthdcky}]]", dataType: "string", dataIndx: "bthdcky", editable:false }, //정산문서번호
+			{ title: "[[#{bm.btgthd.bthyymm}]]", dataType: "string", dataIndx: "bthyymm", editable:false }, //정산년월
+			{ title: "[[#{bm.btgthd.btsdate}]]", dataType: "string", dataIndx: "btsdate", editable:false }, //정산대상시작일자
+			{ title: "[[#{bm.btgthd.btedate}]]", dataType: "string", dataIndx: "btedate", editable:false }, //정산대상종료일자
+			{ title: "[[#{bm.btgthd.tcddate}]]", dataType: "string", dataIndx: "tcddate", editable:false }, //정산마감일시
+			{ title: "[[#{bm.btgthd.tcduser}]]", dataType: "string", dataIndx: "tcduser", editable:false }, //정산마감사용자
+			{ title: "[[#{bm.btgthd.tcvrfyn}]]", dataType: "string",  dataIndx:"tcvrfyn", editable:false,
+				type: 'checkbox', editor: false, align: 'center',
+				cb: { check: 'Y', uncheck: 'N' },
+				render: function (ui) {
+					ui.column.cb.check === ui.cellData ? 'checked' : '';
+				}
+			}, //정산검증여부
+			{ title: "[[#{bm.btgthd.tcvdate}]]", dataType: "string", dataIndx: "tcvdate", editable:false }, //정산검증일시
+			{ title: "[[#{bm.btgthd.tcvuser}]]", dataType: "string", dataIndx: "tcvuser", editable:false }, //정산검증사용자
+			{ title: "[[#{bm.btgthd.tccnfyn}]]", dataType: "string",  dataIndx:"tccnfyn", editable:false,
+				type: 'checkbox', editor: false, align: 'center',
+				cb: { check: 'Y', uncheck: 'N' },
+				render: function (ui) {
+					ui.column.cb.check === ui.cellData ? 'checked' : '';
+				}
+			}, //정산확정여부
+			{ title: "[[#{bm.btgthd.tccdate}]]", dataType: "string", dataIndx: "tccdate", editable:false }, //정산확정일시
+			{ title: "[[#{bm.btgthd.tccuser}]]", dataType: "string", dataIndx: "tccuser", editable:false }, //정산확정사용자
+			{ title: "[[#{bm.btgthd.credate}]]", dataType: "string", dataIndx: "credate", editable:false }, //생성일자
+			{ title: "[[#{bm.btgthd.cretime}]]", dataType: "string", dataIndx: "cretime", editable:false }, //생성시간
+			{ title: "[[#{bm.btgthd.creuser}]]", dataType: "string", dataIndx: "creuser", editable:false }, //생성자
+			{ title: "[[#{bm.btgthd.lmodate}]]", dataType: "string", dataIndx: "lmodate", editable:false }, //수정일자
+			{ title: "[[#{bm.btgthd.lmotime}]]", dataType: "string", dataIndx: "lmotime", editable:false }, //수정시간
+			{ title: "[[#{bm.btgthd.lmouser}]]", dataType: "string", dataIndx: "lmouser", editable:false }, //수정자
+			{ title: "[[#{bm.btgthd.indibzl}]]", dataType: "string", dataIndx: "indibzl", editable:false, hidden: true },
+			{ title: "[[#{bm.btgthd.indiarc}]]", dataType: "string", dataIndx: "indiarc", editable:false, hidden: true },
+			{ title: "[[#{bm.btgthd.updtchk}]]", dataType: "integer", dataIndx: "updtchk", editable:false, hidden: true },
+		]
+
+		bmb07HeadGridObject = new GridUtil(bmb07HeadGridColModel, "[[${gprogrid}]]", pageId+"HeadPqgrid");
+		bmb07HeadGridObject.setFind();
+		bmb07HeadGridObject.setCreate(async function (evt, ui) {
+			await _commonInit();
+		});
+		bmb07HeadGridObject.setRowDblClick(async function( event, ui ) {
+			let param = {
+				compkey : ui.rowData.compkey,
+				warekey : ui.rowData.warekey,
+				bthdcky : ui.rowData.bthdcky
+			}
+			bmb07ItemGridObject.getGrid().showLoading();
+			let response = await fetchUtil("GET", "/bm/billing/"+ pageId + "/grid-item", param);
+			
+			try{
+				if(response.status === 200){
+					let resContent = await response.json();
+					if(resContent.length===0){
+						//alert('[[#{ms.getDataZero}]]');
+					}
+					bmb07ItemGridObject.getGrid().option( "dataModel", { data: resContent } );
+					bmb07ItemGridObject.getGrid().refreshDataAndView();
+					turnOnGridGruopSummary(bmb07ItemGridObject.getGrid());
+				}
+			}catch(err){
+				console.log(err);
+			}finally{
+				bmb07ItemGridObject.getGrid().hideLoading();
+			}
+		});
+		bmb07HeadGridObject.open();
+
+		const bmb07ItemGridColModel = [
+			{ title: "[[#{bm.btgthd.compkey}]]", dataType: "string", dataIndx: "compkey", editable:false, hidden:true },
+			{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			}, //창고
+			{ title: "[[#{bm.btgtit.bthdcky}]]", dataType: "string", dataIndx: "bthdcky", editable:false }, //정산문서번호
+			{ title: "[[#{bm.btgtit.ptnrkey}]]", dataType: "string", dataIndx: "ptnrkey", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			}, //대금구분업체
+			{ title: "[[#{grid.vhcsnam}]]", dataType: "string", dataIndx: "vehicky", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue	
+			}, //차량코드
+			{ title: "[[#{bm.btgtit.btrpmgb}]]", dataType: "string", dataIndx: "btrpmgb", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			}, //대금구분
+			{ title: "[[#{bm.btgtit.btrcsgb}]]", dataType: "string", dataIndx: "btrcsnm", editable:false,
+				editor: { type: "select", options: [] },
+				render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return option ? option[ui.cellData] : ui.cellData;
+	            }
+			}, //계정
+			{ title: "[[#{bm.btgtit.btrunit}]]", dataType: "string", dataIndx: "btrunit", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			}, //단위
+			{ title: "[[#{bm.btgtit.doccate}]]", dataType: "string", dataIndx: "doccate", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			}, //문서유형
+			{ title: "[[#{bm.btgtit.doctype}]]", dataType: "string", dataIndx: "doctype", editable:false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			}, //문서타입
+			{ title: "[[#{bm.btgtit.refcqty}]]", dataType: "integer", dataIndx: "refcqty", editable:false,
+				summary: { type: "sum" }, format: "#,###"
+			}, //운행횟수
+			{ title: "[[#{bm.btgtit.btrcost}]]", dataType: "integer", dataIndx: "btrcost", editable:false,
+				summary: { type: "sum" }, format: "#,###"
+			}, //단가(원)
+			{ title: "[[#{bm.btgtit.btramot}]]", dataType: "integer", dataIndx: "btramot", editable:false,
+				summary: { type: "sum" }, format: "#,###"
+			}, //금액
+			{ title: "[[#{bm.bmb07.btrtknm}]]", dataType: "string", dataIndx: "btrremk", editable:false } //비고
+		]
+
+		bmb07ItemGridObject = new GridUtil(bmb07ItemGridColModel, "[[${gprogrid}]]", pageId+"ItemPqgrid");
+		bmb07ItemGridObject.setFind();
+		bmb07ItemGridObject.open();
+
+		//============================================================
+		// 검색 버튼 이벤트
+		//============================================================
+		async function searchbmb07List(){
+			//검색 영역 필수값 (창고,정산년월To)
+			if($("#"+pageId+"BthyymmFrom").val()==='' && $("#"+pageId+"BthyymmTo").val()===''){
+				alert("[[#{ms.choose.bthyymm}]]");	//정산년월을 선택해주세요.
+				return false;
+			}
+			let param = {
+				warekey : $("#"+pageId+"Warekey").val(),
+				bthyymmfrom : $("#"+pageId+"BthyymmFrom").val(),
+				bthyymmto : $("#"+pageId+"BthyymmTo").val()
+			}
+
+			if(bmb07Warekey != $("#"+pageId+"Warekey").val()){
+				await bmb07Init();
+			}
+
+			bmb07HeadGridObject.getGrid().showLoading();
+			bmb07ItemGridObject.getGrid().showLoading();
+			let searchData = await fetchUtil("GET", "/bm/billing/"+ pageId + "/grid-head", param);
+			
+			try{
+				if(searchData.status === 200){
+					let rData = await searchData.json();
+					if(rData){
+						bmb07HeadGridObject.searchList(rData);
+					}
+				}
+			}catch(err){
+				console.log(err);
+			}finally{
+				bmb07HeadGridObject.getGrid().hideLoading();
+				bmb07ItemGridObject.getGrid().hideLoading();
+
+				bmb07ItemGridObject.getGrid().option( "dataModel", { data: [] } );
+				bmb07ItemGridObject.getGrid().refreshDataAndView();
+				bmb07Warekey = $("#"+pageId+"Warekey").val();
+			}
+		}
+
+		//============================================================
+		// 정산확정 버튼 이벤트
+		//============================================================
+		async function confirmbmb07List(){
+			let headGrid = bmb07HeadGridObject.getGrid();
+			let headGridData = headGrid.getData();
+
+			let headCheckList = headGridData.filter(function(e){
+				return e.state === 'Y'
+			});
+			
+			if(!headCheckList.length){
+				alert("[[#{ms.choiceRowZero}]]");
+				return;
+			}
+			
+			
+			if(confirm('[[#{ms.checksave}]]')) {
+				try{
+					let param = { updateList : headCheckList };
+					bmb07HeadGridObject.getGrid().showLoading();
+					bmb07ItemGridObject.getGrid().showLoading();
+					let rData = await fetchUtil('POST', "/bm/billing/" + pageId + "/confirm", param);
+					if(rData.status === 200) {
+						//alert('[[#{ms.saveSuccess}]]');
+						searchbmb07List();
+					}
+				}catch(err){
+					console.log(err);
+				}finally{
+					bmb07HeadGridObject.getGrid().hideLoading();
+					bmb07ItemGridObject.getGrid().hideLoading();
+				}
+			}
+		}
+
+		//============================================================
+		// Init 이벤트
+		//============================================================
+		async function bmb07Init(){
+			let param = {
+				warekey : $("#"+pageId+"Warekey").val()
+			}
+			let iData = await fetchUtil('GET', '/bm/billing/' + pageId + '/init', param);
+			let jData = await iData.json();
+			initData = jData.item;
+			let gridItem = pq.grid('#bmb07ItemPqgrid');
+			
+			comboCreateData('bmb07HeadPqgrid', 'warekey', initData.warekeyList);
+			comboCreateData('bmb07ItemPqgrid', 'warekey', initData.warekeyList);
+			comboCreateData('bmb07ItemPqgrid', 'ptnrkey', initData.ptnrkeyList);
+			comboCreateData('bmb07ItemPqgrid', 'btrpmgb', initData.btrpmgbList);
+			comboCreateData('bmb07ItemPqgrid', 'btrcsnm', initData.btrcsgbList);
+			initData.btrunitList.push({combovl:'-', combonm:'-'})
+			comboCreateData('bmb07ItemPqgrid', 'btrunit', initData.btrunitList);
+			initData.doccateList.push({combovl:'-', combonm:'-'})
+			comboCreateData('bmb07ItemPqgrid', 'doccate', initData.doccateList);
+			initData.doctypeList.push({combovl:'-', combonm:'-'})
+			comboCreateData('bmb07ItemPqgrid', 'doctype', initData.doctypeList);
+		
+			if(initData.tmList){
+				let column = gridItem.getColumn({ dataIndx: "vehicky" });
+	        	let options = initData.tmList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.vehicky] = obj.vhcsnam;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+			}
+		}
+	});
+	</script>
+</div>
+</html>

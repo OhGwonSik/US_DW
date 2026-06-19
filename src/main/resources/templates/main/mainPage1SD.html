@@ -1,0 +1,58 @@
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+	<th:block th:replace="~{/main/fragment1/comHead.html :: fragments-comHead}">
+	</th:block>
+</head>
+<body>
+<div id="wrapper" class="mobile-wrap">
+	<!-- Header  -->
+	<th:block th:replace="~{/main/fragment1/mainHeader.html :: fragments-mainHeader}"></th:block>
+	<!-- Header  end -->
+	<!-- <ul id="MenuBar"></ul> -->
+
+	<!-- Sidebar  -->
+	<div id="modal-background"></div>
+	<div id="prevPic" class="modal-con"></div>
+	<div id="mainMenu" class="modal-con">
+		<th:block th:replace="~{/main/fragment1/mainSideBar.html :: fragments-mainSideBar}"></th:block>
+	</div>
+	<div class="popup">
+		<div class="msg-box">
+		  	<div class="msg-txt"></div>
+		</div>
+		<div class="edit-btn-wrapper">
+		  	<button type="button" class="btn-white" id="pdaConfirmCancel">취소</button>
+		  	<button type="button" class="btn-blue" id="pdaConfirm">확인</button>
+		</div>
+	</div>
+	<div class="popup">
+		<div class="msg-box">
+		  	<div class="msg-txt"></div>
+		</div>
+		<div class="edit-btn-wrapper">
+		  	<button type="button" class="btn-blue" id="pdaAlert">확인</button>
+		</div>
+	</div>
+	<!-- Sidebar  end -->
+
+	<!-- Page Content  -->
+	<div>
+		<th:block th:replace="${gprogcmd != null } ? ~{${gprogcmd} :: fragments-mainContent} : ~{/main/fragment1/mainContent.html :: fragments-mainContent}"></th:block>
+		<!-- Footer -->
+		<footer>
+			<th:block th:replace="~{/main/fragment1/mainFooter.html :: fragments-mainFooter}"></th:block>
+		</footer>
+		<!-- Footer end  -->
+	</div>
+	<!-- Page Content  end -->
+
+	<!-- spinner -->
+	<div class="spinner-wrapper">
+		<div class="spinner-background"></div>
+		<div class="spinner-border" role="status"></div>
+	</div>
+	<!-- spinner end -->
+</div>
+</body>
+</html>
+

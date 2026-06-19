@@ -1,0 +1,387 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 창고 -->
+				<label for="bmb05Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="bmb05Warekey" name="bmb05Warekey">
+						</select>
+					</div>
+				</div>
+				<!-- 정산년월 -->
+				<label class="setting-grid-title ic-title-nece">[[#{bm.bmb05.bthyymm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" style="width:100%" max="2999-12" id="bmb05Bthyymm" onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="bmb05Search"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="bmb05Reset"><img>[[#{bt.reset}]]</button>
+
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="header-left">
+<!-- 					<div class="grid-title"> -->
+<!-- 						<h1></h1> -->
+<!-- 						<span style="color: red">※ [[#{ms.warning.mayBeDifferencesTransportCostDeadline}]]</span> -->
+<!-- 						빨간글씨 -->
+<!-- 					</div> -->
+					<div class="edit-btn-wrapper">
+						<button type="button" class="btn-finish btn-navy btn-green" id="bmb05DeadLine"><img>[[#{bt.bm.deadline}]]</button>
+					</div>
+				</div>
+
+			</div>
+			<!-- Head Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb05Grid"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+<script>
+
+/*  bmb05 - 운송비정산처리
+*   최초 생성일시   : 2023-12-12 10:30
+*   최초 생성자      : 최강호
+*   설명      	: 운송비 요율 마스터를 기준으로 실시간 예상 운송비를 마감처리하는 화면 
+*   수정 내역  	:
+*   수정일시		:
+*   수정자		:
+*   변경 사항		:
+*/
+
+$(function () {
+	bmb05WarekeySelectBox();
+	const pageId = "[[${gprogrid}]]";
+	let initData;
+	let bmb05Warekey;
+	let bmb05GridObject;
+
+	$('#bmb05Bthyymm').val(moment().format('YYYY-MM')); //현재년도 현재 월
+
+	$('#'+pageId+'Search').click(function() {
+		searchbmb05List();
+	});
+
+	$('#'+pageId+'Reset').click(function() {
+		resetSearchConditions();
+		//탭 리셋
+		resetTabContainer(bmb05GridObject.getGrid());
+		//그리드 초기화
+		makeEmptyGrid(bmb05GridObject);
+	});
+
+	const bmb05GridCM = [
+		 { title: "[[#{md.bvtrma.compkey}]]", dataType: "string", width:150, dataIndx: "compkey", hidden: true, editable:false }, //회사
+		 { title: "[[#{md.bvtrma.warekey}]]", dataType: "string", width:150, dataIndx: "warekey", hidden: true, editable:false,   //창고
+			editor: { type: "select", options: [] },
+			render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return {
+            		text: option ? option[ui.cellData] : "",
+            		cls: getSummaryCellClass(ui)
+            	}
+            }
+		 },
+		 { title: "[[#{md.bvtrma.ptnrkey}]]", dataType: "string", width:150, dataIndx: "ptnrkey", hidden: true, editable:false,
+			 editor: { type: "select", options: [] },
+			 render: function(ui){
+				  return {
+					  text: gridRenderAndValue
+				  }
+			  }
+		 },//대금구분업체 협력사
+		 { title: "[[#{md.mptnma.ptnamlc}]]", dataType: "string", width:150, dataIndx: "ptnamlc", hidden: true, editable:false }, // 협력업체명,
+		 { title: "[[#{bm.bmb05.denamlc}]]", dataType: "string", width:150, dataIndx: "mdestky", hidden: false, editable:false,
+			 editor: { type: "select", options: [] },
+			 render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : "",
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 }, //도착지
+		 { title: "[[#{grid.vhcsnam}]]", dataType: "string", width:200, align: 'center', dataIndx: "vehicky", hidden: false, editable:false,
+			 editor: { type: "select", options: [] },
+			 render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : "",
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 }, //차량번호
+		 { title: "[[#{bm.bmb05.useract}]]", dataType: "string", width:150, dataIndx: "useract", hidden: false, editable:false,
+			 render: function (ui) {
+	            	return {
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 }, //기사명
+		 { title: "[[#{grid.vhcsnam}]]", dataType: "string", width:200, dataIndx: "vhcfnam", hidden: true, editable:false,
+		 }, //차량번호
+		 { title: "[[#{md.bvtrma.btrpmgb}]]", dataType: "string", width:150, align: 'center', dataIndx: "btrpmgb", hidden: true, editable:false,
+			  editor: { type: "select", options: [] },
+			  render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : " ",
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 },//대금구분
+		 { title: "[[#{md.bvtrma.btrpmgb}]]", dataType: "string", width:150, dataIndx: "btrpmnm", hidden: true, editable:false,
+		 },//대금구분명
+		 { title: "[[#{md.bvtrma.btrcsgb}]]", dataType: "string", width:200, align: 'center', dataIndx: "btrcsgb", hidden: false, editable: false,
+			 editor: { type: "text", options: [] },
+			 render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : ui.cellData,
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 },//계정
+		 { title: "[[#{md.bvtrma.doccate}]]", dataType: "string", width:150, dataIndx: "doccate", hidden: true, editable: false,
+		 },//문서유형
+		 { title: "[[#{md.bvtrma.doctype}]]", dataType: "string", width:150, dataIndx: "doctype", hidden: false, editable: false,
+			 editor: { type: "select", options: [] },
+			 render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : "-",
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 },//문서타입
+		 { title: "[[#{md.bvtrma.btrcost}]]", dataType: "integer", width:150, dataIndx: "btrcost", editable: false,
+			 summary: { type: "sum" }, format: "#,###",
+			 render : function(ui){
+	 				return {
+	 					cls : getSummaryCellClass(ui)
+	 				}
+				}
+		 },//단가
+		 { title: "[[#{bm.bmb05.refcqty}]]", dataType: "integer", width:150, dataIndx: "refcqty", editable: false, format: "#,###",
+			 summary: { type: "sum" },
+			 render : function(ui){
+	 				return {
+	 					cls : getSummaryCellClass(ui)
+	 				}
+				}
+		 }, //운행횟수
+		 { title: "[[#{bm.bmb05.btramot}]]", dataType: "integer", width:150, dataIndx: "btramot", editable: false,
+			 summary: { type: "sum" }, format: "#,###"	,
+			 render : function(ui){
+	 				return {
+	 					cls : getSummaryCellClass(ui)
+	 				}
+				}
+		 }  //금액
+	];
+
+	bmb05GridObject = new GridUtil(bmb05GridCM, '[[${gprogrid}]]', 'bmb05Grid');
+	bmb05GridObject.setHeight(650);
+
+	bmb05GridObject.setCreate(async function (evt, ui) {
+		await _commonInit();
+	});
+	
+	bmb05GridObject.setTabModel([createDefaultTabObject()]);
+	bmb05GridObject.open();
+
+	//============================================================
+	// 검색 버튼 이벤트
+	//============================================================
+	async function searchbmb05List(){
+		//검색 영역 필수값 확인
+		if($('#bmb05Bthyymm').val()===''){
+			alert('[[#{ms.choose.bthyymm}]]');
+			return false;
+		}
+
+		//창고값을 변경한 채로 검색할 경우
+		if(bmb05Warekey != $("#"+pageId+"Warekey").val()){
+			await bmb05Init();
+		}
+
+		const grid = bmb05GridObject.getGrid();
+		const gridTab = bmb05GridObject.getGrid().Tab();
+		const tabs = gridTab.tabs();
+		const tabModel = bmb05GridObject.getGrid().option('tabModel');
+
+		//탭이 있을때 showLoading
+		tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.showLoading() : grid.showLoading();
+
+		const data = { warekey : $('#bmb05Warekey').val(), bthyymm : $('#bmb05Bthyymm').val().replace(/-/g, '') };
+
+		bmb05Warekey = data.warekey;
+		
+		const response = await fetchUtil('GET', '/bm/billing/bmb05/grids/1', data);
+	
+		try{
+			if(response.status===200){
+				let resContent = await response.json();
+				resetTabContainer(bmb05GridObject.getGrid());
+				if(resContent.length === 0){
+					//alert('[[#{ms.getDataZero}]]');
+					tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.hideLoading() : grid.hideLoading();
+				} else{
+					//검색시 탭 활성화
+					const startIdxForInsert = tabModel.tabs.length-1;
+					//탭이름
+					const groupBy = ['ptnrkey', 'btrpmgb'];
+					const groupByName = ['ptnamlc', 'btrpmnm'];
+					//merge할 셀
+					const mergeCols = ['mdestky', 'vehicky'];
+					//summary 할 컬럼
+					const summaryCols = ['btrcost', 'refcqty', 'btramot']; //refcqty, btrcost
+					//탭 생성
+					tabModel.tabs.push(... createTabModel(resContent, bmb05GridCM, mergeCols, groupBy, groupByName, summaryCols, isSkipSingleSummary=false)); // spread operator(배열 각 요소를 빼서 합침)
+					let tabModelLength = tabModel.tabs.length;
+					
+					for(let idx=startIdxForInsert; idx<tabModelLength; idx++){
+						//그리드 탭 생성
+						gridTab.create(idx);
+					}
+					gridTab.activate(startIdxForInsert+1); // 추가된 tab 중 첫번째 활성화
+					
+					tabModelLength = tabModel.tabs.length; // 루프를 위해서 값 재할당
+					for(let tmIdx=0; tmIdx<tabModelLength; tmIdx++){
+						if(!tabs[tmIdx].hasOwnProperty('gridOptions') 	|| (tabs[tmIdx].hasOwnProperty('gridOptions') && !tabs[tmIdx].gridOptions)
+																						|| (tabs[tmIdx].gridOptions.hasOwnProperty('dataModel') && !tabs[tmIdx].gridOptions.dataModel)){
+							gridTab.remove(tmIdx);  // gridOption값 이 없거나 dataModel이 없으면 default tab으로 간주하여 삭제함
+							tmIdx = 0;
+							tabModelLength = tabModel.tabs.length; // remove 했다면 배열 크기가 바뀌어 꼬이기 때문에 다시 초기 값으로 변경 후 재루프함
+						}
+					}
+				}
+			}
+		}catch(err){
+			console.log(err);
+		}finally{
+			grid.refreshDataAndView();
+	        //탭에 대한 hideLoading
+			tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.hideLoading() : grid.hideLoading();
+		}
+	}
+
+	//마감(조회하지 않고 가능)
+	$('#bmb05DeadLine').click(function(){
+		if($('#bmb05Bthyymm').val()===''){
+				alert('[[#{ms.choose.bthyymm}]]');
+				return false;
+			}
+		//마감버튼 누를 시 프로시저 호출하고 끝
+		let result = confirm("[[#{ms.confirm.deadline}]]");
+
+		if(result === true){ //프로시저호출(회사,창고,정산년월,사용자ID)
+			const grid = pq.grid('#bmb05Grid');
+			grid.showLoading();
+			const selectedDate = $('#bmb05Bthyymm').val();
+			const bthyymm = selectedDate.replace(/-/g, '');
+
+			const data = { warekey : $('#bmb05Warekey').val(), bthyymm : bthyymm };
+
+			//마감 호출
+			finishbmb05List(data);
+		}
+	});
+
+	//마감 프로시저
+	async function finishbmb05List(finishData){
+		if(!finishData){
+			return false;
+		}
+		const grid = bmb05GridObject.getGrid();
+		const tabModel = bmb05GridObject.getGrid().option('tabModel');
+
+        //탭에 대한 showLoading
+		tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.showLoading() : grid.showLoading();
+
+        grid.showLoading();
+		const finishbmb05Response = await fetchUtil('POST', '/bm/billing/bmb05/grids/1', finishData);
+
+		try{
+			if(finishbmb05Response.status===200){
+				//alert('[[#{ms.success.deadline}]]');
+				resetTabContainer(bmb05GridObject.getGrid());
+			}
+		}catch(err){
+			console.log(err);
+		}finally{
+			//탭에 대한 hideLoading
+			tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.hideLoading() : grid.hideLoading();
+		}
+	}
+
+	//============================================================
+	// Init 이벤트
+	//============================================================
+	async function bmb05Init(){
+		let param = {
+			warekey : $("#"+pageId+"Warekey").val()
+		}
+		let iData = await fetchUtil('GET', '/bm/billing/' + pageId + '/init', param);
+		let jData = await iData.json();
+		initData = jData.item;
+
+		let grid = pq.grid('#bmb05Grid');
+
+		comboCreateData('bmb05Grid', 'warekey', initData.warekeyList);
+		comboCreateData('bmb05Grid', 'ptnrkey', initData.ptnrkeyList);
+		comboCreateData('bmb05Grid', 'mdestky', initData.mdestkyList);
+		comboCreateData('bmb05Grid', 'btrpmgb', initData.btrpmgbList);
+		comboCreateData('bmb05Grid', 'btrcsgb', initData.btrcsgbList);
+		comboCreateData('bmb05Grid', 'doctype', initData.doctypeList);
+
+		if(initData.tmList){
+			let column = grid.getColumn({ dataIndx: "vehicky" });
+        	let options = initData.tmList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.vehicky] = obj.vhcsnam;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+	}
+
+	//검색영역 창고값
+	async function bmb05WarekeySelectBox(){
+		let rData = await fetchUtil('GET', '/md/common/organization/warehouse-user');
+		let warekeyList = await rData.json();
+
+		$("#bmb05Warekey option").not("[value='']").remove();
+		$.each(warekeyList, function(key, value) {
+			$('#bmb05Warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm));
+		});
+	}
+});
+</script>
+</div>
+</html>

@@ -1,0 +1,1217 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="oms07_warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omr11_warekey" name="omr11_warekey"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<label for="omr11_custkey" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omr11_ownerky" name="omr11_ownerky"
+							data-cb-val="combovl" data-cb-name=combonm
+							data-cb-url="/md/common/partner/owner" data-cb-select="select1"
+							data-cb-variable="ownerkyList"></select>
+					</div>
+				</div>
+				<label for="omr11_postdat" class="setting-grid-title ic-title-nece">[[#{om.ocosal.postdat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="date" max="2999-12-31" id="omr11_postdat"
+							onkeyup="setInputDateDel(this)">
+					</div>
+				</div>
+			</div>
+
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="omr11_save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="omr11_pqgrid">그리드</div>
+			</div>
+		</div>
+
+		<!-- 수량입력 모달 부분 -->
+		<div class="modal fade" id="omr11QtyModal" tabindex="-1" role="dialog"
+			aria-labelledby="omr11QtyModalTitle" aria-hidden="true"
+			data-backdrop='static' data-keyboard='false'>
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="omr11QtyModalTitle">[[#{om.omr11.qtyModalTitle}]]</h5>
+						<button type="button" class="close" id="modalClose"
+							aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body"
+						style="position: relative; -webkit-box-flex: 1; flex: 1 1 auto; padding: 1rem;">
+						<div class="form-group row col">
+							<label for="omr11_m_soitqty" class="col-6 col-form-label">[[#{om.ocosal.soitqty}]]</label>
+							<!-- 주문 수량 -->
+							<input type="number" class="col-6 form-control"
+								id="omr11_m_soitqty" style="text-align: end;" value=0>
+						</div>
+						<div class="form-group row col">
+							<label for="omr11_m_custkey" class="col-6 col-form-label">[[#{om.ocosal.custkey}]]</label>
+							<!-- 고객 -->
+							<select class="col-6 form-control" id="omr11_m_custkey"
+								style="text-align: end;" data-cb-val="ptnrkey"
+								data-cb-name="ptnamlc"
+								data-cb-url="/om/purchase/common/partner/customer"
+								data-cb-select="" data-cb-variable="custkeyList" onchange="">
+								<option value=""></option>
+							</select>
+						</div>
+						<div class="form-group row col">
+							<label for="omr11_m_destkey" class="col-6 col-form-label">[[#{om.ocosal.destkey}]]</label>
+							<!-- 도착지 -->
+							<select class="col-6 form-control" id="omr11_m_destkey"
+								style="text-align: end;" disabled>
+								<option value="">고객을 먼저 선택하세요.</option>
+							</select>
+						</div>
+					</div>
+					<div class="modal-footer"
+						style="display: flex; -webkit-box-align: center; align-items: center; -webkit-box-pack: end; justify-content: flex-end; padding: 1rem; border-top: 1px solid #e9ecef;">
+						<button type="button" class="btn btn-secondary"
+							id="omr11_closeQtyModal">[[#{bt.close}]]</button>
+						<button type="button" class="btn btn-primary"
+							id="omr11_saveQtyModal">[[#{bt.save}]]</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- 수량입력 모달 부분 -->
+
+	</div>
+	<script>
+$(function(){
+	//_commonInit(); //select 박스 필수!! *
+	let omr11_init = omr11Init();
+	let findData;
+	const tmpDestArr=[];
+	let rsnCodeList;
+
+    let omr11Warekey;
+    let omr11Ownerky;
+
+	//영업일자 캘린더 날짜 제한
+	$('#omr11_postdat').attr('min',setDate());
+
+	//고객요청일자 날짜 제한
+	$('#omr11_salrqdt').attr('min',setDate());
+
+	let pageId = 'omr11';
+	let gridId = '#' + pageId + '_pqgrid';
+
+	//omr11 pqgrid ColModel
+	let omr11GridCM;
+
+	//omr11 pqgrid Grid Object;
+	let omr11GridObj;
+
+	//============================================================
+	// 화주 Change 이벤트
+	//============================================================
+	let omr11_ownerky;
+
+	$('#omr11_ownerky').on('focus', function () {
+		omr11_ownerky = this.value;
+	}).change( function() {
+		let grid = pq.grid(gridId);
+		if(grid.pdata.length > 0){
+			const result = confirm("[[#{ms.listViewRollback}]]");
+			if(result){
+				omr11_change_search($(this), grid);
+
+			}else{
+				$("#omr11_ownerky").val(omr11_ownerky);
+			}
+		}else{
+			if($(this).val()){
+				omr11_change_search($(this), grid);
+			}
+		}
+	});
+
+	//============================================================
+	// 창고 Change 이벤트
+	//============================================================
+	let omr11_warekey;
+
+	$('#omr11_warekey').on('focus', function () {
+		omr11_warekey = this.value;
+	}).change( function() {
+		let grid = pq.grid(gridId);
+		if(grid.pdata.length > 0){
+			const result = confirm("[[#{ms.listViewRollback}]]");
+			if(result){
+				omr11_change_search($(this), grid);
+			}else{
+				$("#omr11_warekey").val(omr11_warekey);
+			}
+		}else{
+			if($(this).val()){
+				omr11_change_search($(this), grid);
+			}
+		}
+	});
+
+	//============================================================
+	// 영업일자 Change 이벤트
+	//============================================================
+	let omr11_postdat;
+	$('#omr11_postdat').on('focus', function () { 
+		omr11_postdat = this.value;
+	}).change( function() {
+		let grid = pq.grid(gridId);
+		if(!$("#omr11_warekey").val()){
+			alert("[[#{om.ocosal.towarky}]]" + "[[#{ms.choiceValue}]]");
+			$("#omr11_postdat").val(omr11_postdat);
+		}else{
+			if(grid.pdata.length > 0){
+				const result = confirm("[[#{ms.listViewRollback}]]");		//화면이 초기화 됩니다. 진행하시겠습니까?
+				if(result){
+					omr11_change_search($(this), grid);
+				}else{
+					$("#omr11_postdat").val(omr11_postdat);
+				}
+			}
+		}
+	});
+
+	//============================================================	
+	// grid 셋팅
+	//============================================================
+ 	omr11GridCM = [
+		{ title: "", dataType: "String",  dataIndx: "state", type: "checkBoxSelection"
+			, align: "center"
+			, maxWidth:"30", maxHeight:"30"
+			, menuIcon: false
+			, sortable: false, editor: false,
+			cb: {all: false, header: true, check:"Y", uncheck:"N"}
+		},
+		{ title: "[[#{om.ocosal.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false },	//Company Key
+ 		{ title: "[[#{om.ocosal.doctype}]]", dataType: "string",  dataIndx: "doctype", editable: false ,
+			render : function(ui) {
+				ui.rowData.doctype = omr11_init.returnDoctypeList.doctype;
+				return omr11_init.returnDoctypeList.doctynm;
+			}
+		},	//문서타입
+ 		{ title: "[[#{om.ocosal.postdat}]]", dataType: "string",  dataIndx: "postdat", editable: false },	//영업일자
+ 		{ title: "[[#{om.omr.skudesc}]]", dataType: "string",  dataIndx: "skumkey", checkbox : true,		//수주 상품
+ 			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+        	editor: {
+        		type: "select",
+                //attr: "multiple='multiple'",
+                init: function (ui) {
+                	ui.$cell.find("select").pqSelect({ searchId : "omr11_skumkey" , checkbox : true});
+                	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+				},
+                options: [],
+                prepend: {'' : ''},
+			},
+			render : function(ui){
+				let option = ui.column.editor.options.find(function (obj) {
+					return (obj[ui.cellData] != null);
+				});
+				return option ? option[ui.cellData] : '';
+			},
+ 		},
+ 		{ title: "[[#{om.ocosal.skudesc}]]", dataType: "string",  dataIndx: "skudesc", editable: false , hidden : true },	//부품명
+ 		{ title: "[[#{om.ocosal.custkey}]]", dataType: "string",  dataIndx: "custkey",	//고객
+ 			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+ 			editor: {
+        		type: "select",
+                init: function (ui) {
+                	ui.$cell.find("select").pqSelect({ singlePlaceholder: ''});
+                	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+				},
+                options: [],
+			},
+			render : gridRenderAndValue
+ 		},
+ 		{ title: "[[#{om.omr.warekey}]]", dataType: "string",  dataIndx: "warekey", editable: false ,
+ 			render : function(ui){
+ 				if(ui.rowData.ownerky){
+ 					let warekeyOption = warekeyList.filter(function(obj){
+ 						return obj.combovl === ui.cellData;
+ 					})
+ 					return warekeyOption ? warekeyOption[0].combonm : '';
+ 				}
+ 			}
+ 		},	//창고
+ 		{ title: "[[#{om.omr.destkey}]]", dataType: "string",  dataIndx: "destkey",
+ 			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+ 			editor: {
+        		type: "select",
+                init: function (ui) {
+                	ui.$cell.find("select").pqSelect({ singlePlaceholder: ''});
+                	setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+				},
+               options: [],
+               prepend: {'' : ''},
+   			},
+   			render : function(ui){
+   				let option;
+				if(ui.rowData.custkey) {
+					let option;
+					if(ui.rowData.custkey && tmpDestArr[ui.rowData.custkey]) {
+						option = tmpDestArr[ui.rowData.custkey].find(function(obj) {
+							return (obj.destkey === ui.cellData);
+						});
+					}
+					ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+					return option ? option.denamlc : '';
+   				}
+			}
+ 		},
+/*  		{ title: '[[#{om.omr.retdesc}]]',  dataType: 'string',  dataIndx: 'rsncdnm' ,edtiable : false ,
+ 			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' } ,
+ 			editor: {
+        		type: "select",
+                init: function (ui) {
+                	ui.$cell.find("select").pqSelect({ multiplePlaceholder: '', checkbox :true, width: 300 });
+                	setTimeout(function () {
+                		
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250);
+				},
+                options: [],
+                prepend: {'' : ''},
+			},
+		},	//사유상세 */
+		//{ title: '[[#{om.omr.retcode}]]',  dataType: 'string',  dataIndx: 'rsncode', edtiable : false, },	//사유코드
+ 		{ title: "[[#{om.ocosal.ownerky}]]", dataType: "string",  dataIndx: "ownerky", editable: false ,
+ 			render : function(ui){
+ 				if(ui.rowData.ownerky){
+ 					let ownerOption = ownerkyList.filter(function(obj){
+ 						return obj.combovl === ui.cellData;
+ 					})
+ 					return ownerOption ? ownerOption[0].combonm : '';
+ 				}
+ 			}
+ 		},	//화주
+ 		{ title: "[[#{om.ocosal.skuskey}]]", dataType: "string",  dataIndx: "skuskey", editable: false },	//상품작업지시 KEY
+ 		{ title: "[[#{om.omr.soitqty}]]", dataType: "integer", dataIndx: "soitqty", 			//주문 수량
+ 			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+ 			summary: { type: 'sum' }, format: "#,###" ,	
+ 		},
+ 		{ title: '[[#{om.ocosal.salmemo}]]', dataType: 'string',  dataIndx: 'salmemo', styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }	//고객요구사항
+ 		},
+ 		{ title: "[[#{om.ocosal.rgitqty}]]", dataType: "integer", dataIndx: "rgitqty", editable: false ,
+ 			summary: { type: 'sum' }, format: "#,###" ,		
+ 		},	//출고지시 수량
+ 		{ title: "[[#{om.oms02.tsoiqty}]]", dataType: "integer", dataIndx: "tsoiqty", editable: false ,		//주문총수량
+ 			summary: { type: "sum" }, format: "#,###" ,
+ 		},
+	  	{ title: '[[#{md.mpakma.packqty}]]', dataType: 'integer', dataIndx: 'packqty', editable : false ,		//박스 수량
+			summary: { type: 'sum' }, format: "#,###"
+		},		
+		{ title: '[[#{om.oms.packbox}]]',  dataType: 'integer', dataIndx: 'packbox', editable: false,
+			format: '#,###',//박스수량(차후 수정)
+			render : function(ui) {
+				return ui.rowData.packbox ? ui.rowData.packbox : 0;
+			}
+		},
+ 		{ title: "[[#{om.ocosal.dctctyp}]]", dataType: "string",  dataIndx: "dctctyp", editable : false },
+ 		{ title: "[[#{md.mskuma.suomkey}]]", dataType: "string", dataIndx: "suomkey" , editable : false },
+ 		{ title: "[[#{om.ocosal.saatn01}]]", dataType: "integer", dataIndx: "saatn01" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성N01 ProcessNo
+ 		{ title: "[[#{om.ocosal.saatn02}]]", dataType: "integer", dataIndx: "saatn02" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성N02 GroupNo
+ 		{ title: "[[#{om.ocosal.saatn03}]]", ataType: "integer", dataIndx: "saatn03" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성N03 CellNo
+ 		{ title: "[[#{om.ocosal.saatn04}]]", dataType: "integer", dataIndx: "saatn04" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성N04
+ 		{ title: "[[#{om.ocosal.saatn05}]]", dataType: "integer", dataIndx: "saatn05" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성N05
+ 		{ title: "[[#{om.ocosal.saatc01}]]", dataType: "string", dataIndx: "saatc01" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C01 고유서열번호
+ 		{ title: "[[#{om.ocosal.saatc02}]]", dataType: "string", dataIndx: "saatc02" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C02 차대번호
+ 		{ title: "[[#{om.ocosal.saatc03}]]", dataType: "string", dataIndx: "saatc03" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C03
+ 		{ title: "[[#{om.ocosal.saatc04}]]", dataType: "string", dataIndx: "saatc04" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C04
+ 		{ title: "[[#{om.ocosal.saatc05}]]", dataType: "string", dataIndx: "saatc05" , styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C05
+ 		{ title: "[[#{om.ocosal.saatc06}]]", dataType: "string", dataIndx: "saatc06" ,styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C06 palletNo
+ 		{ title: "[[#{om.ocosal.saatc07}]]", dataType: "string", dataIndx: "saatc07" ,styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C07 작업영역순번
+ 		{ title: "[[#{om.ocosal.saatc08}]]", dataType: "string", dataIndx: "saatc08" ,styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C08 작업영역명칭
+ 		{ title: "[[#{om.ocosal.saatc09}]]", dataType: "string", dataIndx: "saatc09" ,styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C09 자동배차차량순번
+ 		{ title: "[[#{om.ocosal.saatc10}]]", dataType: "string", dataIndx: "saatc10" ,styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }},	//수주속성C10
+	];
+
+    omr11GridObj = new GridUtil(omr11GridCM, '[[${gprogrid}]]',pageId +'_pqgrid');
+
+    omr11GridObj.setFind();
+    omr11GridObj.setReset();
+  	 //cell click 시 combo box 세팅
+  	omr11GridObj.setCellClick(async function (evt, ui) {
+    	//comboCreateData(pageId + '_pqgrid', 'custkey', custkeyList, {combovl : 'ptnrkey', combonm : 'ptnamlc'});
+		if(ui.rowData.custkey){
+			const destkeyList = await getDestkey(ui.rowData.custkey, tmpDestArr);
+			comboCreateData(pageId + '_pqgrid', 'destkey', destkeyList , {combovl : 'destkey', combonm : 'denamlc'});
+		}
+		
+		 if(ui.dataIndx === 'destkey'){
+     		if(!ui.rowData.destkey && !ui.rowData.custkey){
+     			alert("[[#{wm.wmp92.custkeyCheck}]]");
+     		}
+		 }
+	});
+  	omr11GridObj.setCellBeforeSave(async function(evt,ui){
+     	if(ui.dataIndx === 'custkey'){
+   			if(ui.oldVal != ui.newVal){
+    			omr11GridObj.getGrid().getColumn({ dataIndx : 'destkey' }).editable = true;
+     		}
+   			//저장버튼 vadidation시 custkey cellSave될 때 도착키 select box
+   			if(ui.newVal){
+   				const destkeyList = await getDestkey(ui.newVal, tmpDestArr);
+				comboCreateData(pageId + '_pqgrid', 'destkey', destkeyList , {combovl : 'destkey', combonm : 'denamlc'});
+   			}
+     	}else if(ui.dataIndx === 'destkey'){
+     		if(!ui.rowData.custkey && ui.rowData.destkey){		//고객키가 없고 도착키만 있을경우 
+ 				ui.rowData.destkey = '';
+ 			}
+     		omr11GridObj.getGrid().getColumn({ dataIndx : 'destkey' }).editable = true;
+     	} else if(ui.dataIndx === 'skumkey'){
+     		comboCreateData(pageId + '_pqgrid', 'custkey', custkeyList, {combovl : 'ptnrkey', combonm : 'ptnamlc'});
+     	}
+     });
+
+  	//Row 추가 
+    omr11GridObj.setAdd(function(evt, ui){
+    	if(!$("#omr11_ownerky").val()){				//화주키가 없을 경우
+    		alert("[[#{om.ocosal.ownerky}]]" + "[[#{ms.choiceValue}]]");	//를/을 선택해주세요.
+    	}/* else if(!$('#omr11_salrqdt').val()){		//고객요청일이 없을 경우
+    		alert("[[#{om.ocosal.salrqdt}]]" + "[[#{ms.choiceValue}]]");	//를/을 선택해주세요.
+    	} */else if(!$('#omr11_warekey').val()){		//창고키가 없을 경우
+    		alert('[[#{ms.searchChoiceValue}]]');	//를/을 선택해주세요.
+    	}else if(!$('#omr11_postdat').val()){		//영업일자가 ㅇ벗을 경우
+    		alert('[[#{om.ocosal.postdat}]]' + '[[#{ms.choiceValue}]]');	//를/을 선택해주세요.
+    	}else{
+    		addRow(this, "[[${userattr.compkey}]]", "[[${userattr.ownerky}]]");
+    	}
+    });
+  	
+    // Row 삭제
+  	omr11GridObj.setDelete(function(evt, ui){	
+  		 let checkList = this.Checkbox('state').getCheckedNodes();
+  		const result = confirm('[[#{ms.choiceRowDelete}]]');		//선택된 행을 모두 삭제하시겠습니까?
+  		if(result){
+  			if(checkList.length > 0){
+  				for (const item of checkList) {
+  				    if (item.cooutky) {
+  				        alert("[[#{om.oms02.noDelete}]]");  // 미송 건은 삭제 불가능 합니다.
+  				        return;
+  				    } else {
+  				        this.deleteRow({ rowIndx: item.pq_ri });
+  				    }
+  				}
+  			}else {
+  	      		alert("[[#{ms.choiceRowZero}]]");
+  	      	}
+  		} 
+    });
+    
+	omr11GridObj.setCreate(async function(evt,ui){
+		await _commonInit();
+		
+		omr11Warekey = document.querySelector('#omr11_warekey').value;
+		omr11Ownerky = document.querySelector('#omr11_ownerky').value;	
+		await getPostdate($('#omr11_warekey').val());
+		
+		comboCreateData(pageId + '_pqgrid', 'custkey', custkeyList, {combovl : 'ptnrkey', combonm : 'ptnamlc'});
+		
+		// 20231018 화주로그인=화주 고정 옵션 수정
+		if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+			const html = '<option value="" selected>[[#{om.omr.all}]]</option>';
+			document.querySelector('#omr11_ownerky').insertAdjacentHTML('afterbegin', html); 
+			$('#omr11_ownerky').pqSelect({ deselect : false }); 
+		}
+		
+			// getSkuList() 함수를 호출
+		    const param = {
+		    		warekey: omr11Warekey,
+		    	    ownerky: omr11Ownerky
+			}; 
+		    skuwcList = await getSkuList(param);
+		    
+		    // 초기 warekey 값을 바탕으로 데이터 불러오기
+		    if (omr11Warekey) {
+		        omr11_change_search($('#omr11_warekey'), omr11GridObj.getGrid());
+		    }
+			
+		    
+	});
+
+  //pqGrid 이벤트발생시 validate 함수
+	omr11GridObj.setBeforeValidate(function(event, ui){
+		if(ui.source === 'edit'){
+			const upNewRow = ui.updateList[0].newRow;
+			const upRowData = ui.updateList[0].rowData;
+
+			omr11_init.custkeyList.forEach(function(obj){
+				if(obj.ptnrkey === upNewRow.custkey){
+					return;	
+				}else{
+					return false;
+				}
+			});
+
+			skuwcList.forEach(function(obj){
+				if(obj.skumkey === upNewRow.skumkey){
+					return;
+				}else if (obj.skumkey != upNewRow.skumkey) {
+					return false;
+				}
+			});
+
+			if(upNewRow.salrqtm){
+				//time validation
+				const datetimeRegexp = /([0-5][0-9]):([0-5][0-9]):([0-5][0-9])(([\-\+]([0-1][0-9])\:00))?/; 
+				if(!datetimeRegexp.test(upNewRow.salrqtm)) {
+					alert('[[#{om.oms02.invalidTimeFormat}]]');
+               		this.updateRow({
+               			rowIndx : upRowData.rowIndx,
+               		    newRow : {
+               		    	state : 'Y',
+               		    	salrqtm : ''
+          				},
+          				 checkEditable: false
+                	});
+               		return false;
+				}
+			}
+			
+			// 주문수량 validation
+			if (ui.updateList[0].newRow.soitqty) {
+			    let soitqty = ui.updateList[0].newRow.soitqty;
+
+			    if (soitqty > 999999999) {
+			        alert('[[#{ms.validations.maxLenLength(9)}]]'); // 경고 메시지
+			        ui.updateList[0].newRow.soitqty = 0; // soitqty를 0으로 설정
+			        ui.updateList[0].newRow.rgitqty = 0; // soitqty를 0으로 설정
+			        return;
+			    } else if (soitqty < 0) {
+			    	alert('0 ' + '[[#{ms.notSmallQty}]]');
+			        ui.updateList[0].newRow.soitqty = 0; // soitqty를 0으로 설정
+			        ui.updateList[0].newRow.rgitqty = 0; // soitqty를 0으로 설정
+			        return;
+			    }
+			}   
+		}
+		
+		if (ui.source === 'update' || ui.source === 'paste') {
+        	let selectedRowNum = ui.updateList.map((updatedRow) => updatedRow.rowIndx);
+        	// 반출 사유를 선택하면
+            if (ui.updateList[0].newRow.rsncdnm) {
+              let rsncdnm = ui.updateList[0].newRow.rsncdnm;
+              let rsncode = omr11_init.returnCodeList.find(
+                (row) => row.rsncdnm === rsncdnm
+              );
+
+              let newRsncode = rsncode.rsncode;
+
+              if (rsncode) {
+            	  for (const rowIndx of selectedRowNum) {
+            		  this.updateRow({
+            		    rowIndx: rowIndx,
+            		    newRow: {
+            		      rsncode: newRsncode,
+            		      state: "Y",
+            		    },
+            		    checkEditable: false,
+            		  });
+            		}
+              		} else {
+              		  console.error('[[#{ms.searchChoiceValue}]]', rsncdnm);
+              }
+            } 
+            if (ui.updateList[0].newRow.soitqty) {
+	              let soitqty = ui.updateList[0].newRow.soitqty;
+	              
+	              if (soitqty){
+	            	  for (const rowIndx of selectedRowNum) {
+	            		  this.updateRow({
+	            		    rowIndx: rowIndx,
+	            		    newRow: {
+	            		      rgitqty: soitqty,
+	            		      state: "Y",
+	            		    },
+	            		    checkEditable: false,
+	            		  });
+	            		}
+	              }
+			 }
+	
+        }
+		
+	});
+
+
+    let omr11_grid_ui;
+    omr11GridObj.setChange(function (evt, ui) {
+    	//============================================================	
+       	// grid 수정 이벤트
+       	//============================================================
+    	if (ui.source == 'edit'){
+			if(ui.updateList[0].newRow.skumkey){
+				let skumkeyStr = ui.updateList[0].newRow.skumkey.split(',');
+				omr11GridData =[];
+        		for(const skumkeyData of skumkeyStr) {
+        			findData = skuwcList.find(function(data) { 	
+        				return data.skumkey === skumkeyData 
+        			});
+        			omr11GridData.push(findData);
+        		}
+
+				// 1개 이상의 상품을 선택시, 모달 오픈
+				if(skumkeyStr.length > 1){
+					$("#omr11QtyModal").modal("show");
+					omr11_grid_ui = ui;
+				}else if(findData){
+					const newRow ={
+						skumkey : findData.skumkey,
+	       		    	skudesc : findData.skudesc,
+		   	    		skuskey : findData.skuskey ? findData.skuskey : '' ,
+		   	    		suomkey : findData.suomkey,
+		   	    		tsoiqty : findData.tsoiqty,
+		   	    		packqty : findData.packqty
+					}
+					if(ui.updateList[0].rowData.packqty){
+						newRow.packbox = findData.packqty ? Math.ceil(ui.updateList[0].rowData.soitqty / findData.packqty) : 0;
+					}
+
+					this.updateRow( {
+		       			rowIndx : ui.updateList[0].rowIndx,
+		       		    newRow : newRow,
+		       		    checkEditable: false
+		       		});	 
+				}
+			} else if(ui.updateList[0].newRow.soitqty || ui.updateList[0].rowData.packqty){
+				ui.updateList[0].rowData.packbox = ui.updateList[0].rowData.packqty != 0 ? Math.ceil(ui.updateList[0].newRow.soitqty / ui.updateList[0].rowData.packqty): 0;
+				this.updateRow( {
+           			rowIndx : ui.updateList[0].rowIndx,
+           		    newRow : { 
+           		    	rgitqty : ui.updateList[0].rowData.soitqty
+           		    			},
+           		    checkEditable: false
+           		});
+        	//선택한 날짜가 오늘 날짜 이전이라면 기존 도착요청일 값을 다시 넣어줌
+			} else if($('#omr11_postdat').val() > ui.updateList[0].newRow.salrqdt){
+				alert('[[#{om.oms02.unableBeforePosdate}]]');
+        		return ui.updateList[0].rowData.salrqdt = $('#omr11_salrqdt').val();
+
+        	//고객키 선택시 도착지 설정
+        	} else if(ui.updateList[0].oldRow.custkey != ui.updateList[0].newRow.custkey){
+        		ui.updateList[0].rowData.destkey = '';
+        	} 
+        	// 회수사유상세 선택하면 상세코드매핑
+        	else if (ui.updateList[0].newRow.rsndesc) {
+        		const rsnList =  rsnCodeList.filter(function(obj){
+    				return obj.combonm === ui.updateList[0].newRow.rsndesc;
+    			})
+    			for(const rsnData of rsnList){
+    				oms04ItGridObj.getGrid().updateRow({
+    					rowIndx : ui.updateList[0].rowIndx,
+    					newRow : {
+    						rsncode : rsnData.combovl
+    					},
+    					checkEditable : false
+    				});
+    			}
+        	}
+       	//============================================================	
+       	// grid 복붙 이벤트
+       	//============================================================
+		}else if(ui.source != 'undo' && ui.source === 'paste'){
+			if(ui.updateList.length > 0){
+				for(const updateData of ui.updateList){
+					if(updateData.newRow.skumkey){
+						findData = skuwcList.find(function(data) { 	
+	        				return data.skumkey === updateData.newRow.skumkey; 
+	        			});
+						if(findData){
+	            			const newRow ={
+	            					state : 'Y',
+	        						skumkey : findData.skumkey,
+	        	       		    	skudesc : findData.skudesc,
+	        		   	    		skuskey : findData.skuskey ? findData.skuskey : '' ,
+	        		   	    		suomkey : findData.suomkey ? findData.suomkey : 'EA',
+	        		   	    		soitqty : updateData.rowData.soitqty ? updateData.rowData.soitqty : '' ,
+	        		   	    		rgitqty : updateData.rowData.soitqty ? updateData.rowData.soitqty : '' , 
+	        		   	    		tsoiqty : findData.tsoiqty,
+	        		   	    		packqty : findData.packqty,
+	        		   	    		packbox : findData.packqty ? Math.ceil(updateData.rowData.soitqty / findData.packqty) : 0
+	        					}
+        					this.updateRow( {
+        		       			rowIndx : updateData.rowIndx,
+        		       		    newRow : newRow,
+        		       		    checkEditable: false
+        		       		});	 
+	            		}
+					}else if(!updateData.newRow.skumkey && !updateData.rowData.skumkey){	//newRow skumkey가 없고 , rowData의 skumkey가 빈 값일 경우에만
+						this.updateRow( {
+	               			rowIndx : updateData.rowIndx,
+	               		    newRow : {
+	               		    	state : 'Y',
+	               		    	skumkey : '',
+	               		    	skudesc : '',
+	               		    	skuskey : '',
+	               		    	suomkey : '',
+           		   	    		tsoiqty : 0 ,
+           		   	    		soitqty : updateData.rowData.soitqty ? updateData.rowData.soitqty  : '' ,
+           		   	    		rgitqty : updateData.rowData.soitqty ? updateData.rowData.soitqty  : '' ,
+           		   	    		packqty : 0
+	          				},
+	                	    checkEditable: false
+	                	});
+						
+					}else if(updateData.newRow.soitqty >= 0){
+						this.updateRow( {
+		           			rowIndx : updateData.rowIndx,
+		           		    newRow : { 
+		           		    	rgitqty : updateData.rowData.soitqty
+		           		    			},
+		           		    checkEditable: false
+		           		});
+		        		updateData.rowData.packbox = updateData.rowData.packqty != 0 ? Math.ceil(updateData.rowData.soitqty / updateData.rowData.packqty) : 0;
+					}
+				}
+			}
+			if(ui.addList.length > 0){
+    			for(const addData of ui.addList){
+    				if(addData.newRow.skumkey){
+    					findData = skuwcList.find(function(data) { 	
+	        				return data.skumkey === addData.newRow.skumkey; 
+	        			});
+    					addData.newRow.state = 'Y';
+						addData.newRow.compkey = '[[${userattr.compkey}]]';
+						addData.newRow.postdat = $('#omr11_postdat').val();
+						addData.newRow.salrqdt = $('#omr11_salrqdt').val();
+	    				addData.newRow.salrqtm = '08:00:00';
+	    				addData.newRow.ownerky = $('#omr11_ownerky').val();
+	    				addData.newRow.warekey = $('#omr11_warekey').val();
+	    				addData.newRow.doctype = '230';
+	    				addData.newRow.dctctyp = 'DC';
+            			addData.newRow.skumkey = findData.skumkey;
+            			addData.newRow.skuskey = findData.skuskey ? findData.skuskey : '';
+            			addData.newRow.skudesc = findData.skudesc ;
+            			addData.newRow.tsoiqty = findData.tsoiqty;
+            			addData.newRow.soitqty = addData.newRow.soitqty ? addData.newRow.soitqty : '' ;
+            			addData.newRow.rgitqty = addData.newRow.soitqty ? addData.newRow.soitqty : '' ;
+            			addData.newRow.packqty = findData.packqty;
+            			addData.newRow.suomkey = findData.suomkey ? findData.suomkey : 'EA';
+            			
+            			addData.newRow.packbox = addData.newRow.packqty ? Math.ceil(addData.newRow.soitqty / addData.newRow.packqty) : 0;
+            			
+            		//newRow.skumkey가 없는 경우 --> 다른컬럼 복붙시
+    				}else {
+    					addData.newRow.state = 'Y';
+						addData.newRow.compkey = '[[${userattr.compkey}]]';
+						addData.newRow.postdat = $('#omr11_postdat').val();
+						addData.newRow.salrqdt = $('#omr11_salrqdt').val();
+	    				addData.newRow.salrqtm = '08:00:00';
+	    				addData.newRow.ownerky = $('#omr11_ownerky').val();
+	    				addData.newRow.warekey = $('#omr11_warekey').val();
+	    				addData.newRow.soitqty = addData.newRow.soitqty ? addData.newRow.soitqty : '' ;
+	                	addData.newRow.rgitqty = addData.newRow.soitqty ? addData.newRow.soitqty : '' ;
+	                	addData.newRow.tsoiqty = 0 ;
+	                	addData.newRow.packqty = 0 ;
+	    				addData.newRow.dctctyp = 'DC';
+	    				addData.newRow.doctype = '230';
+    				}
+        		}
+    		}
+		}else if(ui.source == 'clear'){
+			for(const update of ui.updateList){
+            	if(update.newRow.hasOwnProperty('skumkey')){
+            		omr11GridObj.getGrid().updateRow({
+            			rowIndx : update.rowIndx,
+               		    newRow : { 
+               		    	skumkey : '',
+               		    	skudesc : '',
+               		    	skuskey : '',
+               		    	suomkey : '',
+               		    	soitqty : 0 ,
+               		    	rgitqty : 0 ,
+       		   	    		tsoiqty : 0 ,
+       		   	    		packqty : 0
+          				},
+                	    checkEditable: false
+            		});
+				}
+			}
+		}
+	});
+
+    omr11GridObj.open();
+
+	//============================================================	
+	// 수량입력 모달 화면 이벤트
+	//============================================================
+
+	$("#omr11_saveQtyModal").click(function () {
+		omr11QtyModalAction();
+	});
+
+	$('#omr11QtyModal').on('shown.bs.modal', function() {
+		document.querySelectorAll('[id*=omr11_m_]').forEach(function(element) {
+			element.value = '';
+			if(element.id === 'omr11_m_destkey'){
+				element.disabled = true;
+				element.innerHTML = '<option value="">[[#{om.ocosal.custkey}]][[#{ms.choiceValue}]]</option>';
+			}
+		});
+
+		$('#omr11_m_soitqty').focus();
+	});
+
+	//모달 창 닫기 클릭시 선택한 상품코드 초기화 
+	$('#omr11_closeQtyModal, #modalClose').click(function() {
+		if(confirm('[[#{ms.modifyRollback}]]')) {
+			$('#omr11QtyModal').modal('hide');
+			$('#omr11_m_soitqty').val(0);
+			omr11_grid_ui.source = 'clear';
+			omr11GridObj.change('', omr11_grid_ui);	// grid의 change 이벤트 발생(setChange: ui.source)
+			omr11GridObj.getGrid().editCell({ rowIndx : omr11_grid_ui.updateList[0].rowIndx , dataIndx : 'skumkey' });
+		}
+	});
+
+	// 주문 수량 키보드 엔터 이벤트
+	$("#omr11_m_soitqty").keyup(function(e) {
+		if (e.keyCode == 13) {
+			$("#omr11QtyModal").modal("hide");
+			omr11QtyModalAction();
+		}else if(e.keyCode === 27) {	// esc
+			if(confirm('[[#{ms.modifyRollback}]]')) {	
+				$('#omr11QtyModal').modal('hide');
+				omr11_grid_ui.source = 'clear';
+				omr11GridObj.change('', omr11_grid_ui);	// grid의 change 이벤트 발생(setChange: ui.source)
+				omr11GridObj.getGrid().editCell({ rowIndx : omr11_grid_ui.updateList[0].rowIndx , dataIndx : 'skumkey' });
+			}
+		}
+	});
+
+	$('#omr11_m_custkey').on('change',async function(){
+		const param =  $('#omr11_m_custkey').val();
+		if(!param) {
+			$('#omr11_m_destkey').attr('disabled',true);
+			$('#omr11_m_destkey').html('<option value="">[[#{om.ocosal.custkey}]][[#{ms.choiceValue}]]</option>');	//고객을/를 선택해주세요.
+			return;
+		}
+		const destkeyList = await getDestkey(param, tmpDestArr);
+		let html = '';
+		for(const destkey of destkeyList) {
+			html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+		}
+
+		$('#omr11_m_destkey').html(html);
+		$('#omr11_m_destkey').attr('disabled',false);
+	})
+
+	//============================================================	
+	// 저장 버튼 이벤트
+	//============================================================
+	$("#omr11_save").click(function () {
+		let grid = pq.grid(gridId);
+		let getData = grid.pdata;			//grid rowData
+		let gridDataList = grid.getData();
+
+		let omr11_ownerky = $('#omr11_ownerky').val();
+		if(!omr11_ownerky){
+			alert("[[#{om.ocosal.ownerky}]]" + "[[#{ms.choiceValue}]]");
+			return;
+		}
+
+		let checkList = gridDataList.filter(function(e){
+			return e.state == 'Y';
+		});
+
+
+		if(checkList.length > 0){
+			//============================================================	 
+	    	// 필수 값 체크
+	    	//============================================================
+			for(let i in checkList){
+				if(!checkList[i].skumkey){
+					alert("[[#{wm.wmo40.skumkeyCheck}]]");	//필수입력 값을 입력해주세요.
+					grid.editCell( { rowIndx: checkList[i].pq_ri, dataIndx: "skumkey" } );
+	    	  		return false;
+				}
+				if(!checkList[i].custkey){
+					alert("[[#{wm.wmo40.custkeyCheck}]]");
+					grid.editCell( {rowIndx : checkList[i].pq_ri, dataIndx : 'custkey'} );
+					return false;
+				}
+				if(!checkList[i].destkey){
+					alert("[[#{ms.omr.destkey}]]");	//필수입력 값을 입력해주세요.
+					grid.editCell( { rowIndx: checkList[i].pq_ri, dataIndx: "destkey" } );
+	    	  		return false;
+				}
+
+				if(!checkList[i].soitqty){	// || checkList[i].soitqty == 0
+					alert("[[#{ms.omr.soitqty}]]");	//필수입력 값을 입력해주세요.
+					grid.editCell( { rowIndx: checkList[i].pq_ri, dataIndx: "soitqty" } );
+	    	  		return false;
+				}
+				if(!checkList[i].dctctyp){
+					alert((checkList[i].pq_ri + 1) + " Row " + "[[#{ms.requiredValue}]]");	//필수입력 값을 입력해주세요.
+					grid.editCell( { rowIndx: checkList[i].pq_ri, dataIndx: "dctctyp" } );
+	    	  		return false;
+				}
+
+				if(!checkList[i].suomkey){
+					alert((checkList[i].pq_ri + 1) + " Row " + "[[#{ms.requiredValue}]]");	//필수입력 값을 입력해주세요.
+					grid.editCell( { rowIndx: checkList[i].pq_ri, dataIndx: "suomkey" } );
+	    	  		return false;
+				}
+			}
+
+			//============================================================	 
+	    	// 오더 저장
+	    	//============================================================
+			const result = confirm("[[#{ms.checksave}]]");
+
+			if(result){
+				if(checkList.length){
+					let data = {
+						addList : checkList
+					}
+
+					let aul = new AjaxUtil_Order("/om/sales/omr11/save",data);
+					aul.setCallbackSuccess(function(data){
+						//alert("[[#{ms.saveSuccess}]]");
+						 grid.option( "dataModel", { data: [] } );
+			             grid.refreshDataAndView();
+					})
+					aul.setComplete(function(data){
+						grid.hideLoading();	//로딩바 숨기기
+					});
+				    aul.send();
+				}
+			}
+		}else{
+			alert("[[#{ms.choiceRowZero}]]");	//저장하려는 상품이 존재하지 않습니다.
+			return;
+		}
+	});
+
+  	// 1개 이상의 상품을 선택하여 수량 입력 모달 SAVE 후 실행하는 이벤트
+    function omr11QtyModalAction(){
+    	let grid = pq.grid(gridId);
+  		let findData;
+  		let omr11GridEditData=[];
+    	let omr11_m_soitqty = $('#omr11_m_soitqty').val();	//주문 수량
+    	let omr11_m_custkey = $('#omr11_m_custkey').val();	//고객
+    	let omr11_m_destkey = $('#omr11_m_destkey').val();	//도착지
+		let skumkeyStr = omr11_grid_ui.updateList[0].newRow.skumkey.split(',');
+
+    	//선택한 상품 list
+		for(const skumkeyData of skumkeyStr) {
+			findData = skuwcList.find(function(data) { 	
+				return data.skumkey === skumkeyData 
+			});
+			omr11GridEditData.push(findData);
+		}
+
+    	if(!omr11_m_soitqty){
+    		alert('[[#{ms.requiredValue}]]');
+    		return;
+    	}
+    	if(!omr11_m_custkey){
+    		alert('[[#{ms.requiredValue}]]');
+    		return;
+    	}
+    	if(!omr11_m_destkey){
+    		alert('[[#{ms.requiredValue}]]');
+    		return;
+    	}
+
+       for(let i=0; i<omr11GridEditData.length ; i++){
+    	   if(i != 0){
+     			const newRow ={
+     					dctctyp : 'DC',
+     					compkey : "[[${userattr.compkey}]]",
+     					ownerky : $('#omr11_ownerky').val(),
+     					custkey : omr11_m_custkey,
+             			destkey : omr11_m_destkey,
+             			doctype : omr11_grid_ui.updateList[0].rowData.doctype,
+             			warekey : omr11_grid_ui.updateList[0].rowData.warekey,
+     					postdat : $('#omr11_postdat').val(),
+     					salrqdt : $('#omr11_salrqdt').val(),
+     		   	    	salrqtm : omr11_grid_ui.updateList[0].rowData.salrqtm,
+     		   	    	skumkey : omr11GridData[i].skumkey,
+	            		skudesc : omr11GridData[i].skudesc,
+	    	    		skuskey : omr11GridData[i].skuskey,
+	    	    		suomkey : omr11GridData[i].suomkey,
+	    	    		tsoiqty : omr11GridData[i].tsoiqty,	
+     		   	  		soitqty : omr11_m_soitqty,	//주문 수량
+     		   	  		rgitqty : omr11_m_soitqty,	// 출고지시수량(미송 0)
+     		   	  		packqty : omr11GridData[i].packqty
+     			}
+     			newRow.state = 'Y';
+     			newRow.packbox = findData.packqty ? Math.ceil(omr11_m_soitqty / omr11GridData[i].packqty) : 0;
+
+     			grid.addRow({
+     				newRow: newRow,
+     				checkEditable: false
+     			});
+     		}else{
+     			const newRow = {
+   					salrqtm : omr11_grid_ui.updateList[0].rowData.salrqtm,
+   					custkey : omr11_m_custkey,
+           			destkey : omr11_m_destkey,
+           			skumkey : omr11GridData[i].skumkey,
+	           		skudesc : omr11GridData[i].skudesc,
+	   	    		skuskey : omr11GridData[i].skuskey,
+	   	    		suomkey : omr11GridData[i].suomkey,
+	   	    		tsoiqty : omr11GridData[i].tsoiqty,
+   		   	  		soitqty : omr11_m_soitqty,	//주문 수량
+   		   	  		rgitqty : omr11_m_soitqty,	// 출고지시수량
+   		   	  		packqty : omr11GridData[i].packqty
+     			};
+
+     			newRow.packbox = findData.packqty ? Math.ceil(omr11_m_soitqty / omr11GridData[i].packqty) : 0; 
+     			grid.updateRow( {
+            		rowIndx : omr11_grid_ui.updateList[0].rowIndx,
+             		newRow : newRow,
+             		checkEditable: false
+             	});
+     		}    
+        }
+       $('#omr11QtyModal').modal('hide');	
+    }
+});
+
+//============================================================	
+// grid 추가 이벤트
+//============================================================
+function addRow(grid, compkey, ownerky){
+	 	let rowData = {
+	 		state : 'Y',
+	 		compkey : compkey,
+	 		ownerky : $('#omr11_ownerky').val(),	
+	 		warekey : $('#omr11_warekey').val(),
+	 		doctype : '230',
+	 		postdat : $('#omr11_postdat').val(),
+	 		saldate : $('#omr11_saldate').val(),	//수주일자
+	 		//salrqdt : $('#omr11_salrqdt').val(),	//고객도착요청일
+	 		//salrqtm : '00:00:00',					//고객도착요청시간 default
+	 		dctctyp : 'DC',
+	 		custkey : (custkeyList.length === 1) ? custkeyList[0].ptnrkey : ''
+	 	};
+	 	let rowIndx = grid.addRow({ rowData: rowData, checkEditable: false });
+	 	grid.goToPage({ rowIndx: rowIndx });
+	 	grid.editFirstCellInRow({ rowIndx: rowIndx });
+	}
+//============================================================	
+// init 데이터 조회
+//============================================================
+function omr11Init(){
+	let omr11_init = callAjax('data', 'GET', "/om/sales/omr11/grid/init");
+
+	// 영업 일자
+	$("#omr11_postdat").val(omr11_init.postdat);
+
+	// 고객도착요청일
+	$("#omr11_salrqdt").val(omr11_init.postdat);
+
+
+	let omr11_custkey;
+	omr11_custkey = omr11_init.custkeyList.filter(function(item){
+		return item.ptnrkey;
+	})
+
+	let custkey;
+	omr11_custkey.forEach(item => {
+		custkey = item.ptnrkey;
+	})
+	$('#omr11_custkey').val(custkey);
+
+	return omr11_init;
+}
+
+
+//============================================================	
+//init 데이터 재조회
+//============================================================
+async function omr11_change_search(thisVal, grid){
+	const ownerky = $('#omr11_ownerky').val();
+	const warekey = $('#omr11_warekey').val()
+
+	grid.option( "dataModel", { data: [] } );
+	grid.refreshDataAndView();
+
+
+	//화주와 창고 값이 둘 다 있을때 상품 data get
+	if(thisVal.context.id === 'omr11_warekey'){
+		let omr11InitPostdat = await getPostdate(warekey);
+
+		let date = omr11InitPostdat.toString();
+		// 영업 일자
+		if(date != null){
+			let postdat = date.substr(0,4) + '-' + date.substr(4,2) + '-' + date.substr(6,2);
+			$("#omr11_postdat").val(postdat);
+
+			// 고객도착요청일
+			$('#omr11_salrqdt').val(postdat);
+		}
+	}
+	if(ownerky && warekey){
+		let params = {
+				ownerky : ownerky,
+				warekey : warekey
+		}
+		skuwcList = await getSkuList(params);
+		// 상품 리스트
+		let column = grid.getColumn({ dataIndx: "skumkey" });
+  		const options = skuwcList.map(function(obj){
+			let rObj = {};
+
+			//20230818 상품명 + ( )안에 숫자 삭제
+			//rObj[obj.skumkey] ='[' + obj.skumkey + ']' + obj.skudesc + '(' + obj.stotqty + ')';
+			rObj[obj.skumkey] ='[' + obj.skumkey + ']' + obj.skudesc;
+				return rObj;
+		});
+
+		column.editor.options = options;
+		return skuwcList;
+	}
+}
+
+//MPTNMA : 고객에 따른 도착지 조회. array에 미존재 시 DB에서 조회 후 array에 추가.
+async function getDestkey(param, arr) {
+	let destkeyList;
+
+	if(arr[param]) {
+		destkeyList = arr[param];
+	}else{
+		const destkeyData = await fetchUtil('GET', '/om/sales/oms02/grid/destkey/'+ param);
+		destkeyList = await destkeyData.json();
+		arr[param] = destkeyList;
+	}
+
+	return destkeyList;
+}
+
+//============================================================	
+//상품용
+//============================================================
+async function getSkuList(param){
+	const rData = await fetchUtil('','/om/purchase/common/skuwc',param)
+	skuwcList = rData.json(); 
+	return skuwcList;
+}
+//============================================================	
+//영업일자 Init
+//============================================================
+ async function getPostdate(warekey){
+	const param = {warekey : warekey};
+	const rData = await fetchUtil('','/om/sales/oms02/postdat', param);
+	
+	let postdatInit =  await rData.json();
+	
+	let date = postdatInit.toString();
+	// 영업 일자
+	if(date != null){
+		let postdat = date.substr(0,4) + '-' + date.substr(4,2) + '-' + date.substr(6,2);
+		// 고객도착요청일
+		$("#omr11_postdat").prop('disabled',false);
+		$('#omr11_postdat').val(postdat);
+	}
+	
+	return await postdatInit;
+}
+
+
+//============================================================	
+// grid Options Renser 이벤트(상품용)
+//============================================================
+function returnGridRenderSkumkey(ui){
+	let option = ui.column.editor.options.find(function (obj) {
+		return (obj[ui.cellData] != null);
+	});
+
+}
+//============================================================	
+//window key add row 이벤트
+//============================================================
+function omr11_window_key_addRow(){
+	if(!$("#omr11_ownerky").val() || !$('#omr11_skumkey').val() || !$('#omr11_saldate').val() || !$('#omr11_salrqdt').val()){
+		alert("[[#{ms.searchChoiceValue}]]");	//검색조건을 선택해주세요.
+	}else{
+		addRow(pq.grid("#omr11_grid"), "[[${userattr.compkey}]]", "[[${userattr.ownerky}]]");
+	}
+}
+
+
+//============================================================	
+//grid 단행 삭제 이벤트
+//============================================================
+function deleteRow(){
+	var grid = pq.grid('#omr11_pqgrid');
+	var Sel = grid.Selection()._areas;
+	if(Sel.length > 0){
+		for( var i in Sel ){
+			if(Sel[i].type == 'block'){
+				var rows = [];
+				var result = confirm((Sel[i].rc) + '[[#{ms.rowDelete}]]');
+				for(let j=Sel[i].r1; j<=Sel[i].r2; j++){
+					if(result){
+						rows.push({rowIndx : j});
+					}else{
+						//alert("[[#{om.oms2.noDelete}]]"); 할당, 미송발송, 반품, 매장판매가 진행된 주문은 삭제할 수 없습니다.
+						return;
+					}
+				}
+				grid.deleteRow({ rowList: rows });
+			}
+			if(Sel[i].type == 'cell'){
+				result = confirm((Sel[i].rc) + '[[#{ms.rowDelete}]]');
+				if(result){
+					grid.deleteRow({ rowIndx: Sel[i].r1 });
+				}else{
+					//alert("[[#{om.oms2.noDelete}]]"); 할당, 미송발송, 반품, 매장판매가 진행된 주문은 삭제할 수 없습니다.
+					return;
+				}
+			}
+		}
+	}
+}
+
+//============================================================	
+//캘린더 날짜 선택 제한
+//============================================================
+function setDate(){
+	let nowDate = Date.now();
+
+	let timeOff = new Date().getTimezoneOffset()*6000;
+
+	let today = new Date(nowDate-timeOff).toISOString().split('T')[0];
+
+	return today;
+}
+
+</script>
+
+</div>
+</html>

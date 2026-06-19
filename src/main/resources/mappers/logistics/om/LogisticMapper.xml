@@ -1,0 +1,2281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.logistics.om.mapper.LogisticMapper">
+	<select id="getOmCooutky300" resultType="hashMap">
+		select fn_om_cooutky300() as COOUTKY from DUAL
+	</select>
+	
+	<select id="getWmShpdcky" resultType="hashMap">
+		select fn_wm_shpdcky() as SHPDCKY from DUAL
+	</select>
+	
+	<select id="getWmEoasnky" resultType="hashMap">
+		select fn_wm_eoasnky() as EOASNKY from DUAL
+	</select>
+	
+	<select id="getWmTaskoky" resultType="hashMap">
+		select fn_wm_taskoky() as TASKOKY from DUAL
+	</select>
+	
+	<select id="getWmRcvdcky" resultType="hashMap">
+		select fn_wm_rcvdcky() as RCVDCKY from DUAL
+	</select>
+	
+	<select id="getWmPmtinno" resultType="hashMap">
+		select fn_wm_pmtinno() as PMTINNO from DUAL
+	</select>
+	
+	<select id="getWmSalgrky" resultType="hashMap">
+		select fn_om_salgrky() as SALGRKY from DUAL
+	</select>
+	
+	<!-- Procedure :: sp_wm_ctrwrcvit -->
+    <select id="callOmw2SpWmCtrwrcvit" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		{ 
+			CALL sp_wm_ctrwrcvit
+			( 
+			  #{item.compkey}
+			, #{item.warekey}
+			, #{item.doctype}
+			, #{item.rcvdcky}
+			, fn_wm_rcvdcit(#{item.compkey}, #{item.rcvdcky})
+			, #{item.eoasnky}
+			, #{item.eoasnit}
+			, #{item.rcveqty}
+			, ' '
+			, ' '
+			, #{userData.useract}
+			, #{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR}
+			, #{O_ORESULT, mode=OUT, jdbcType=INTEGER}
+			)
+		}
+	</select>
+	
+	<!-- Procedure :: sp_wm_ctrwrcvit -->
+    <select id="callSpWmReturnClose" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		CALL sp_wm_returnclose
+		( 
+		  #{item.compkey}
+		, #{item.mngwhky}
+		, #{item.pmtinno}
+		, #{item.cooutky}
+		, #{item.cooutit}
+		, #{userData.useract}
+		, #{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR}
+		, #{O_ORESULT, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<!-- Procedure :: sp_wm_ctrstokky_lot -->
+	<select id="callSpWmCtrstokkyLot" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		CALL sp_wm_ctrstokky_lot
+		( 
+		  #{item.compkey}
+		, #{item.warekey}
+		, #{item.doccate}
+		, #{item.doctype}
+		, #{item.taskoky}
+		, #{item.taskoit}
+		, #{item.refsodc}
+		, #{item.refsoit}
+		, #{userData.useract}
+		, #{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR}
+		, #{O_ORESULT, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<!-- Procedure :: sp_wm_ctrstokky_lot -->
+	<select id="callSpOmOcotak" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		CALL sp_om_ocotak_cancel320
+		( 
+		  #{item.compkey}
+		, #{item.cooutky}
+		, #{item.scitqty}
+		, #{userData.useract}
+		, #{O_OMSGKEY, mode=OUT, jdbcType=VARCHAR}
+		, #{O_ORESULT, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<!-- *********************************************** -->
+    <!--  OMW1 -->
+    <!-- *********************************************** -->
+	<select id="selectOmw1VirtualWshpit" resultType="com.logistics.wm.domain.WshpitVO">
+		select  
+			  COMPKEY
+			, COOUTIT as SHPDCIT
+			, MNGWHKY as WAREKEY
+			, '700' as DOCCATE 
+			, case when DOCTYPE = '310'
+				   then '750'
+				   when DOCTYPE = '330'
+				   then '760'
+				   when DOCTYPE = '370'
+				   then '770'
+			  end as DOCTYPE
+			, 'NEW' as SHPDCST
+			, 'NEW' as SHPITST
+			, ' ' as PICKTYP
+			, ' ' as OGSTRKY
+			, ' ' as ALSTRKY
+			, OWNERKY
+			, SKUMKEY
+			, (SELECT SKUDESC FROM mskuwc WHERE COMPKEY = OC.COMPKEY AND OWNERKY = OC.OWNERKY AND WAREKEY = OC.MNGWHKY AND SKUMKEY = OC.SKUMKEY) as SKUDESC
+			, to_char(now(),'YYYYMMDD') as SHPPDAY
+			, to_char(now(),'hh24miss') as SHPPTIM
+			, ' ' as SHPSDAY
+			, ' ' as SHPSTIM
+			, ' ' as SPEHTIM
+			, ' ' as SPEITIM
+			, ' ' as SALDATE
+			, CUSTKEY
+			, RETAKEY
+			, VENDKEY
+			, SALMEMO
+			, SALRQDT
+			, SALRQTM
+			, SOITQTY as SHCUQTY
+			, RGITQTY as RGITQTY
+			, 0 as SHALQTY
+			, 0 as SHPKQTY
+			, 0 as SHDVSQT
+			, 0 as SHDVEQT
+			, 0 as SHCFQTY
+			, 'EA' as SUOMKEY
+			, 'FREE' as PAYTYPE
+			, 'DC' as DCTCTYP
+			, ' ' as ALLGRKY
+			, ' ' as PAKLBKY
+			, ' ' as REFPODC
+			, ' ' as REFPOIT
+			, COOUTKY as REFSODC
+			, COOUTIT as REFSOIT
+			, ' ' as REFDNDC
+			, ' ' as REFDNIT
+			, ' ' as REFSDDC
+			, ' ' as REFSDIT
+			, CREDATE
+			, CRETIME
+			, CREUSER
+			, LMODATE
+			, LMOTIME
+			, LMOUSER
+			from OCOSAL OC
+			where COMPKEY = #{compkey}
+			AND COOUTKY = #{cooutky}
+	</select>
+	
+	<select id="selectOmw1VirtualWasnif" resultType="com.logistics.wm.domain.WasnifVO">
+		select  
+			  COMPKEY
+			, COOUTIT as EOASNIT
+			, case when DOCTYPE = '310'
+				   then 'WHOLESALE'
+				   when DOCTYPE != '310'
+				   then MNGWHKY 
+			  end as WAREKEY
+			, '400' as DOCCATE
+			, case when DOCTYPE = '310'
+				   then '440'
+				   when DOCTYPE = '330'
+				   then '445'
+				   when DOCTYPE = '350'
+				   then '450'
+				   when DOCTYPE = '360'
+				   then '460'
+			  end as DOCTYPE
+			, 'NEW' as ASNSTAT
+			, OWNERKY
+			, SKUMKEY
+			, (SELECT SKUDESC FROM mskuwc WHERE COMPKEY = OC.COMPKEY AND OWNERKY = OC.OWNERKY AND WAREKEY = OC.MNGWHKY AND SKUMKEY = OC.SKUMKEY) as SKUDESC
+			, SKUSKEY
+			, ' ' as SIRBCOD
+			, to_char(now(),'YYYYMMDD') as ASNDATE
+			, 0 as POITQTY
+			, 'EA' as PUOMKEY
+			, SOITQTY as ASNDQTY
+			, 'EA' as AUOMKEY
+			, 0 as RCHSQTY
+			, 'EA' as RCHSUOM
+			, case when DOCTYPE = '310'
+				   then MNGWHKY
+				   when (DOCTYPE = '330' or DOCTYPE = '340')
+				   then VENDKEY
+				   when DOCTYPE != '310'
+				   then CUSTKEY 
+			  end as VENDKEY
+			, ' ' as CARRKEY
+			, ' ' as TRUCKNO
+			, ' ' as TRUCTON
+			, ' ' as PRODDAT
+			, 0 as SHELIFE
+			, ' ' as EXPIDAT
+			, CUSTKEY as CUSTKEY
+			, case when DOCTYPE = '330' 
+					AND ( SELECT COUNT(1) FROM mptnma 
+					where 1=1 
+					and COMPKEY = OC.COMPKEY 
+					and OWNERKY = OC.OWNERKY 
+					and PTDELYN = 'N'
+					and PTNGRO1 = 'LABEL'
+					and PTNRTYP = 'VENDER'
+					AND PTNRKEY = OC.CUSTKEY
+					and PTNGRO1 not in('WAREHOUSE')) > 0 
+					then RETAKEY
+					
+					when DOCTYPE = '330' 
+					AND ( SELECT COUNT(1) FROM mptnma 
+					where 1=1 
+   		   			and COMPKEY = OC.COMPKEY
+   		   			and OWNERKY = OC.OWNERKY
+	  	  			and PTDELYN = 'N'
+	  	   			and PTNGRO1 = 'LABEL'
+   		   			and PTNRTYP = 'VENDER'
+   		   			AND PTNRKEY = OC.CUSTKEY
+   		   			and PTNGRO1 not in('WAREHOUSE')
+   		   			<![CDATA[
+   		   			) <= 0 
+   		   			]]>
+   		   			then NULL
+					ELSE CUSTKEY
+				end as RETAKEY
+			, 'DC' as DCTCTYP
+			, ' ' as LOTAT01
+			, ' ' as LOTAT02
+			, ' ' as LOTAT03
+			, ' ' as LOTAT04
+			, ' ' as LOTAT05
+			, ' ' as LOTAT06
+			, ' ' as LOTAT07
+			, ' ' as LOTAT08
+			, ' ' as LOTAT09
+			, ' ' as LOTAT10
+			, ' ' as LOTAT11
+			, ' ' as LOTAT12
+			, ' ' as LOTAT13
+			, ' ' as LOTAT14
+			, ' ' as LOTAT15
+			, ' ' as LOTAT16
+			, case when DOCTYPE = '330' 
+				AND ( SELECT COUNT(1) FROM mptnma 
+				where 1=1 
+				and COMPKEY = OC.COMPKEY 
+				and OWNERKY = OC.OWNERKY 
+				and PTDELYN = 'N'
+				and PTNGRO1 = 'LABEL'
+				and PTNRTYP = 'VENDER'
+				AND PTNRKEY = OC.CUSTKEY
+				and PTNGRO1 not in('WAREHOUSE')) > 0 
+				then 'Y'
+				ELSE 'N'
+			end as LOTAT17
+			, case when DOCTYPE = '330' 
+				AND ( SELECT COUNT(1) FROM mptnma 
+				where 1=1 
+				and COMPKEY = OC.COMPKEY 
+				and OWNERKY = OC.OWNERKY 
+				and PTDELYN = 'N'
+				and PTNGRO1 = 'LABEL'
+				and PTNRTYP = 'VENDER'
+				AND PTNRKEY = OC.CUSTKEY
+				and PTNGRO1 not in('WAREHOUSE')) > 0 
+				then RETAKEY
+				ELSE ' '
+			end as LOTAT18
+			, ' ' as LOTAT19
+			, ' ' as LOTAT20
+			, case when DOCTYPE = '310'
+				   then '80'
+				   when DOCTYPE = '350'
+				   then '90'
+				   when DOCTYPE in ('360','330')
+				   then '00'
+		  	  end as STKSTAT
+			, ' ' as RSNCODE
+			, ' ' as RCVSRMK
+			, ' ' as COPODKY
+			, ' ' as COPODIT
+			, COOUTKY as REFSODC
+			, COOUTIT as REFSOIT
+			, ' ' as REFDNDC
+			, ' ' as REFDNIT
+			, ' ' as REFSDDC
+			, ' ' as REFSDIT
+			, CREDATE
+			, CRETIME
+			, CREUSER
+			, LMODATE
+			, LMOTIME
+			, LMOUSER
+			from OCOSAL OC
+			where COMPKEY = #{compkey}
+			AND COOUTKY = #{cooutky}
+	</select>
+	
+	<insert id="insertOmw1Wshpit" parameterType="hashmap">
+		insert into WSHPIT
+		(
+			  COMPKEY
+			, SHPDCKY
+			, SHPDCIT
+			, WAREKEY
+			, DOCCATE
+			, DOCTYPE
+			, SHPDCST
+			, SHPITST
+			, PICKTYP
+			, OGSTRKY
+			, ALSTRKY
+			, OWNERKY
+			, SKUMKEY
+			, SKUDESC
+			, SHPPDAY
+			, SHPPTIM
+			, SHPSDAY
+			, SHPSTIM
+			, SPEHTIM
+			, SPEITIM
+			, SALDATE
+			, CUSTKEY
+			, RETAKEY
+			, SALMEMO
+			, SALRQDT
+			, SALRQTM
+			, SHCUQTY
+			, RGITQTY
+			, SHALQTY
+			, SHPKQTY
+			, SHDVSQT
+			, SHDVEQT
+			, SHCFQTY
+			, SUOMKEY
+			, PAYTYPE
+			, DCTCTYP
+			, ALLGRKY
+			, PAKLBKY
+			, REFPODC
+			, REFPOIT
+			, REFSODC
+			, REFSOIT
+			, REFDNDC
+			, REFDNIT
+			, REFSDDC
+			, REFSDIT
+			, CREDATE
+			, CRETIME
+			, CREUSER
+			, LMODATE
+			, LMOTIME
+			, LMOUSER
+		)
+		values
+		<foreach collection="insertWshpitList" item="item" separator=",">
+		(
+			  #{item.compkey}
+			, #{item.shpdcky}
+			, #{item.shpdcit}
+			, #{item.warekey}
+			, #{item.doccate}
+			, #{item.doctype}
+			, #{item.shpdcst}
+			, #{item.shpitst}
+			, #{item.picktyp}
+			, #{item.ogstrky}
+			, #{item.alstrky}
+			, #{item.ownerky}
+			, #{item.skumkey}
+			, #{item.skudesc}
+			, #{item.shppday}
+			, #{item.shpptim}
+			, #{item.shpsday}
+			, #{item.shpstim}
+			, #{item.spehtim}
+			, #{item.speitim}
+			, #{item.saldate}
+			, #{item.custkey}
+			, #{item.retakey}
+			, #{item.salmemo}
+			, #{item.salrqdt}
+			, #{item.salrqtm}
+			, #{item.shcuqty}
+			, #{item.rgitqty}
+			, #{item.shalqty}
+			, #{item.shpkqty}
+			, #{item.shdvsqt}
+			, #{item.shdveqt}
+			, #{item.shcfqty}
+			, #{item.suomkey}
+			, #{item.paytype}
+			, #{item.dctctyp}
+			, #{item.allgrky}
+			, #{item.paklbky}
+			, #{item.refpodc}
+			, #{item.refpoit}
+			, #{item.refsodc}
+			, #{item.refsoit}
+			, #{item.refdndc}
+			, #{item.refdnit}
+			, #{item.refsddc}
+			, #{item.refsdit}
+			, #{item.credate}
+			, #{item.cretime}
+			, #{item.creuser}
+			, #{item.lmodate}
+			, #{item.lmotime}
+			, #{item.lmouser}
+		)
+		</foreach>
+	</insert>
+	
+	<insert id="insertOmw1Wasnif" parameterType="hashmap">
+		insert into WASNIF
+		(
+			  COMPKEY
+			, EOASNKY
+			, EOASNIT
+			, WAREKEY
+			, DOCCATE
+			, DOCTYPE
+			, ASNSTAT
+			, OWNERKY
+			, SKUMKEY
+			, SKUDESC
+			, SKUSKEY
+			, SIRBCOD
+			, ASNDATE
+			, POITQTY
+			, PUOMKEY
+			, ASNDQTY
+			, AUOMKEY
+			, RCHSQTY
+			, RCHSUOM
+			, VENDKEY
+			, CARRKEY
+			, TRUCKNO
+			, TRUCTON
+			, PRODDAT
+			, SHELIFE
+			, EXPIDAT
+			, CUSTKEY
+			, RETAKEY
+			, DCTCTYP
+			, LOTAT01
+			, LOTAT02
+			, LOTAT03
+			, LOTAT04
+			, LOTAT05
+			, LOTAT06
+			, LOTAT07
+			, LOTAT08
+			, LOTAT09
+			, LOTAT10
+			, LOTAT11
+			, LOTAT12
+			, LOTAT13
+			, LOTAT14
+			, LOTAT15
+			, LOTAT16
+			, LOTAT17
+			, LOTAT18
+			, LOTAT19
+			, LOTAT20
+			, STKSTAT
+			, RSNCODE
+			, RCVSRMK
+			, COPODKY
+			, COPODIT
+			, REFSODC
+			, REFSOIT
+			, REFDNDC
+			, REFDNIT
+			, REFSDDC
+			, REFSDIT
+			, CREDATE
+			, CRETIME
+			, CREUSER
+			, LMODATE
+			, LMOTIME
+			, LMOUSER
+		)
+		values
+		<foreach collection="insertWasnifList" item="item" separator=",">
+		(
+			  #{item.compkey}
+			, #{item.eoasnky}
+			, #{item.eoasnit}
+			, #{item.warekey}
+			, #{item.doccate}
+			, #{item.doctype}
+			, #{item.asnstat}
+			, #{item.ownerky}
+			, #{item.skumkey}
+			, #{item.skudesc}
+			, #{item.skuskey}
+			, #{item.sirbcod}
+			, #{item.asndate}
+			, #{item.poitqty}
+			, #{item.puomkey}
+			, #{item.asndqty}
+			, #{item.auomkey}
+			, #{item.rchsqty}
+			, #{item.rchsuom}
+			, #{item.vendkey}
+			, #{item.carrkey}
+			, #{item.truckno}
+			, #{item.tructon}
+			, #{item.proddat}
+			, #{item.shelife}
+			, #{item.expidat}
+			, #{item.custkey}
+			, #{item.retakey}
+			, #{item.dctctyp}
+			, #{item.lotat01}
+			, #{item.lotat02}
+			, #{item.lotat03}
+			, #{item.lotat04}
+			, #{item.lotat05}
+			, #{item.lotat06}
+			, #{item.lotat07}
+			, #{item.lotat08}
+			, #{item.lotat09}
+			, #{item.lotat10}
+			, #{item.lotat11}
+			, #{item.lotat12}
+			, #{item.lotat13}
+			, #{item.lotat14}
+			, #{item.lotat15}
+			, #{item.lotat16}
+			, #{item.lotat17}
+			, #{item.lotat18}
+			, #{item.lotat19}
+			, #{item.lotat20}
+			, #{item.stkstat}
+			, #{item.rsncode}
+			, #{item.rcvsrmk}
+			, #{item.copodky}
+			, #{item.copodit}
+			, #{item.refsodc}
+			, #{item.refsoit}
+			, #{item.refdndc}
+			, #{item.refdnit}
+			, #{item.refsddc}
+			, #{item.refsdit}
+			, #{item.credate}
+			, #{item.cretime}
+			, #{item.creuser}
+			, #{item.lmodate}
+			, #{item.lmotime}
+			, #{item.lmouser}
+		)
+		</foreach>
+	</insert>
+	
+	<insert id="insertOcosal" parameterType="hashmap">
+		insert into OCOSAL
+		(
+			  COMPKEY
+			, COOUTKY
+			, COOUTIT
+			, DOCCATE, DOCTYPE
+			, SALMODE, SALGRKY, SALSTAT
+			, POSTDAT
+			, SALDATE, SALTIME
+			, CUSTKEY, RETAKEY, VENDKEY, TOWARKY
+			, SALMEMO
+			, SALRQDT, SALRQTM
+			, SALLBYN
+			, OWNERKY
+			, SKUMKEY
+			, SKUDESC
+			, SKUSKEY
+			, SOITQTY, RGITQTY, SHCFQTY, SUOMKEY
+			, PAYTYPE
+			, DCTCTYP
+			, MNGWHKY
+			, RSNCODE, RSNDESC
+			, INBSTAT, OUBSTAT
+			, ITMCOST
+			, SELPRIC
+			, SEDPRIC
+			, SEPRICE
+			, ORDGR01, ORDGR02, ORDGR03
+			, CLOSLYN, CLODATE, CLOTIME, CLOUSER
+			, SPRETYP, PMTSAYN, PMTSADT, PMTSATM, PMTSAUR
+			, CREDATE, CRETIME, CREUSER
+			, LMODATE, LMOTIME, LMOUSER
+		)
+		values
+		<foreach collection="insertList" item="item" separator=",">
+		(
+			  #{item.compkey}
+			, #{item.cooutky}, #{item.cooutit}
+			, #{item.doccate}, #{item.doctype}
+			, #{item.salmode}, #{item.salgrky}, #{item.salstat}
+			, (SELECT fn_om_posdate(#{item.compkey}, #{item.custkey}))
+			, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss')
+			, #{item.custkey}, #{item.retakey}, #{item.vendkey}, #{item.towarky}
+			, #{item.salmemo}
+			, REPLACE(#{item.salrqdt}, '-', ''), REPLACE(#{item.salrqtm}, ':', '')
+			, #{item.sallbyn}
+			, #{item.ownerky}
+			, #{item.skumkey}
+			, (SELECT SKUDESC FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.mngwhky} AND SKUMKEY = #{item.skumkey})
+			, #{item.skuskey}
+			, #{item.soitqty}, #{item.rgitqty}, #{item.shcfqty}, #{item.suomkey}
+			, #{item.paytype}
+			, #{item.dctctyp}
+			, #{item.mngwhky}
+			, #{item.rsncode}, #{item.rsndesc}
+			, #{item.inbstat}, #{item.oubstat}
+			, (SELECT ITMCOST FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.mngwhky} AND SKUMKEY = #{item.skumkey})
+			, (SELECT SELPRIC FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.mngwhky} AND SKUMKEY = #{item.skumkey})
+			, (SELECT SEDPRIC FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.mngwhky} AND SKUMKEY = #{item.skumkey})
+			, (SELECT SEPRICE FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.mngwhky} AND SKUMKEY = #{item.skumkey})
+			, #{item.ordgr01}, #{item.ordgr02}, #{item.ordgr03}
+			, #{item.closlyn}, #{item.clodate}, #{item.clotime}, #{item.clouser}
+			, #{item.spretyp}, #{item.pmtsayn}, #{item.pmtsadt}, #{item.pmtsatm}, #{item.pmtsaur}
+			, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+			, to_char(now(),'YYYYMMDD'), to_char(now(),'hh24miss'), #{userData.useract}
+		)
+		</foreach>
+	</insert>
+	
+	
+	<!-- *********************************************** -->
+    <!-- OMW2 -->
+    <!-- *********************************************** -->
+    <select id="selectOmw2HeadList" resultType="com.logistics.wm.domain.WasnifVO">
+    	SELECT							
+			WA.COMPKEY ,								
+			WA.WAREKEY ,								
+			WA.DOCCATE ,								
+			WA.DOCTYPE ,								
+			MD.DOCTYNM ,
+			WA.EOASNKY ,								
+			WA.ASNSTAT ,								
+			date_format(WA.ASNDATE, '%Y-%m-%d') AS ASNDATE ,								
+			WA.OWNERKY ,								
+			WA.VENDKEY ,								
+		 	MP.PTNAMLC AS VENDNAM ,								
+			WA.CUSTKEY ,								
+			MC1.CUNAMLC AS CUSTNAM ,								
+			WA.RETAKEY ,								
+			MC2.CUNAMLC AS RETANAM ,								
+			FORMAT(SUM((WA.ASNDQTY - WA.RCHSQTY) / MS.ROINQTY), 1) AS GPAKCNT ,								
+			SUM(WA.ASNDQTY) AS ASNDQTY ,								
+			COUNT(1) AS ITEMCNT								
+		FROM									
+			WASNIF WA								
+		INNER 									
+		JOIN MSKUWC MS ON									
+			MS.COMPKEY = WA.COMPKEY								
+			AND MS.WAREKEY = WA.WAREKEY								
+			AND MS.OWNERKY = WA.OWNERKY								
+			AND MS.SKUMKEY = WA.SKUMKEY								
+		INNER JOIN MDOCMA MD ON									
+			MD.COMPKEY = WA.COMPKEY								
+			AND MD.WAREKEY = WA.WAREKEY								
+			AND MD.DOCCATE = WA.DOCCATE								
+			AND MD.DOCTYPE = WA.DOCTYPE								
+		INNER JOIN MPTNMA MP ON									
+		 	MP.COMPKEY = WA.COMPKEY								
+		 	AND MP.PTNRKEY = WA.VENDKEY								
+		 	AND MP.PTDELYN = 'N'								
+		INNER JOIN MCUSMA MC1 ON									
+			MC1.COMPKEY = WA.COMPKEY								
+			AND MC1.OWNERKY = WA.OWNERKY								
+			AND MC1.CUSTKEY = WA.CUSTKEY							
+		LEFT JOIN 									
+		MCUSMA MC2 ON									
+			MC2.COMPKEY = WA.COMPKEY								
+			AND MC2.OWNERKY = WA.OWNERKY								
+			AND MC2.CUSTKEY = WA.RETAKEY	
+		WHERE									
+			WA.COMPKEY = #{userData.compkey}							
+			AND WA.ASNSTAT != 'CMP'								
+			AND WA.DOCCATE = '400'
+			AND WA.DOCTYPE in ('440')							
+			AND WA.WAREKEY = 'WHOLESALE'					
+			AND WA.OWNERKY = #{ownerky}
+			AND WA.CUSTKEY IN ( #{custkey} )
+			<if test="asndatf != null and asndatf != ''">
+	    	and WA.ASNDATE >= REPLACE(#{asndatf}, '-', '')
+	    	</if>
+	    	<if test="asndatt != null and asndatt != ''">
+	    	<![CDATA[
+	    	and WA.ASNDATE <= REPLACE(#{asndatt}, '-', '')
+	    	]]>
+	    	</if>
+    	
+			group by 
+			 WA.COMPKEY , WA.WAREKEY , WA.DOCCATE , WA.DOCTYPE 
+			, MD.DOCTYNM , WA.EOASNKY , WA.ASNSTAT , WA.ASNDATE
+			, WA.OWNERKY 
+			, WA.VENDKEY , MP.PTNAMLC
+			, WA.CUSTKEY , MC1.CUNAMLC
+			, WA.RETAKEY , MC2.CUNAMLC		
+    </select>
+    
+    <select id="selectOmw2ItemList" resultType="com.logistics.wm.domain.WasnifVO">
+    	SELECT									
+			CONCAT(WA.COMPKEY, WA.EOASNKY, WA.EOASNIT) AS ROWKEY ,								
+			WA.COMPKEY ,								
+			WA.EOASNKY ,								
+			WA.EOASNIT ,								
+			WA.WAREKEY ,								
+			WA.DOCCATE ,								
+			WA.DOCTYPE ,								
+			MD.DOCTYNM ,								
+			FN_WM_GETPASTRKY( WA.COMPKEY, WA.WAREKEY, WA.DOCCATE, WA.DOCTYPE, WA.OWNERKY,								
+				  WA.SKUMKEY, WA.VENDKEY, ' '       , MS.SKUWABC, WA.CUSTKEY,							
+				  MS.SKUGR01, MS.SKUGR02, MS.SKUGR03, MS.SKUGR04, MS.SKUGR05) AS PASTRKY ,							
+			WA.ASNSTAT ,								
+			(	SELECT	COMCDTX						
+				FROM MCODEM							
+				WHERE COMPKEY = WA.COMPKEY 							
+				AND COMCDKY = 'ASNSTAT'							
+				AND COMCDVL = WA.ASNSTAT ) AS ASNSNAM ,							
+			MD.FRLOCKY AS RVLOCKY ,								
+			date_format(WA.ASNDATE, '%Y-%m-%d') AS ASNDATE ,								
+			WA.OWNERKY ,								
+			WA.SKUMKEY ,								
+			WA.SKUDESC ,								
+			WA.POITQTY ,								
+			WA.ASNDQTY ,								
+			WA.RCHSQTY ,
+			WA.RCHPQTY ,
+			(WA.RCHPQTY - WA.RCHSQTY) AS RCVEQTY ,							
+			FORMAT((WA.ASNDQTY - WA.RCHSQTY) / MS.ROINQTY, 1) AS GPAKCNT ,								
+			WA.VENDKEY ,								
+			MP.PTNAMLC AS VENDNAM ,								
+			WA.CUSTKEY ,								
+			MC1.CUNAMLC AS CUSTNAM ,								
+			WA.DCTCTYP ,								
+			MS.SKUWABC ,								
+			WA.RETAKEY ,								
+			MC2.CUNAMLC AS RETANAM ,								
+			WA.COPODKY ,								
+			WA.COPODIT ,								
+			WA.REFSODC ,								
+			WA.REFSOIT								
+		FROM									
+			WASNIF WA								
+		INNER JOIN MSKUWC MS ON									
+			MS.COMPKEY = WA.COMPKEY								
+			AND MS.WAREKEY = WA.WAREKEY								
+			AND MS.OWNERKY = WA.OWNERKY								
+			AND MS.SKUMKEY = WA.SKUMKEY								
+		INNER JOIN MDOCMA MD ON									
+			MD.COMPKEY = WA.COMPKEY								
+			AND MD.WAREKEY = WA.WAREKEY								
+			AND MD.DOCCATE = WA.DOCCATE								
+			AND MD.DOCTYPE = WA.DOCTYPE								
+		INNER JOIN MPTNMA MP ON									
+			MP.COMPKEY = WA.COMPKEY								
+			AND MP.PTNRKEY = WA.VENDKEY								
+			AND MP.PTDELYN = 'N'								
+		INNER JOIN MCUSMA MC1 ON									
+			MC1.COMPKEY = WA.COMPKEY								
+			AND MC1.OWNERKY = WA.OWNERKY								
+			AND MC1.CUSTKEY = WA.CUSTKEY							
+		LEFT JOIN MCUSMA MC2 ON									
+			MC2.COMPKEY = WA.COMPKEY								
+			AND MC2.OWNERKY = WA.OWNERKY								
+			AND MC2.CUSTKEY = WA.RETAKEY							
+		WHERE									
+			WA.COMPKEY = #{compkey}
+			AND WA.WAREKEY = 'WHOLESALE'
+		 	AND WA.EOASNKY = #{eoasnky}		
+			AND WA.ASNSTAT = #{asnstat}
+			AND WA.OWNERKY = #{ownerky}				
+		 	AND WA.CUSTKEY = #{custkey} 
+		 	AND WA.RETAKEY = #{retakey}
+    </select>
+    
+    <update id="updateOmw2Ocosal" parameterType="hashmap">
+    	update OCOSAL OS 
+		 inner join OCLMAP OM 
+		  on OM.COMPKEY = OS.COMPKEY 
+		 and OM.WAREKEY = OS.MNGWHKY 
+		 and OM.COTYPE1 = OS.DOCCATE 
+		 and OM.COTYPE2 = OS.DOCTYPE																			
+		   set OS.SALSTAT = 'ORDFM'																			
+			 , OS.INBSTAT = 'WHIN'																		
+			 , OS.LMODATE = date_format(sysdate(), '%Y%m%d')																		
+			 , OS.LMOTIME = date_format(sysdate(), '%H%i%S')																		
+			 , OS.LMOUSER = #{userData.useract}																	
+		 where OS.COMPKEY = #{item.compkey}																																		
+		   and OS.COOUTKY = #{item.refsodc}
+		   and OS.COOUTIT = #{item.refsoit}
+    </update>
+    
+	<!-- *********************************************** -->
+    <!-- OMW3 -->
+    <!-- *********************************************** -->
+    <select id="selectOmw3List" resultType="com.logistics.wm.domain.WstkkyVO">
+    	SELECT					
+		  CONCAT(W.COMPKEY , W.STOCKKY) AS ROWKEY	
+		, W.COMPKEY AS COMPKEY 				
+		, W.STOCKKY AS STOCKKY 				
+		, W.WAREKEY AS WAREKEY 				
+		, '500' AS DOCCATE 			
+		, '540' AS DOCTYPE   			
+		, W.TRUNTYP AS TRUNTYP 				
+		, W.TRUNPID AS TRUNPID 				
+		, W.LOTNMKY AS LOTNMKY 				
+		, W.OWNERKY AS OWNERKY 				
+		, W.SKUMKEY AS SKUMKEY 				
+		, W.SKUDESC AS SKUDESC 				
+		, W.VENDKEY AS VENDKEY
+		, (select PTNAMLC from mptnma where COMPKEY = M.COMPKEY and OWNERKY = M.OWNERKY and PTNRKEY = W.VENDKEY) as PTNAMLC 				
+		, W.AREAKEY AS AREAKEY 				
+		, W.ZONEKEY AS ZONEKEY 				
+		, W.LOCAKEY AS LOCAKEY 				
+		, W.SIRBCOD AS SIRBCOD 				
+		, W.STOTQTY AS STOTQTY 				
+		, 'SHP' AS TOAREKY   				
+		, 'SHPZ' AS TOZONKY			
+		, 'SHPLOC' AS TOLOCKY 			
+		, 0 AS FORDQTY				
+		, '' AS PARSNCD				
+		, '' AS PARSNNM				
+		, W.SALLQTY AS SALLQTY				
+		, W.SINBQTY AS SINBQTY				
+		, W.SOUBQTY AS SOUBQTY				
+		, W.SBLOQTY AS SBLOQTY				
+		, W.SUOMKEY AS SUOMKEY				
+		, date_format(W.PRODDAT, '%Y-%m-%d') AS PRODDAT			
+		, W.SHELIFE AS SHELIFE				
+		, date_format(W.EXPIDAT, '%Y-%m-%d') AS EXPIDAT				
+		, W.RCVDCDT AS RCVDCDT				
+		, W.RCVFRDT AS RCVFRDT				
+		, W.LOTFRKY AS LOTFRKY				
+		, W.LOTAT01 AS LOTAT01				
+		, W.LOTAT02 AS LOTAT02				
+		, W.LOTAT03 AS LOTAT03				
+		, W.LOTAT04 AS LOTAT04				
+		, W.LOTAT05 AS LOTAT05				
+		, W.LOTAT06 AS LOTAT06				
+		, W.LOTAT07 AS LOTAT07				
+		, W.LOTAT08 AS LOTAT08				
+		, W.LOTAT09 AS LOTAT09				
+		, W.LOTAT10 AS LOTAT10				
+		, W.LOTAT11 AS LOTAT11				
+		, W.LOTAT12 AS LOTAT12				
+		, W.LOTAT13 AS LOTAT13				
+		, W.LOTAT14 AS LOTAT14				
+		, W.LOTAT15 AS LOTAT15				
+		, W.LOTAT16 AS LOTAT16				
+		, W.LOTAT17 AS LOTAT17				
+		, W.LOTAT18 AS LOTAT18				
+		, W.LOTAT19 AS LOTAT19				
+		, W.LOTAT20 AS LOTAT20				
+		, W.STKSTAT AS STKSTAT				
+		, W.BLOCKID AS BLOCKID				
+		, W.PHYSROW AS PHYSROW				
+		, W.PHYSSEC AS PHYSSEC				
+		, W.PHYSFLO AS PHYSFLO				
+		, W.RCVDCKY AS RCVDCKY				
+		, W.RCVDCIT AS RCVDCIT				
+		, W.TASKOKY AS TASKOKY				
+		, W.TASKOIT AS TASKOIT				
+		, W.SHPDCKY AS SHPDCKY				
+		, W.SHPDCIT AS SHPDCIT				
+		, W.ADJSOKY AS ADJSOKY				
+		, W.ADJSOIT AS ADJSOIT				
+		, W.PHYSOKY AS PHYSOKY				
+		, W.PHYSOIT AS PHYSOIT				
+		, W.STORFKY AS STORFKY				
+		, date_format(W.CREDATE, '%Y-%m-%d') AS CREDATE 				
+		, date_format(W.CRETIME, '%H-%i-%s') as CRETIME 				
+		, fn_sy_usernam(W.COMPKEY ,	W.CREUSER) AS CREUSER			
+		, date_format(W.LMODATE, '%Y-%m-%d') AS LMODATE
+		, date_format(W.LMOTIME, '%H-%i-%s') as LMOTIME			
+		, fn_sy_usernam(W.COMPKEY ,W.LMOUSER) AS LMOUSER			
+		, W.INDIBZL AS INDIBZL
+		, W.INDIARC AS INDIARC
+		, W.UPDTCHK AS UPDTCHK
+	FROM					
+		WSTKKY W				
+	INNER JOIN MSKUWC M ON					
+		M.COMPKEY = W.COMPKEY				
+		AND M.WAREKEY = W.WAREKEY				
+		AND M.OWNERKY = W.OWNERKY				
+		AND M.SKUMKEY = W.SKUMKEY				
+	WHERE 1=1				
+		AND W.COMPKEY = #{userData.compkey}
+		AND W.OWNERKY = #{ownerky}
+		AND W.WAREKEY = 'WHOLESALE' 				
+		AND W.AREAKEY = 'STG'
+		<if test="custkey != null and custkey !='' ">
+		AND W.LOCAKEY = #{custkey}
+		</if>
+		<if test="skumkey != null and skumkey !='' ">
+		AND upper(W.SKUMKEY) like concat('%', upper(#{skumkey}),'%')
+		</if>
+		<if test="skudesc != null and skudesc !='' ">
+		AND upper(W.SKUDESC) like concat('%', upper(#{skudesc}),'%')
+		</if>
+		AND W.STKSTAT = '80'	
+		AND W.STOTQTY > 0				
+		AND W.SALLQTY = 0				
+		AND W.SOUBQTY = 0				
+		AND W.SBLOQTY = 0				
+    </select>
+    
+    <insert id="insertOmw3Wtakit" parameterType="com.logistics.wm.domain.WstkkyVO">
+		insert into WTAKIT
+		 (
+		 	COMPKEY , STORFKY , TASKOKY , TASKOIT ,
+			TASKSTS , WAREKEY , DOCCATE , DOCTYPE ,
+			TRUNTYP , TRUNPID ,
+			LOTNMKY , OWNERKY , 
+			SKUMKEY , 
+			SKUDESC ,
+			VENDKEY , FRAREKY , FRZONKY , FRLOCKY ,
+			TOAREKY , TOZONKY , TOLOCKY , FORDQTY , FUOMEKY ,
+			TCMPQTY , TUOMEKY , SIRBCOD ,
+			PRODDAT , SHELIFE , EXPIDAT , RCVDCDT , RCVFRDT ,
+			LOTFRKY , 
+			LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 ,
+			LOTAT05 , LOTAT06 , LOTAT07 , LOTAT08 ,
+			LOTAT09 , LOTAT10 , LOTAT11 , LOTAT12 ,
+			LOTAT13 , LOTAT14 , LOTAT15 , LOTAT16 ,
+			LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 ,
+			PARSNCD , PARSNNM , PKRSNCD , PKRSNNM ,
+			RCVDCKY , RCVDCIT , SHPDCKY , SHPDCIT ,
+			CREDATE , CRETIME , CREUSER ,
+			LMODATE , LMOTIME , LMOUSER 
+		 )
+		 values
+		 <foreach collection="insertList" item="item" separator=",">
+		 (
+		 	#{item.compkey} , #{item.stockky} , #{item.taskoky} , #{item.taskoit} ,
+			"NEW"      , #{item.warekey} , #{item.doccate} , #{item.doctype} ,
+			#{item.truntyp} , #{item.trunpid} ,
+			#{item.lotnmky} , #{item.ownerky} , 
+			#{item.skumkey} , 
+			(SELECT SKUDESC FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.warekey} AND SKUMKEY = #{item.skumkey}),
+			#{item.vendkey} , #{item.areakey} , #{item.zonekey} , #{item.locakey} ,
+			#{item.toareky} , #{item.tozonky} , #{item.tolocky} , #{item.fordqty} , #{item.suomkey} ,
+			0 		   , #{item.suomkey} , #{item.sirbcod} ,
+			replace(#{item.proddat}, '-', '') , #{item.shelife} , replace(#{item.expidat}, '-', '') , replace(#{item.rcvdcdt}, '-', '') , replace(#{item.rcvfrdt}, '-', '') ,
+			#{item.lotfrky} , 
+			#{item.lotat01} , #{item.lotat02} , #{item.lotat03} , #{item.lotat04} ,
+			#{item.lotat05} , #{item.lotat06} , #{litem.otat07} , #{item.lotat08} ,
+			#{item.lotat09} , #{item.lotat10} , #{item.lotat11} , #{item.lotat12} ,
+			#{item.lotat13} , #{item.lotat14} , #{item.lotat15} , #{item.lotat16} ,
+			#{item.lotat17} , #{item.lotat18} , #{item.lotat19} , #{item.lotat20} ,
+			#{item.parsncd} , #{item.parsnnm} , #{item.rsncode} , #{item.adjsrmk} ,
+			#{item.rcvdcky} , #{item.rcvdcit} , #{item.shpdcky} , #{item.shpdcit} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract}   
+		 )
+		 </foreach>
+	</insert>
+
+	<update id="updateOmw3Wtakit" parameterType="hashmap">
+    	update WTAKIT			
+	       set TCMPQTY = #{item.fordqty}
+	     where TASKOKY = #{item.taskoky}
+	       and TASKOIT = #{item.taskoit}
+	       and TASKSTS = 'TASK'
+    </update>
+    
+    <select id="selectOmw3VirtualOcosal" resultType="com.logistics.om.domain.OcosalVO">
+		SELECT 
+		  COMPKEY as COMPKEY
+		, #{cooutky} as COOUTKY
+		, TASKOIT AS COOUTIT
+		, '300' as DOCCATE
+		, #{doctype} as DOCTYPE
+		, ' ' as SALMODE
+		, ' ' as SALGRKY
+		, case when #{doctype} = '340'
+			   then 'ORDFM'
+			   when (#{doctype} = '350' or #{doctype} = '360')
+			   then 'ORDFM'
+		  end as SALSTAT
+		, to_char(now(),'YYYYMMDD') as POSTDAT
+		, to_char(now(),'YYYYMMDD') as SALDATE
+		, to_char(now(),'hh24miss') as SALTIME
+		, FRLOCKY as CUSTKEY
+		, #{towhous} as RETAKEY
+		, case when #{doctype} = '340'
+			   then #{towhous}
+		  else ' '
+		  end as VENDKEY
+		, #{salmemo} as SALMEMO
+		, replace(#{salrqdt} , '-', '') as SALRQDT
+		, replace(#{salrqtm} , ':', '') as SALRQTM
+		, 'N' as SALLBYN
+		, OWNERKY as OWNERKY
+		, SKUMKEY as SKUMKEY
+		, (SELECT SKUDESC FROM MSKUWC WHERE COMPKEY = WT.COMPKEY AND OWNERKY = WT.OWNERKY AND WAREKEY = WT.WAREKEY AND SKUMKEY = WT.SKUMKEY) as SKUDESC
+		, (SELECT SKUSKEY FROM MSKUWC WHERE COMPKEY = WT.COMPKEY AND OWNERKY = WT.OWNERKY AND WAREKEY = WT.WAREKEY AND SKUMKEY = WT.SKUMKEY) as SKUSKEY
+		, fordqty as SOITQTY
+		, fordqty as RGITQTY
+		, fordqty as SHCFQTY
+		, 'EA' as SUOMKEY
+		, 'FREE' as PAYTYPE
+		, 'DC' as DCTCTYP
+		, case when #{doctype} = '340'
+			   then WAREKEY
+			   when (#{doctype} = '350' or #{doctype} = '360')
+			   then #{towhous}
+		  end as MNGWHKY
+		, #{rsncode} as RSNCODE
+		, #{rsndesc} as RSNDESC
+		, 'NEW' as INBSTAT
+		, 'NEW' as OUBSTAT
+		, (SELECT ITMCOST FROM MSKUWC WHERE COMPKEY = WT.COMPKEY AND OWNERKY = WT.OWNERKY AND WAREKEY = WT.WAREKEY AND SKUMKEY = WT.SKUMKEY) as ITMCOST
+		, (SELECT SELPRIC FROM MSKUWC WHERE COMPKEY = WT.COMPKEY AND OWNERKY = WT.OWNERKY AND WAREKEY = WT.WAREKEY AND SKUMKEY = WT.SKUMKEY) as SELPRIC
+		, 0 as SEDPRIC
+		, 0 as SEPRICE
+		, ' ' as ORDGR01
+		, ' ' as ORDGR02
+		, ' ' as ORDGR03
+		, 'N' as CLOSLYN
+		, ' ' as CLODATE
+		, ' ' as CLOTIME
+		, ' ' as CLOUSER
+		, ' ' as SPRETYP
+		, 'N' as PMTSAYN
+		, ' ' as PMTSADT
+		, ' ' as PMTSATM
+		, ' ' as PMTSAUR
+		, to_char(now(),'YYYYMMDD') as CREDATE
+		, to_char(now(),'hh24miss') asCRETIME
+		, #{userData.useract} as CREUSER
+		, to_char(now(),'YYYYMMDD') as LMODATE
+		, to_char(now(),'hh24miss') as LMOTIME
+		, #{userData.useract} as LMOUSER
+		
+		FROM WTAKIT WT
+		WHERE 1=1
+		AND COMPKEY = #{userData.compkey}
+		AND TASKOKY = #{taskoky}
+	</select>
+    
+    
+    
+    <!-- *********************************************** -->
+    <!-- OMW4 -->
+    <!-- *********************************************** -->
+    
+    <select id="selectOmw4List" resultType="com.logistics.wm.domain.WstkkyVO">
+    	SELECT 
+    		  CONCAT(MSKU.COMPKEY, MSKU.OWNERKY, MSKU.BRANDCD, MSKU.SKUMKEY) as ROWKEY
+    		, MSKU.COMPKEY as COMPKEY						
+			, MSKU.OWNERKY as OWNERKY
+			, MSKU.SKUMKEY as SKUMKEY
+			, MSKU.SKUSKEY as SKUSKEY			
+			, MSKU.SKUDESC as SKUDESC
+			, MSKU.BRANDCD as BRANDCD
+			, IFNULL(CSTK.STOTQTY, 0) as STOTQTY
+			, ifnull(ORDCUS.ORDDQTY, 0) as ORDHQTY
+			, IFNULL(CSTK.STKSAMP, 0) as STKSAMP
+			, ifnull(CSTK.STOTQTY, 0) - ifnull(ORDCUS.ORDDQTY, 0) - ifnull(CSTK.STKSAMP, 0) as STPOQTY
+			, IFNULL(WSTK.WAREKEY, #{warekey}) as WAREKEY
+			, IFNULL(WSTK.STKGOOD, 0) as STKGOOD
+			, IFNULL(WSTK.STKBADS, 0) as STKBADS
+			, ifnull(ORDWHA.ORDDQTY, 0) as ORDWQTY
+			, ifnull(WSTK.STKGOOD, 0) - ifnull(ORDWHA.ORDDQTY, 0) as ORDMQTY
+		FROM 							
+		MSKUWC MSKU 							
+			LEFT JOIN (						
+					SELECT 				
+						  OWNERKY			
+						, SKUMKEY			
+						, STKSTAT			
+						, LOCAKEY			
+						, SUM(STOTQTY) AS STOTQTY			
+						, SUM(case when STKSTAT = '80' then STOTQTY else 0 end ) AS STKCUST 			
+						, SUM(case when STKSTAT = '60' then STOTQTY else 0 end ) AS STKSAMP 			
+						FROM WSTKKY			
+					WHERE 1=1
+					AND COMPKEY = #{userData.compkey}
+					AND WAREKEY = 'WHOLESALE'				
+					AND AREAKEY = 'STG'				
+					AND LOCAKEY = #{custkey}
+					AND STKSTAT in ('60', '80', '44') 				
+					AND STOTQTY > 0 AND SALLQTY = 0  AND SINBQTY = 0 AND SOUBQTY = 0 AND SBLOQTY = 0 				
+					GROUP BY OWNERKY, SKUMKEY, STKSTAT, LOCAKEY				
+				) CSTK					
+				ON MSKU.OWNERKY = CSTK.OWNERKY					
+				AND MSKU.SKUMKEY = CSTK.SKUMKEY					
+				AND MSKU.WAREKEY = #{warekey}
+			LEFT JOIN 						
+				(					
+					SELECT 				
+						SK.OWNERKY			
+						, SK.WAREKEY			
+						, SK.SKUMKEY			
+						, SUM(case when SK.STKSTAT = '00' then SK.STOTQTY else 0 end ) AS STKGOOD 			
+						, SUM(case when SK.STKSTAT = '90' then SK.STOTQTY else 0 end ) AS STKBADS 			
+						FROM WSTKKY SK INNER JOIN MSKUWC WC			
+						ON SK.OWNERKY = WC.OWNERKY
+						AND SK.WAREKEY = WC.WAREKEY	
+						AND SK.SKUMKEY = WC.SKUMKEY 			
+					WHERE 1=1
+					AND SK.COMPKEY = #{userData.compkey}
+					AND SK.WAREKEY = #{warekey}
+					AND SK.AREAKEY = 'STG'				
+				  	AND WC.BRANDCD = #{custkey}	
+					AND SK.STKSTAT IN  ('00', '90')
+					AND SK.STOTQTY > 0 AND SK.SALLQTY = 0  AND SK.SINBQTY = 0 AND SK.SOUBQTY = 0 AND SK.SBLOQTY = 0 				
+					GROUP BY SK.OWNERKY, SK.WAREKEY, SK.SKUMKEY				
+				) WSTK					
+				ON MSKU.OWNERKY = WSTK.OWNERKY					
+				AND MSKU.SKUMKEY = WSTK.SKUMKEY
+			LEFT JOIN (				
+				SELECT 		
+					  OWNERKY	
+					, SKUMKEY	
+				 	, SUM(SOITQTY) AS ORDDQTY	
+				FROM		
+					OCOSAL 	
+				WHERE COMPKEY = #{userData.compkey}
+					AND DOCCATE = '300'		
+				 	AND DOCTYPE IN ('340','360','350','390')
+				 	AND SALSTAT = 'ORDER'	
+				 	AND CUSTKEY = #{custkey}
+				GROUP BY OWNERKY, SKUMKEY		
+			) ORDCUS			
+			 ON MSKU.OWNERKY = ORDCUS.OWNERKY			
+			AND MSKU.SKUMKEY = ORDCUS.SKUMKEY			
+			AND MSKU.WAREKEY = #{warekey}
+		LEFT JOIN (				
+				SELECT 		
+					  OWNERKY	
+					, SKUMKEY	
+				 	, SUM(SOITQTY) AS ORDDQTY	
+				FROM		
+					OCOSAL 	
+				WHERE COMPKEY = #{userData.compkey}
+					AND DOCCATE = '300'		
+				 	AND DOCTYPE IN ('310','330','379') 	
+				 	AND SALSTAT = 'ORDER'	
+				 	AND CUSTKEY = #{custkey}
+				 	AND MNGWHKY = #{warekey}
+				GROUP BY OWNERKY, SKUMKEY		
+			) ORDWHA			
+			 ON MSKU.OWNERKY = ORDWHA.OWNERKY			
+			AND MSKU.SKUMKEY = ORDWHA.SKUMKEY			
+			AND MSKU.WAREKEY = #{warekey}
+			WHERE ( WSTK.SKUMKEY > '' OR CSTK.SKUMKEY > '' or ORDCUS.SKUMKEY > '' or ORDWHA.SKUMKEY > '')		
+			AND MSKU.WAREKEY = #{warekey}
+			<if test="skudesc != null and skudesc != ''">
+    		AND UPPER(MSKU.SKUDESC) like concat('%', upper(#{skudesc}), '%')
+    		</if>
+			ORDER BY MSKU.SKUMKEY
+    </select>
+    
+
+    <!-- *********************************************** -->
+    <!-- OMW5 -->
+    <!-- *********************************************** -->
+    <select id="selectOmw5HeadList" resultType="com.logistics.om.domain.OcosalVO">
+    	SELECT
+    		CONCAT(SAL.DOCCATE, SAL.DOCTYPE) AS ROWKEY,
+			SAL.DOCCATE,
+			SAL.DOCTYPE,
+			(SELECT M.DOCTYNM FROM MDOCMA M WHERE M.DOCCATE = SAL.DOCCATE AND M.DOCTYPE = SAL.DOCTYPE AND M.COMPKEY = #{userData.compkey}) as DOCNAME,
+			SAL.SALGRKY,
+			SAL.SALSTAT,
+			SAL.CUSTKEY,
+			SAL.TOWARKY,
+			SAL.VENDKEY,
+			( SELECT CUS.CUNAMLC FROM MCUSMA CUS WHERE CUS.CUSTKEY = SAL.VENDKEY AND CUS.COMPKEY = #{userData.compkey} ) AS VENDNAM,
+			SAL.RETAKEY,
+			( SELECT CUS.CUNAMLC FROM MCUSMA CUS WHERE CUS.CUSTKEY = SAL.RETAKEY AND CUS.COMPKEY = #{userData.compkey} ) AS RETANAM,
+			SUM(SAL.SOITQTY) as SOITQTY,
+			SUM(SAL.RGITQTY) as RGITQTY,
+			SUM(SAL.SHCFQTY) as SHCFQTY
+		FROM						
+			OCOSAL SAL
+		WHERE SAL.COMPKEY 	= #{userData.compkey}
+		   AND SAL.DOCCATE 	= #{doccate}
+		   AND SAL.CUSTKEY 	= #{custkey}
+		   <if test="doctype != null and doctype != ''">
+		   AND SAL.DOCTYPE 	= #{doctype}
+		   </if>
+		   <if test="credafr != null and credafr != ''">
+		   AND SAL.CREDATE >= replace(#{credafr}, '-', '')
+		   </if>
+		   <if test="credato != null and credato != ''">
+		   <![CDATA[ AND SAL.CREDATE <= replace(#{credato}, '-', '') ]]>
+		   </if>
+		   <if test="salrqfr != null and salrqfr != ''">
+		   AND SAL.SALRQDT >= replace(#{salrqfr}, '-', '')
+		   </if>
+		   <if test="salrqto != null and salrqto != ''">
+		   <![CDATA[ AND SAL.SALRQDT <= replace(#{salrqto}, '-', '') ]]>
+		   </if>
+		   
+		   <choose>
+		   <when test='comptyp != null and comptyp == "N"'>
+		   AND SALSTAT = 'ORDER'
+		   </when>
+		   <when test='comptyp != null and comptyp == "Y"'>
+		   AND SALSTAT not in ('ORDER', 'DELETE')
+		   </when>
+		   </choose>
+		GROUP BY
+			SAL.DOCCATE,
+			SAL.DOCTYPE,
+			SAL.SALGRKY,
+			SAL.SALSTAT,
+			SAL.CUSTKEY,
+			SAL.TOWARKY,
+			SAL.VENDKEY,
+			SAL.RETAKEY
+    </select>
+    
+    <select id="selectOmw5ItemList" resultType="com.logistics.om.domain.OcosalVO">
+    	SELECT
+    		  CONCAT(SAL.COMPKEY, SAL.DOCTYPE, SAL.COOUTKY, SAL.COOUTIT) as ROWKEY			
+			, SAL.COMPKEY
+			, SAL.DOCCATE
+			, SAL.DOCTYPE
+			, (SELECT M.DOCTYNM FROM MDOCMA M WHERE M.DOCCATE = SAL.DOCCATE AND M.DOCTYPE = SAL.DOCTYPE AND M.COMPKEY = '000') as DOCNAME						
+			, SAL.OWNERKY
+			, SAL.MNGWHKY
+			, SAL.SALGRKY
+			, SAL.COOUTKY
+			, SAL.COOUTIT
+			, SAL.DCTCTYP
+			, SAL.SKUMKEY
+			, SAL.SKUDESC
+			, SAL.SOITQTY
+			, (SAL.SOITQTY - SAL.RGITQTY) AS SCITQTY
+			, SAL.RGITQTY
+			, SAL.SHCFQTY
+			, SAL.CUSTKEY
+			, SAL.TOWARKY
+			, SAL.VENDKEY
+			, ( SELECT CUS.CUNAMLC FROM MCUSMA CUS WHERE CUS.CUSTKEY = SAL.VENDKEY AND CUS.COMPKEY = SAL.COMPKEY ) AS VENDNAM
+			, SAL.RETAKEY
+			, ( SELECT CUS.CUNAMLC FROM MCUSMA CUS WHERE CUS.CUSTKEY = SAL.RETAKEY AND CUS.COMPKEY = #{userData.compkey} ) AS RETANAM
+			, date_format(SAL.CREDATE, '%Y-%m-%d') as CREDATE
+			, date_format(SAL.CRETIME, '%H-%i-%s') as CRETIME
+			, fn_sy_usernam(SAL.COMPKEY, SAL.CREUSER) as CREUSER
+			, SAL.UPDTCHK
+		FROM							
+			OCOSAL SAL						
+		WHERE 
+			SAL.COMPKEY = #{userData.compkey}
+			and SAL.DOCCATE = #{doccate}
+		 	and SAL.DOCTYPE = #{doctype}
+			<if test="credafr != null and credafr != ''">
+			AND SAL.CREDATE >= replace(#{credafr}, '-', '')
+			</if>
+			<if test="credato != null and credato != ''">
+			<![CDATA[ AND SAL.CREDATE <= replace(#{credato}, '-', '') ]]>
+			</if>
+			<if test="salrqfr != null and salrqfr != ''">
+			AND SAL.SALRQDT >= replace(#{salrqfr}, '-', '')
+			</if>
+			<if test="salrqto != null and salrqto != ''">
+			<![CDATA[ AND SAL.SALRQDT <= replace(#{salrqto}, '-', '') ]]>
+			</if>
+
+		 	<choose>
+			<when test='comptyp != null and comptyp == "N"'>
+			AND SAL.SALSTAT = 'ORDER'
+			</when>
+			<when test='comptyp != null and comptyp == "Y"'>
+			AND SAL.SALSTAT not in ('ORDER', 'DELETE')
+			</when>
+			</choose>
+			<if test="salgrky != null and salgrky != ''">
+		 	and SAL.SALGRKY = #{salgrky}
+		 	</if>
+		 	<if test="custkey != null and custkey != ''">
+		 	and SAL.CUSTKEY = #{custkey}
+		 	</if>
+		 	<if test="towarky != null and towarky != ''">
+		 	and SAL.TOWARKY = #{towarky}
+		 	</if>
+		 	<if test="vendkey != null and vendkey != ''">
+		 	and SAL.VENDKEY = #{vendkey}
+		 	</if>
+		 	<if test="retakey != null and retakey != ''">
+		 	and SAL.RETAKEY = #{retakey}
+		 	</if>
+    </select>
+    
+    <update id="updateOmw5Ocosal" parameterType="hashmap">
+    	UPDATE OCOSAL SET	
+    		  SALSTAT = (case when (SOITQTY - (RGITQTY + #{item.scitqty} + DIFFQTY)) = 0 then 'ORDFM' else 'ORDER' end)
+    		, RGITQTY = RGITQTY + #{item.scitqty}
+    		, SHCFQTY = (case when (DOCTYPE = '310' or DOCTYPE = '330' or DOCTYPE = '370' ) then SHCFQTY 
+    						  else (SHCFQTY + #{item.scitqty}) end)
+    		, SALGRKY = #{item.salgrky}
+    		, LMODATE = date_format(sysdate(), '%Y%m%d')
+    		, LMOTIME = date_format(sysdate(), '%H%i%S')
+    		, LMOUSER = #{userData.useract}								
+		 where COMPKEY = #{item.compkey}																																		
+		   and COOUTKY = #{item.cooutky}
+		   and COOUTIT = #{item.cooutit}
+		   and UPDTCHK = #{item.updtchk}
+    </update>
+    
+    <update id="deleteOmw5Ocosal" parameterType="hashmap">
+    	UPDATE OCOSAL SET	
+    		  SALSTAT = 'DELETE'
+    		, LMODATE = date_format(sysdate(), '%Y%m%d')
+    		, LMOTIME = date_format(sysdate(), '%H%i%S')
+    		, LMOUSER = #{userData.useract}								
+		 where COMPKEY = #{item.compkey}																																		
+		   and COOUTKY = #{item.cooutky}
+		   and COOUTIT = #{item.cooutit}
+		   and UPDTCHK = #{item.updtchk}
+    </update>
+    
+    <select id="selectOmw5WstkkyList" resultType="com.logistics.wm.domain.WstkkyVO">
+    	SELECT
+		  W.COMPKEY AS COMPKEY 				
+		, W.STOCKKY AS STOCKKY 				
+		, W.WAREKEY AS WAREKEY 				
+		, '500' AS DOCCATE 			
+		, '540' AS DOCTYPE   			
+		, W.TRUNTYP AS TRUNTYP 				
+		, W.TRUNPID AS TRUNPID 				
+		, W.LOTNMKY AS LOTNMKY 				
+		, W.OWNERKY AS OWNERKY 				
+		, W.SKUMKEY AS SKUMKEY 				
+		, W.SKUDESC AS SKUDESC 				
+		, W.VENDKEY AS VENDKEY
+		, (select PTNAMLC from mptnma where COMPKEY = M.COMPKEY and OWNERKY = M.OWNERKY and PTNRKEY = W.VENDKEY) as PTNAMLC 				
+		, W.AREAKEY AS AREAKEY 				
+		, W.ZONEKEY AS ZONEKEY 				
+		, W.LOCAKEY AS LOCAKEY 				
+		, W.SIRBCOD AS SIRBCOD 				
+		, W.STOTQTY AS STOTQTY 				
+		, 'SHP' AS TOAREKY   				
+		, 'SHPZ' AS TOZONKY			
+		, 'SHPLOC' AS TOLOCKY 			
+		, #{item.scitqty} AS FORDQTY				
+		, '' AS PARSNCD				
+		, '' AS PARSNNM				
+		, W.SALLQTY AS SALLQTY				
+		, W.SINBQTY AS SINBQTY				
+		, W.SOUBQTY AS SOUBQTY				
+		, W.SBLOQTY AS SBLOQTY				
+		, W.SUOMKEY AS SUOMKEY				
+		, date_format(W.PRODDAT, '%Y-%m-%d') AS PRODDAT			
+		, W.SHELIFE AS SHELIFE				
+		, date_format(W.EXPIDAT, '%Y-%m-%d') AS EXPIDAT				
+		, W.RCVDCDT AS RCVDCDT				
+		, W.RCVFRDT AS RCVFRDT				
+		, W.LOTFRKY AS LOTFRKY				
+		, W.LOTAT01 AS LOTAT01				
+		, W.LOTAT02 AS LOTAT02				
+		, W.LOTAT03 AS LOTAT03				
+		, W.LOTAT04 AS LOTAT04				
+		, W.LOTAT05 AS LOTAT05				
+		, W.LOTAT06 AS LOTAT06				
+		, W.LOTAT07 AS LOTAT07				
+		, W.LOTAT08 AS LOTAT08				
+		, W.LOTAT09 AS LOTAT09				
+		, W.LOTAT10 AS LOTAT10				
+		, W.LOTAT11 AS LOTAT11				
+		, W.LOTAT12 AS LOTAT12				
+		, W.LOTAT13 AS LOTAT13				
+		, W.LOTAT14 AS LOTAT14				
+		, W.LOTAT15 AS LOTAT15				
+		, W.LOTAT16 AS LOTAT16				
+		, W.LOTAT17 AS LOTAT17				
+		, W.LOTAT18 AS LOTAT18				
+		, W.LOTAT19 AS LOTAT19				
+		, W.LOTAT20 AS LOTAT20				
+		, W.STKSTAT AS STKSTAT				
+		, W.BLOCKID AS BLOCKID				
+		, W.PHYSROW AS PHYSROW				
+		, W.PHYSSEC AS PHYSSEC				
+		, W.PHYSFLO AS PHYSFLO				
+		, W.RCVDCKY AS RCVDCKY				
+		, W.RCVDCIT AS RCVDCIT				
+		, W.TASKOKY AS TASKOKY				
+		, W.TASKOIT AS TASKOIT				
+		, W.SHPDCKY AS SHPDCKY				
+		, W.SHPDCIT AS SHPDCIT				
+		, W.ADJSOKY AS ADJSOKY				
+		, W.ADJSOIT AS ADJSOIT				
+		, W.PHYSOKY AS PHYSOKY				
+		, W.PHYSOIT AS PHYSOIT				
+		, W.STORFKY AS STORFKY				
+		, date_format(W.CREDATE, '%Y-%m-%d') AS CREDATE 				
+		, date_format(W.CRETIME, '%H-%i-%s') as CRETIME 				
+		, fn_sy_usernam(W.COMPKEY ,	W.CREUSER) AS CREUSER			
+		, date_format(W.LMODATE, '%Y-%m-%d') AS LMODATE
+		, date_format(W.LMOTIME, '%H-%i-%s') as LMOTIME			
+		, fn_sy_usernam(W.COMPKEY ,W.LMOUSER) AS LMOUSER			
+		, W.INDIBZL AS INDIBZL
+		, W.INDIARC AS INDIARC
+		, W.UPDTCHK AS UPDTCHK
+	FROM					
+		WSTKKY W				
+	INNER JOIN MSKUWC M ON					
+		M.COMPKEY = W.COMPKEY				
+		AND M.WAREKEY = W.WAREKEY				
+		AND M.OWNERKY = W.OWNERKY				
+		AND M.SKUMKEY = W.SKUMKEY				
+	WHERE 1=1				
+		AND W.COMPKEY = #{item.compkey}
+		AND W.OWNERKY = #{item.ownerky}
+		AND W.SKUMKEY = #{item.skumkey}
+		AND W.WAREKEY = 'WHOLESALE' 				
+		AND W.AREAKEY = 'STG'
+		AND W.STKSTAT = (case when #{item.doctype} = '320' then '60' when #{item.doctype} != '320' then '80' end)
+		AND W.STOTQTY > 0
+		AND W.SALLQTY = 0
+		AND W.SOUBQTY = 0
+		AND W.SBLOQTY = 0
+    </select>
+    
+    <select id="selectOmw5WstkkyConvertList" resultType="com.logistics.wm.domain.WstkkyVO">
+    	SELECT
+		  W.COMPKEY AS COMPKEY 				
+		, W.STOCKKY AS STOCKKY 				
+		, W.WAREKEY AS WAREKEY 				
+		, '500' AS DOCCATE 			
+		, '540' AS DOCTYPE   			
+		, W.TRUNTYP AS TRUNTYP 				
+		, W.TRUNPID AS TRUNPID 				
+		, W.LOTNMKY AS LOTNMKY 				
+		, W.OWNERKY AS OWNERKY 				
+		, W.SKUMKEY AS SKUMKEY 				
+		, W.SKUDESC AS SKUDESC 				
+		, W.VENDKEY AS VENDKEY
+		, (select PTNAMLC from mptnma where COMPKEY = M.COMPKEY and OWNERKY = M.OWNERKY and PTNRKEY = W.VENDKEY) as PTNAMLC 				
+		, W.AREAKEY AS AREAKEY 				
+		, W.ZONEKEY AS ZONEKEY 				
+		, W.LOCAKEY AS LOCAKEY 				
+		, W.SIRBCOD AS SIRBCOD 				
+		, W.STOTQTY AS STOTQTY 				
+		, W.AREAKEY AS TOAREKY   				
+		, W.ZONEKEY AS TOZONKY			
+		, W.LOCAKEY AS TOLOCKY 			
+		, #{item.scitqty} AS FORDQTY				
+		, '' AS PARSNCD				
+		, '' AS PARSNNM				
+		, W.SALLQTY AS SALLQTY				
+		, W.SINBQTY AS SINBQTY				
+		, W.SOUBQTY AS SOUBQTY				
+		, W.SBLOQTY AS SBLOQTY				
+		, W.SUOMKEY AS SUOMKEY				
+		, date_format(W.PRODDAT, '%Y-%m-%d') AS PRODDAT			
+		, W.SHELIFE AS SHELIFE				
+		, date_format(W.EXPIDAT, '%Y-%m-%d') AS EXPIDAT				
+		, W.RCVDCDT AS RCVDCDT				
+		, W.RCVFRDT AS RCVFRDT				
+		, W.LOTFRKY AS LOTFRKY				
+		, W.LOTAT01 AS LOTAT01				
+		, W.LOTAT02 AS LOTAT02				
+		, W.LOTAT03 AS LOTAT03				
+		, W.LOTAT04 AS LOTAT04				
+		, W.LOTAT05 AS LOTAT05				
+		, W.LOTAT06 AS LOTAT06				
+		, W.LOTAT07 AS LOTAT07				
+		, W.LOTAT08 AS LOTAT08				
+		, W.LOTAT09 AS LOTAT09				
+		, W.LOTAT10 AS LOTAT10				
+		, W.LOTAT11 AS LOTAT11				
+		, W.LOTAT12 AS LOTAT12				
+		, W.LOTAT13 AS LOTAT13				
+		, W.LOTAT14 AS LOTAT14				
+		, W.LOTAT15 AS LOTAT15				
+		, W.LOTAT16 AS LOTAT16				
+		, W.LOTAT17 AS LOTAT17				
+		, W.LOTAT18 AS LOTAT18				
+		, W.LOTAT19 AS LOTAT19				
+		, W.LOTAT20 AS LOTAT20				
+		, W.STKSTAT AS STKSTAT				
+		, W.BLOCKID AS BLOCKID				
+		, W.PHYSROW AS PHYSROW				
+		, W.PHYSSEC AS PHYSSEC				
+		, W.PHYSFLO AS PHYSFLO				
+		, W.RCVDCKY AS RCVDCKY				
+		, W.RCVDCIT AS RCVDCIT				
+		, W.TASKOKY AS TASKOKY				
+		, W.TASKOIT AS TASKOIT				
+		, W.SHPDCKY AS SHPDCKY				
+		, W.SHPDCIT AS SHPDCIT				
+		, W.ADJSOKY AS ADJSOKY				
+		, W.ADJSOIT AS ADJSOIT				
+		, W.PHYSOKY AS PHYSOKY				
+		, W.PHYSOIT AS PHYSOIT				
+		, W.STORFKY AS STORFKY				
+		, date_format(W.CREDATE, '%Y-%m-%d') AS CREDATE 				
+		, date_format(W.CRETIME, '%H-%i-%s') as CRETIME 				
+		, fn_sy_usernam(W.COMPKEY ,	W.CREUSER) AS CREUSER			
+		, date_format(W.LMODATE, '%Y-%m-%d') AS LMODATE
+		, date_format(W.LMOTIME, '%H-%i-%s') as LMOTIME			
+		, fn_sy_usernam(W.COMPKEY ,W.LMOUSER) AS LMOUSER			
+		, W.INDIBZL AS INDIBZL
+		, W.INDIARC AS INDIARC
+		, W.UPDTCHK AS UPDTCHK
+	FROM					
+		WSTKKY W				
+	INNER JOIN MSKUWC M ON					
+		M.COMPKEY = W.COMPKEY				
+		AND M.WAREKEY = W.WAREKEY				
+		AND M.OWNERKY = W.OWNERKY				
+		AND M.SKUMKEY = W.SKUMKEY				
+	WHERE 1=1				
+		AND W.COMPKEY = #{item.compkey}
+		AND W.OWNERKY = #{item.ownerky}
+		AND W.SKUMKEY = #{item.skumkey}
+		AND W.WAREKEY = 'WHOLESALE' 				
+		AND W.AREAKEY = 'STG'
+		AND W.STKSTAT = (case when #{item.doctype} = '320' then '60' when #{item.doctype} != '320' then '80' end)
+		AND W.STOTQTY > 0
+		AND W.SALLQTY = 0
+		AND W.SOUBQTY = 0
+		AND W.SBLOQTY = 0
+    </select>
+    
+    <update id="updateOmw5Wtakit" parameterType="hashmap">
+    	update WTAKIT			
+	       set TCMPQTY = #{item.fordqty}
+	     where TASKOKY = #{item.taskoky}
+	       and TASKOIT = #{item.taskoit}
+	       and TASKSTS = 'TASK'
+    </update>
+    
+    <insert id="insertOmw5Wtakit" parameterType="com.logistics.wm.domain.WstkkyVO">
+		insert into WTAKIT
+		 (
+		 	COMPKEY , STORFKY , 
+		 	TASKOKY , 
+		 	TASKOIT ,
+			TASKSTS , WAREKEY , DOCCATE , DOCTYPE ,
+			TRUNTYP , TRUNPID ,
+			LOTNMKY , OWNERKY , 
+			SKUMKEY , 
+			SKUDESC ,
+			VENDKEY , FRAREKY , FRZONKY , FRLOCKY ,
+			TOAREKY , TOZONKY , TOLOCKY , FORDQTY , FUOMEKY ,
+			TCMPQTY , TUOMEKY , SIRBCOD ,
+			PRODDAT , SHELIFE , EXPIDAT , RCVDCDT , RCVFRDT ,
+			LOTFRKY , 
+			LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 ,
+			LOTAT05 , LOTAT06 , LOTAT07 , LOTAT08 ,
+			LOTAT09 , LOTAT10 , LOTAT11 , LOTAT12 ,
+			LOTAT13 , LOTAT14 , LOTAT15 , LOTAT16 ,
+			LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 ,
+			PARSNCD , PARSNNM , PKRSNCD , PKRSNNM ,
+			RCVDCKY , RCVDCIT , SHPDCKY , SHPDCIT ,
+			ALLGRKY , REFSODC , REFSOIT , STKSTAT ,
+			CREDATE , CRETIME , CREUSER ,
+			LMODATE , LMOTIME , LMOUSER 
+		 )
+		 values
+		 (
+		 	#{item.compkey} , #{item.stockky} , 
+		 	#{item.taskoky} , 
+		 	#{item.taskoit} ,
+			"NEW"      , #{item.warekey} , #{item.doccate} , #{item.doctype} ,
+			#{item.truntyp} , #{item.trunpid} ,
+			#{item.lotnmky} , #{item.ownerky} , 
+			#{item.skumkey} , 
+			(SELECT SKUDESC FROM mskuwc WHERE COMPKEY = #{item.compkey} AND OWNERKY = #{item.ownerky} AND WAREKEY = #{item.warekey} AND SKUMKEY = #{item.skumkey}),
+			#{item.vendkey} , #{item.areakey} , #{item.zonekey} , #{item.locakey} ,
+			#{item.toareky} , #{item.tozonky} , #{item.tolocky} , #{item.fordqty} , #{item.suomkey} ,
+			0 		   , #{item.suomkey} , #{item.sirbcod} ,
+			replace(#{item.proddat}, '-', '') , #{item.shelife} , replace(#{item.expidat}, '-', '') , replace(#{item.rcvdcdt}, '-', '') , replace(#{item.rcvfrdt}, '-', '') ,
+			#{item.lotfrky} , 
+			#{item.lotat01} , #{item.lotat02} , #{item.lotat03} , #{item.lotat04} ,
+			#{item.lotat05} , #{item.lotat06} , #{litem.otat07} , #{item.lotat08} ,
+			#{item.lotat09} , #{item.lotat10} , #{item.lotat11} , #{item.lotat12} ,
+			#{item.lotat13} , #{item.lotat14} , #{item.lotat15} , #{item.lotat16} ,
+			#{item.lotat17} , #{item.lotat18} , #{item.lotat19} , #{item.lotat20} ,
+			#{item.parsncd} , #{item.parsnnm} , #{item.rsncode} , #{item.adjsrmk} ,
+			#{item.rcvdcky} , #{item.rcvdcit} , #{item.shpdcky} , #{item.shpdcit} ,
+			#{item.allgrky} , #{item.refsodc} , #{item.refsoit} , #{item.stkstat} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract}   
+		 )
+	</insert>
+    
+    <select id="selectOmw5WshpitCount" resultType="hashmap">
+    	select
+    		count(1) as CNT
+    	from WSHPIT
+    	where COMPKEY = #{item.compkey}
+    	and DOCCATE = '700'
+    	and	DOCTYPE = (case when #{item.doctype} = '310'
+				   			  then '750'
+				   			  when #{item.doctype} = '330'
+				   			  then '760'
+				   			  when #{item.doctype} = '370'
+				   			  then '770' end)
+		and REFSODC = #{item.cooutky}
+		and REFSOIT = #{item.cooutit}
+    </select>
+    
+    <update id="updateOmw5Wshpit">
+    	update WSHPIT
+    	set 
+    		  SHPDCST = (case when SHPDCST = 'NEW' then 'NEW' ELSE 'P_ALOC' end)
+    		, SHPITST = (case when SHPDCST = 'NEW' then 'NEW' ELSE 'P_ALOC' end)
+    		, SHCUQTY = SHCUQTY + #{item.scitqty}
+    		, RGITQTY = RGITQTY + #{item.scitqty}
+    		, LMODATE = to_char(now(), 'YYYYMMDD')
+    		, LMOTIME = to_char(now(), 'hh24miss')
+    		, LMOUSER = #{userData.useract}
+    	where COMPKEY = #{item.compkey}
+    	and DOCCATE = '700'
+    	and	DOCTYPE = (case when #{item.doctype} = '310'
+				   			  then '750'
+				   			  when #{item.doctype} = '330'
+				   			  then '760'
+				   			  when #{item.doctype} = '370'
+				   			  then '770' end)
+		and REFSODC = #{item.cooutky}
+		and REFSOIT = #{item.cooutit}
+    </update>
+    
+    <select id="selectOmw5VirtualWshpit" resultType="com.logistics.wm.domain.WshpitVO">
+		select  
+			  COMPKEY
+			, COOUTIT as SHPDCIT
+			, MNGWHKY as WAREKEY
+			, '700' as DOCCATE 
+			, case when DOCTYPE = '310'
+				   then '750'
+				   when DOCTYPE = '330'
+				   then '760'
+				   when DOCTYPE = '370'
+				   then '770'
+			  end as DOCTYPE
+			, 'NEW' as SHPDCST
+			, 'NEW' as SHPITST
+			, ' ' as PICKTYP
+			, ' ' as OGSTRKY
+			, ' ' as ALSTRKY
+			, OWNERKY
+			, SKUMKEY
+			, (SELECT SKUDESC FROM mskuwc WHERE COMPKEY = OC.COMPKEY AND OWNERKY = OC.OWNERKY AND WAREKEY = OC.MNGWHKY AND SKUMKEY = OC.SKUMKEY) as SKUDESC
+			, to_char(now(),'YYYYMMDD') as SHPPDAY
+			, to_char(now(),'hh24miss') as SHPPTIM
+			, ' ' as SHPSDAY
+			, ' ' as SHPSTIM
+			, ' ' as SPEHTIM
+			, ' ' as SPEITIM
+			, ' ' as SALDATE
+			, CUSTKEY
+			, case when DOCTYPE = '310'
+			  	   then CUSTKEY
+			  	   when DOCTYPE = '330'
+			  	   then VENDKEY
+			  	   when DOCTYPE = '370'
+			  	   then TOWARKY
+			  	   else RETAKEY
+			  end as RETAKEY
+			, VENDKEY
+			, SALMEMO
+			, SALRQDT
+			, SALRQTM
+			, case 	when #{item.scitqty} = 0 then SOITQTY
+				   	else #{item.scitqty}
+				   	end as SHCUQTY
+			, case  when #{item.scitqty} = 0 then SOITQTY
+					else #{item.scitqty}
+					end as RGITQTY
+			, 0 as SHALQTY
+			, 0 as SHPKQTY
+			, 0 as SHDVSQT
+			, 0 as SHDVEQT
+			, 0 as SHCFQTY
+			, 'EA' as SUOMKEY
+			, 'FREE' as PAYTYPE
+			, DCTCTYP
+			, ' ' as ALLGRKY
+			, ' ' as PAKLBKY
+			, ' ' as REFPODC
+			, ' ' as REFPOIT
+			, COOUTKY as REFSODC
+			, COOUTIT as REFSOIT
+			, ' ' as REFDNDC
+			, ' ' as REFDNIT
+			, ' ' as REFSDDC
+			, ' ' as REFSDIT
+			, to_char(now() , 'YYYYMMDD') as CREDATE
+			, to_char(now(), 'hh24miss')  as CRETIME
+			, #{userData.useract}		  as CREUSER
+			, to_char(now() , 'YYYYMMDD') as LMODATE
+			, to_char(now(), 'hh24miss')  as LMOTIME
+			, #{userData.useract}		  as LMOUSER
+			from OCOSAL OC
+			where COMPKEY = #{item.compkey}
+			AND COOUTKY = #{item.cooutky}
+			AND COOUTIT = #{item.cooutit}
+	</select>
+    
+    <select id="selectOmw5VirtualWasnif" resultType="com.logistics.wm.domain.WasnifVO">
+		select  
+			  COMPKEY
+			, COOUTIT as EOASNIT
+			, case when DOCTYPE = '310'
+				   then 'WHOLESALE'
+				   when (DOCTYPE = '320' or DOCTYPE = '350' or DOCTYPE = '360')
+				   then TOWARKY
+				   else MNGWHKY 
+			  end as WAREKEY
+			, '400' as DOCCATE
+			, case when DOCTYPE = '310'
+				   then '440'
+				   when DOCTYPE = '330'
+				   then '445'
+				   when DOCTYPE = '350'
+				   then '450'
+				   when (DOCTYPE = '320' or DOCTYPE = '360')
+				   then '460'
+			  end as DOCTYPE
+			, 'NEW' as ASNSTAT
+			, OWNERKY
+			, SKUMKEY
+			, (SELECT SKUDESC FROM mskuwc WHERE COMPKEY = OC.COMPKEY AND OWNERKY = OC.OWNERKY AND WAREKEY = OC.MNGWHKY AND SKUMKEY = OC.SKUMKEY) as SKUDESC
+			, SKUSKEY
+			, ' ' as SIRBCOD
+			, to_char(now(),'YYYYMMDD') as ASNDATE
+			, 0 as POITQTY
+			, 'EA' as PUOMKEY
+			, case when #{item.scitqty} = 0 then SOITQTY
+				   else #{item.scitqty}
+				   end as ASNDQTY
+			, 'EA' as AUOMKEY
+			, 0 as RCHSQTY
+			, 'EA' as RCHSUOM
+			, case 
+				when DOCTYPE = '330' then VENDKEY
+				when (DOCTYPE = '320' or DOCTYPE = '350' or DOCTYPE = '360') then CUSTKEY
+				when DOCTYPE = '310' then MNGWHKY
+				end as VENDKEY
+			, 0 as SPROPRC
+			, ' ' as CARRKEY
+			, ' ' as TRUCKNO
+			, ' ' as TRUCTON
+			, ' ' as PRODDAT
+			, 0 as SHELIFE
+			, ' ' as EXPIDAT
+			, CUSTKEY as CUSTKEY
+			, case  when DOCTYPE = '330' AND DCTCTYP = 'TC' then RETAKEY
+					when DOCTYPE = '330' AND DCTCTYP = 'DC' then NULL
+					ELSE CUSTKEY
+				end as RETAKEY
+			, DCTCTYP as DCTCTYP
+			, ' ' as LOTAT01
+			, ' ' as LOTAT02
+			, ' ' as LOTAT03
+			, ' ' as LOTAT04
+			, ' ' as LOTAT05
+			, ' ' as LOTAT06
+			, ' ' as LOTAT07
+			, ' ' as LOTAT08
+			, ' ' as LOTAT09
+			, ' ' as LOTAT10
+			, ' ' as LOTAT11
+			, ' ' as LOTAT12
+			, ' ' as LOTAT13
+			, ' ' as LOTAT14
+			, ' ' as LOTAT15
+			, ' ' as LOTAT16
+			, case 	when DOCTYPE = '330' AND DCTCTYP = 'TC' then 'Y'
+					when DOCTYPE = '330' AND DCTCTYP = 'DC' then 'N'
+					ELSE 'N'
+			end as LOTAT17
+			, case 	when DOCTYPE = '330' AND DCTCTYP = 'TC' then RETAKEY
+					ELSE ' '
+			end as LOTAT18
+			, ' ' as LOTAT19
+			, ' ' as LOTAT20
+			, case when DOCTYPE = '310'
+				   then '80'
+				   when DOCTYPE = '350'
+				   then '90'
+				   when DOCTYPE in ('360','320','330')
+				   then '00'
+		  	  end as STKSTAT
+			, ' ' as RSNCODE
+			, RSNDESC as RCVSRMK
+			, ' ' as COPODKY
+			, ' ' as COPODIT
+			, COOUTKY as REFSODC
+			, COOUTIT as REFSOIT
+			, ' ' as REFDNDC
+			, ' ' as REFDNIT
+			, ' ' as REFSDDC
+			, ' ' as REFSDIT
+			, SALGRKY
+			, to_char(now() , 'YYYYMMDD') as CREDATE
+			, to_char(now(), 'hh24miss')  as CRETIME
+			, #{userData.useract}		  as CREUSER
+			, to_char(now() , 'YYYYMMDD') as LMODATE
+			, to_char(now(), 'hh24miss')  as LMOTIME
+			, #{userData.useract}		  as LMOUSER
+			from OCOSAL OC
+			where COMPKEY = #{item.compkey}
+			AND COOUTKY = #{item.cooutky}
+			AND COOUTIT = #{item.cooutit}
+	</select>
+    
+    <insert id="insertOmw5Wshpit" parameterType="hashmap">
+		insert into WSHPIT
+		(
+			  COMPKEY
+			, SHPDCKY
+			, SHPDCIT
+			, WAREKEY
+			, DOCCATE
+			, DOCTYPE
+			, SHPDCST
+			, SHPITST
+			, PICKTYP
+			, OGSTRKY
+			, ALSTRKY
+			, OWNERKY
+			, SKUMKEY
+			, SKUDESC
+			, SHPPDAY
+			, SHPPTIM
+			, SHPSDAY
+			, SHPSTIM
+			, SPEHTIM
+			, SPEITIM
+			, SALDATE
+			, CUSTKEY
+			, RETAKEY
+			, SALMEMO
+			, SALRQDT
+			, SALRQTM
+			, SHCUQTY
+			, RGITQTY
+			, SHALQTY
+			, SHPKQTY
+			, SHDVSQT
+			, SHDVEQT
+			, SHCFQTY
+			, SUOMKEY
+			, PAYTYPE
+			, DCTCTYP
+			, ALLGRKY
+			, PAKLBKY
+			, REFPODC
+			, REFPOIT
+			, REFSODC
+			, REFSOIT
+			, REFDNDC
+			, REFDNIT
+			, REFSDDC
+			, REFSDIT
+			, CREDATE
+			, CRETIME
+			, CREUSER
+			, LMODATE
+			, LMOTIME
+			, LMOUSER
+		)
+		values
+		<foreach collection="insertWshpitList" item="item" separator=",">
+		(
+			  #{item.compkey}
+			, #{item.shpdcky}
+			, #{item.shpdcit}
+			, #{item.warekey}
+			, #{item.doccate}
+			, #{item.doctype}
+			, #{item.shpdcst}
+			, #{item.shpitst}
+			, #{item.picktyp}
+			, #{item.ogstrky}
+			, #{item.alstrky}
+			, #{item.ownerky}
+			, #{item.skumkey}
+			, #{item.skudesc}
+			, #{item.shppday}
+			, #{item.shpptim}
+			, #{item.shpsday}
+			, #{item.shpstim}
+			, #{item.spehtim}
+			, #{item.speitim}
+			, #{item.saldate}
+			, #{item.custkey}
+			, #{item.retakey}
+			, #{item.salmemo}
+			, #{item.salrqdt}
+			, #{item.salrqtm}
+			, #{item.shcuqty}
+			, #{item.rgitqty}
+			, #{item.shalqty}
+			, #{item.shpkqty}
+			, #{item.shdvsqt}
+			, #{item.shdveqt}
+			, #{item.shcfqty}
+			, #{item.suomkey}
+			, #{item.paytype}
+			, #{item.dctctyp}
+			, #{item.allgrky}
+			, #{item.paklbky}
+			, #{item.refpodc}
+			, #{item.refpoit}
+			, #{item.refsodc}
+			, #{item.refsoit}
+			, #{item.refdndc}
+			, #{item.refdnit}
+			, #{item.refsddc}
+			, #{item.refsdit}
+			, #{item.credate}
+			, #{item.cretime}
+			, #{item.creuser}
+			, #{item.lmodate}
+			, #{item.lmotime}
+			, #{item.lmouser}
+		)
+		</foreach>
+	</insert>
+	
+	<insert id="insertOmw5Wasnif" parameterType="hashmap">
+		insert into WASNIF
+		(
+			  COMPKEY
+			, EOASNKY
+			, EOASNIT
+			, WAREKEY
+			, DOCCATE
+			, DOCTYPE
+			, ASNSTAT
+			, OWNERKY
+			, SKUMKEY
+			, SKUDESC
+			, SKUSKEY
+			, SIRBCOD
+			, ASNDATE
+			, POITQTY
+			, PUOMKEY
+			, ASNDQTY
+			, AUOMKEY
+			, RCHSQTY
+			, RCHSUOM
+			, VENDKEY
+			, CARRKEY
+			, TRUCKNO
+			, TRUCTON
+			, PRODDAT
+			, SHELIFE
+			, EXPIDAT
+			, CUSTKEY
+			, RETAKEY
+			, DCTCTYP
+			, LOTAT01
+			, LOTAT02
+			, LOTAT03
+			, LOTAT04
+			, LOTAT05
+			, LOTAT06
+			, LOTAT07
+			, LOTAT08
+			, LOTAT09
+			, LOTAT10
+			, LOTAT11
+			, LOTAT12
+			, LOTAT13
+			, LOTAT14
+			, LOTAT15
+			, LOTAT16
+			, LOTAT17
+			, LOTAT18
+			, LOTAT19
+			, LOTAT20
+			, STKSTAT
+			, RSNCODE
+			, RCVSRMK
+			, COPODKY
+			, COPODIT
+			, REFSODC
+			, REFSOIT
+			, REFDNDC
+			, REFDNIT
+			, REFSDDC
+			, REFSDIT
+			, SALGRKY
+			, CREDATE
+			, CRETIME
+			, CREUSER
+			, LMODATE
+			, LMOTIME
+			, LMOUSER
+		)
+		values
+		<foreach collection="insertWasnifList" item="item" separator=",">
+		(
+			  #{item.compkey}
+			, #{item.eoasnky}
+			, fn_wm_eoasnit(#{item.compkey}, #{item.eoasnky})
+			, #{item.warekey}
+			, #{item.doccate}
+			, #{item.doctype}
+			, #{item.asnstat}
+			, #{item.ownerky}
+			, #{item.skumkey}
+			, #{item.skudesc}
+			, #{item.skuskey}
+			, #{item.sirbcod}
+			, #{item.asndate}
+			, #{item.poitqty}
+			, #{item.puomkey}
+			, #{item.asndqty}
+			, #{item.auomkey}
+			, #{item.rchsqty}
+			, #{item.rchsuom}
+			, #{item.vendkey}
+			, #{item.carrkey}
+			, #{item.truckno}
+			, #{item.tructon}
+			, #{item.proddat}
+			, #{item.shelife}
+			, #{item.expidat}
+			, #{item.custkey}
+			, #{item.retakey}
+			, #{item.dctctyp}
+			, #{item.lotat01}
+			, #{item.lotat02}
+			, #{item.lotat03}
+			, #{item.lotat04}
+			, #{item.lotat05}
+			, #{item.lotat06}
+			, #{item.lotat07}
+			, #{item.lotat08}
+			, #{item.lotat09}
+			, #{item.lotat10}
+			, #{item.lotat11}
+			, #{item.lotat12}
+			, #{item.lotat13}
+			, #{item.lotat14}
+			, #{item.lotat15}
+			, #{item.lotat16}
+			, #{item.lotat17}
+			, #{item.lotat18}
+			, #{item.lotat19}
+			, #{item.lotat20}
+			, #{item.stkstat}
+			, #{item.rsncode}
+			, #{item.rcvsrmk}
+			, #{item.copodky}
+			, #{item.copodit}
+			, #{item.refsodc}
+			, #{item.refsoit}
+			, #{item.refdndc}
+			, #{item.refdnit}
+			, #{item.refsddc}
+			, #{item.refsdit}
+			, #{item.salgrky}
+			, #{item.credate}
+			, #{item.cretime}
+			, #{item.creuser}
+			, #{item.lmodate}
+			, #{item.lmotime}
+			, #{item.lmouser}
+		)
+		</foreach>
+	</insert>
+	
+    <!-- *********************************************** -->
+    <!-- OMW6 -->
+    <!-- *********************************************** -->
+    <select id="selectOmw6List" resultType="com.logistics.om.domain.OcosalVO">
+    	SELECT
+    	  concat(COMPKEY, COOUTKY, COOUTIT) as ROWKEY
+		, COMPKEY
+		, COOUTKY
+		, COOUTIT
+		, DOCCATE
+		, DOCTYPE
+		, SALMODE
+		, SALGRKY
+		, ( SELECT COMCDTX FROM MCODEM WHERE COMPKEY = OS.COMPKEY AND COMCDKY = 'SALSTAT' AND COMCDVL = OS.SALSTAT) AS SALSTAT
+		, date_format(POSTDAT, '%Y-%m-%d') as POSTDAT
+		, date_format(SALDATE, '%Y-%m-%d') as SALDATE
+		, date_format(SALTIME, '%H-%i-%s') as SALTIME
+		, CASE 
+			WHEN (DOCTYPE = '310' OR DOCTYPE = '330' OR DOCTYPE = '370')
+			THEN (SELECT WHNAMLC FROM MWARMA WHERE COMPKEY = OS.COMPKEY AND WAREKEY = OS.MNGWHKY) 
+			WHEN (DOCTYPE = '340' or DOCTYPE = '350' or DOCTYPE = '360')
+			THEN (SELECT CUNAMLC FROM MCUSMA WHERE COMPKEY = OS.COMPKEY AND OWNERKY = OS.OWNERKY AND CUSTKEY = OS.CUSTKEY)
+		  END AS FRWHONM
+		, CASE WHEN (DOCTYPE = '310' OR DOCTYPE = '330')
+			THEN (SELECT CUNAMLC FROM MCUSMA WHERE COMPKEY = OS.COMPKEY AND OWNERKY = OS.OWNERKY AND CUSTKEY = OS.CUSTKEY)
+			WHEN (DOCTYPE = '350' OR DOCTYPE = '360' OR DOCTYPE = '370' )
+			THEN (SELECT WHNAMLC FROM MWARMA WHERE COMPKEY = OS.COMPKEY AND WAREKEY = OS.MNGWHKY)
+			WHEN (DOCTYPE = '340')
+			THEN (SELECT PTNAMLC FROM MPTNMA WHERE COMPKEY = OS.COMPKEY AND OWNERKY = OS.OWNERKY AND PTNRKEY = OS.RETAKEY)
+		  END AS TOWHONM
+		, CUSTKEY
+		, RETAKEY
+		<!-- , (select CUNAMLC from MCUSMA where COMPKEY = OS.COMPKEY and OWNERKY = OS.OWNERKY and PTNRKEY = OS.CUSTKEY) as CUSTKEY 
+		, (select PTNAMLC from mptnma where COMPKEY = OS.COMPKEY and OWNERKY = OS.OWNERKY and PTNRKEY = OS.RETAKEY) as RETAKEY  -->
+		, SALMEMO
+		, date_format(SALRQDT, '%Y-%m-%d') as SALRQDT
+		, date_format(SALRQTM), '%H-%i-%s') as SALRQTM
+		, SALLBYN
+		, OWNERKY
+		, SKUMKEY
+		, SKUDESC
+		, SKUSKEY
+		, SOITQTY
+		, RGITQTY
+		, SUOMKEY
+		, PAYTYPE
+		, DCTCTYP
+		, MNGWHKY
+		, RSNCODE
+		, RSNDESC
+		, (SELECT COMCDTX FROM MCODEM WHERE COMPKEY = OS.COMPKEY AND COMCDKY = 'INBSTAT' AND COMCDVL = OS.INBSTAT) AS INBSTAT
+		, (SELECT COMCDTX FROM MCODEM WHERE COMPKEY = OS.COMPKEY AND COMCDKY = 'OUBSTAT' AND COMCDVL = OS.OUBSTAT) AS OUBSTAT
+		, ITMCOST
+		, SELPRIC
+		, SEDPRIC
+		, SEPRICE
+		, ORDGR01
+		, ORDGR02
+		, ORDGR03
+		, CLOSLYN
+		, CLODATE
+		, CLOTIME
+		, CLOUSER
+		, SPRETYP
+		, PMTSAYN
+		, PMTSADT
+		, PMTSATM
+		, PMTSAUR
+		, date_format(CREDATE, '%Y-%m-%d') as CREDATE
+		, date_format(CRETIME, '%Y-%m-%d') as CRETIME
+		, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+		, date_format(LMODATE, '%Y-%m-%d') as LMODATE
+		, date_format(LMOTIME, '%Y-%m-%d') as LMOTIME
+		, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		FROM OCOSAL OS
+    	WHERE 1=1
+    	and COMPKEY = #{userData.compkey}
+    	and OWNERKY = #{ownerky}
+    	and DOCCATE = '300'
+    	<if test="custkey != null and custkey != ''">
+    	and (CUSTKEY = #{custkey} or RETAKEY = #{custkey} or MNGWHKY = #{custkey})
+    	</if>
+    	<if test="salstat != null and salstat !=''">
+		and SALSTAT = #{salstat}
+		</if>
+    	<if test="salrqdf != null and salrqdf != ''">
+    	and SALRQDT >= REPLACE(#{salrqdf}, '-', '')
+    	</if>
+    	<if test="salrqdt != null and salrqdt != ''">
+    	<![CDATA[
+    	and SALRQDT <= REPLACE(#{salrqdt}, '-', '')
+    	]]>
+    	</if>
+    	<if test="salrqtm != null and salrqtm != ''">
+    	<![CDATA[
+		and SALRQTM <= REPLACE(#{salrqtm}, ':', '')
+		]]>
+		</if>
+		<choose>
+			<when test="doctype != null and doctype != ''">
+				and DOCTYPE = #{doctype}
+			</when>
+			<when test="doctype == null or doctype == ''">
+			and DOCTYPE in ('310','330','340','350','360','370')
+			</when>
+		</choose>
+		<if test="inbstat != null and inbstat != ''">
+		and INBSTAT = #{inbstat}
+		</if>
+		<if test="oubstat != null and oubstat != ''">
+		and OUBSTAT = #{oubstat}
+		</if>
+		<if test="salmemo != null and salmemo != ''">
+		and upper(SALMEMO) like concat('%', upper(#{salmemo}), '%')
+		</if>
+    	<if test="skumkey != null and skumkey != ''">
+    	and upper(SKUMKEY) like concat('%', upper(#{skumkey}), '%')
+    	</if>
+    	<if test="skudesc != null and skudesc != ''">
+    	and upper(skudesc) like concat('%', upper(#{skudesc}), '%')
+    	</if>
+    </select>
+    
+	<!-- omw9 : 재고 조회-->
+	<select id="getOmwp9List" resultType="hashMap">
+		select
+		  STK.ROWKEY  as rowkey , STK.COMPKEY as compkey ,																	
+		  STK.WAREKEY as warekey , WM.WHNAMLC as whnamlc , STK.OWNERKY as ownerky , OW.OWNAMLC as ownamlc ,	
+		  STK.BRANDCD as brandcd , CU.CUNAMLC as cunamlc , STK.SKUMKEY as skumkey , STK.SKUDESC as skudesc , 
+		  STK.STOTQTY as stotqty , STK.STKSTAT as stkstat ,	CD.COMCDTX as comcdtx																	
+		from (																	
+			select 					
+				CONCAT(W1.COMPKEY , W1.STOCKKY) as rowkey ,											
+				W1.COMPKEY as compkey, W1.WAREKEY as warekey , W1.OWNERKY as ownerky ,															
+				W1.SKUMKEY as skumkey, W1.SKUDESC as skudesc , W1.LOCAKEY as brandcd ,		
+				SUM(W1.STOTQTY) as stotqty , W1.STKSTAT as stkstat															
+			from																
+				WSTKKY W1															
+			where 1=1
+			 and W1.COMPKEY = #{compkey}																
+			 and (W1.WAREKEY = 'WHOLESALE' 
+		 		  and W1.LOCAKEY in
+				 <foreach collection="onlyCustkey" item="item" open="(" close=")" separator=",">
+				 	#{item} 
+				 </foreach>
+		 		  and W1.STKSTAT = '80' ) <!-- 재고상태 80 -->																
+			group by WAREKEY,OWNERKY, SKUMKEY, STKSTAT , BRANDCD																
+			union all 																
+			select 	
+				CONCAT(W2.COMPKEY , W2.STOCKKY) as rowkey ,															
+				W2.COMPKEY as compkey , W2.WAREKEY as warekey , W2.OWNERKY as ownerky ,														
+				W2.SKUMKEY as skumkey , W2.SKUDESC as skudesc , M.BRANDCD as brandcd ,
+				SUM(W2.STOTQTY) as stotqty , W2.STKSTAT as stkstat 														
+			from WSTKKY W2 															
+			 inner join MSKUWC  M on W2.COMPKEY = M.COMPKEY 															
+			  and W2.SKUMKEY = M.SKUMKEY 															
+			  and W2.OWNERKY = M.OWNERKY 															
+			where 1=1																
+			 and W2.COMPKEY = M.COMPKEY 
+			 and W2.WAREKEY = M.WAREKEY  
+			 and W2.AREAKEY = 'STG' 
+			 and W2.STOTQTY > 0 
+			 and W2.SALLQTY = 0 
+			 and W2.SINBQTY = 0 
+			 and W2.SOUBQTY = 0 
+			 and W2.SBLOQTY = 0 
+			 and M.BRANDCD in
+		   <foreach collection="onlyWarekey" item="item" open="(" close=")" separator=",">
+			 #{item} 
+		   </foreach>														
+			 and W2.WAREKEY in 
+			 ( 
+			 	select distinct CW.MNGWHKY  from MCUSWH CW 
+				 where W2.COMPKEY = CW.COMPKEY 
+				  and CW.CUSTKEY in																
+				<foreach collection="onlyWarekey" item="item" open="(" close=")" separator=",">
+					#{item} 
+				</foreach>
+			 )
+		  group by WAREKEY, OWNERKY, SKUMKEY, STKSTAT , BRANDCD																
+	      order by WAREKEY, OWNERKY, SKUMKEY, STKSTAT																
+		 ) STK 																	
+		  inner join MWARMA WM on STK.COMPKEY = WM.COMPKEY																
+		   and STK.WAREKEY = WM.WAREKEY																
+		  inner join MOWRMA OW on STK.COMPKEY = OW.COMPKEY																
+		   and STK.OWNERKY = OW.OWNERKY																
+		  inner join MCODEM CD on STK.COMPKEY = CD.COMPKEY																
+		   and CD.COMCDKY = 'STKSTAT'																
+		   and STK.STKSTAT = CD.COMCDVL		
+		  inner join MCUSMA CU on STK.COMPKEY = CU.COMPKEY		
+		   and STK.BRANDCD = CU.CUSTKEY		
+		   and CU.CUSTTYP = 'WHOLESALE'		
+		   
+	</select>
+</mapper>

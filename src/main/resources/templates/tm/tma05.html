@@ -1,0 +1,781 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="tma05_warekey_item" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tma05_warekey_item" name="tma05_warekey_item" data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<label for="tma05_vhcsnam" class="setting-grid-title">[[#{tm.tvhcma.vhcsnam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper tma05">
+						<input type="text" id="tma05_vhcsnam" th:placeholder="${#messages.msg('tm.tvhcma.vhcsnam')}">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="tma05_subSearch"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="tma05_reset"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+				<button class="btn-search btn-navy btn-green" id="tma05_cancel"><img class="ic-bt-cancel-g">[[#{tm.tma08.planCancle}]]</button>
+					<button class="btn-navy btn-green" id="tma05_save"><img class="ic-bt-save">[[#{tm.tma05.editPlan}]]</button>
+				</div>
+			</div>
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="tma05_modalGrid"></div>
+				</div>
+			</div>
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="tma05_subGrid"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- 권역배차 모달 -->
+	<div class="modal fade modalTm" id="tma05AreaModal" tabindex="-1" role="dialog" aria-labelledby="tma05AreaModal" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-top">
+					<button type="button" class="close" id="tma05AreaMdClose" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<div class="search-list">
+						<div class="list-top">
+							<div class="list-title ic-title-mark">
+								<span th:text="${gnatitle}"></span>
+							</div>
+						</div>
+						<div class="list-grid-wrapper con-box">
+							<div id="tma05_pqgrid"></div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-bottom">
+					<button class="btn-white" id="tma05AreaMdSaveBt">[[#{tm.tma05.editPlan}]]</button>
+					<button class="btn-save btn-navy btn-green" id="tma05AreaMdCloseBt">[[#{bt.close}]]</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+	<script>
+		/* *******************************************************
+		 * 최초 생성일시 : 2023-09-15
+		 * 최초 생성자 : 최재환
+		 * 설명 : 현재 등록된 권역배차들을 변경할 수 있는 화면입니다.
+		 *********************************************************/
+		let grid;
+		let subGrid;
+		let modalGrid;
+
+		let responseData;
+		
+		_commonInit();
+
+		const pageId = 'tma05';
+		const gridId = '#' + pageId + '_pqgrid';
+		const subGridId = '#' + pageId + '_subGrid';
+		const modalGridId = '#' + pageId + '_modalGrid';
+
+		$(function() {
+			const yesterday = moment().subtract(1, 'd').format('YYYY-MM-DD');
+			const today = moment().format('YYYY-MM-DD');
+			$('#' + pageId + '_postdatFrom').val(yesterday);
+			$('#' + pageId + '_postdatTo').val(today);
+
+			const tma05GridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+					type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+					cb: { all: false, header: true}
+				},
+				{ title: '[[#{tm.tplnhd.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true},
+				{ title: '[[#{tm.tplnhd.vhplnky}]]', dataType: 'string', dataIndx: 'vhplnky', editable: false},
+				{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'warekey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.warehouseList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.warehouseList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.warekey = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{tm.tvhcma.vhcsnam}]]' + '([[#{tm.tvhcma.vhcfnam}]])', dataType: 'string', dataIndx: 'vehicky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.vehiList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.vehiList.find(function (obj) {
+							return (obj.vehicky === ui.cellData);
+						});
+						ui.rowData.vehicky = option ? ui.cellData : '';
+						return option ? option.vhcsnam : '';
+					},
+				}
+			]
+
+			const tma05SubGridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+					type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+					cb: { all: false, header: true}
+				},
+				{ title: '[[#{tm.tplnhd.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true},
+				{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'warekey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.warehouseList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.warehouseList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.warekey = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{tm.tvhcma.vhcsnam}]]' + '([[#{tm.tvhcma.vhcfnam}]])', dataType: 'string', dataIndx: 'vehicky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.vehiList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.vehiList.find(function (obj) {
+							return (obj.vehicky === ui.cellData);
+						});
+						ui.rowData.vehicky = option ? ui.cellData : '';
+						return option ? option.vhcsnam : '';
+					},
+				},
+				{ title: '[[#{tm.tplnhd.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.doccateList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.doccateList.find(function (obj) {
+							return (obj.doccate === ui.cellData && obj.warekey === ui.rowData.warekey);
+						});
+						ui.rowData.doccate = option ? ui.cellData : '';
+						return option ? option.docctnm : '';
+					},
+				},
+				{ title: '[[#{tm.tplnhd.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.doctypeList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.doctypeList.find(function (obj) {
+							return (obj.warekey === ui.rowData.warekey && obj.doctype === ui.cellData && obj.doccate === ui.rowData.doccate);
+						});
+						ui.rowData.doctype = option ? ui.cellData : '';
+						return option ? option.doctynm : '';
+					},
+				},
+				{ title: '[[#{tm.tplnit.vhplnky}]]', dataType: 'string', dataIndx: 'vhplnky', editable: false},
+				{ title: '[[#{tm.tplnit.vhplnit}]]', dataType: 'string', dataIndx: 'vhplnit', editable: false},
+				{ title: '[[#{tm.tplnit.custkey}]]', dataType: 'string', dataIndx: 'custkey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.customerList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.customerList.find(function (obj) {
+							return (obj.ptnrkey === ui.cellData);
+						});
+						ui.rowData.custkey = option ? ui.cellData : '';
+						return option ? option.ptnamlc : '';
+					},},
+				{ title: '[[#{tm.tplnit.destkey}]]', dataType: 'string', dataIndx: 'destkey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.destkeyList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.destkeyList.find(function (obj) {
+							return (obj.destkey === ui.cellData);
+						});
+						ui.rowData.destkey = option ? ui.cellData : '';
+						return option ? option.denamlc : '';
+					},
+				},
+				{ title: '[[#{grid.ownamlc}]]', dataType: 'string', dataIndx: 'ownerky', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.ownerList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.ownerList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.ownerky = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{grid.skuCode}]]', dataType: 'string', dataIndx: 'skumkey', editable: false},
+				{ title: '[[#{grid.skunm}]]', dataType: 'string', dataIndx: 'skudesc', editable: false},
+				{ title: '[[#{tm.tplnit.soitqty}]]', dataType: 'integer', dataIndx: 'soitqty', editable: false, format: '#,###',
+					summary: { type: "sum" }},
+				{ title: '[[#{tm.tplnit.tritqty}]]', dataType: 'integer', dataIndx: 'tritqty', editable: false, format: '#,###',
+					summary: { type: "sum" }},
+				{ title: '[[#{tm.tplnit.suomkey}]]', dataType: 'string', dataIndx: 'suomkey', editable: false},
+				{ title: '[[#{tm.tplnit.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false},
+				{ title: '[[#{tm.tplnit.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false},
+				{ title: '[[#{tm.tplnit.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+				{ title: '[[#{tm.tplnit.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false},
+				{ title: '[[#{tm.tplnit.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false},
+				{ title: '[[#{tm.tplnit.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false}
+			]
+
+			const tma05ModalGridCM = [
+				{ title: '[[#{tm.tplnhd.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable: false, hidden: true},
+				{ title: '[[#{tm.tplnhd.vhplnky}]]', dataType: 'string', dataIndx: 'vhplnky', editable: false},
+				{ title: '[[#{tm.tplnhd.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false},
+				{ title: '[[#{tm.tplnhd.vhpdate}]]', dataType: 'string', dataIndx: 'vhpdate', editable: false},
+				{ title: '[[#{tm.tplnhd.vhptime}]]', dataType: 'string', dataIndx: 'vhptime', editable: false},
+				{ title: '[[#{tm.tma08.plnstat}]]', dataType: 'string', dataIndx: 'plnstat', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.plnstatList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.plnstatList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.plnstat = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{tm.tplnhd.pbillyn}]]', dataType: 'string', dataIndx: 'pbillyn', editable: false},
+				{ title: '[[#{tm.tplnhd.pbilpay}]]', dataType: 'integer', dataIndx: 'pbilpay', editable: false, format: '#,###',
+					summary: { type: "sum" }},
+				{ title: '[[#{tm.tplnhd.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false},
+				{ title: '[[#{tm.tplnhd.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false},
+				{ title: '[[#{tm.tplnhd.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+				{ title: '[[#{tm.tplnhd.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false},
+				{ title: '[[#{tm.tplnhd.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false},
+				{ title: '[[#{tm.tplnhd.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false},
+				{ title: '[[#{tm.tplnhd.trnmemo}]]', dataType: 'string', dataIndx: 'trnmemo', editable: false},
+				{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'warekey', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.warehouseList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.warehouseList.find(function (obj) {
+							return (obj.combovl === ui.cellData);
+						});
+						ui.rowData.warekey = option ? ui.cellData : '';
+						return option ? option.combonm : '';
+					},
+				},
+				{ title: '[[#{tm.tvhcma.vhcsnam}]]' + '([[#{tm.tvhcma.vhcfnam}]])', dataType: 'string', dataIndx: 'vehicky', editable: false,
+						editor: {
+							type: 'select',
+							options: function(ui){
+					            return responseData.vehiList;
+							},
+						},
+						render: function (ui) {
+							let option = responseData.vehiList.find(function (obj) {
+								return (obj.vehicky === ui.cellData);
+							});
+							ui.rowData.vehicky = option ? ui.cellData : '';
+							return option ? option.vhcsnam : '';
+						},
+					},
+				{ title: '[[#{tm.tplnhd.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable: false,
+						editor: {
+							type: 'select',
+							options: function(ui){
+					            return responseData.doccateList;
+							},
+						},
+						render: function (ui) {
+							let option = responseData.doccateList.find(function (obj) {
+								return (obj.doccate === ui.cellData && obj.warekey === ui.rowData.warekey);
+							});
+							ui.rowData.doccate = option ? ui.cellData : '';
+							return option ? option.docctnm : '';
+						},
+					},
+				{ title: '[[#{tm.tplnhd.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable: false,
+					editor: {
+						type: 'select',
+						options: function(ui){
+				            return responseData.doctypeList;
+						},
+					},
+					render: function (ui) {
+						let option = responseData.doctypeList.find(function (obj) {
+							return (obj.doctype === ui.cellData && obj.doccate === ui.rowData.doccate && obj.warekey === ui.rowData.warekey);
+						});
+						ui.rowData.doctype = option ? ui.cellData : '';
+						return option ? option.doctynm : '';
+					},
+				}
+			]
+
+			const tma05Grid = new GridUtil(tma05GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+			const tma05SubGrid = new GridUtil(tma05SubGridCM, '[[${gprogrid}]]', pageId + '_subGrid');
+			const tma05ModalGrid = new GridUtil(tma05ModalGridCM, '[[${gprogrid}]]', pageId + '_modalGrid');
+
+			tma05Grid.setCheck(function(evt, ui){
+				if(ui.check){
+					this.Checkbox('state').unCheckAll(); // 하나만 클릭
+					ui.rowData.state = true;
+					this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+				}
+			});
+
+			//============================================================
+			//그리드 create 이벤트
+			//============================================================
+			tma05ModalGrid.setCreate(async function (evt, ui) {
+				await initData();
+			});
+
+			tma05ModalGrid.setRowDblClick(async function(event, ui) {
+				await tma05_subAreaInitData(ui);
+			});
+
+			tma05Grid.setFind();
+			tma05Grid.setReset();
+			tma05Grid.open();
+
+			tma05SubGrid.setFind();
+			tma05SubGrid.setReset();
+			tma05SubGrid.open();
+
+			tma05ModalGrid.setFind();
+			tma05ModalGrid.setReset();
+			tma05ModalGrid.open();
+
+		});
+
+		$('#' + pageId + '_subSearch').click(async function(){
+			await tma05_headInitData();
+		});
+
+		//============================================================
+		//검색조건 초기화 이벤트
+		//============================================================
+		$('#' + pageId + '_reset').click(function () {
+			$('#' + pageId + '_warekey_item').val($('#' + pageId + '_warekey_item option:first').val());
+			$('#' + pageId + '_vhcsnam').val('');
+
+			modalGrid = pq.grid('#' + pageId + '_modalGrid');
+			subGrid = pq.grid('#' + pageId + '_subGrid');
+
+			modalGrid.showLoading();
+			subGrid.showLoading();
+
+			subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+			subGrid.refreshDataAndView();
+			subGrid.hideLoading();
+
+			modalGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+			modalGrid.refreshDataAndView();
+			modalGrid.hideLoading();
+
+		});
+
+		$('#' + pageId + '_cancel').click(async function(){
+			modalGrid = pq.grid(modalGridId);
+			subGrid = pq.grid(subGridId);
+
+			const subGridCheck = subGrid.Checkbox('state').getCheckedNodes();
+
+			if(!subGridCheck.length){
+				alert('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+
+			const result = confirm('[[#{tm.tma08.itemCancle}]]');
+
+			if(result) {
+
+				const data = {
+					deleteList: subGridCheck
+				}
+				modalGrid.showLoading();
+				subGrid.hideLoading();
+				try {
+					const response = await fetchUtil('POST', '/tm/area/tma05/delete', data);
+
+					if(response.status === 200) {
+						// 삭제 성공 후 데이터 조회
+						modalGrid.option('dataModel', {data: []});
+						subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+						await tma05_headInitData(); // 헤드그리드 재조회
+
+						subGrid.refreshDataAndView();
+						subGrid.hideLoading();
+					}
+				}catch(err) {
+					alert('[[#{ms.deleteErr}]]');
+				}finally {
+					modalGrid.hideLoading();
+					subGrid.hideLoading();
+				}
+			}
+
+		});
+
+		$('#' + pageId + '_save').click(async function(){
+
+			modalOpen();
+
+		});
+
+		//============================================================
+		//데이터 조회
+		//============================================================
+		async function tma05_headInitData() {
+			modalGrid = pq.grid(modalGridId);
+			subGrid = pq.grid(subGridId);
+
+			const data = {
+					// 검색할 조건을 가지고 있는 변수
+					warekey: $('#' + pageId + '_warekey_item').val(),
+					vhcsnam: $('#' + pageId + '_vhcsnam').val().replace(/(\s*)/g, '')
+			}
+
+			modalGrid.showLoading();
+			try{
+				const response = await fetchUtil('GET', "/tm/area/tma05/grids/1", data);
+
+				//============================================================
+				//그리드 Option
+				//============================================================
+				if(response.status === 200) {
+					const resContent = await response.json();
+
+					modalGrid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					subGrid.option('dataModel', {data: []});
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+
+					modalGrid.refreshDataAndView();
+					modalGrid.hideLoading();
+
+				}
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				modalGrid.hideLoading();
+				subGrid.hideLoading();
+			}
+		}
+
+		//============================================================
+		//데이터 조회
+		//============================================================
+		async function tma05_modalInitData() {
+			subGrid = pq.grid(subGridId);
+			grid = pq.grid(gridId);
+			const subGridCheck = subGrid.Checkbox('state').getCheckedNodes();
+
+			const data = {
+					// 검색할 조건을 가지고 있는 변수
+					compkey: subGridCheck[0].compkey,
+					vhplnky: subGridCheck[0].vhplnky,
+					warekey: subGridCheck[0].warekey,
+					doccate: subGridCheck[0].doccate,
+					doctype: subGridCheck[0].doctype,
+					vehicky: subGridCheck[0].vehicky
+			}
+
+			grid.showLoading();
+
+			try{
+				const response = await fetchUtil('GET', "/tm/area/tma05/grids/3", data);
+
+		//============================================================
+		//그리드 Option
+		//============================================================
+				if(response.status === 200) {
+					const resContent = await response.json();
+
+					grid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+				}
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				grid.hideLoading();
+			}
+		}
+
+		//============================================================
+		//TPLNIT 아이템 데이터 조회
+		//============================================================
+		async function tma05_subAreaInitData(ui) {
+			subGrid = pq.grid(subGridId);
+
+			const data = {
+					// 검색할 조건을 가지고 있는 변수
+					compkey: ui.rowData.compkey,
+					vhplnky: ui.rowData.vhplnky,
+					warekey: ui.rowData.warekey,
+					doccate: ui.rowData.doccate,
+					doctype: ui.rowData.doctype,
+					vehicky: ui.rowData.vehicky
+			}
+			subGrid.showLoading();
+			try{
+				const response = await fetchUtil('GET', "/tm/area/tma05/grids/2", data);
+
+				//============================================================
+				//그리드 Option
+				//============================================================
+				if(response.status === 200) {
+					let resContent = await response.json();
+
+					subGrid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+				}
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				subGrid.hideLoading();
+			}
+		}
+
+		//============================================================
+		//모달 오픈
+		//============================================================
+
+		function modalOpen(){
+			subGrid = pq.grid('#' + pageId + '_subGrid');
+			const subGridCheck = subGrid.Checkbox('state').getCheckedNodes();
+
+			if(!subGridCheck.length){
+				alert('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+
+			$('#' + pageId + 'AreaModal').modal('show');
+		};
+
+		//============================================================
+		//  모달 화면 이벤트
+		//============================================================
+
+		$('#' + pageId + 'AreaMdSaveBt').click(async function () {
+
+			grid = pq.grid('#' + pageId + '_pqgrid');
+			const gridCheck = grid.Checkbox('state').getCheckedNodes();
+
+			if(!gridCheck.length){
+				alert('[[#{ms.choiceRowZero}]]');
+				return;
+			}
+
+			await tma05AreaModalAction();
+		});
+
+		//모달 open 시 값 초기화
+		$('#' + pageId + 'AreaModal').on('shown.bs.modal', async function() {
+
+			await tma05_modalInitData();
+
+		});
+
+		//modal close button click
+		$('#tma05AreaMdClose, #tma05AreaMdCloseBt').click(function() {
+
+			$('#' + pageId + 'AreaModal').modal('hide');
+
+			grid = pq.grid('#' + pageId + '_pqgrid');
+
+			grid.option('dataModel', {data: []});
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+
+		});
+
+		$('#' + pageId + '_AreaModalSearch').click(async function(){
+
+			await tma05_modalInitData();
+
+		});
+
+
+		//=======================================================
+	  	// 모달 SAVE 후 실행하는 이벤트
+	  	//=======================================================
+	     async function tma05AreaModalAction() {
+
+				grid = pq.grid('#' + pageId + '_pqgrid');
+				subGrid = pq.grid('#' + pageId + '_subGrid');
+
+				const gridCheck = grid.Checkbox('state').getCheckedNodes();
+				const subGridCheck = subGrid.Checkbox('state').getCheckedNodes();
+
+				const gridChange = grid.getChanges({all: true});
+				const subGridChange = subGrid.getChanges({all: true});
+
+				if(gridCheck.length === 0){
+					alert('[[#{ms.choiceRowZero}]]');
+					return;
+				}
+
+				gridChange.addList = gridCheck;
+				subGridChange.updateList = subGridCheck;
+				const result = confirm('[[#{ms.checksave}]]');
+
+				if(result) {
+
+					const data = {
+						headGrid: gridChange,
+						itemGrid: subGridChange
+					}
+					grid.showLoading();
+					subGrid.showLoading();
+					try {
+						const response = await fetchUtil('POST', '/tm/area/tma05/tplnhdsave', data);
+
+						if(response.status === 200) {
+							// 저장 성공 후 데이터 조회
+							$('#' + pageId + 'AreaModal').modal('hide');
+
+							await tma05_headInitData();
+							subGrid.option('dataModel', {data: []});
+
+							subGrid.refreshDataAndView();
+							subGrid.hideLoading();
+						}
+					}catch(err) {
+						alert('[[#{ms.saveErr}]]');
+					}finally {
+						grid.hideLoading();
+						subGrid.hideLoading();
+					}
+				}
+		};
+
+		//============================================================
+		//Init데이터 조회
+		//============================================================
+		async function initData() {
+
+			responseData = await fetchUtil('GET', '/tm/area/common/initdata', {});
+			responseData = await responseData.json();
+			return responseData;
+			
+		}
+
+
+		//============================================================
+		//검색 엔터키 이벤트
+		//============================================================
+
+	    async function enterKeySearch(event) {
+			modalGrid = pq.grid('#' + pageId + '_modalGrid');
+			subGrid = pq.grid('#' + pageId + '_subGrid');
+			grid = pq.grid('#' + pageId + '_pqgrid');
+
+	        if (event.key === 'Enter') {
+				if(event.target.parentNode.parentNode.parentNode === document.querySelector('div[id*="'+pageId+'Modal"]')){
+					grid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+
+					await tma05_modalInitData();
+				}
+				else{
+					modalGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+					modalGrid.refreshDataAndView();
+					modalGrid.hideLoading();
+
+					await tma05_headInitData(); // 헤드그리드 재조회
+				}
+
+	        }
+	    }
+
+	    // 모든 input 요소 가져오기
+	    const inputElements = document.querySelectorAll('.input-wrapper.' + pageId);
+	    const gridSearchList = [];
+	    const modalSearchList = [];
+	    inputElements.forEach(inputElement => {
+	    	if(inputElement.parentNode.parentNode === document.querySelector('div[id*="'+pageId+'Modal"]')){
+	    		modalSearchList.push(inputElement);
+	    	}else{
+	    		gridSearchList.push(inputElement);
+	    	}
+	    });
+
+	    // 각 input 요소에 이벤트 리스너 추가
+	    gridSearchList.forEach(input => {
+	        input.addEventListener('keyup', enterKeySearch);
+	    });
+	    modalSearchList.forEach(input => {
+	        input.addEventListener('keyup', enterKeySearch);
+	    });
+
+	</script>
+</html>

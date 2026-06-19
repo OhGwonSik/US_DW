@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.StrategyMapper">
+
+	<!-- *********************************************** -->
+    <!-- 적치 전략  -->
+    <!-- *********************************************** -->        
+    <!-- wms1 : 적치전략 Header List 조회 --> 
+    <select id="selectWpashdList" resultType="com.logistics.wm.domain.PutawayStrategyDTO">
+     	select concat(COMPKEY, WAREKEY, PASTRKY) as ROWKEY
+     		 , COMPKEY
+     		 , WAREKEY
+     		 , PASTRKY
+     		 , PASTRNM
+     		 , PADELYN
+		     , date_format(CREDATE, '%Y-%m-%d') as CREDATE, date_format(CRETIME, '%Y-%m-%d') as CRETIME, fn_sy_usernam(COMPKEY,CREUSER) as CREUSER
+			 , date_format(LMODATE, '%Y-%m-%d') as LMODATE, date_format(LMOTIME, '%Y-%m-%d') as LMOTIME, fn_sy_usernam(COMPKEY,LMOUSER) as LMOUSER
+			 , INDIBZL, INDIARC, UPDTCHK
+		  from WPASHD
+		 where 1=1
+		   and COMPKEY = #{userData.compkey}
+		 <if test="warekey != null and warekey != ''">
+		   and WAREKEY = #{warekey}
+		 </if>
+		 <if test="pastrky != null and pastrky != ''">
+		   and PASTRKY = #{pastrky}
+		 </if>
+		 <if test="pastrnm != null and pastrnm != ''">
+		   and upper(PASTRNM) like concat('%', upper(#{pastrnm}), '%')
+		 </if>
+		 order by COMPKEY, WAREKEY, PASTRKY
+    </select>
+    
+    <!-- wms1 : 적치전략 Item List 조회 --> 
+    <select id="selectWpasitList" resultType="com.logistics.wm.domain.PutawayStrategyDTO">
+     	select concat(WI.COMPKEY, WI.WAREKEY, WI.PASTRKY, WI.PASTRIT) as ROWKEY
+			 , WI.COMPKEY, WI.WAREKEY, WI.PASTRKY
+			 , WI.PASTRIT, WI.PASTROD, WI.PASTRMD
+		     , WI.RCVLOCA, WM.RCVLOYN
+		     , WI.RCVZONE, WM.RCVZNYN
+		     , WI.RCVSABC, WM.RCVABYN
+		     , WI.PAWLOCA, WM.PAWLCYN
+		     , WI.PAWZONE, WM.PAWZNYN
+		     , WI.SCHMETH, WM.SCHMEYN
+		     , WI.SCHSFNO, WM.SCHSFYN
+		     , WI.SCHEFNO, WM.SCHEFYN
+		     , WI.SCHMXOP, WM.SCHMXYN
+		     , WI.SCHLROP, WM.SCHLRYN
+		     , WI.PADELYN
+		     , date_format(WI.CREDATE, '%Y-%m-%d') as CREDATE, date_format(WI.CRETIME, '%H-%i-%s') as CRETIME, fn_sy_usernam(WI.COMPKEY, WI.CREUSER) as CREUSER
+	 		 , date_format(WI.LMODATE, '%Y-%m-%d') as LMODATE, date_format(WI.LMOTIME, '%H-%i-%s') as LMOTIME, fn_sy_usernam(WI.COMPKEY, WI.LMOUSER) as LMOUSER
+		     , WI.INDIBZL, WI.INDIARC, WI.UPDTCHK
+		  from WPASIT WI
+		 inner join WPASMA WM 
+		    on WI.COMPKEY = WM.COMPKEY
+		   and WI.PASTRMD = WM.PASTRMD
+		 where WI.COMPKEY = #{compkey}
+		   and WI.WAREKEY = #{warekey}
+		   and WI.PASTRKY = #{pastrky}
+		  order by WI.COMPKEY, WI.WAREKEY, WI.PASTRKY, WI.PASTROD
+    </select>
+    
+    <!-- wms1 : 적치전략 마스터 List 조회 -->
+    <select id="selectWpasmaList" resultType="com.logistics.wm.domain.WpasmaVO" parameterType="HashMap"> 
+		  select COMPKEY
+		       , PASTRMD
+		       , PASTRNM
+		       , RCVLOYN
+		       , RCVZNYN
+		       , RCVABYN
+		       , PAWLCYN
+		       , PAWZNYN
+		       , SCHMEYN
+		       , SCHSFYN
+		       , SCHEFYN
+		       , SCHMXYN
+		       , SCHLRYN
+		       , PADELYN 
+		    from WPASMA
+		   where COMPKEY = #{compkey}
+		   <if test="pastrmd != null and pastrmd != ''">
+		     and PASTRMD = #{pastrmd}
+		   </if>
+	</select>
+	
+	<!-- wms1 : 적치전략 Head insert -->
+	<insert id="insertWpashd" parameterType="com.logistics.wm.domain.PutawayStrategyDTO"> 
+		insert 
+		  into WPASHD( COMPKEY, WAREKEY, PASTRKY, PASTRNM, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+		values ( #{compkey}, #{warekey}, upper(#{pastrky}), #{pastrnm}
+		     , to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{creuser}
+		     , to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{lmouser} )
+    </insert>
+    
+    <!-- wms1 : 적치전략 Head update -->
+	<update id="updateWpashd" parameterType="com.logistics.wm.domain.PutawayStrategyDTO"> 
+		update WPASHD 
+		   set PASTRNM = #{pastrnm}
+		   	 , PADELYN = #{padelyn}
+		     , LMODATE = to_char(NOW() ,'YYYYMMDD')
+		     , LMOTIME = to_char(NOW() ,'hh24miss')
+		     , LMOUSER = #{lmouser}
+		 where COMPKEY = #{compkey}
+		   and WAREKEY = #{warekey}
+		   and PASTRKY = #{pastrky}
+		   and UPDTCHK = #{updtchk}
+    </update> 
+	
+	<!-- wms1 : 적치전략 Item insert -->
+	<insert id="insertWpasit" parameterType="com.logistics.wm.domain.PutawayStrategyDTO"> 
+		insert
+		  into WPASIT ( COMPKEY, WAREKEY, PASTRKY, PASTRIT, PASTROD, PASTRMD
+		  			  , RCVLOCA, RCVZONE, RCVSABC, PAWLOCA, PAWZONE, SCHMETH
+		  			  , SCHSFNO, SCHEFNO, SCHMXOP, SCHLROP
+					  , CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+		values
+		<foreach collection="list" item="item"  separator=",">
+		( #{item.compkey}, #{item.warekey}, #{item.pastrky}, fn_wm_pastrit(#{item.compkey},#{item.warekey}, #{item.pastrky}), #{item.pastrod}, #{item.pastrmd}
+		, #{item.rcvloca}, #{item.rcvzone}, #{item.rcvsabc}, #{item.pawloca}, #{item.pawzone}, #{item.schmeth}
+		, #{item.schsfno}, #{item.schefno}, #{item.schmxop}, #{item.schlrop}
+		, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+		, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+		</foreach>
+	</insert>
+	
+	<!-- wms1 : 적치전략 Item update -->
+	<update id="updateWpasit" parameterType="com.logistics.wm.domain.PutawayStrategyDTO"> 
+		<foreach collection="list" item="item"  separator=";">
+		update WPASIT
+		   set PASTROD = #{item.pastrod}
+		     , PASTRMD = #{item.pastrmd}
+		     , RCVLOCA = #{item.rcvloca}
+		     , RCVZONE = #{item.rcvzone}
+		     , RCVSABC = #{item.rcvsabc}
+		     , PAWLOCA = #{item.pawloca}
+		     , PAWZONE = #{item.pawzone}
+		     , SCHMETH = #{item.schmeth}
+		  	 , SCHSFNO = #{item.schsfno}
+		  	 , SCHEFNO = #{item.schefno}
+		  	 , SCHMXOP = #{item.schmxop}
+		  	 , SCHLROP = #{item.schlrop}
+		  	 , PADELYN = #{item.padelyn}
+		  	 , LMODATE = to_char(NOW() ,'YYYYMMDD')
+		     , LMOTIME = to_char(NOW() ,'hh24miss')
+		     , LMOUSER = #{userData.useract}
+		 where COMPKEY = #{item.compkey}
+		   and WAREKEY = #{item.warekey}
+		   and PASTRKY = #{item.pastrky}
+		   and PASTRIT = #{item.pastrit}
+		   and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>
+	
+	<!-- wms1 : 적치전략 Select Box -->
+    <select id="selectWpashdBox" resultType="HashMap"> 
+		select PASTRKY as combovl
+			 , PASTRNM as combonm
+		  from WPASHD
+	  	 where 1=1 
+	  	<if test='compkey != null and compkey != ""'>
+	  	   and COMPKEY = #{compkey}
+	  	</if> 
+	  	<if test="warekey != null and warekey != ''">
+		   and WAREKEY = #{warekey}
+		 </if>
+		 <if test="pastrky != null and pastrky != ''">
+		   and PASTRKY = #{pastrky}
+		 </if>
+		 <if test="padelyn != null and padelyn != ''">
+		   and PADELYN = #{padelyn}
+		 </if>
+	  	 group by PASTRKY, PASTRNM
+	 	 order by PASTRKY, PASTRNM
+ 	</select>
+	
+	<!-- *********************************************** -->
+    <!-- 전략오더 연결  -->
+    <!-- *********************************************** -->        
+    <!-- WMS2 : 적치오더 연결 List 조회 -->
+    <select id="selectWpaordList" resultType="com.logistics.wm.domain.WpaordVO">
+     	select concat(COMPKEY, WAREKEY, PAORDIT) as ROWKEY
+     		 , COMPKEY, WAREKEY, PAORDIT, PAORDOD, PASTRKY, DOCCATE, DOCTYPE, OWNERKY
+	  		 , SKUMKEY, VENDKEY, CARRKEY, SKUWABC, BRANDCD, SKUGR01, SKUGR02, SKUGR03
+	 		 , SKUGR04, SKUGR05 ,PADELYN
+	 		 , date_format(CREDATE, '%Y-%m-%d') as CREDATE, date_format(CRETIME, '%Y-%m-%d') as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER
+	 		 , date_format(LMODATE, '%Y-%m-%d') as LMODATE, date_format(LMOTIME, '%Y-%m-%d') as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER
+		     , INDIBZL, INDIARC, UPDTCHK
+		  from WPAORD
+		 where 1=1
+		   and COMPKEY = #{userData.compkey}
+		 <if test="warekey != null and warekey != ''">
+		   and WAREKEY = #{warekey}
+		 </if>
+		 order by COMPKEY, WAREKEY, PAORDIT
+    </select>
+	
+	<!-- WMS2 : 적치오더 연결 List 생성 -->
+	<insert id="insertWpaord" parameterType="com.logistics.wm.domain.WpaordVO"> 
+		<foreach collection="list" item="item"  separator=";">
+		insert
+		  into WPAORD ( 
+		  	   COMPKEY
+		  	 , WAREKEY
+		  	 , PAORDIT
+		  	 , PAORDOD
+		  	 , PASTRKY
+		  	 , DOCCATE
+		<if test="item.doctype != null and item.doctype !=''">
+			 , DOCTYPE
+		</if>
+		<if test="item.ownerky != null and item.ownerky !=''">
+			 , OWNERKY
+		</if>
+		<if test="item.skumkey != null and item.skumkey !=''">
+			 , SKUMKEY
+		</if>
+		<if test="item.vendkey != null and item.vendkey !=''">
+			 , VENDKEY
+		</if>
+		<if test="item.skuwabc != null and item.skuwabc !=''">
+			 , SKUWABC
+		</if>
+		<if test="item.brandcd != null and item.brandcd !=''">
+			 , BRANDCD
+		</if>
+		<if test="item.skugr02 != null and item.skugr02 !=''">
+			 , SKUGR02
+		</if>
+		<if test="item.skugr03 != null and item.skugr03 !=''">
+			 , SKUGR03
+		</if>
+		<if test="item.skugr04 != null and item.skugr04 !=''">
+			 , SKUGR04
+		</if>
+		<if test="item.padelyn != null and item.padelyn !=''">
+			 , PADELYN
+		</if>
+		  	, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+	   values ( 
+			  #{item.compkey}
+			, #{item.warekey}
+			, ( select IFNULL(MAX(PAORDIT)+1,1) 
+			      from WPAORD W
+			     where W.COMPKEY = #{item.compkey}
+			       and W.WAREKEY = #{item.warekey} )
+			, #{item.paordod}
+			, #{item.pastrky}
+			, #{item.doccate}
+		<if test="item.doctype != null and item.doctype !=''">
+		 	, #{item.doctype}
+		</if>
+		<if test="item.ownerky != null and item.ownerky !=''">
+			, #{item.ownerky}
+		</if>
+		<if test="item.skumkey != null and item.skumkey !=''">
+			, #{item.skumkey}
+		</if>
+		<if test="item.vendkey != null and item.vendkey !=''">
+			, #{item.vendkey}
+		</if>
+		<if test="item.skuwabc != null and item.skuwabc !=''">
+			, #{item.skuwabc}
+		</if>
+		<if test="item.brandcd != null and item.brandcd !=''">
+			, #{item.brandcd}
+		</if>
+		<if test="item.skugr02 != null and item.skugr02 !=''">
+			, #{item.skugr02}
+		</if>
+		<if test="item.skugr03 != null and item.skugr03 !=''">
+			, #{item.skugr03}
+		</if>
+		<if test="item.skugr04 != null and item.skugr04 !=''">	
+			, #{item.skugr04}
+		</if>	
+		<if test="item.padelyn != null and item.padelyn !=''">
+			, #{item.padelyn}
+		</if>
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+		</foreach>
+	</insert>
+	
+	<!-- WMS2 : 적치오더 연결 List 수정 -->
+	<update id="updateWpaord" parameterType="com.logistics.wm.domain.WpaordVO"> 
+		<foreach collection="list" item="item"  separator=";">
+		update WPAORD
+		   set PAORDOD = ifnull(#{item.paordod},' ')
+		     , PASTRKY = ifnull(#{item.pastrky},' ')
+		  	 , DOCTYPE = ifnull(#{item.doctype},' ')
+		  	 , OWNERKY = ifnull(#{item.ownerky},' ')
+		  	 , SKUMKEY = ifnull(#{item.skumkey},' ')
+		  	 , VENDKEY = ifnull(#{item.vendkey},' ')
+			 , SKUWABC = ifnull(#{item.skuwabc},' ')
+			 , BRANDCD = ifnull(#{item.brandcd},' ')
+			 , PADELYN = ifnull(#{item.padelyn},' ')
+			 , SKUGR02 = ifnull(#{item.skugr02},' ')
+			 , SKUGR03 = ifnull(#{item.skugr03},' ')
+			 , SKUGR04 = ifnull(#{item.skugr04},' ')
+			 , LMODATE = to_char(NOW() ,'YYYYMMDD')
+		     , LMOTIME = to_char(NOW() ,'hh24miss')
+		     , LMOUSER = #{userData.useract}
+		 where COMPKEY = #{item.compkey}
+		   and WAREKEY = #{item.warekey}
+		   and PAORDIT = #{item.paordit}
+		   and UPDTCHK = #{item.updtchk}
+		</foreach>
+	</update>
+	
+	<!-- WMS2 : 적치오더 연결 List 삭제 -->
+    <delete id="deleteWpaord" parameterType="com.logistics.wm.domain.WpaordVO"> 
+		<foreach collection="list" item="item"  separator=";">
+		delete from WPAORD
+		 where COMPKEY = #{item.compkey}   
+		   and WAREKEY = #{item.warekey}
+		   and PAORDIT = #{item.paordit}
+		</foreach>
+    </delete>
+	
+</mapper>

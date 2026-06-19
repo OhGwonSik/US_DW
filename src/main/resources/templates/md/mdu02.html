@@ -1,0 +1,1739 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdu02Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdu02Warekey"></select>
+					</div>
+				</div>
+				<label for="mdu02Ownerky" class="setting-grid-title">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdu02Ownerky">
+							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="mdu02Skumkey" class="settin-grid-title">[[#{md.mskuwc.skumkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mskuwc.skumkey')}" id="mdu02Skumkey">
+					</div>
+				</div>
+				<label for="mdu02Skudesc" class="setting-grid-title">[[#{md.mskuwc.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mskuwc.skudesc')}" id="mdu02Skudesc">
+					</div>
+				</div>
+				<label for="mdu02Skustat" class="setting-grid-title">[[#{md.mskuwc.skustat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="mdu02SkustatCheckbox" >
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdu02Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdu02Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdu02Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdu02Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdu02
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.07.21
+	  - 설명 : 부품등록
+	  ------------------------------------------
+	*/
+
+$(function() {
+	//----------- 전역변수 ------------//
+	const mdu02ComboData = {}; // 데이터 저장 obj
+	let mdu02WarekeyCondition; // 현재 warekey 검색값 저장
+	let mdu02OwnerkyCondition; // 현재 ownerky 검색값 저장
+	let mdu02InitData;
+	//----------- 전역변수 end ------------//
+
+	//============================================================
+	// 검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function(){
+		getMdu02List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all: true});
+
+		//===============================================================
+		// 체크된 데이터 필수 값 & 중복 체크
+		//===============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['warekey', 'ownerky', 'skumkey', 'skudesc', 'miniqty', 'suomkey', 'skugr01'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+	      			});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+   				const keyCols = ['warekey', 'ownerky', 'skumkey'];
+
+   				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+   					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData)
+   										+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+   					alert(alertTxt);
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'warekey' } )
+	      			});
+
+					return false;
+				}
+			}
+
+	   		const skuListForStatReq = await fetchUtil('GET',  '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + 'skustat', { warekey: mdu02WarekeyCondition });
+			const skuListForStat = await skuListForStatReq.json();
+
+			const changeToUseSkustatData = gridCheck.filter(sku => gCheck['compkey'] === sku['compkey'] && gCheck['warekey'] === sku['warekey'] && gCheck['skumkey'] === sku['skumkey']);
+			const statList = await skuListForStat.filter(sku => gCheck['compkey'] === sku['compkey'] && gCheck['warekey'] === sku['warekey'] && gCheck['skumkey'] === sku['skumkey']);
+
+			for(const changedSkustat of changeToUseSkustatData){
+				const targetIdx = statList.findIndex(data => changedSkustat['compkey'] === data['compkey'] && changedSkustat['warekey'] === data['warekey'] && changedSkustat['ownerky'] === data['ownerky'] && changedSkustat['skumkey'] === data['skumkey']);
+
+				if(targetIdx !== -1){
+					statList[targetIdx].skustat = changedSkustat.skustat;
+				} else {
+					statList.push(changedSkustat);
+				}
+			}
+
+			let countStat = 0;
+			await statList.forEach(stat =>{
+				if(stat['skustat'] === '[[#{md.skustat.use}]]'){
+					countStat++;
+				}
+			});
+
+			if(countStat > 1){
+				alert('[[#{ms.validation.useOnlyOneKeyOnWarehouse(#{md.mskuwc.skumkey})}]] .\n(' + (gCheck.pq_ri+1) + '[[#{ms.row}]] '+  gCheck['skumkey'] + '/' + gCheck['skudesc'] +')' );
+      			grid.focus({
+      				rowIndxPage: gCheck.pq_ri,
+      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'warekey' } )
+      			});
+
+				return false;
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(!confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdu02List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		document.querySelectorAll('div[id="'+ '[[${gprogrid}]]' + 'SkustatCheckbox' +'"] input')?.forEach(checkboxDOM => {
+			if(checkboxDOM?.value === '[[#{md.mdu02.skustat.default}]]'){
+				checkboxDOM.checked = true;
+			}
+		});
+
+		makeEmptyGrid(mdu02Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// 페이지 초기화 함수
+	async function initMdu02() {
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const response = await fetchUtil('GET', url);
+
+		return response.json();
+	}
+
+	// 그리드 조회 함수
+	async function getMdu02List() {
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const skustats = [];
+
+		for(const skustat of document.querySelectorAll('input[name="' + '[[${gprogrid}]]' + 'SkustatCheckbox' + '"]' + ':checked')){
+			skustats.push(skustat.value)
+		}
+
+		const data = {
+			warekey : $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val(),
+			ownerky : $('#' + '[[${gprogrid}]]' + 'Ownerky').val(),
+			skumkey : $('#' + '[[${gprogrid}]]' + 'Skumkey').val(),
+			skudesc : $('#' + '[[${gprogrid}]]' + 'Skudesc').val(),
+ 			skustats : skustats
+		};
+
+		mdu02WarekeyCondition = $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val();
+		mdu02OwnerkyCondition = $('#' + '[[${gprogrid}]]' + 'Ownerky option:selected').val();
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', { data: resContent, recIndx: '[[#{common.grid.recIndx}]]' } );
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// Grid Column Model
+	const mdu02GridCM = [ {
+			title: '',
+			dataType: 'bool',
+			align: 'center',
+			dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+			type: 'checkbox',
+			sortable: false,
+			editor: false,
+			cb: {
+				all: false,
+				header: true
+			}
+		},
+		{
+			title: '[[#{common.grid.recIndx}]]',
+			dataType: 'string',
+			dataIndx: '[[#{common.grid.recIndx}]]',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{md.mskuwc.compkey}]]',
+			dataType: 'string',
+			dataIndx: 'compkey',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{grid.whnamlc}]]',
+			dataType: 'string',
+			dataIndx: 'warekey',
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			},
+			editable: false
+		},
+		{
+			title: '[[#{grid.ownamlc}]]',
+			dataType: 'select',
+			dataIndx: 'ownerky',
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return { text: option ? option[ui.cellData] : ui.cellData };
+			},
+			editable: false
+		},
+		{
+			title: '[[#{md.mskuwc.skumkey}]]',
+			dataType: 'string',
+			dataIndx: 'skumkey',
+			styleHead: {
+				'background': '[[#{grid.styleHead01}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]'
+				}
+			],
+	       	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.mskuwc.skudesc}]]',
+			dataType: 'string',
+			dataIndx: 'skudesc',
+			styleHead: {
+				'background': '[[#{grid.styleHead01}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.miniqty}]]',
+			dataType: 'integer',
+			dataIndx: 'miniqty',
+			format: '#,###',
+			styleHead: {
+				'background': '[[#{grid.styleHead01}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]'
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.suomkey}]]',
+			dataType: 'string',
+			dataIndx: 'suomkey', //Default unit of measure
+			styleHead: {
+				'background': '[[#{grid.styleHead01}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+	   			prepend: { '': ' ' }
+	           },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.skugr01}]]',
+			dataType: 'string',
+			dataIndx: 'skugr01', //SKU Group 1
+			styleHead: {
+				'background': '[[#{grid.styleHead01}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+	   			prepend: { '': ' ' }
+	           },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.skutype}]]',
+			dataType: 'string',
+			dataIndx: 'skutype',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+				prepend: { '': ' ' }
+	           },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.cuskuky}]]',
+			dataType: 'string',
+			dataIndx: 'cuskuky',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.cuskunm}]]',
+			dataType: 'string',
+			dataIndx: 'cuskunm',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.vdskuky}]]',
+			dataType: 'string',
+			dataIndx: 'vdskuky',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.vdskunm}]]',
+			dataType: 'string',
+			dataIndx: 'vdskunm',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuskey}]]',
+			dataType: 'string',
+			dataIndx: 'skuskey',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skusdsc}]]',
+			dataType: 'string',
+			dataIndx: 'skusdsc',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.vendkey}]]',
+			dataType: 'select',
+			dataIndx: 'vendkey',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+	   			prepend: { '': ' ' }
+	           },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.truntyp}]]',
+			dataType: 'string',
+			dataIndx: 'truntyp',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+	   			prepend: { '': ' ' }
+	           },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.packkey}]]',
+			width: 100,
+			dataType: 'string',
+			dataIndx: 'packkey',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+				options: ui => {
+	           		return mdu02InitData[ui.dataIndx].map(obj => {
+			           			if(obj['warekey'] === ui.rowData['warekey'] && obj['truntyp'] === ui.rowData['truntyp']){
+			        				return obj[ui.dataIndx];
+			           			}
+			           		}).filter(e => e);
+	              },
+	              prepend: { '': ' ' }
+			},
+			editable: ui => ui.rowData['truntyp']
+		},
+		{
+			title: '[[#{md.mskuwc.propqty}]]',
+			dataType: 'integer',
+			dataIndx: 'propqty',
+			format: '#,###',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(1)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		}, {
+			title: '[[#{md.mskuwc.salfqty}]]',
+			dataType: 'integer',
+			dataIndx: 'salfqty',
+			format: '#,###',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},  {
+			title: '[[#{md.mskuwc.sputzon}]]',
+			dataType: 'string',
+			dataIndx: 'sputzon', //기본 적치 Zone
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+	               type: 'select',
+	               init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => {
+	            	const sputzonList = mdu02InitData[ui.dataIndx].map(obj => {
+								        			if(obj['warekey'] === ui.rowData['warekey']){
+								        				let rObj = {};
+
+								        				rObj[obj['zonekey']] = obj['zonenam'] + '(' + obj['zonekey'] + ')';
+
+								        				return rObj;
+								        			}
+								        		}).filter(e => e);
+
+					return sputzonList;
+	            },
+				prepend: { '': ' ' }
+	       },
+	       render: ui => {
+				const option = mdu02InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey'] && obj['zonekey'] === ui.cellData);
+
+	           	return {text: option && ui.rowData[ui.dataIndx] ? option['zonenam'] : ''};
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.sputloc}]]',
+			dataType: 'string',
+			dataIndx: 'sputloc', //기본 적치 Location
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+	               type: 'select',
+					init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => {
+	            	const sputlocList = mdu02InitData[ui.dataIndx].map(obj => {
+								        			if(obj['warekey'] === ui.rowData['warekey'] && obj['zonekey'] === ui.rowData['sputzon']){
+								        				let rObj = {};
+
+								        				rObj[obj['locakey']] = obj['locanam'] + '(' + obj['locakey'] +')';
+
+								        				return rObj;
+								        			}
+							        			}).filter(e => e);
+
+					return sputlocList;
+				},
+				prepend: { '': ' ' }
+			},
+			render: ui => {
+					const option = mdu02InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey']
+																						&& obj['zonekey'] === ui.rowData['sputzon']
+																						&& obj['locakey'] === ui.cellData);
+
+					return { text: option && ui.rowData[ui.dataIndx] ? option['locanam'] : ''};
+			},
+			editable: ui => ui.rowData['sputzon']
+		},
+		{
+			title: '[[#{md.mskuwc.spikloc}]]',
+			dataType: 'string',
+			dataIndx: 'spikloc', //기본 피킹 Location
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+	               type: 'select',
+	               init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => {
+	            	const spiklocList = mdu02InitData['sputloc'].map(obj => {
+								        			if(obj['warekey'] === ui.rowData['warekey']){
+								        				let rObj = {};
+
+								        				rObj[obj['locakey']] = obj['locanam'] + '(' + obj['locakey'] +')';
+
+								        				return rObj;
+								        			}
+								        		}).filter(e => e);
+
+					return spiklocList;
+	              },
+	              prepend: { '': ' ' }
+			},
+			render: ui => {
+					const option = mdu02InitData['sputloc'].find(obj => obj['warekey'] === ui.rowData['warekey'] && obj['locakey'] === ui.cellData);
+
+					return { text: option && ui.rowData[ui.dataIndx] ? option['locanam'] : '' };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.vndfday}]]',
+			dataType: 'integer',
+			dataIndx: 'vndfday',
+			format: '#,###',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.eancode}]]',
+			dataType: 'string',
+			dataIndx: 'eancode',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		}, {
+			title: '[[#{md.mskuwc.upccode}]]',
+			dataType: 'string',
+			dataIndx: 'upccode',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skugr02}]]',
+			dataType: 'string',
+			dataIndx: 'skugr02', //SKU Group 2
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: true,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+	   			prepend: { '': ' ' }
+	        },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.skugr03}]]',
+			dataType: 'string',
+			dataIndx: 'skugr03', //SKU Group 3
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 30,
+					msg: '[[#{ms.validations.maxLenLength(30)}]]',
+					warn: true
+				}
+			]
+		}, {
+			title: '[[#{md.mskuwc.skugr04}]]',
+			dataType: 'string',
+			dataIndx: 'skugr04', //SKU Group 4
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 30,
+					msg: '[[#{ms.validations.maxLenLength(30)}]]',
+					warn: true
+				}
+			]
+		}, {
+			title: '[[#{md.mskuwc.skugr05}]]',
+			dataType: 'string',
+			dataIndx: 'skugr05', //SKU Group 5
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 30,
+					msg: '[[#{ms.validations.maxLenLength(30)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skualt1}]]',
+			dataType: 'string',
+			dataIndx: 'skualt1',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skualt2}]]',
+			dataType: 'string',
+			dataIndx: 'skualt2',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skualt3}]]',
+			dataType: 'string',
+			dataIndx: 'skualt3',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 50,
+					msg: '[[#{ms.validations.maxLenLength(50)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuat01}]]',
+			dataType: 'string',
+			dataIndx: 'skuat01',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuat02}]]',
+			dataType: 'string',
+			dataIndx: 'skuat02', //SKU Attribute2
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuat03}]]',
+			dataType: 'string',
+			dataIndx: 'skuat03', //SKU Attribute3
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuat04}]]',
+			dataType: 'string',
+			dataIndx: 'skuat04', //SKU Attribute4
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuat05}]]',
+			dataType: 'string',
+			dataIndx: 'skuat05', //SKU Attribute5
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.sgrweig}]]',
+			dataType: 'integer',
+			dataIndx: 'sgrweig',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.sneweig}]]',
+			dataType: 'integer',
+			dataIndx: 'sneweig', //Net weight
+			styleHead: {
+				'background-color': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuleng}]]',
+			dataType: 'integer',
+			dataIndx: 'skuleng',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(1)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuwidh}]]',
+			dataType: 'integer',
+			dataIndx: 'skuwidh',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuheig}]]',
+			dataType: 'integer',
+			dataIndx: 'skuheig',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			summary: {
+				type: 'sum'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skucubi}]]',
+			dataType: 'integer',
+			dataIndx: 'skucubi',
+			format: '###,###,###,###,###.000',
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum15Dot3,
+					msg: '[[#{ms.validations.onlyNumber(15)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skuwabc}]]',
+			dataType: 'string',
+			dataIndx: 'skuwabc',
+			editable: false, //WH SKU ABC analyzed value
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		}, {
+			title: '[[#{md.mskuwc.skunote}]]',
+			dataType: 'string',
+			dataIndx: 'skunote',
+			styleHead: {
+				'background-color': '[[#{grid.styleHead02}]]'
+			},
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg:'[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mskuwc.skustat}]]',
+			dataType: 'string',
+			dataIndx: 'skustat', //*SKU상태
+			styleHead: {
+				'background': '[[#{grid.styleHead02}]]'
+			},
+			editor: {
+				type: 'select',
+				init: ui => {
+					ui.$cell.find('select').pqSelect({
+						search: false,
+						singlePlaceholder: '',
+						width: getSelectBoxWidthCondition(ui)
+					});
+					ui.$cell.find('select').pqSelect('open');
+				},
+	            options: ui => mdu02ComboData[ui.dataIndx],
+	   			prepend: { '': ' ' }
+	        },
+			render: ui => {
+				const option = mdu02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+	           	return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{md.mskuwc.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mskuwc.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mskuwc.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.mskuwc.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mskuwc.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mskuwc.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdu02Grid = new GridUtil(mdu02GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+	mdu02Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdu02Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+	mdu02Grid.setAdd(function(evt, ui){
+		if(!mdu02WarekeyCondition && !mdu02OwnerkyCondition){
+			alert('[[#{ms.noSearchError}]]');
+
+			return;
+		} else if(!mdu02OwnerkyCondition){
+			alert('[[#{md.mowrma.ownerky}]] ' + '[[#{ms.noSearchError}]]');
+
+			return;
+		}
+
+		const rowData = {
+			state: true,
+			compkey: '[[${userattr.compkey}]]',
+			warekey: mdu02WarekeyCondition,
+			ownerky: mdu02OwnerkyCondition,
+			miniqty: 0,
+			suomkey: '[[#{md.mdu02.suomkey.default}]]',
+			skugr01: '[[#{md.mdu02.skugr01.default}]]',
+			skustat: '[[#{md.mdu02.skustat.default}]]'
+		};
+		const rowIndx = this.addRow({
+			rowData: rowData,
+			checkEditable: false
+		});
+
+        this.goToPage({ rowIndx: rowIndx });
+		this.focus({
+			rowIndxPage: rowIndx,
+			colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )
+		});
+	});
+
+	// Grid 생성시 이벤트
+	mdu02Grid.setCreate(async function(evt, ui){
+		const response = await initMdu02();
+		mdu02InitData = response.item;
+
+		for(let key of Object.keys(mdu02InitData)){
+			const gData = mdu02InitData[key];
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+			} else if('ownerky' === key){
+				target = '[[${gprogrid}]]' + 'Ownerky';
+			}
+
+			if('' !== target){
+				$('#' + target + ' option').not('[value=""]').remove();
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'));
+			}
+
+			if('comcdky' === key){
+				const items = ['skugr01', 'skugr02', 'skustat', 'skutype'];
+
+				for(let item of items){
+					const itemFilter = gData.filter(obj => obj['comcdky'] === item.toUpperCase());
+					const options = itemFilter.map(obj => {
+			        	let rObj = {};
+
+			        	rObj[obj['combovl']] = obj['combonm'];
+
+			        	return rObj;
+					});
+
+					mdu02ComboData[item] = options;
+					fillSearchMenuCheckbox(item, itemFilter);
+				}
+			} else if('sputzon' !== key || 'packkey' !== key){
+				const options = gData.map(obj => {
+		        	let rObj = {};
+
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+
+				mdu02ComboData[key] = options;
+			}
+		}
+
+		$('#' + '[[${gprogrid}]]' + 'Ownerky').pqSelect({
+			deselect: false,
+			singlePlaceholder: ''
+		});
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdu02Grid.setChange(async function (evt, ui) {
+    	if('edit' === ui.source || 'clear' === ui.source || 'paste' === ui.source){
+    		const updateRowList = [];
+
+    		await ui.updateList.forEach(updateData => {
+        		let newRow = {state: true};
+
+    			if(updateData.newRow.hasOwnProperty('skumkey') && updateData.oldRow.hasOwnProperty('skumkey')){
+    				newRow['skumkey'] = updateData.newRow.skumkey?.toUpperCase()?.trim();
+    			}
+
+    			const selectBoxCols = ['skustat', 'skutype', 'vendkey', 'skugr01', 'skugr02', 'suomkey'];
+
+    			selectBoxCols.forEach(cols => {
+        			if(updateData.newRow.hasOwnProperty(cols) && updateData.oldRow.hasOwnProperty(cols)){
+        				const option = mdu02ComboData[cols].find(obj => obj[updateData.rowData[cols]]);
+
+    				    newRow[cols] = option ? updateData.rowData[cols] : null;
+        			}
+    			});
+
+    			if(updateData.newRow.hasOwnProperty('truntyp') && updateData.oldRow.hasOwnProperty('truntyp')){
+        			const option = mdu02ComboData['truntyp'].find(obj => obj[updateData.rowData['truntyp']]);
+
+        			if(option){
+        				newRow['truntyp'] = updateData.rowData['truntyp'];
+        			} else {
+            			newRow['truntyp'] = null;
+            			newRow['packkey'] = null;
+        			}
+    			}
+
+    			if(updateData.newRow.hasOwnProperty('sputzon') && updateData.oldRow.hasOwnProperty('sputzon')){
+        			const option = mdu02InitData['sputzon'].find(obj => obj['zonekey'] === updateData.rowData['sputzon'] && obj['warekey'] === updateData.rowData['warekey']);
+
+        			if(option){
+        				newRow['sputzon'] = option['zonekey'];
+        			} else {
+            			newRow['sputzon'] = null;
+            			newRow['sputloc'] = null;
+        			}
+    			}
+
+    			if(updateData.newRow.hasOwnProperty('sputloc') && updateData.oldRow.hasOwnProperty('sputloc')){
+    				const option = mdu02InitData['sputloc'].find(obj => obj['locakey'] === updateData.rowData['sputloc']
+																						&& obj['zonekey'] === updateData.rowData['sputzon']
+																						&& obj['warekey'] === updateData.rowData['warekey']);
+
+					newRow['sputloc'] = option && updateData.rowData['sputloc'] ? option['locakey'] : null;
+    			}
+
+    			if(updateData.newRow.hasOwnProperty('spikloc') && updateData.oldRow.hasOwnProperty('spikloc')){
+    				const option = mdu02InitData['sputloc'].find(obj => obj['locakey'] === updateData.rowData['spikloc'] && obj['warekey'] === updateData.rowData['warekey']);
+
+					newRow['spikloc'] = option && updateData.rowData['spikloc'] ? option['locakey'] : null;
+    			}
+
+    			if(updateData.newRow.hasOwnProperty('packkey') && updateData.oldRow.hasOwnProperty('packkey')){
+    				const option = mdu02InitData['packkey'].find(obj => obj['warekey'] === updateData.rowData['warekey']
+																						&& obj['truntyp'] ===  updateData.rowData['truntyp']
+																						&& obj['packkey'] === updateData.rowData['packkey']);
+
+        			newRow['packkey'] = option && updateData.rowData['packkey'] ? option['packkey'] : null;
+    			}
+
+    			updateRowList.push({
+					rowIndx: updateData.rowIndx,
+					newRow: newRow
+				});
+    		});
+
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+
+    	if('paste' === ui.source){
+    		await ui.addList.forEach(addData =>
+    			addData.newRow = {
+   					state: true,
+   					compkey: '[[${userattr.compkey}]]',
+   					warekey: mdu02WarekeyCondition,
+   					ownerky: mdu02OwnerkyCondition,
+   					suomkey: addData?.newRow?.suomkey || '[[#{md.mdu02.suomkey.default}]]',
+   					skugr01: addData?.newRow?.skugr01 || '[[#{md.mdu02.skugr01.default}]]',
+   					skustat: addData?.newRow?.skustat || '[[#{md.mdu02.skustat.default}]]'
+        	});
+
+			await this.updateRow({
+				rowList: ui.addList,
+				checkEditable: false
+			});
+    	}
+	});
+
+	// Grid 객체 생성
+	mdu02Grid.open();
+
+	// Grid 저장 함수
+	async function saveMdu02List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+
+		grid.showLoading();
+
+		const saveMdu02Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdu02Response.status === 200){
+			await getMdu02List();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 검색영역 체크박스 DB 조회 후 생성
+	function fillSearchMenuCheckbox(targetColunm, dataList){
+		const checkboxName = '[[${gprogrid}]]' + targetColunm?.replace(/^[a-z]/, str => str.toUpperCase()) + 'Checkbox';
+		const checkboxDiv = document.querySelector('div[id="'+ checkboxName +'"]');
+
+		if(document.querySelector('input[name="'+ checkboxName +'"]') || !checkboxDiv) {
+			return;
+		}
+
+		let newCheckboxAllDOM = document.createElement('input');
+		let newCheckboxAllNameDOM = document.createElement('span');
+
+		newCheckboxAllDOM.setAttribute('type', 'checkbox');
+		newCheckboxAllDOM.setAttribute('id', checkboxName+'AllCheck');
+		newCheckboxAllDOM.setAttribute('value', '');
+
+		newCheckboxAllNameDOM.innerHTML = '[[#{ms.chooseAll}]]';
+
+		checkboxDiv.insertBefore(newCheckboxAllDOM, null);
+		checkboxDiv.insertBefore(newCheckboxAllNameDOM, null);
+
+		for(let data of dataList){
+			let newCheckboxLable = document.createElement('label');
+			let newCheckboxValueDOM = document.createElement('input');
+			let newCheckboxNameDOM = document.createElement('span');
+
+			newCheckboxLable.setAttribute('class', 'check-box');
+			newCheckboxValueDOM.setAttribute('type', 'checkbox');
+			newCheckboxValueDOM.setAttribute('name', checkboxName);
+			newCheckboxValueDOM.setAttribute('value', data.combovl);
+
+			if('skustat' === targetColunm && data.combovl === '[[#{md.mdu02.skustat.default}]]'){
+				newCheckboxValueDOM.setAttribute('checked', 'checked');
+			}
+
+			newCheckboxNameDOM.innerHTML = data.combonm;
+
+			checkboxDiv.insertBefore(newCheckboxLable, null);
+			checkboxDiv.insertBefore(newCheckboxValueDOM, null);
+			checkboxDiv.insertBefore(newCheckboxNameDOM, null);
+		}
+
+		setCheckboxEvent(checkboxName);
+	}
+
+	// 검색영역 체크박스 이벤트 할당 함수
+	function setCheckboxEvent(checkboxName){
+		const checkboxDOMs = document.querySelectorAll('input[name="'+ checkboxName +'"]');
+		const allCheckDOM = document.querySelector('input[id="' + checkboxName + 'AllCheck"]');
+
+		if(checkboxDOMs.length === 1) {
+			checkboxObjs[0].disabled = true;
+			checkboxObjs[0].checked = true;
+			checkboxObjs[0].addEventListener('click', function(event){
+				event.preventDefault();
+			});
+		}
+
+	 	document.querySelectorAll('div[id="'+ checkboxName +'"] input').forEach(element => {
+			element.addEventListener('change', function() {
+				const checkedObjs = document.querySelectorAll('input[name="' + checkboxName + '"]' + ':checked');
+
+				allCheckDOM.checked = false;
+
+				if(checkboxDOMs.length === checkedObjs.length || !checkedObjs.length || element.id === (checkboxName + 'AllCheck')) {
+					allCheckDOM.checked = true;
+
+					for(const checkedObj of checkedObjs) {
+						checkedObj.checked = false;
+					}
+				}
+			});
+		});
+	}
+});
+</script>
+</div>
+</html>

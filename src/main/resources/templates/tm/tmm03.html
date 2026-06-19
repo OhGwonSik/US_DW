@@ -1,0 +1,886 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="fragments-mainContent">
+    <div class="tab-contents">
+      <div class="search-conditions con-box">
+        <div class="setting-grid">
+          <label class="setting-grid-title">*[[#{tm.tshrhd.warekey}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-group">
+              <select
+                name="tmm03_warekey"
+                data-cb-val="combovl"
+                data-cb-name="combonm"
+                data-cb-url="/tm/code/warehouse"
+                id="tmm03_warekey"
+              >
+                <!-- -- 전체 -- -->
+                <!-- <option value="">[[#{tm.common.all}]]</option> -->
+              </select>
+            </div>
+          </div>
+          <label class="setting-grid-title">[[#{tm.tshrhd.shtgrnm}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tshrhd.shtgrnm')}"
+                id="tmm03_shtgrnm"
+              />
+              <!-- <select
+                name="tmm03_shtgrnm"
+                data-cb-val="combovl"
+                data-cb-name="combonm"
+                data-cb-url="/md/common/code/common-code?comcdky=SHTGRNM"
+                data-cb-select="#{tm.common.all}"
+                id="tmm03_shtgrnm"
+              >
+                <option value="">[[#{tm.common.all}]]</option>
+              </select> -->
+            </div>
+          </div>
+          <label for="tmm03_shtrtnm" class="setting-grid-title">[[#{tm.tshrhd.shtrtnm}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tshrhd.shtrtnm')}"
+                id="tmm03_shtrtnm"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="search-btn-group">
+          <button type="button" class="btn-search btn-navy btn-green" id="tmm03_btnSearch">
+            <img />[[#{bt.search}]]
+          </button>
+          <button type="button" class="btn-clear btn-white" id="tmm03_btnReset">
+            <img /> [[#{bt.reset}]]
+          </button>
+        </div>
+      </div>
+      <div class="search-list">
+        <div class="list-top">
+          <div class="list-title ic-title-mark">
+            <span th:text="${gnatitle}"></span>
+          </div>
+          <div class="edit-btn-wrapper">
+            <button class="btn-navy btn-green" id="tmm03_btnSave">
+              <img class="ic-bt-save" />[[#{bt.save}]]
+            </button>
+          </div>
+        </div>
+        <div class="list-grid-wrapper con-box">
+          <div id="tmm03_pqgrid"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(function () {
+        initor();
+      });
+      async function initor() {
+        const pageId = "tmm03";
+        const gridId = pageId + "_pqgrid";
+        // const subGridId = pageId + "_subgrid";
+        // const subGrid2Id = pageId + "_sub2grid";
+        // const gridIdShop = "#" + pageId + "_pqgrid";
+        // const subGridIdShop = "#" + pageId + "_subgrid";
+        // const subGrid2IdShop = "#" + pageId + "_sub2grid";
+        const LastRowclickData = {};
+
+        const comboCreateData = (gridnm, colnm, obj = [], mapob, type) => {
+          const grid = pq.grid("#" + gridnm);
+          const column = grid.getColumn({ dataIndx: colnm });
+
+          const options = obj.map((obj) => {
+            const rObj = {};
+            if (mapob?.combovl && mapob?.combonm) {
+              rObj[obj[mapob.combovl]] = obj[mapob.combonm];
+            } else {
+              rObj[obj.combovl] = obj.combonm;
+            }
+            return rObj;
+          });
+          const render = (v) => {
+            const cellData = v?.cellData;
+            // const rowdata = v?.rowdata || {};
+            const options = v?.column?.editor?.options || [];
+            const labelTextObj = options.find((o) => o[cellData]);
+
+            return labelTextObj ? labelTextObj[cellData] : cellData;
+          };
+
+          column.editor.options = options;
+          column.editor.optionData = obj;
+          column.render = render;
+        };
+        await _commonInit();
+
+        //검색버튼 이벤트
+        $("#" + pageId + "_btnSearch").click(function () {
+          searchtmm03List();
+        });
+        $("input").keyup(function (e) {
+          // enter
+          if (e.keyCode === 13) {
+            searchtmm03List();
+          }
+        });
+
+        // 리셋버튼 이벤트
+        $("#" + pageId + "_btnReset").click(function () {
+          if (tmm03GridObject.getGrid()?.pdata?.length) {
+            const ok = confirm("[[#{ms.listViewRollback}]]");
+            if (!ok) return;
+          }
+          const selects = $("select");
+          const inputs = $("input");
+          for (let index = 0; index < inputs.length; index++) {
+            const element = inputs[index];
+            if (!element?.id?.startsWith(pageId)) continue;
+            element.value = "";
+          }
+          for (let index = 0; index < selects.length; index++) {
+            const element = selects[index];
+            if (!element?.id?.startsWith(pageId)) continue;
+            $("#" + element.id + " option:eq(0)").prop("selected", true);
+          }
+          // searchtmm03List();
+          tmm03GridObject.searchList([]);
+        });
+
+        //저장버튼 이벤트
+        $("#" + pageId + "_btnSave").click(function () {
+          savetmm03GridChange();
+        });
+
+        const Tmm03GridColModel = [
+/*           {
+            title: "",
+            dataType: "bool",
+            dataIndx: "state",
+            type: "checkBoxSelection",
+            align: "center",
+            maxWidth: "30",
+            maxHeight: "30",
+            menuIcon: false,
+            cls: "ui-state-default",
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N", select: "Y" },
+          }, */
+  		{ title: "", dataType: 'bool', dataIndx: "state", align: "center",
+              type: 'checkbox', sortable: false, editor: false,
+              cb: { all: false, header: true }
+          },
+          {
+            title: "[[#{tm.tshrhd.rowkey}]]",
+            dataType: "string",
+            dataIndx: "rowkey",
+            hidden: true,
+            editable: false,
+          }, // rowkey
+          {
+            title: "[[#{tm.tshrhd.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            hidden: true,
+            editable: false,
+          }, // Company Key
+          {
+            title: "[[#{tm.tshrhd.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            validations: [
+              // { type: "required", msg: "[[#{ms.requiredValue}]]" },
+              { type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" },
+            ],
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 150, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+          }, // 창고키 => 창고
+          {
+            title: "[[#{tm.tshrhd.shtrtky}]]",
+            dataType: "string",
+            dataIndx: "shtrtky",
+            editable: false,
+          }, // 셔틀 코드 : 10자리
+          {
+            title: "[[#{tm.tshrhd.shtgrnm}]]",
+            dataType: "string",
+            dataIndx: "shtgrnm",
+            // styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            // validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+            // editor: {
+            //   type: "select",
+            //   init: (ui) => {
+            //     ui.$cell.find("select").pqSelect({ width: 150, check: true });
+            //     setTimeout(() => {
+            //       ui.$cell.find("select").pqSelect("open");
+            //     }, 250);
+            //   },
+            // },
+          }, // 셔틀 그룹
+          {
+            title: "[[#{tm.tshrhd.destkey}]]",
+            dataType: "string",
+            dataIndx: "destkey",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 150, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+          }, // 셔틀대표도착지
+          {
+            title: "[[#{tm.tshrhd.shtrtnm}]]",
+            dataType: "string",
+            dataIndx: "shtrtnm",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+          }, // 셔틀명
+          {
+            title: "[[#{tm.tshrhd.shtcytm}]]",
+            dataType: "integer",
+            dataIndx: "shtcytm",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+          }, // 셔틀 운행주기
+          {
+            title: "[[#{tm.tshrhd.shtmemo}]]",
+            dataType: "string",
+            dataIndx: "shtmemo",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+          }, // 셔틀 메모
+          {
+            title: "[[#{tm.tshrhd.itemnumb}]]",
+            dataType: "integer",
+            dataIndx: "itemnumb",
+            editable: false,
+          }, // 등록거점수
+          {
+            title: "[[#{tm.tshrhd.vehiclenumb}]]",
+            dataType: "integer",
+            dataIndx: "vehiclenumb",
+            editable: false,
+          }, // 등록차량수
+          {
+            title: "[[#{tm.tshrhd.inbshyn}]]",
+            dataType: "string",
+            dataIndx: "inbshyn",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            align: "center",
+            type: "checkbox",
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          }, // 납입노선 여부
+          {
+            title: "[[#{tm.tshrhd.oubshyn}]]",
+            dataType: "string",
+            dataIndx: "oubshyn",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            align: "center",
+            type: "checkbox",
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          }, // 납품노선 여부
+          {
+            title: "[[#{tm.tshrhd.tsuseyn}]]",
+            dataType: "string",
+            dataIndx: "tsuseyn",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            align: "center",
+            type: "checkbox",
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          }, // 사용여부"
+          {
+            title: "[[#{tm.tshrhd.credate}]]",
+            dataType: "string",
+            dataIndx: "credate",
+            editable: false,
+          }, // 생성일자
+          {
+            title: "[[#{tm.tshrhd.cretime}]]",
+            dataType: "string",
+            dataIndx: "cretime",
+            editable: false,
+          }, // 생성일시
+          {
+            title: "[[#{tm.tshrhd.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          }, // 생성사용자
+          {
+            title: "[[#{tm.tshrhd.lmodate}]]",
+            dataType: "string",
+            dataIndx: "lmodate",
+            editable: false,
+          }, // 수정일자
+          {
+            title: "[[#{tm.tshrhd.lmotime}]]",
+            dataType: "string",
+            dataIndx: "lmotime",
+            editable: false,
+          }, // 수정일시
+          {
+            title: "[[#{tm.tshrhd.lmouser}]]",
+            dataType: "string",
+            dataIndx: "lmouser",
+            editable: false,
+          }, // 수정사용자
+        ];
+
+        // 아랫쪽 서브그리드용 : item
+        const Tmm03SubGridColModel = [
+          {
+            title: "",
+            dataType: "String",
+            dataIndx: "state",
+            type: "checkBoxSelection",
+            align: "center",
+            maxWidth: "30",
+            maxHeight: "30",
+            menuIcon: false,
+            cls: "ui-state-default",
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N", select: "Y" },
+          },
+          {
+            title: "[[#{tm.tshrhd.rowkey}]]",
+            dataType: "string",
+            dataIndx: "rowkey",
+            hidden: true,
+            editable: false,
+          }, // rowkey
+          {
+            title: "[[#{tm.tshrhd.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            hidden: true,
+            editable: false,
+          }, // ware Key
+          {
+            title: "[[#{tm.tshrhd.shtrtky}]]",
+            dataType: "string",
+            dataIndx: "shtrtky",
+            hidden: true,
+            editable: false,
+          }, // shtrtky
+          {
+            title: "[[#{tm.tshrhd.shtrtit}]]",
+            dataType: "string",
+            dataIndx: "shtrtit",
+            hidden: true,
+            editable: false,
+          }, // shtrtit
+          {
+            title: "[[#{tm.tshrhd.custkey}]]",
+            dataType: "string",
+            dataIndx: "custkey",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // custkey 고객
+          {
+            title: "[[#{tm.tshrhd.destkey}]]",
+            dataType: "string",
+            dataIndx: "destkey",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // destkey 거점키
+          {
+            title: "[[#{tm.tshrhd.shtrpty}]]",
+            dataType: "string",
+            dataIndx: "shtrpty",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // shtrpty 보고유형
+          {
+            title: "[[#{tm.tshrhd.credate}]]",
+            dataType: "string",
+            dataIndx: "credate",
+            editable: false,
+          }, // 생성일자
+          {
+            title: "[[#{tm.tshrhd.cretime}]]",
+            dataType: "string",
+            dataIndx: "cretime",
+            editable: false,
+          }, // 생성일시
+          {
+            title: "[[#{tm.tshrhd.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          }, // 생성사용자
+          {
+            title: "[[#{tm.tshrhd.lmodate}]]",
+            dataType: "string",
+            dataIndx: "lmodate",
+            editable: false,
+          }, // 수정일자
+          {
+            title: "[[#{tm.tshrhd.lmotime}]]",
+            dataType: "string",
+            dataIndx: "lmotime",
+            editable: false,
+          }, // 수정일시
+          {
+            title: "[[#{tm.tshrhd.lmouser}]]",
+            dataType: "string",
+            dataIndx: "lmouser",
+            editable: false,
+          }, // 수정사용자
+        ];
+
+        // 아랫쪽 서브그리드용 : vehicle
+        const Tmm03Sub2GridColModel = [
+          {
+            title: "",
+            dataType: "String",
+            dataIndx: "state",
+            type: "checkBoxSelection",
+            align: "center",
+            maxWidth: "30",
+            maxHeight: "30",
+            menuIcon: false,
+            cls: "ui-state-default",
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N", select: "Y" },
+          },
+          {
+            title: "[[#{tm.tshrhd.rowkey}]]",
+            dataType: "string",
+            dataIndx: "rowkey",
+            hidden: true,
+            editable: false,
+          }, // rowkey
+          {
+            title: "[[#{tm.tshrhd.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            hidden: true,
+            editable: false,
+          }, // compKey
+          {
+            title: "[[#{tm.tshrhd.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            hidden: true,
+            editable: false,
+          }, // ware Key
+          {
+            title: "[[#{tm.tshrhd.shtrtky}]]",
+            dataType: "string",
+            dataIndx: "shtrtky",
+            hidden: true,
+            editable: false,
+          }, // shtrtky
+          {
+            title: "[[#{tm.tshrhd.vehicky}]] ([[#{tm.vehicle.vhcsnam}]])",
+            dataType: "string",
+            dataIndx: "vehicky",
+            styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // vehicky 차량코드 with 차량이름
+
+          { title: "[[#{tm.tshrhd.srvehod}]]", dataType: "integer", dataIndx: "srvehod" }, // 셔틀 차량순서
+          { title: "[[#{tm.tshrhd.shtvcap}]]", dataType: "integer", dataIndx: "shtvcap" }, // 상차가능 Pallet 수량
+
+          {
+            title: "[[#{tm.tshrhd.credate}]]",
+            dataType: "string",
+            dataIndx: "credate",
+            editable: false,
+          }, // 생성일자
+          {
+            title: "[[#{tm.tshrhd.cretime}]]",
+            dataType: "string",
+            dataIndx: "cretime",
+            editable: false,
+          }, // 생성일시
+          {
+            title: "[[#{tm.tshrhd.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          }, // 생성사용자
+          {
+            title: "[[#{tm.tshrhd.lmodate}]]",
+            dataType: "string",
+            dataIndx: "lmodate",
+            editable: false,
+          }, // 수정일자
+          {
+            title: "[[#{tm.tshrhd.lmotime}]]",
+            dataType: "string",
+            dataIndx: "lmotime",
+            editable: false,
+          }, // 수정일시
+          {
+            title: "[[#{tm.tshrhd.lmouser}]]",
+            dataType: "string",
+            dataIndx: "lmouser",
+            editable: false,
+          }, // 수정사용자
+        ];
+
+        const tmm03GridObject = new GridUtil(Tmm03GridColModel, "[[${gprogrid}]]", gridId);
+
+        // const tmm03SubGridObject = new GridUtil(Tmm03SubGridColModel, "[[${gprogrid}]]", subGridId);
+
+        // const tmm03Sub2GridObject = new GridUtil(
+        //   Tmm03Sub2GridColModel,
+        //   "[[${gprogrid}]]",
+        //   subGrid2Id
+        // );
+
+        const whenFailFetch = () => {
+          tmm03GridObject.getGrid().hideLoading();
+          // alert("sy.common.errmesg}]]");
+        };
+
+        //pqGrid 이벤트발생시 validate 함수
+        function setBeforeValidate(event, ui) {
+          if (!ui.updateList.find((u) => JSON.stringify(u?.newRow) != JSON.stringify(u.oldRow)))
+            return;
+          if (
+            ui.source != "undo" &&
+            (ui.source == "edit" || ui.source == "paste" || ui.source == "checkbox")
+          ) {
+            const rownum = ui.updateList[0].rowIndx;
+            this.updateRow({
+              rowIndx: rownum,
+              newRow: {
+                state: true,
+                warekey: $("#" + pageId + "_warekey").val(),
+              },
+              checkEditable: false,
+            });
+          }
+        }
+
+        tmm03GridObject.setBeforeValidate(setBeforeValidate);
+        // tmm03SubGridObject.setBeforeValidate(setBeforeValidate);
+        // tmm03Sub2GridObject.setBeforeValidate(setBeforeValidate);
+
+        tmm03GridObject.setAdd((evt, ui) => {
+          /*
+           * addButton
+           * 이벤트 발생시 컬럼 초기값 세팅
+           */
+          const rowData = {
+            state: true,
+            compkey: "[[${userattr.compkey}]]",
+            warekey: $("#" + pageId + "_warekey").val(),
+            // warekey: "",
+            shtrtky: "",
+            shtgrnm: "",
+            shtrtnm: "",
+            shtcytm: 0,
+            shtmemo: "",
+            tsuseyn: "Y",
+            inbshyn: "N",
+            oubshyn: "Y",
+          };
+
+          const grid = tmm03GridObject.getGrid();
+
+          const rowIndx = grid.addRow({
+            rowData,
+            checkEditable: false, //colModel의 editable 옵션 무시
+          });
+          grid.goToPage({ rowIndx: rowIndx });
+          grid.editFirstCellInRow({ rowIndx: rowIndx });
+        });
+
+        // tmm03GridObject.setFind();
+        // tmm03GridObject.setReset();
+
+        tmm03GridObject.setCreate(async (evt, ui) => {
+          // 코드=>밸류 및 검색에 셀렉트 같은거 있으면 디비에서 꺼내와서 넣어주기
+
+          // warekey 창고코드 => 창고
+          (async () => {
+            const warekeyRes = await fetchUtil("GET", "/tm/code/warehouse", {}, whenFailFetch);
+            const warekeyList = await warekeyRes.json();
+            comboCreateData(gridId, "warekey", warekeyList, {
+              combovl: "combovl",
+              combonm: "combonm",
+            });
+          })();
+
+          // common code list
+          // SHTGRNM 셔틀그룹 : non select
+          // (async () => {
+          //   const codeListRes = await fetchUtil("GET", "/md/common/code/common-code", {
+          //     comcdky: "SHTGRNM",
+          //   });
+          //   const codeList = await codeListRes.json();
+
+          //   comboCreateData(
+          //     gridId,
+          //     "shtgrnm",
+          //     codeList.filter((c) => c.comcdky == "shtgrnm".toUpperCase())
+          //   ); //, { combovl: 'comcdvl', combonm: 'comcdtx' });
+          // })();
+
+          // destkey
+          (async () => {
+            // const codeListRes = await fetchUtil("GET", "/md/common/code/common-code", {
+            //   comcdky: "MDESTKY",
+            // });
+            // const codeList = await codeListRes.json();
+
+            // comboCreateData(
+            //   gridId,
+            //   "destkey",
+            // codeList.filter((c) => c.comcdky == "mdestky".toUpperCase())
+            // );
+
+            const destmaRes = await fetchUtil("GET", "/tm/code/destkey", {}, whenFailFetch);
+            const destmaList = await destmaRes.json();
+
+            console.log("/tm/code/destkey", destmaList);
+
+            comboCreateData(gridId, "destkey", destmaList, {
+              combovl: "destkey",
+              combonm: "denamlc",
+            });
+          })();
+        });
+
+        tmm03GridObject.setChange((evt, ui) => {
+          const newdestkey = ui?.updateList?.length ? ui.updateList[0]?.newRow?.destkey : null;
+          if (!newdestkey) return;
+
+          const destkeylist = tmm03GridObject
+            .getGrid()
+            .pdata.filter((d) => d.rowkey != ui.updateList[0].rowData.rowkey)
+            .map((d) => d.destkey);
+
+          if (destkeylist.find((d) => d == newdestkey)) {
+            alert("[[#{tm.tmm03.destkeyduplicate}]]");
+            ui.updateList[0].rowData.destkey = ui.updateList[0].oldRow.destkey;
+          }
+        });
+
+        tmm03GridObject.open();
+
+        //============================================================
+        //영역 검색 버튼 이벤트
+        //============================================================
+        async function searchtmm03List() {
+          let param = {
+            warekey: $("#" + pageId + "_warekey").val() || "",
+            shtgrnm: $("#" + pageId + "_shtgrnm").val() || "",
+            shtrtnm: $("#" + pageId + "_shtrtnm").val() || "",
+          };
+
+          const resALL = await fetchUtil(
+            "GET",
+            "/tm/shuttle",
+            param,
+            whenFailFetch
+            // () =>            tmm03GridObject.getGrid().hideLoading()
+          );
+          const res = await resALL.json();
+
+          if (!res?.length) {
+            tmm03GridObject.searchList([]);
+            // alert("[[#{ms.getDataZero}]]");
+          }
+          tmm03GridObject.getGrid().option("dataModel", { data: res, recIndx: "rowkey" });
+          tmm03GridObject.getGrid().refreshDataAndView();
+          tmm03GridObject.getGrid().hideLoading();
+        }
+
+        // const searchTpvassList = async ()=>{
+        // 	const resALL = await fetchUtil("GET", '/tm/tpvassList', {vehicky:});
+        // 	const res = await resALL.json();
+
+        // 	if (!res?.length) {
+
+        // 	}
+        // }
+
+        // searchtmm03List(); // page load 자동
+
+        // const RequiredColumn = ['rowkey', 'compkey', 'vehicky', 'warekey'];
+
+        // 불가함
+        // const getUpdateDataOnly = (updateList, gridAllData) => {
+        // 	return updateList.map(row => {
+        // 		const newRow = {};
+        // 		const idxNumb = gridAllData.updateList.findIndex(u => u.rowkey == row.rowkey);
+        // 		const oldRow = gridAllData.oldList[idxNumb];
+        // 		const oldColumns = Object.keys(oldRow);
+        // 		const newRowColumns = RequiredColumn.concat(oldColumns);
+
+        // 		newRowColumns.forEach(c => newRow[c] = row[c]);
+
+        // 		return newRow
+        // 	})
+        // }
+
+        //============================================================
+        // column validations에 의한 자동 validate
+        //============================================================
+        const getPQvalidateFn = (typeName) => pq.validations[typeName];
+
+        const ValidateNeedCols = Tmm03GridColModel.filter((c) => c.validations);
+
+        const EmptyVObject = {};
+        ValidateNeedCols.forEach((vc) => (EmptyVObject[vc.dataIndx] = null));
+
+        const DefaultFn = (t) => t;
+
+        // row를 체크하여 잘못된  key (즉 column) 를 내보냄
+        const validationCheckRow = (rowData) => {
+          if (!ValidateNeedCols?.length) return;
+          let msg = "";
+          Object.entries({
+            // ...ValidateNeedCols.map(vc => { return { [vc.dataIndx]: null } }),
+            ...EmptyVObject,
+            ...rowData,
+          }).find(([cName, rowValue]) => {
+            const col = ValidateNeedCols.find((cc) => cc.dataIndx == cName);
+            if (!col) return;
+            const validations = col.validations;
+            return (
+              validations?.length &&
+              validations.find((v) => {
+                const vtype = v.type;
+                const validateFn = typeof vtype == "string" ? getPQvalidateFn(vtype) : vtype;
+                const isInvalid = !validateFn(rowValue, v?.value || "0", v?.fn || DefaultFn);
+                if (isInvalid) {
+                  msg += (rowData?.pq_ri || 0) + 1;
+                  msg += " Row ";
+                  msg += col.title + " " + (v?.msg || "[[#{ms.checkValue}]]");
+                  tmm03GridObject
+                    .getGrid()
+                    .editCell({ rowIndx: rowData?.pq_ri, dataIndx: col.dataIndx });
+                }
+                return isInvalid;
+              })
+            );
+          });
+          return msg;
+        };
+
+        const validationCheck = (data) => {
+          let result = true;
+          let msg = "";
+
+          // ValidateNeedCols.forEach(c=>{	});
+          const invalidAdd = data.addList.find(validationCheckRow);
+          if (invalidAdd) {
+            msg = validationCheckRow(invalidAdd);
+            return { result: false, msg };
+          }
+          const invalidUpdate = data.updateList.find(validationCheckRow);
+          if (invalidUpdate) {
+            msg = validationCheckRow(invalidUpdate);
+            return { result: false, msg };
+          }
+
+          return { result, msg };
+        };
+
+        //============================================================
+        //그리드 세이브 버튼 이벤트
+        //============================================================
+        async function savetmm03GridChange() {
+          const grid = tmm03GridObject.getGrid();
+          const gridAllData = grid.getChanges({ all: true });
+          const gridData = grid.getData().filter((row) => row?.state === true);
+
+          if (!gridData.length) {
+            alert("[[#{ms.syncNo}]]");
+            return;
+          }
+          if (!confirm("[[#{ms.checksave}]]")) {
+            return;
+          }
+          const data = {};
+          const addList = gridData.filter((row) => !row?.rowkey) || [];
+          const updateList = gridData.filter((row) => row?.rowkey) || [];
+
+          data.addList = addList;
+          // data.updateList = getUpdateDataOnly(updateList, gridAllData);
+          data.updateList = updateList;
+
+          // const sss = grid.Checkbox('state').getCheckedNodes();
+
+          const validationCheckRes = validationCheck(data);
+          if (!validationCheckRes.result) {
+            alert(validationCheckRes.msg);
+            return;
+          }
+
+          grid.showLoading();
+          const res = await fetchUtil("POST", "/tm/shuttle", data, whenFailFetch); // 주의 :
+          const rData = await res.json();
+
+          console.log("post res ", rData);
+
+          if (rData != 0 && rData != undefined && res.status == 200) {
+            // alert("[[#{ms.saveSuccess}]]");
+            searchtmm03List(); // 1234
+          } else {
+            alert("[[#{ms.saveErr}]]");
+          }
+        }
+      }
+    </script>
+  </div>
+</html>

@@ -1,0 +1,1111 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdp11Ownamlc" class="setting-grid-title">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.ownamlc')}" id="mdp11Ownamlc">
+					</div>
+				</div>
+				<label for="mdp11Owblctc" class="setting-grid-title">[[#{md.mowrma.owblctc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mowrma.owblctc')}" id="mdp11Owblctc">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdp11Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdp11Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdp11Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdp11Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdp11
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.08.04
+	  - 설명 : 화주등록
+	  ------------------------------------------
+	*/
+
+	$(function() {
+		//----------- 전역변수 ------------//
+		const mdp11ComboData = new Object;
+		let mdp11InitData;
+		//----------- 전역변수 end ------------//
+
+		//============================================================
+		// 검색 화면 이벤트
+		//============================================================
+		$('#' + '[[${gprogrid}]]' + 'Search').click(function() {
+			getMdp11List();
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Save').click(async function() {
+			const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+			const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+			if (gridCheck.length === 0) {
+				alert('[[#{ms.choiceRowZero}]]');
+
+				return;
+			}
+
+			const gridChange = grid.getChanges({all: true});
+
+			//============================================================
+			// 체크 데이터 중 필수 값 & 중복 체크
+			//============================================================
+			for(let gCheck of gridCheck){
+				const essentialCols = ['ownerky', 'ownamlc'];
+
+	    		for(let checkCol of essentialCols){
+	    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+		    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+		      			grid.focus({
+							rowIndxPage: gCheck.pq_ri,
+							colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+						});
+
+		    	  		return false;
+	    			}
+	    		}
+				for(let gData of grid.getData()){
+	   				const keyCols = ['ownerky'];
+
+	   				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+	   					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData)
+											+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+						alert(alertTxt);
+		      			grid.focus({
+							rowIndxPage: (gCheck.pq_ri),
+							colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'ownerky' } )
+						});
+
+						return false;
+					}
+				}
+			}
+			//updateList 체크 데이터 정제
+			for (let z=0; z<gridChange.updateList.length; z++) {
+				if (gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true) {
+					gridChange.updateList.splice(z, 1);
+					gridChange.oldList.splice(z, 1);
+				}
+			}
+			//addList 체크 데이터 정제
+			gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+			if (await !confirm('[[#{ms.checksave}]]')) {
+				return false;
+			}
+
+			saveMdp11List(gridChange);
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+			resetSearchConditions();
+			makeEmptyGrid(mdp11Grid);
+		});
+		//----------- 검색영역 Event end ------------//
+
+		// Grid Column Model
+		const mdp11GridCM = [
+			{
+				title: '',
+				dataType: 'bool',
+				dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+				align: 'center',
+				type: 'checkbox',
+				sortable: false,
+				editor: false,
+				cb: {
+					all: false,
+					header: true
+				}
+			},
+			{
+				title: '[[#{common.grid.recIndx}]]',
+				dataType: 'string',
+				dataIndx: '[[#{common.grid.recIndx}]]',
+				editable: false,
+				hidden: true
+			},
+			{
+				title: '[[#{md.mowrma.compkey}]]',
+				dataType: 'string',
+				dataIndx: 'compkey',
+				editable: false,
+				hidden: true
+			},
+			{
+				title: '[[#{grid.ownerCode}]]',
+				dataType: 'string',
+				dataIndx: 'ownerky',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead01}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 1,
+						msg: '[[#{ms.validations.minLenLength(1)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				],
+	            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mowrma.ownamlc}]]',
+				dataType: 'string',
+				dataIndx: 'ownamlc',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead01}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owuseyn}]]',
+				dataType: 'string',
+				dataIndx: 'owuseyn',
+				align: 'center', //Owner use YN
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				type: 'checkbox',
+				editor: false,
+				cb: {
+					all: false,
+					header: true,
+					check: 'Y',
+					uncheck: 'N'
+				}
+			},
+			{
+				title: '[[#{md.mowrma.owneord}]]',
+				dataType: 'integer',
+				dataIndx: 'owneord',
+				format: '#,###',
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'gte',
+						value: 0,
+						msg:'[[#{ms.validations.minLenLength(1)}]]',
+						warn: true
+					},
+					{
+						type: 'lte',
+						value: 1000000000,
+						msg: '[[#{ms.validations.maxLenLength(9)}]]',
+						warn: true
+					},
+					{
+						type: 'regexp',
+						value: regNum9Digit,
+						msg: '[[#{ms.validations.onlyNumber(9)}]]',
+						warn: true
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.ownatcd}]]',
+				dataType: 'string',
+				dataIndx: 'ownatcd',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 3,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(3)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.ownamko}]]',
+				dataType: 'string',
+				dataIndx: 'ownamko',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					},
+					{
+						type: 'regexp',
+						value: regKorOnly,
+						warn: true,
+						msg: '[[#{ms.onlyInputKorean}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.ownamen}]]',
+				dataType: 'string',
+				dataIndx: 'ownamen',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					},
+					{
+						type: 'regexp',
+						value: regEngOnly,
+						warn: true,
+						msg: '[[#{ms.onlyInputEnglish}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owaddr1}]]',
+				dataType: 'string',
+				dataIndx: 'owaddr1',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 100,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(100)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owaddr2}]]',
+				dataType: 'string',
+				dataIndx: 'owaddr2',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 100,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(100)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owaddr3}]]',
+				dataType: 'string',
+				dataIndx: 'owaddr3',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 100,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(100)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.ownelat}]]',
+				dataType: 'float',
+				dataIndx: 'ownelat',
+				format: '###,###,###,###,###.0000000000',
+				styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+				validations: [
+					{
+						type: 'gte',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(0)}]]',
+						warn: true
+					},
+					{
+						type: 'lte',
+						value: 1000000000000000,
+						msg: '[[#{ms.validations.maxLenLength(15)}]]',
+						warn: true
+					},
+					{
+						type: 'regexp',
+						value: regNum15Dot10,
+						msg: '[[#{ms.validations.onlyNumber(15)}]]',
+						warn: true
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.ownelon}]]',
+				dataType: 'float',
+				dataIndx: 'ownelon',
+				format: '###,###,###,###,###.0000000000',
+				styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+				validations: [
+					{
+						type: 'gte',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(0)}]]',
+						warn: true
+					},
+					{
+						type: 'lte',
+						value: 1000000000000000,
+						msg: '[[#{ms.validations.maxLenLength(15)}]]',
+						warn: true
+					},
+					{
+						type: 'regexp',
+						value: regNum15Dot10,
+						msg: '[[#{ms.validations.onlyNumber(15)}]]',
+						warn: true
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owciynm}]]',
+				dataType: 'string',
+				dataIndx: 'owciynm',
+				hidden: true,
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 100,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(100)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owregnm}]]',
+				dataType: 'string',
+				dataIndx: 'owregnm',
+				hidden: true,
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 100,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(100)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owteln1}]]',
+				dataType: 'string',
+				dataIndx: 'owteln1',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owteln2}]]',
+				dataType: 'string',
+				dataIndx: 'owteln2',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owteln3}]]',
+				dataType: 'string',
+				dataIndx: 'owteln3',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owtaxcd}]]',
+				dataType: 'string',
+				dataIndx: 'owtaxcd',
+				hidden: true,
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owposbx}]]',
+				dataType: 'string',
+				dataIndx: 'owposbx',
+				hidden: true,
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 10,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(10)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owposcd}]]',
+				dataType: 'string',
+				dataIndx: 'owposcd',
+				hidden: true,
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 10,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(10)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owrepnm}]]',
+				dataType: 'string',
+				dataIndx: 'owrepnm',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owreptl}]]',
+				dataType: 'string',
+				dataIndx: 'owreptl',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owrepem}]]',
+				dataType: 'string',
+				dataIndx: 'owrepem',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owmannm}]]',
+				dataType: 'string',
+				dataIndx: 'owmannm',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+					validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owmantl}]]',
+				dataType: 'string',
+				dataIndx: 'owmantl',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owmanem}]]',
+				dataType: 'string',
+				dataIndx: 'owmanem',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 60,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(60)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.owblctc}]]',
+				dataType: 'string',
+				dataIndx: 'owblctc',
+				styleHead: {
+					'background-color': '[[#{grid.styleHead02}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						warn: true,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 20,
+						warn: true,
+						msg: '[[#{ms.validations.maxLenLength(20)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mowrma.sputzon}]]',
+				dataType: 'string',
+				dataIndx: 'sputzon', //*기본 적치 Zone
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				},
+				editor: {
+		            type: 'select',
+					init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => {
+		            	const sputzonList = mdp11InitData[ui.dataIndx].map(obj => {
+	        				let rObj = new Object;
+
+	        				rObj[obj['zonekey']] = obj['zonenam'] + '('+ obj['zonekey'] +')';
+
+	        				return rObj;
+		        		}).filter(e => e);
+
+						return sputzonList;
+		            },
+					prepend: { '' : ' ' }
+	           },
+				render: ui => {
+					const option = mdp11InitData[ui.dataIndx].find(obj => obj['zonekey'] === ui.cellData);
+
+					return { text: option && ui.rowData[ui.dataIndx] ? option['zonenam'] : '' };
+				}
+			},
+			{
+				title: '[[#{md.mowrma.sputloc}]]',
+				dataType: 'string',
+				dataIndx: 'sputloc', //*기본 적치 Location
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				},
+				editor: {
+		            type: 'select',
+					init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => {
+	                	const sputlocList = mdp11InitData[ui.dataIndx].map(obj => {
+		        			if(obj['zonekey'] === ui.rowData['sputzon']){
+		        				let rObj = new Object;
+
+		        				rObj[obj['locakey']] = obj['locanam'] + '('+ obj['locakey'] +')';
+
+		        				return rObj;
+		        			}
+		        		}).filter(e => e);
+
+	    				return sputlocList;
+					},
+		   			prepend: { '' : ' ' }
+				},
+				render: ui => {
+					const option = mdp11InitData[ui.dataIndx].find((obj) =>obj['zonekey'] === ui.rowData['sputzon'] && obj['locakey'] === ui.cellData);
+
+					return { text: option && ui.rowData[ui.dataIndx] ? option['locanam'] : '' };
+				},
+				editable: ui => ui.rowData['sputzon']
+			},
+			{
+				title: '[[#{md.mowrma.spikloc}]]',
+				dataType: 'string',
+				dataIndx: 'spikloc', //*기본 피킹 Location
+				styleHead: {
+					'background' : '[[#{grid.styleHead02}]]'
+				},
+				editor: {
+		               type: 'select',
+		               init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => mdp11ComboData[ui.dataIndx],
+		   			prepend: { '' : ' ' }
+		        },
+				render: ui => {
+					const option = mdp11ComboData[ui.dataIndx].find( obj =>obj[ui.cellData]);
+
+		           	return { text: option ? option[ui.cellData] : ui.cellData };
+				}
+			},
+			{
+				title: '[[#{md.mowrma.credate}]]',
+				dataType: 'string',
+				dataIndx: 'credate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mowrma.cretime}]]',
+				dataType: 'string',
+				dataIndx: 'cretime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mowrma.creuser}]]',
+				dataType: 'string',
+				dataIndx: 'creuser',
+				editable: false
+			},
+			{
+				title: '[[#{md.mowrma.lmodate}]]',
+				dataType: 'string',
+				dataIndx: 'lmodate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mowrma.lmotime}]]',
+				dataType: 'string',
+				dataIndx: 'lmotime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mowrma.lmouser}]]',
+				dataType: 'string',
+				dataIndx: 'lmouser',
+				editable: false
+			}
+		];
+
+		// Grid Object 및 기초 세팅
+		const mdp11Grid = new GridUtil(mdp11GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+		// Grid 검색 세팅
+		mdp11Grid.setFind();
+
+		// Grid 초기화 세팅
+		mdp11Grid.setReset();
+
+		// Grid 데이터 추가 이벤트
+		mdp11Grid.setAdd(function(evt, ui) {
+			const rowData = {
+				state: true,
+				compkey: '[[${userattr.compkey}]]',
+				owuseyn: 'Y'
+			};
+			const rowIndx = this.addRow({
+				rowData: rowData,
+				checkEditable: false
+			});
+
+			this.goToPage({	rowIndx : rowIndx });
+			this.focus({
+				rowIndxPage: rowIndx,
+				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )
+			});
+		});
+
+		// 그리드 생성시 이벤트
+		mdp11Grid.setCreate(async function (evt, ui) {
+			const response = await initMdp11();
+
+			mdp11InitData = response.item;
+
+			for(let key of Object.keys(mdp11InitData)){
+				const gData = mdp11InitData[key];
+
+				if('sputzon' !== key){
+					const options = gData.map(obj => {
+								        	let rObj = {};
+
+								        	rObj[obj['combovl']] = obj['combonm'];
+
+								        	return rObj;
+										});
+
+					mdp11ComboData[key] = options;
+				}
+			}
+	    });
+
+		// Grid 데이터 변경 이벤트
+		mdp11Grid.setChange(async function(evt, ui) {
+			if ('edit' === ui.source || 'paste' === ui.source) {
+	    		const updateRowList = [];
+
+	    		await ui.updateList.forEach(updateData =>{
+					let newRow = { state : true };
+
+					if (updateData.newRow.hasOwnProperty('ownerky')	&& updateData.oldRow.hasOwnProperty('ownerky')) {
+						newRow['ownerky'] = updateData.newRow['ownerky']?.toUpperCase();
+					}
+
+	    			if(updateData.newRow.hasOwnProperty('sputzon') && updateData.oldRow.hasOwnProperty('sputzon')){
+	        			const option = mdp11InitData['sputzon'].find((obj) => obj['zonekey'] === updateData.rowData['sputzon']);
+
+	        			if(option){
+	        				newRow['sputzon'] = option['zonekey'];
+	        			} else {
+	        				newRow['sputzon'] = null
+		        			newRow['sputloc'] = null;
+	        			}
+	    			}
+
+	    			if(updateData.newRow.hasOwnProperty('sputloc') && updateData.oldRow.hasOwnProperty('sputloc')){
+	    				const option = mdp11InitData['sputloc'].find((obj)=>obj['locakey'] === updateData.rowData['sputloc'] && obj['zonekey'] === updateData.rowData['sputzon']);
+
+	    				newRow['sputloc'] = option && updateData.rowData['sputloc'] ? option['locakey'] : null;
+	    			}
+
+	    			if(updateData.newRow.hasOwnProperty('spikloc') && updateData.oldRow.hasOwnProperty('spikloc')){
+	        			const option = mdp11ComboData['spikloc'].find((obj)=>obj[updateData.rowData['spikloc']]);
+
+	        			newRow['spikloc'] = option ? updateData.rowData['spikloc'] : null;
+	    			}
+
+	    			updateRowList.push({
+						rowIndx: updateData.rowIndx,
+						newRow: newRow
+					});
+				});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+			} else if (ui.source === 'checkbox') {
+	    		const updateRowList = [];
+
+	    		await ui.updateList.forEach( updateData => {
+					let newRow = { state: true };
+
+					if (updateData.newRow.hasOwnProperty('owuseyn')) {
+		    			updateRowList.push({
+		    				rowIndx: updateData.rowIndx,
+		    				newRow: newRow
+		    			});
+					}
+				});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+			}
+
+			if ('paste' === ui.source) {
+				await ui.addList.forEach( addData =>
+	    			addData.newRow = {
+						state: true,
+						compkey: '[[${userattr.compkey}]]',
+						owuseyn: addData?.newRow?.owuseyn || 'Y'
+				});
+				await this.updateRow({
+					rowList: ui.addList,
+					checkEditable: false
+				});
+			}
+		});
+
+		// 그리드 객체 생성
+		mdp11Grid.open();
+
+		// 그리드 저장 함수
+		async function saveMdp11List(saveData) {
+			if (!saveData) {
+				return false;
+			}
+
+			const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+			grid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+			const saveMdp11Response = await fetchUtil('POST', url, saveData);
+
+			if(saveMdp11Response.status === 200){
+				await getMdp11List();
+			}
+
+			grid.hideLoading();
+		}
+
+		// 그리드 조회 함수
+		async function getMdp11List() {
+			const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+			grid.showLoading();
+
+			const data = {
+				owblctc : $('#' + '[[${gprogrid}]]' + 'Owblctc').val(),
+				ownamlc : $('#' + '[[${gprogrid}]]' + 'Ownamlc').val()
+			};
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+			const response = await fetchUtil('GET', url, data);
+
+			if(response.status===200){
+				const resContent = await response.json();
+
+				grid.option( 'dataModel', {
+					data: resContent,
+					recIndx: '[[#{common.grid.recIndx}]]'
+				});
+				grid.refreshDataAndView();
+			}
+
+			grid.hideLoading();
+		}
+
+		// 페이지 초기화 함수
+		async function initMdp11(){
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+			const response = await fetchUtil('GET', url);
+
+			return response.json();
+		}
+	});
+</script>
+</div>
+</html>

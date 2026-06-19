@@ -1,0 +1,1569 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.tm.mapper.TmAppMapper">
+
+  <select id="selectTplnhdList" resultType="com.logistics.tm.domain.TMAppDTO">
+    /* selectTplnhdList */
+    SELECT
+      <!-- /* TPL.* */ -->
+      TPL.COMPKEY
+      , TPL.VHPLNKY
+      , TPL.WAREKEY
+      , TPL.VEHICKY
+      , TPL.DOCCATE
+      , TPL.DOCTYPE
+      , TPL.POSTDAT
+      , TPL.VHPDATE
+      , TPL.VHPTIME
+      , TPL.USERACT
+      <!-- , USER.USERNAM -->
+      , fn_sy_usernam(TPL.COMPKEY, TPL.USERACT) as USERNAM
+      <!-- , TPL.RETODYN -->
+      , TPL.STPITDT
+      , TPL.STPITTM
+      , TPL.PLNSTAT
+      , TPL.TRNMEMO
+      , TPL.EMERSCD
+      , TPL.EMERDNM
+      , TPL.PCARSCD
+      , TPL.PCARSNM
+      , TPL.PCADATE
+      , TPL.PCATIME
+      , TPL.PCAUSER
+      , TPL.TRFINDT
+      , TPL.TRFINTM
+      , TPL.PBILLYN
+      , TPL.PBILPAY
+      , TPL.SHTRTKY
+      , TPL.TRAREKY
+      , fn_com_todate(TPL.CREDATE) as CREDATE
+      , fn_com_totime(TPL.CRETIME) as CRETIME
+      , fn_sy_usernam(TPL.COMPKEY, TPL.CREUSER) as CREUSER
+      , fn_com_todate(TPL.LMODATE) as LMODATE
+      , fn_com_totime(TPL.LMOTIME) as LMOTIME
+      , fn_sy_usernam(TPL.COMPKEY, TPL.LMOUSER) as LMOUSER
+
+    , MWA.WHNAMLC, MWA.WHNAMKO, MWA.WHNAMEN
+      <!-- , IT.WANAMLC, IT.WHNAMKO, IT.WANAMEN -->
+      <!-- , IT.WAADDR1, IT.WAADDR2, IT.WAADDR3 -->
+      , SH.SHTRTNM
+      , TR.TRARENM
+
+    FROM TPLNHD TPL
+    <!-- left outer join TPLNIT -->
+    <!-- LEFT OUTER JOIN (
+        SELECT
+        FROM TPLNIT TPIT
+      ) IT
+      ON TPL.COMPKEY = IT.COMPKEY2
+      AND TPL.VHPLNKY = IT.VHPLNKY2 -->
+      <!-- NESTING 은 쿼리로 안 되니까 따로 해야함. -->
+
+    <!-- LEFT OUTER JOIN (
+        SELECT DEST.COMPKEY as COMPKEY2, DEST.DESTKEY as DESTKEY2,
+          DEST.DENAMLC, DEST.DENAMKO, DEST.DENAMEN
+        FROM MDESMA DEST
+      ) IT
+      ON TPL.COMPKEY = IT.COMPKEY2
+      AND TPL.DESTKEY = IT.DESTKEY2 -->
+
+    INNER JOIN MWARMA MWA ON TPL.COMPKEY = MWA.COMPKEY
+      AND TPL.WAREKEY = MWA.WAREKEY
+      AND MWA.WHUSEYN = 'Y'
+
+    LEFT JOIN TSHRHD SH ON TPL.COMPKEY = SH.COMPKEY
+      AND TPL.WAREKEY = SH.WAREKEY
+      AND TPL.SHTRTKY = SH.SHTRTKY
+      AND SH.TSUSEYN = 'Y'
+
+    LEFT JOIN TAREHD TR ON TPL.COMPKEY = TR.COMPKEY
+      AND TPL.WAREKEY = TR.WAREKEY
+      AND TPL.TRAREKY = TR.TRAREKY
+      AND TR.TRUSEYN = 'Y'
+
+    <!-- LEFT JOIN SUSRMA USER ON TPL.USERACT = USER.USERACT -->
+
+    <!-- LEFT OUTER JOIN (
+        SELECT DEST.COMPKEY as COMPKEY2, DEST.DESTKEY as DESTKEY2,
+          DEST.DENAMLC as WANAMLC, DEST.DENAMKO as WHNAMKO, DEST.DENAMEN as WANAMEN
+        FROM MDESMA DEST
+      ) IT
+      ON TPL.COMPKEY = IT.COMPKEY2
+      AND TPL.WAREKEY = IT.DESTKEY2
+
+    LEFT OUTER JOIN (
+      SELECT SH.SHTRTNM, SH.COMPKEY as COMPKEY3, SH.WAREKEY as SHWAREKEY, SH.SHTRTKY as SHTRTKY2
+      FROM TSHRHD SH
+    ) SH
+    ON TPL.COMPKEY = SH.COMPKEY3
+      AND TPL.WAREKEY = SH.SHWAREKEY
+      AND TPL.SHTRTKY = SH.SHTRTKY2
+
+    LEFT OUTER JOIN (
+      SELECT TR.TRARENM, TR.COMPKEY as COMPKEY4, TR.WAREKEY as TRWAREKEY, TR.TRAREKY as TRAREKY2
+      FROM TAREHD TR
+    ) TR
+    ON TPL.COMPKEY = TR.COMPKEY4
+      AND TPL.WAREKEY = TR.TRWAREKEY
+      AND TPL.TRAREKY = TR.TRAREKY2 -->
+
+    WHERE 1=1
+      AND TPL.COMPKEY = #{userData.compkey}
+
+		<!-- and 검색조건 키, 창고, 차량코드, 문서유형, 문서타입, 셔틀노선키, 운송계획일자, 일자타입 -->
+		<if test='vhplnky != null and vhplnky != ""'>
+			<!-- AND vhplnky LIKE CONCAT('%', #{vhplnky}, '%') -->
+			AND vhplnky = #{vhplnky}
+		</if>
+		<if test='warekey != null and warekey != ""'>
+			AND warekey = #{warekey}
+		</if>
+		<if test='vehicky != null and vehicky != ""'>
+			AND vehicky = #{vehicky}
+		</if>
+		<if test='vehickyornot != null and vehickyornot != ""'>
+			AND (vehicky = #{vehickyornot} OR vehicky is NULL OR vehicky = '' OR vehicky = ' ')
+		</if>
+		<if test='vehicky_list != null and vehicky_list != "" and vehicky_list.length > 0'>
+      AND VEHICKY in (
+        <foreach collection="vehicky_list" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+		</if>
+
+		<if test='shtrtky != null and shtrtky != ""'>
+			AND TPL.SHTRTKY = #{shtrtky}
+		</if>
+		<if test='shtrtky_list != null and shtrtky_list != "" and shtrtky_list.length > 0'>
+      AND TPL.SHTRTKY in (
+        <foreach collection="shtrtky_list" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+		</if>
+		<if test='shtrtky_list_ornot != null and shtrtky_list_ornot != "" and shtrtky_list_ornot.length > 0'>
+      AND (TPL.SHTRTKY in (
+        <foreach collection="shtrtky_list_ornot" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+        OR TPL.SHTRTKY is NULL OR TPL.SHTRTKY = '' OR TPL.SHTRTKY = ' '
+      )
+		</if>
+    
+		<if test='useractornot != null and useractornot != ""'>
+			AND (useract = #{useractornot} OR useract is NULL OR useract = '' OR useract = ' ')
+		</if>
+		<if test='doccate != null and doccate != ""'>
+			AND doccate = #{doccate}
+		</if>
+		<if test='doctype != null and doctype != ""'>
+			AND doctype = #{doctype}
+		</if>
+		<if test='shtrtky != null and shtrtky != ""'>
+			AND shtrtky = #{shtrtky}
+		</if>
+		<if test='vhpdate != null and vhpdate != ""'>
+			AND vhpdate LIKE CONCAT('%', #{vhpdate}, '%')
+		</if>
+    <!-- targetvhpdate -->
+    <!--  targetvhpdate == 0 -->
+		<if test='targetvhpdate !=null and targetvhpdate =="today"'>
+			AND VHPDATE LIKE date_format(now(), 'YYYYMMDD')
+		</if>
+		<!-- <if test='targetvhpdate !=null and targetvhpdate gt 0'> -->
+		<if test='targetvhpdate !=null and targetvhpdate =="future"'>
+		<![CDATA[	AND VHPDATE  >  date_format(now(), 'YYYYMMDD') ]]>
+		</if>
+		<!-- <if test='targetvhpdate !=null and targetvhpdate lt 0'> -->
+		<if test='targetvhpdate !=null and targetvhpdate =="past"'>
+			AND VHPDATE <![CDATA[ < ]]> date_format(now(), 'YYYYMMDD')
+		</if>
+		<if test='targetvhpdate !=null and targetvhpdate =="not_future"'>
+			AND VHPDATE <![CDATA[ <= ]]> date_format(now(), 'YYYYMMDD')
+		</if>
+
+    <!-- targetpostdat -->
+    <!--  targetpostdat == 0 -->
+		<if test='targetpostdat !=null and targetpostdat =="today"'>
+			AND VHPDATE LIKE date_format(now(), 'YYYYMMDD')
+		</if>
+		<!-- <if test='targetpostdat !=null and targetpostdat gt 0'> -->
+		<if test='targetpostdat !=null and targetpostdat =="future"'>
+		<![CDATA[	AND VHPDATE  >  date_format(now(), 'YYYYMMDD') ]]>
+		</if>
+		<!-- <if test='targetpostdat !=null and targetpostdat lt 0'> -->
+		<if test='targetpostdat !=null and targetpostdat =="past"'>
+			AND VHPDATE <![CDATA[ < ]]> date_format(now(), 'YYYYMMDD')
+		</if>
+		<if test='targetpostdat !=null and targetpostdat =="not_future"'>
+			AND VHPDATE <![CDATA[ <= ]]> date_format(now(), 'YYYYMMDD')
+		</if>
+
+		<if test='startdate !=null and startdate !=""'>
+			AND VHPDATE <![CDATA[ >= ]]> #{startdate}
+		</if>
+		<if test='enddate !=null and enddate !=""'>
+			AND VHPDATE <![CDATA[ <= ]]> #{enddate}
+		</if>
+    <!-- targetstate -->
+    <if test='targetstate != null and targetstate =="ongoing"'>
+      AND PLNSTAT in ('PLAN', 'LOADING', 'START', 'UNLOADING')
+      <!-- AND TRFINDT is NULL
+      AND TRFINTM is NULL  -->
+    </if>
+    <if test='targetstate != null and targetstate =="reservation"'>
+      AND PLNSTAT in ('PLAN')
+      <!-- AND TRFINDT is NULL
+      AND TRFINTM is NULL  -->
+    </if>
+    <if test='targetstate != null and targetstate =="done"'>
+      <!-- AND (TRFINDT is not NULL
+        OR TRFINTM is not NULL) -->
+      AND PLNSTAT in ('FINISH')
+    </if>
+    <if test='targetstate != null and targetstate =="cancel"'>
+      AND PLNSTAT in ('CANCEL')
+    </if>
+
+
+    <!-- order by -->
+    <!-- ORDER BY LMODATE DESC, LMOTIME ASC -->
+    ORDER BY FIELD(PLNSTAT, 'PLAN', 'LOADING', 'START', 'UNLOADING', 'FINISH', 'CANCEL'), VHPLNKY DESC
+    <!-- OFFSET & LIMIT -->
+    <if test='limitnumber != null and limitnumber != "" and offsetnumber != null and offsetnumber != ""'>
+      LIMIT offsetnumber limitnumber
+    </if>
+  </select>
+
+
+  <select id="selectTplnitList" resultType="com.logistics.tm.domain.TMAppDTO">
+    /* selectTplnitList */
+    SELECT
+      /* TPIT.* */
+      TPIT.COMPKEY
+      , TPIT.VHPLNKY
+      , TPIT.VHPLNIT
+      , TPIT.SHTRPTY
+      , TPIT.WAREKEY
+      , TPIT.DESTORD
+      , TPIT.CUSTKEY
+      , TPIT.DESTKEY
+      , TPIT.SHTRSTS
+      , TPIT.OWNERKY
+      , TPIT.SKUMKEY
+      , TPIT.SKUDESC
+      , TPIT.SKUSKEY
+      , TPIT.SOITQTY
+      , TPIT.TRITQTY
+      , TPIT.SUOMKEY
+      , TPIT.TRUNTYP
+      , TPIT.TRUNPID
+      , TPIT.SAATN01
+      , TPIT.SAATN02
+      , TPIT.SAATN03
+      , TPIT.SAATN04
+      , TPIT.SAATN05
+      , TPIT.SAATC01
+      , TPIT.SAATC02
+      , TPIT.SAATC03
+      , TPIT.SAATC04
+      , TPIT.SAATC05
+      , TPIT.SAATC06
+		<if test='groupby != null and groupby != ""'>
+			, MIN(TPIT.SAATC10) as SAATC10MIN
+			, MAX(TPIT.SAATC10) as SAATC10MAX
+      , MIN(TPIT.SAATC05) as SAATC05MIN
+		</if>
+      , TPIT.SAATC07
+      , TPIT.SAATC08
+      , TPIT.SAATC09
+      , TPIT.SAATC10
+      <!-- , TPIT.SAATC11
+      , TPIT.SAATC12 -->
+      , TPIT.REPITDT
+      , TPIT.REPITTM
+      , TPIT.RSNCODE
+      , TPIT.RSNREMK
+      , TPIT.COPODKY
+      , TPIT.COPODIT
+      , TPIT.COOUTKY
+      , TPIT.COOUTIT
+      , TPIT.OERETKY
+      , TPIT.OERETIT
+      , TPIT.EOASNKY
+      , TPIT.EOASNIT
+      , TPIT.RCVDCKY
+      , TPIT.RCVDCIT
+      , TPIT.REFSODC
+      , TPIT.REFSOIT
+      , TPIT.REFDNDC
+      , TPIT.REFDNIT
+      , TPIT.REFSDDC
+      , TPIT.REFSDIT
+      , fn_com_todate(TPIT.CREDATE) as CREDATE
+      , fn_com_totime(TPIT.CRETIME) as CRETIME
+      , fn_sy_usernam(COMPKEY, TPIT.CREUSER) as CREUSER
+      , fn_com_todate(TPIT.LMODATE) as LMODATE
+      , fn_com_totime(TPIT.LMOTIME) as LMOTIME
+      , fn_sy_usernam(COMPKEY, TPIT.LMOUSER) as LMOUSER
+
+      <!-- , IT.DENAMLC, IT.DENAMKO, IT.DENAMEN -->
+      , DST.DENAMLC, DST.DENAMKO, DST.DENAMEN
+      <!-- , IT2.WANAMLC, IT2.WHNAMKO, IT2.WANAMEN -->
+      , MWA.WANAMLC, MWA.WHNAMKO, MWA.WANAMEN
+      , PTN.PTNAMLC, PTN.PTADDR1, PTN.PTADDR2, PTN.PTADDR3
+
+    FROM TPLNIT TPIT
+
+    INNER JOIN MDESMA DST
+      ON TPIT.COMPKEY = DST.COMPKEY
+        AND TPIT.CUSTKEY = DST.PTNRKEY
+        AND TPIT.DESTKEY = DST.DESTKEY
+        AND DST.DEUSEYN= 'Y'
+
+    INNER JOIN MWARMA MWA
+      ON TPIT.COMPKEY = MWA.COMPKEY
+        AND TPIT.WAREKEY = MWA.WAREKEY
+        AND MWA.WHUSEYN = 'Y'
+
+    <!-- LEFT OUTER JOIN (
+        SELECT DEST.COMPKEY as COMPKEY2, DEST.DESTKEY as DESTKEY2,
+          DEST.DENAMLC, DEST.DENAMKO, DEST.DENAMEN
+        FROM MDESMA DEST
+      ) IT
+      ON TPIT.COMPKEY = IT.COMPKEY2
+      AND TPIT.DESTKEY = IT.DESTKEY2
+
+    LEFT OUTER JOIN (
+        SELECT DEST.COMPKEY as COMPKEY3, DEST.DESTKEY as DESTKEY3,
+          DEST.DENAMLC as WANAMLC, DEST.DENAMKO as WHNAMKO, DEST.DENAMEN as WANAMEN
+        FROM MDESMA DEST
+      ) IT2
+      ON TPIT.COMPKEY = IT2.COMPKEY3
+        AND TPIT.WAREKEY = IT2.DESTKEY3 -->
+
+
+    LEFT OUTER JOIN (
+      SELECT PTN.PTNRKEY, PTN.PTNAMLC, PTN.PTADDR1, PTN.PTADDR2, PTN.PTADDR3, PTN.COMPKEY as COMPKEY4
+        FROM MPTNMA PTN
+    ) PTN
+    ON TPIT.COMPKEY = PTN.COMPKEY4
+      AND TPIT.CUSTKEY = PTN.PTNRKEY
+
+    WHERE 1=1
+      AND COMPKEY = #{userData.compkey}
+
+		<!-- and 검색조건 키, 아이템키, 창고, 보고유형, 고객도착순서, 고객, 도착지키, 고객운송상태, 화주 -->
+		<if test='vhplnky != null and vhplnky != ""'>
+			AND vhplnky = #{vhplnky}
+		</if>
+		<if test='vhplnit != null and vhplnit != ""'>
+			AND vhplnit = #{vhplnit}
+		</if>
+		<if test='warekey != null and warekey != ""'>
+			AND warekey = #{warekey}
+		</if>
+		<if test='shtrpty != null and shtrpty != ""'>
+			AND shtrpty = #{shtrpty}
+		</if>
+		<if test='destord != null and destord != ""'>
+			AND destord = #{destord}
+		</if>
+		<if test='custkey != null and custkey != ""'>
+			AND custkey = #{custkey}
+		</if>
+		<if test='destkey != null and destkey != ""'>
+			AND destkey = #{destkey}
+		</if>
+		<if test='shtrsts != null and shtrsts != ""'>
+			AND shtrsts = #{shtrsts}
+		</if>
+		<if test='ownerky != null and ownerky != ""'>
+			AND ownerky = #{ownerky}
+		</if>
+    
+		<if test='groupby != null and groupby != ""'>
+			GROUP BY TPIT.SAATC06
+		</if>
+
+    ORDER BY FIELD(SHTRPTY, 'START', 'ARRIVAL', 'END'), VHPLNIT ASC , DESTKEY ASC , DESTORD ASC , SAATC10 ASC 
+  </select>
+
+
+
+  <select id="selectTplnitListByVhplnkyList" resultType="com.logistics.tm.domain.TMAppDTO">
+    /* selectTplnitListByVhplnkyList */
+    SELECT
+      /* TPIT.* */
+      TPIT.COMPKEY
+      , TPIT.VHPLNKY
+      , TPIT.VHPLNIT
+      , TPIT.SHTRPTY
+      , TPIT.WAREKEY
+      , TPIT.DESTORD
+      , TPIT.CUSTKEY
+      , TPIT.DESTKEY
+      , TPIT.SHTRSTS
+      , TPIT.OWNERKY
+      , TPIT.SKUMKEY
+      , TPIT.SKUDESC
+      , TPIT.SKUSKEY
+      , TPIT.SOITQTY
+      , TPIT.TRITQTY
+      , TPIT.SUOMKEY
+      , TPIT.TRUNTYP
+      , TPIT.TRUNPID
+      , TPIT.SAATN01
+      , TPIT.SAATN02
+      , TPIT.SAATN03
+      , TPIT.SAATN04
+      , TPIT.SAATN05
+      , TPIT.SAATC01
+      , TPIT.SAATC02
+      , TPIT.SAATC03
+      , TPIT.SAATC04
+      , TPIT.SAATC05
+      , TPIT.SAATC06
+		<if test='groupby != null and groupby != ""'>
+			, MIN(TPIT.SAATC10) as SAATC10MIN
+			, MAX(TPIT.SAATC10) as SAATC10MAX
+      , MIN(TPIT.SAATC05) as SAATC05MIN
+		</if>
+      , TPIT.SAATC07
+      , TPIT.SAATC08
+      , TPIT.SAATC09
+      , TPIT.SAATC10
+      <!-- , TPIT.SAATC11
+      , TPIT.SAATC12 -->
+      , TPIT.RETODYN
+      , TPIT.REPITDT
+      , TPIT.REPITTM
+      , TPIT.RSNCODE
+      , TPIT.RSNREMK
+      , TPIT.COPODKY
+      , TPIT.COPODIT
+      , TPIT.COOUTKY
+      , TPIT.COOUTIT
+      , TPIT.OERETKY
+      , TPIT.OERETIT
+      , TPIT.EOASNKY
+      , TPIT.EOASNIT
+      , TPIT.RCVDCKY
+      , TPIT.RCVDCIT
+      , TPIT.REFSODC
+      , TPIT.REFSOIT
+      , TPIT.REFDNDC
+      , TPIT.REFDNIT
+      , TPIT.REFSDDC
+      , TPIT.REFSDIT
+      , fn_com_todate(TPIT.CREDATE) as CREDATE
+      , fn_com_totime(TPIT.CRETIME) as CRETIME
+      , fn_sy_usernam(COMPKEY, TPIT.CREUSER) as CREUSER
+      , fn_com_todate(TPIT.LMODATE) as LMODATE
+      , fn_com_totime(TPIT.LMOTIME) as LMOTIME
+      , fn_sy_usernam(COMPKEY, TPIT.LMOUSER) as LMOUSER
+
+      , IT.DENAMLC, IT.DENAMKO, IT.DENAMEN
+      , IT2.WANAMLC, IT2.WHNAMKO, IT2.WANAMEN
+      , PTN.PTNAMLC, PTN.PTADDR1, PTN.PTADDR2, PTN.PTADDR3
+
+    FROM TPLNIT TPIT
+
+    LEFT OUTER JOIN (
+        SELECT DEST.COMPKEY as COMPKEY2, DEST.DESTKEY as DESTKEY2,
+          DEST.DENAMLC, DEST.DENAMKO, DEST.DENAMEN
+        FROM MDESMA DEST
+      ) IT
+      ON TPIT.COMPKEY = IT.COMPKEY2
+      AND TPIT.DESTKEY = IT.DESTKEY2
+
+    LEFT OUTER JOIN (
+        SELECT DEST.COMPKEY as COMPKEY3, DEST.DESTKEY as DESTKEY3,
+          DEST.DENAMLC as WANAMLC, DEST.DENAMKO as WHNAMKO, DEST.DENAMEN as WANAMEN
+        FROM MDESMA DEST
+      ) IT2
+      ON TPIT.COMPKEY = IT2.COMPKEY3
+        AND TPIT.WAREKEY = IT2.DESTKEY3
+
+    LEFT OUTER JOIN (
+      SELECT PTN.PTNRKEY, PTN.PTNAMLC, PTN.PTADDR1, PTN.PTADDR2, PTN.PTADDR3, PTN.COMPKEY as COMPKEY4
+        FROM MPTNMA PTN
+    ) PTN
+    ON TPIT.COMPKEY = PTN.COMPKEY4
+      AND TPIT.CUSTKEY = PTN.PTNRKEY
+
+    WHERE 1=1
+      AND COMPKEY = #{userData.compkey}
+      AND VHPLNKY IN (
+        <foreach collection="vhplnky_list" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+    
+		<if test='groupby != null and groupby != ""'>
+			GROUP BY TPIT.SAATC06
+		</if>
+
+    ORDER BY FIELD(SHTRPTY, 'START', 'ARRIVAL', 'END'), VHPLNIT ASC , DESTKEY ASC , DESTORD ASC , SAATC10 ASC 
+
+  </select>
+
+
+<!-- 이하 delivery TPLNHD 및 TPLNIT 의 action (업데이트) -->
+
+<!-- 상차 -->
+  <!-- /delivery/load -->
+  <update id="deliveryLoad" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryLoad 쓰면안됨 -->
+    update TPLNHD T
+      set
+        T.PLNSTAT = 'LOADING'
+
+      , T.LMODATE = to_char(now(), 'YYYYMMDD')
+      , T.LMOTIME = to_char(now(), 'hh24miss')
+      , T.VEHICKY = #{vehicky}
+      , T.USERACT = #{userData.useract}
+
+      , T.LMOUSER = #{userData.useract}
+
+    where 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      AND T.VHPLNKY = #{vhplnky}
+  </update>
+  <update id="deliveryLoad2" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryLoad2 -->
+    <foreach collection="vhplnit_list" item="_vhplnit" separator=";">
+      update TPLNIT IT
+        set
+            IT.SHTRSTS = 'LOADING'
+        , IT.REPITDT = to_char(now(), 'YYYYMMDD')
+        , IT.REPITTM = to_char(now(), 'hh24miss')
+          , IT.LMODATE = to_char(now(), 'YYYYMMDD')
+          , IT.LMOTIME = to_char(now(), 'hh24miss')
+          , IT.LMOUSER = #{userData.useract}
+          , IT.TRITQTY = (select SOITQTY from TPLNIT IT2 where IT2.COMPKEY = #{userData.compkey} AND IT2.VHPLNKY = #{vhplnky} AND IT2.VHPLNIT = #{_vhplnit})
+
+        where 1=1
+          AND IT.COMPKEY = #{userData.compkey}
+          AND IT.VHPLNKY = #{vhplnky}
+          <!-- AND IT.VHPLNIT = #{_vhplnit} -->
+        <if test='destkey != null and destkey != ""'>
+        AND IT.DESTKEY = #{destkey}
+        </if>
+    </foreach>
+  </update>
+  <update id="deliveryLoad3" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryLoad3 -->
+    <foreach collection="vhplnit_list" item="_vhplnit" separator=";">
+      UPDATE OCOSAL T,
+        inner join  
+        (
+          SELECT COMPKEY, COOUTKY, SAATC06
+            FROM TPLNIT
+            WHERE COMPKEY = #{userData.compkey}
+              AND VHPLNKY = #{vhplnky}
+              AND VHPLNIT IN (
+                <foreach collection="vhplnit_list" item="_vhplnit" separator=",">
+                  #{_vhplnit}
+                </foreach>
+              )
+        ) S
+        
+        ON  T.COMPKEY = S.COMPKEY
+        AND T.SAATC06 = S.SAATC06
+        AND T.COOUTKY = S.COOUTKY
+      SET T.TRNSTAT = 'UNLOADING'
+      WHERE 1=1
+        <!-- AND T.COOUTKY = S.COOUTKY
+        AND T.COOUTIT = S.COOUTIT -->
+        <!-- <if test='destkey != null and destkey != ""'>
+        AND T.DESTKEY #{destkey}
+        </if>
+        <if test='compkey != null and compkey != ""'>
+        AND T.COMPKEY = #{compkey}
+        </if>
+        <if test='warekey != null and warekey != ""'>
+        AND T.TOWARKY = #{warekey}
+        </if>
+        <if test='postdat != null and postdat != ""'>
+        AND T.POSTDAT = #{postdat}
+        </if>
+        <if test='saatc06 != null and saatc06 != ""'>
+        AND T.SAATC06 = #{saatc06}
+        </if> -->
+    </foreach>
+  </update>
+    <!-- deliveryLoad4 : 빠짐 -->
+  <update id="deliveryLoad4" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <foreach collection="vhplnit_list" item="_vhplnit" separator=";">
+      update OCOPUR OP
+        set
+          <!-- OP.TRNSTAT = 'LOADING' -->
+          OP.PURSTAT = 'LOADING'
+        where 1=1
+          AND OP.COPODKY = (
+            SELECT IT.COPODKY
+              FROM TPLNIT IT
+              WHERE 1=1
+                AND IT.COMPKEY = #{userData.compkey}
+                AND IT.VHPLNKY = #{vhplnky}
+                AND IT.VHPLNIT = #{_vhplnit}
+          )
+          AND OP.COPODIT = (
+            SELECT IT.COPODIT
+              FROM TPLNIT IT
+              WHERE 1=1
+                AND IT.COMPKEY = #{userData.compkey}
+                AND IT.VHPLNKY = #{vhplnky}
+                AND IT.VHPLNIT = #{_vhplnit}
+          )
+    </foreach>
+  </update>
+
+<!-- 출발 보고 -->
+  <!-- /delivery/start -->
+  <update id="deliveryStart" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryStart -->
+    update TPLNHD T
+      set
+        T.STPITDT = to_char(now(), 'YYYYMMDD')
+      , T.STPITTM = to_char(now(), 'hh24miss')
+      , T.VEHICKY = #{vehicky}
+      , T.PLNSTAT = 'START'
+      , T.USERACT = #{userData.useract}
+
+      , T.LMODATE = to_char(now(), 'YYYYMMDD')
+      , T.LMOTIME = to_char(now(), 'hh24miss')
+      , T.LMOUSER = #{userData.useract}
+
+    where 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      AND T.VHPLNKY = #{vhplnky}
+      <!-- AND T.PLNSTAT = 'LOADING' -->
+  </update>
+
+<!-- 하차지 도착예정 / 입차승인요청 -->
+  <!-- /delivery/request-for-arrive -->
+  <update id="deliveryArriveRequest" parameterType="com.logistics.tm.domain.TMAppDTO">
+    update TVHENT T
+      set
+        T.ENTUSER = #{userData.useract}
+      , T.ENTRQDT = to_char(now(), 'YYYYMMDD')
+      , T.ENTRQTM = to_char(now(), 'hh24miss')
+      , T.ENTEPDT = #{entepdt}
+      , T.ENTEPTM = #{enteptm}
+      , T.LMOUSER = #{userData.useract}
+
+    WHERE 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      AND T.WAREKEY = #{warekey}
+      AND T.VHPLNKY = #{vhplnky}
+  </update>
+
+  <select id="getCountTvhent" parameterType="com.logistics.tm.domain.TMAppDTO" resultType="int">
+
+    SELECT COUNT(T.VHPLNKY) FROM TVHENT T
+      WHERE T.COMPKEY = #{userData.compkey}
+        AND T.WAREKEY = #{warekey}
+        AND T.VHPLNKY = #{vhplnky}
+  </select>
+
+  <insert id="deliveryArriveRequestNew" parameterType="com.logistics.tm.domain.TMAppDTO">
+    insert into TVHENT (
+      COMPKEY, WAREKEY, VHPLNKY,
+      ENTUSER,
+      ENTRQDT, ENTRQTM,
+      ENTEPDT, ENTEPTM,
+
+      CREDATE, CRETIME, CREUSER
+    )
+    values
+      (
+        #{userData.compkey}, #{warekey}, #{vhplnky},
+        #{userData.useract},
+        <!-- {ENTRQDT}, #{ENTRQTM},  -->
+        to_char(now(), 'YYYYMMDD'),
+        to_char(NOW(), 'hh24miss'),
+        #{entepdt}, #{enteptm},
+
+        to_char(now(), 'YYYYMMDD'),
+        to_char(NOW(), 'hh24miss'),
+        #{userData.useract}
+      )
+  </insert>
+
+  <select id="selectTvhentList" resultType="com.logistics.tm.domain.TMAppDTO">
+    /* selectTvhentList */
+    SELECT
+      T.COMPKEY
+    ,  T.WAREKEY
+    ,  T.VHPLNKY
+    ,  T.ENTSTAT
+    ,  T.ENTUSER
+    ,  T.ENTRQDT
+    ,  T.ENTRQTM
+    ,  T.ENTEPDT
+    ,  T.ENTEPTM
+    ,  T.ENTPERM
+    ,  T.ENTPMDT
+    ,  T.ENTPMTM
+    ,  T.ENTAVDT
+    ,  T.ENTAVTM
+    FROM TVHENT T
+    WHERE 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      <!-- AND T.COMPKEY = #{compkey} -->
+      AND T.WAREKEY = #{warekey}
+      <!-- AND T.VHPLNKY = #{vhplnky} -->
+    <if test='vhplnky != null and vhplnky != ""'>
+      AND vhplnky = #{vhplnky}
+    </if>
+    <if test='vhplnky_list != null and vhplnky_list != "" and vhplnky_list.length > 0'>
+      AND vhplnky_list IN (
+        <foreach collection="vhplnky_list" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+    </if>
+  </select>
+
+<!-- 서열확인 -->
+  <!-- /delivery/check-entering -->
+<!-- SP_TM_RANK_VIOLATION 호출 -->
+<select id="checkEntering" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.tm.domain.TMAppDTO">
+  /* SP_TM_RANK_VIOLATION */
+
+  CALL SP_TM_RANK_VIOLATION(
+   	    #{userData.compkey}
+      , #{vhplnky}
+      , #{vhlolat}
+      , #{vhlolon}
+
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}    <!--  오류 -1, 서열위반=1, 정상=0  -->
+    )
+</select>
+
+<!-- 하차지 도착 -->
+  <!-- /delivery/arrive --><!-- deliveryArrive -->
+  <update id="deliveryArrive" parameterType="com.logistics.tm.domain.TMAppDTO">
+
+    <foreach collection="vhplnit_list" item="_vhplnit" separator=";">
+      update TPLNIT IT
+        set
+          IT.SHTRSTS = 'ARRIVAL'
+        , IT.REPITDT = to_char(now(), 'YYYYMMDD')
+        , IT.REPITTM = to_char(now(), 'hh24miss')
+
+        , IT.LMODATE = to_char(now(), 'YYYYMMDD')
+        , IT.LMOTIME = to_char(now(), 'hh24miss')
+        , IT.LMOUSER = #{userData.useract}
+
+      where 1=1
+        AND IT.COMPKEY = #{userData.compkey}
+        AND IT.VHPLNKY = #{vhplnky}
+        <!-- AND IT.VHPLNIT = #{_vhplnit} -->
+        <if test='destkey != null and destkey != ""'>
+        AND IT.DESTKEY = #{destkey}
+        </if>
+    </foreach>
+  </update>
+
+<!-- 하차 -->
+  <!-- /delivery/unload -->
+  <update id="deliveryUnload" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryUnload -->
+    <foreach collection="vhplnit_list" item="_vhplnit"  separator=";">
+      update TPLNIT IT
+        set
+          IT.SHTRSTS = 'UNLOADING'
+        , IT.REPITDT = to_char(now(), 'YYYYMMDD')
+        , IT.REPITTM = to_char(now(), 'hh24miss')
+
+        , IT.LMODATE = to_char(now(), 'YYYYMMDD')
+        , IT.LMOTIME = to_char(now(), 'hh24miss')
+        , IT.LMOUSER = #{userData.useract}
+
+      where 1=1
+        AND IT.COMPKEY = #{userData.compkey}
+        AND IT.VHPLNKY = #{vhplnky}
+        <!-- saatc06 으로 묶었기 때문에 하차할때 destkey로 변경 -->
+        <!-- AND IT.VHPLNIT = #{_vhplnit} -->
+        <if test='destkey != null and destkey != ""'>
+        AND IT.DESTKEY = #{destkey}
+        </if>
+    </foreach>
+  </update>
+  <update id="deliveryUnload2" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryUnload2 -->
+    UPDATE OCOSAL T
+      inner join  
+      (
+        SELECT COMPKEY, COOUTKY, SAATC06
+          FROM TPLNIT
+          WHERE COMPKEY = #{userData.compkey}
+            AND VHPLNKY = #{vhplnky}
+            AND VHPLNIT IN (
+              <foreach collection="vhplnit_list" item="_vhplnit" separator=",">
+                #{_vhplnit}
+              </foreach>
+            )
+      ) S
+        ON  T.COMPKEY = S.COMPKEY
+        AND T.SAATC06 = S.SAATC06
+        AND T.COOUTKY = S.COOUTKY
+      SET T.TRNSTAT = 'UNLOADING'
+      WHERE 1=1
+      <!--  AND T.COMPKEY = S.COMPKEY
+        AND T.SAATC06 = S.SAATC06
+        AND T.COOUTKY = S.COOUTKY -->
+  </update>
+    <!-- deliveryUnload3 : 빠짐 -->
+  <update id="deliveryUnload3" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <foreach collection="vhplnit_list" item="_vhplnit" separator=";">
+      update OCOPUR OP
+        set
+          <!-- OP.TRNSTAT = 'UNLOADING' -->
+          OP.PURSTAT = 'UNLOADING'
+        where 1=1
+          AND OP.COPODKY = (
+            SELECT IT.COPODKY
+              FROM TPLNIT IT
+              WHERE 1=1
+                AND IT.COMPKEY = #{userData.compkey}
+                AND IT.VHPLNKY = #{vhplnky}
+                AND IT.VHPLNIT = #{_vhplnit}
+          )
+          AND OP.COPODIT = (
+            SELECT IT.COPODIT
+              FROM TPLNIT IT
+              WHERE 1=1
+                AND IT.COMPKEY = #{userData.compkey}
+                AND IT.VHPLNKY = #{vhplnky}
+                AND IT.VHPLNIT = #{_vhplnit}
+          )
+    </foreach>
+  </update>
+    <!-- deliveryUnload4 -->
+  <update id="deliveryUnload4" parameterType="com.logistics.tm.domain.TMAppDTO">
+    update TPLNHD T
+      set
+        T.VEHICKY = #{vehicky}
+      , T.PLNSTAT = 'UNLOADING'
+      , T.VEHICKY = #{vehicky}
+      , T.USERACT = #{userData.useract}
+
+      , T.LMODATE = to_char(now(), 'YYYYMMDD')
+      , T.LMOTIME = to_char(now(), 'hh24miss')
+      , T.LMOUSER = #{userData.useract}
+
+    where 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      AND T.VHPLNKY = #{vhplnky}
+  </update>
+
+<!-- 운행 완료 -->
+  <!-- /delivery/finish -->
+  <update id="deliveryFinish" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryFinish -->
+    update TPLNHD T
+      set
+        T.TRFINDT = to_char(now(), 'YYYYMMDD')
+      , T.TRFINTM = to_char(now(), 'hh24miss')
+      , T.VEHICKY = #{vehicky}
+      , T.PLNSTAT = 'FINISH'
+      , T.USERACT = #{userData.useract}
+
+      , T.LMODATE = to_char(now(), 'YYYYMMDD')
+      , T.LMOTIME = to_char(now(), 'hh24miss')
+      , T.LMOUSER = #{userData.useract}
+
+    where 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      AND T.VHPLNKY = #{vhplnky}
+      <!-- AND T.PLNSTAT = 'UNLOADING' -->
+  </update>
+
+  <!-- 하차인증 -->
+  <!-- /delivery/certify -->
+  <insert id="deliveryCertify" parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryCertify -->
+    insert into TPLFIT (
+      COMPKEY, VHPLNKY, CUSTKEY, DESTKEY,
+      FTFTKNO, HOTAKTY, 
+
+      SIGSVIP, SIGFLPH, SIGFLNM,
+      PICSVIP, PICFLPH, PICFLNM,
+
+      trnmemo, retmemo,
+
+      <!-- CREDATE, CRETIME,  -->
+      CREUSER
+    )
+
+    values
+    <!-- <foreach collection="list" item="item" separator=","> -->
+      (
+        #{userData.compkey}, #{vhplnky}, #{custkey}, #{destkey},
+        FN_TM_FTFTKNO(), #{hotakty},
+
+        #{sigsvip}, #{sigflph}, #{sigflnm},
+        #{picsvip}, #{picflph}, #{picflnm},
+
+        #{trnmemo}, #{retmemo},
+
+        <!-- date_format(now(), 'YYYYMMDD'),
+        to_char(NOW(), 'hh24miss'), -->
+        #{userData.useract}
+      )
+    <!-- </foreach> -->
+  </insert>
+
+  <!-- 위치 위경도 -->
+  <!-- /delivery/position -->
+  <insert id="deliveryPosition" parameterType="com.logistics.tm.domain.TMAppDTO">
+    insert into TVLOHI (
+      COMPKEY, VHPLNKY,
+      VHLOGSQ,
+      WAREKEY, SHTRPTY,
+      REPITDT, REPITTM,
+      VHLOLAT, VHLOLON,
+      <!-- CREDATE, CRETIME,  -->
+      CREUSER
+    )
+    values (
+      #{userData.compkey}, #{vhplnky},
+      FN_TM_VHLOGSQ(),
+      #{warekey}, #{shtrpty},
+      #{repitdt}, #{repittm},
+
+      #{vhlolat}, #{vhlolon},
+
+      <!-- date_format(now(), 'YYYYMMDD'),
+      to_char(NOW(), 'hh24miss'), -->
+      #{userData.useract}
+    )
+  </insert>
+
+  <!-- /delivery/done --><!-- deliveryDone -->
+  <!-- <update id="deliveryDone" parameterType="com.logistics.tm.domain.TMAppDTO">
+
+    update TPLNHD T
+      set
+        T.PLNSTAT = 'UNLOADING'
+      , T.TRFINDT = to_char(now(), 'YYYYMMDD')
+      , T.TRFINTM = to_char(now(), 'hh24miss')
+      , T.VEHICKY = #{vehicky}
+
+      , T.LMODATE = to_char(now(), 'YYYYMMDD')
+      , T.LMOTIME = to_char(now(), 'hh24miss')
+      , T.LMOUSER = #{userData.useract}
+
+    where 1=1
+      AND T.COMPKEY = #{userData.compkey}
+      AND T.VHPLNKY = #{vhplnky}
+  </update> -->
+
+  <select id="selectOcosalDestkeyGroup" resultType="java.util.HashMap">
+
+  <!-- 쓰지 않습니다. -->
+    SELECT count(*) as count, destkey
+    <!-- SELECT 1 as count, destkey -->
+      FROM OCOSAL
+    WHERE COMPKEY = #{userData.compkey}
+
+		<if test='towarky != null and towarky != ""'>
+			AND towarky = #{towarky}
+		</if>
+    <if test='postdat_from != null and postdat_from != ""'>
+      AND POSTDAT  <![CDATA[ >= ]]> #{postdat_from}
+    </if>
+    <if test='postdat_in != null and postdat_in != "" and postdat_in.length > 0'>
+      AND POSTDAT in (
+        <foreach collection="postdat_in" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+    </if>
+		<if test='salstat != null and salstat != ""'>
+			AND salstat = #{salstat}
+		</if>
+		<if test='trnstat != null and trnstat != ""'>
+			AND trnstat = #{trnstat}
+		</if>
+      and DOCTYPE in (
+        <foreach collection="doctype_list" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+
+    group by destkey
+    order by destkey
+  </select>
+
+  <select id="selectOcosalForTPLListTEST" resultType="com.logistics.tm.domain.TMAppDTO">
+    	SELECT
+    	  <!-- concat(COMPKEY, COOUTKY, COOUTIT) as ROWKEY
+		,  -->
+    COMPKEY
+		, COOUTKY
+		, COOUTIT
+		, DOCCATE
+		, DOCTYPE
+		, POSTDAT
+		, SALDATE
+		, SALTIME
+		, CUSTKEY
+		, SALMEMO
+		, SALRQDT
+		, SALRQTM
+
+    , DESTKEY
+		, OWNERKY
+		, SKUMKEY
+		, SKUDESC
+		, SKUSKEY
+		, SOITQTY
+		, RGITQTY
+		, SUOMKEY
+		, DCTCTYP
+		, RSNCODE
+		, RSNDESC
+
+    , INBSTAT
+    , OUBSTAT
+    , TRNSTAT
+
+		, ORDGR01
+		, ORDGR02
+		, ORDGR03
+    , SAATN01
+    , SAATN02
+    , SAATN03
+    , SAATN04
+    , SAATN05
+    , SAATC01
+    , SAATC02
+    , SAATC03
+    , SAATC04
+    , SAATC05
+    , SAATC06
+		<if test='destlimit != null and destlimit != ""'>
+			, MIN(SAATC10) as SAATC10MIN
+			, MAX(SAATC10) as SAATC10MAX
+      , MIN(SAATC05) as SAATC05MIN
+		</if>
+    , SAATC07
+    , SAATC08
+    , SAATC09
+    , SAATC10
+    , SAATC11
+    , SAATC12
+
+		, CLOSLYN
+		, CLODATE
+		, CLOTIME
+		, CLOUSER
+
+		, CREDATE
+		, CRETIME
+		, CREUSER
+		, LMODATE
+		, LMOTIME
+		, LMOUSER
+
+    <!-- <if test='destlimit !=null and destlimit !=""'>
+		FROM
+    (
+      SELECT
+        -dense_rank row_number rank
+        row_number() OVER(partition by destkey order by COOUTKY, COOUTIT) destlimit,
+        OS.*
+      from OCOSAL OS
+    ) OS
+    WHERE destlimit <![CDATA[ <= ]]> #{destlimit}
+
+    </if> -->
+
+    <!-- <if test='destlimit ==null or destlimit =="" '> -->
+		FROM OCOSAL OS
+      <if test='destlimit !=null and destlimit !=""'>
+      FORCE INDEX(IX_OCOSAL04)
+      <!-- ㄴ COMPKEY, TOWARKY, POSTDAT, SAATC06 인덱스임 -->
+      </if>
+    	WHERE 1=1
+    <!-- </if> -->
+    	and COMPKEY = #{userData.compkey}
+
+		<if test='towarky != null and towarky != ""'>
+			AND towarky = #{towarky}
+		</if>
+    <if test='postdat_from != null and postdat_from != ""'>
+      AND POSTDAT  <![CDATA[ >= ]]> #{postdat_from}
+    </if>
+    <if test='postdat_in != null and postdat_in != "" and postdat_in.length > 0'>
+      AND POSTDAT in (
+        <foreach collection="postdat_in" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+    </if>
+		<if test='salstat != null and salstat != ""'>
+			AND salstat = #{salstat}
+		</if>
+		<if test='trnstat != null and trnstat != ""'>
+			AND trnstat = #{trnstat}
+		</if>
+      <!-- and WAREKEY = #{warekey} -->
+      <!-- and DOCCATE = '200' -->
+      and DOCTYPE in (
+        <foreach collection="doctype_list" item="item" separator=",">
+          #{item}
+        </foreach>
+      )
+      <!-- and DOCTYPE in ('210','211','220','230','240','280','289','290') -->
+
+    <if test='destkey !=null and destkey !=""'>
+      AND DESTKEY = #{destkey}
+    </if>
+
+      <if test='destlimit !=null and destlimit !=""'>
+        GROUP BY SAATC06 
+        ORDER BY SAATC11
+        LIMIT #{destlimit}
+      </if>
+      <if test='offset !=null and offset !=""'>
+        OFFSET #{offset}
+      </if>
+    <!-- ORDER BY SAATC11 -->
+
+  </select>
+
+  <select id="deliveryShuttleVehicleStatusList" resultType="com.logistics.tm.domain.TMAppDTO">
+SELECT
+    SHTRTKY,
+    SHTRTNM,
+    VEHICKY,
+    POSTDAT,
+    VHCSNAM,
+    COMCDTX, 
+    SHTRSTS,
+    LASTTIM,
+    VCHRANK,
+    VCIRANK
+FROM
+    (
+    SELECT
+        TR.SHTRTKY,
+        TR.SHTRTNM ,
+        TS.VEHICKY,
+        TV.VHCSNAM,
+        TP.POSTDAT,
+        TP.VHPDATE,
+        TP.COMCDTX, 
+        TP.SHTRSTS ,
+        TO_CHAR(TP.LASTTIM,'YYYY-MM-DD HH24:MI:SS') as LASTTIM,
+        TP.VCHRANK,
+        TP.VCIRANK,
+        TP.VHPLNKY
+    FROM TSHRHD TR
+    INNER JOIN TSHRVH TS on TR.COMPKEY = TS.COMPKEY AND TR.WAREKEY = TS.WAREKEY AND TR.SHTRTKY = TS.SHTRTKY
+    INNER JOIN TVHCMA TV on TR.COMPKEY = TV.COMPKEY AND TR.WAREKEY = TV.WAREKEY AND TS.VEHICKY = TV.VEHICKY
+    INNER JOIN (
+        SELECT
+            TH.COMPKEY,
+            TH.WAREKEY,
+            TH.VEHICKY,
+            TH.POSTDAT,
+            TH.VHPDATE,
+            TH.VHPLNKY ,
+            RANK() OVER ( PARTITION BY TH.VEHICKY ORDER BY  CONCAT(TH.VHPDATE, TH.VHPTIME) DESC ) as VCHRANK ,
+            VC.COMCDOR,
+            VC.COMCDTX,
+            TI.SHTRSTS ,
+            RANK() OVER (PARTITION BY TH.VHPLNKY ORDER BY VC.COMCDOR DESC) as VCIRANK , 
+            MAX( GREATEST( CONCAT(TH.STPITDT, TH.STPITTM) , CONCAT(TH.TRFINDT, TH.TRFINTM), CONCAT(TI.REPITDT, TI.REPITTM) ) )  AS LASTTIM 
+        FROM  TPLNHD TH
+        INNER JOIN TPLNIT TI ON TH.COMPKEY = TI.COMPKEY  AND TH.VHPLNKY = TI.VHPLNKY
+        INNER JOIN V_MCODEM VC ON TI.COMPKEY = VC.COMPKEY  AND VC.COMCDKY = 'SHTRSTS' AND VC.ACTYN = 'Y'  AND TI.SHTRSTS = VC.COMCDVL
+        WHERE
+            TH.COMPKEY = #{userData.compkey}
+            AND TH.WAREKEY = #{warekey}
+            AND TH.VHPDATE = #{vhpdate}
+            AND TH.SHTRTKY = #{shtrtky}
+        GROUP BY
+            TH.COMPKEY,
+            TH.WAREKEY,
+            TH.VEHICKY,
+            TH.POSTDAT,
+            TH.VHPDATE,
+            TH.VHPLNKY,
+            VC.COMCDOR,
+            VC.COMCDTX,
+            TI.SHTRSTS 
+    ) TP on
+        TR.COMPKEY = TP.COMPKEY
+        AND TR.WAREKEY = TP.WAREKEY
+        AND TV.VEHICKY = TP.VEHICKY
+    WHERE
+        TR.COMPKEY = #{userData.compkey}
+        AND TR.WAREKEY = #{warekey}
+        AND TP.VHPDATE = #{vhpdate}
+        ) AA
+WHERE 1 = 1
+     AND AA.VCHRANK = 1 
+     AND AA.VCIRANK = 1
+  </select>
+
+  <select id="selectOcosalForTPLList" resultType="com.logistics.tm.domain.TMAppDTO">
+    SELECT COMPKEY  
+      , MIN(COOUTKY) as COOUTKY
+      , MIN(COOUTIT) as COOUTIT
+      , POSTDAT 
+      , CUSTKEY
+      , DESTKEY
+      <!-- , MAX(SALMEMO) AS SALMEMO    -->
+      <!-- , SUM(SOITQTY) AS SOITQTY, SUM(RGITQTY) AS RGITQTY      -->
+      <!-- , MAX(SAATC03) as SAATC03  -->
+      , MIN(SAATC05) as SAATC05MIN
+      , SAATC06  
+      <!-- , ROW_NUMBER() OVER (PARTITION BY SAATC06  ORDER BY SAATC11 DESC) as RANK -->
+      , SAATC08
+      , MIN(SAATC10) as SAATC10MIN, MAX(SAATC10) as SAATC10MAX
+      <!-- , SAATC11 -->
+      , SAATC13 
+    FROM OCOSAL OS 
+      FORCE INDEX(IX_OCOSAL04)  
+      WHERE 1=1 
+          and COMPKEY = #{userData.compkey}
+
+        <if test='towarky != null and towarky != ""'>
+          AND towarky = #{towarky}
+        </if>
+        <if test='postdat_from != null and postdat_from != ""'>
+          AND POSTDAT  <![CDATA[ >= ]]> #{postdat_from}
+        </if>
+        <if test='postdat_in != null and postdat_in != "" and postdat_in.length > 0'>
+          AND POSTDAT in (
+            <foreach collection="postdat_in" item="item" separator=",">
+              #{item}
+            </foreach>
+          )
+        </if>
+        <if test='salstat != null and salstat != ""'>
+          AND salstat = #{salstat}
+        </if>
+        <if test='trnstat != null and trnstat != ""'>
+          AND trnstat = #{trnstat}
+        </if>
+          <!-- and WAREKEY = #{warekey} -->
+          <!-- and DOCCATE = '200' -->
+          and DOCTYPE in (
+            <foreach collection="doctype_list" item="item" separator=",">
+              #{item}
+            </foreach>
+          )
+          <!-- and DOCTYPE in ('210','211','220','230','240','280','289','290') -->
+
+        <if test='destkey !=null and destkey !=""'>
+          AND DESTKEY = #{destkey}
+        </if>
+        <!-- <if test='saatc13 !=null and saatc13 !="" and !saatc13.startsWith("!")'> -->
+        <if test='saatc13 !=null and saatc13 !=""'>
+          AND SAATC13 = #{saatc13}
+        </if>
+        <if test='saatc13not !=null and saatc13not !=""'>
+          AND SAATC13 != #{saatc13not}
+        </if>
+      GROUP BY COMPKEY  
+          , POSTDAT 
+          , CUSTKEY
+          , DESTKEY    
+          , SAATC06  
+          , SAATC08 
+          , SAATC13
+          <!-- , SAATC11 -->
+      ORDER BY SAATC11  
+      <if test='destlimit != null and destlimit != ""'>
+      LIMIT #{destlimit}
+      </if>
+  </select>
+
+  <select id="selectOcopurForTPLList" resultType="com.logistics.om.domain.OcopurVO">
+    	SELECT
+        <!-- * -->
+        COMPKEY
+        , COPODKY
+        , COPODIT
+        , DOCCATE
+        , DOCTYPE
+        , PURSTAT
+        , PURDATE
+        , PURTIME
+        , CUSTKEY
+        , DESTKEY
+        , VENDKEY
+        , OWNERKY
+        , SKUSKEY
+        , SKUMKEY
+        , SKUDESC
+        , POITQTY
+        , PUOMKEY
+        , RCHSQTY
+        , PODMEMO
+        , PODELYN
+        , RCVWHKY
+        , REQDATE
+        , REQTIME
+        , REQMEMO
+        , COOUTKY
+        , COOUTIT
+        , VNDCFYN
+        , VNDCFDT
+        , VNDCFTM
+        , DCTCTYP
+        , CREDATE
+        , CRETIME
+        , CREUSER
+
+      FROM OCOPUR OP
+        WHERE 1=1
+        and COMPKEY = #{userData.compkey}
+        and DOCTYPE = #{doctype}
+
+  </select>
+
+<select id="selectMdesmaList" resultType="com.logistics.md.domain.MdesmaDTO">
+  SELECT
+    COMPKEY
+    , PTNRKEY
+    , DESTKEY
+    , DENAMLC
+    , DENATCD
+    , DENAMKO
+    , DENAMEN
+    , DEADDR1
+    , DEADDR2
+    , DEADDR3
+    , DEPOSCD
+    , DESTLAT
+    , DESTLON
+    , DEUSEYN
+  FROM MDESMA
+  WHERE 1=1
+    AND COMPKEY = #{userData.compkey}
+    <!-- AND PTNRKEY = #{userData.ptnrkey} -->
+    AND PTNRKEY = #{warekey}
+    AND DEUSEYN = 'Y'
+
+</select>
+
+<select id="selectSkuwcList" resultType="com.logistics.md.domain.MskuwcDTO">
+  SELECT
+    COMPKEY
+    , WAREKEY
+    , OWNERKY
+    , SKUMKEY
+    , SKUDESC
+    , SKUTYPE
+    , CUSKUKY
+    , CUSKUNM
+    , VDSKUKY
+    , VDSKUNM
+    , SKUSKEY
+    , SKUSDSC
+    , VENDKEY
+    , PACKKEY
+    , TRUNTYP
+    , PROPQTY
+    , MINIQTY
+    , SALFQTY
+   FROM MSKUWC SKU
+   WHERE COMPKEY = #{userData.compkey}
+      AND OWNERKY = #{userData.ownerky}
+      <!-- AND VENDKEY = #{userData.vendkey} -->
+      AND VENDKEY = #{userData.ptnrkey}
+</select>
+
+<select id="getNewVhplnky" resultType="String">
+  select FN_TM_VHPLNKY() as 'vhplnky'
+</select>
+
+<select id="getNewCopodky" resultType="String">
+  select FN_OM_COPODKY() as 'copodky'
+</select>
+
+<select id="getNewEoasnky" resultType="String">
+  select FN_WM_EOASNKY() as 'eoasnky'
+</select>
+
+
+<select id="hasBtgthdCount" resultType="int">
+  select count(*) FROM BTGTHD 
+    WHERE COMPKEY = #{userData.compkey}
+      AND WAREKEY = #{warekey}
+      AND BTHYYMM = #{bthyymm}
+</select>
+
+<!-- SP_TM_PLAN_LOADING 호출 -->
+<!-- <select id="deliveryOutStart" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.tm.domain.TMAppDTO"> -->
+<select id="deliveryOutStartList" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="hashmap">
+
+  <!-- $vhplnky = FN_TM_VHPLNKY() -->
+  <foreach collection="list" item="item" index="index" separator=";">
+  /*sp_tm_plan_loading*/
+  CALL SP_TM_PLAN_LOADING
+ 	 (
+   	    #{userData.compkey}
+   	    <!-- #{item.compkey} -->
+      , #{item.warekey}
+      , #{item.postdat}
+      , #{vhplnky}
+      <!-- , $vhplnky -->
+      , #{item.saatc06}
+      , #{item.vehicky}
+      , #{item.shtrtky}
+      , #{userData.useract}
+      <!-- , #{item.useract} -->
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	 )
+  </foreach>
+</select>
+
+<!-- deliveryOutSuspend -->
+<update id="deliveryOutSuspend"  parameterType="com.logistics.tm.domain.TMAppDTO">
+    <!-- deliveryOutSuspend -->
+    <foreach collection="list" item="item" separator=";">
+      UPDATE OCOSAL AS OCO
+        SET OCO.SAATC13 = #{item.saatc13}
+      <!-- WHERE OCO.COMPKEY = #{item.compkey} -->
+      WHERE 1=1
+        AND OCO.COMPKEY = #{item.compkey}
+        AND OCO.TOWARKY = #{item.warekey}
+        AND OCO.POSTDAT = #{item.postdat}
+        AND OCO.DESTKEY = #{item.destkey}
+        AND OCO.SAATC06 = #{item.saatc06}
+    </foreach>
+  </update>
+
+<select id="deliveryOutStart" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.tm.domain.TMAppDTO">
+
+  <!-- $vhplnky = FN_TM_VHPLNKY() -->
+  /*sp_tm_plan_loading*/
+  CALL SP_TM_PLAN_LOADING
+ 	 (
+   	    #{userData.compkey}
+      , #{warekey}
+      , #{postdat}
+      , #{vhplnky}
+      , #{saatc06}
+      , #{vehicky}
+      <!-- , #{shtrtky} -->
+      , #{userData.useract}
+
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	 )
+</select>
+
+<!-- SP_TM_INBOUND_ORD 호출 -->
+<select id="sp_tm_inbound_ord" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.tm.domain.TMAppDTO">
+<!-- parameterType="com.logistics.md.domain.MskuwcDTO" -->
+  /* SP_TM_INBOUND_ORD */
+
+   CALL SP_TM_INBOUND_ORD(
+   	    #{userData.compkey}
+      , #{warekey}
+      , #{copodky}
+      , #{eoasnky}
+      , #{ownerky}
+      , #{skumkey}
+      , #{custkey}
+      , #{destkey}
+      , #{vendkey}
+      , #{truckno}
+      , #{tructon}
+      , 1
+      , to_char(NOW(), 'YYYYMMDD')
+      , #{userData.useract}
+
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	 )
+</select>
+
+<!-- SP_TM_INBOUND 호출 -->
+<select id="sp_tm_inbound" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.tm.domain.TMAppDTO">
+<!-- parameterType="com.logistics.md.domain.MskuwcDTO" -->
+  /* SP_TM_INBOUND */
+
+   CALL SP_TM_INBOUND(
+   	    #{userData.compkey}
+      , #{warekey}
+      , #{eoasnky}
+      <!-- , FN_TM_VHPLNKY() -->
+      , #{vhplnky}
+      , #{vehicky}
+      , #{userData.useract}
+
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	 )
+</select>
+
+<!-- SP_TM_LOADING 호출 -->
+<select id="sp_tm_loading" statementType="CALLABLE" resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.om.domain.OcopurVO">
+  /*sp_tm_loading*/
+  CALL SP_TM_LOADING
+ 	 (
+   	    #{userData.compkey}
+      , #{warekey}
+      , #{postdat}
+      , #{vhplnky}
+      , #{saatc06}
+      , #{vehicky}
+      <!-- , #{shtrtky} -->
+      , #{userData.useract}
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	 )
+</select>
+
+<!-- SP_TM_PLAN_BILLING 호출 -->
+
+<select id="sp_tm_plan_billing" statementType="CALLABLE"  resultType="com.logistics.tm.domain.TMAppDTO" parameterType="com.logistics.tm.domain.TMAppDTO">
+  /* sp_tm_plan_billing */
+  CALL SP_TM_PLAN_BILLING
+  (
+      #{userData.compkey}
+    , #{warekey}
+    , #{postdat}
+    , #{vehicky}
+    , #{shtrtky}
+    , #{tripcnt}
+    , #{userData.useract}
+      , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+      , #{oresult, mode=OUT, jdbcType=INTEGER}
+      <!-- , #{ovhplnk, mode=OUT, jdbcType=VARCHAR} -->
+  )
+</select>
+
+<!-- 물류비 명세서에 필요한 키 : BTGTHD -->
+<select id="selectBthdckyForMonthlyPayReport" resultType="String">
+  select BH.BTHDCKY
+    from BTGTHD BH
+      inner join BTGTIT BI
+      on BH.COMPKEY = BI.COMPKEY 
+      and BH.WAREKEY = BI.WAREKEY 
+      and BH.BTHDCKY = BI.BTHDCKY 
+  where BH.COMPKEY = #{userData.compkey}
+    and BH.WAREKEY = #{warekey}
+    and BI.VEHICKY = #{vehicky}
+    and BH.BTHYYMM = #{bthyymm}
+  GROUP BY BTHDCKY
+</select>
+
+</mapper>

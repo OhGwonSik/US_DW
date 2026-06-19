@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.20.1.final using JasperReports Library version 6.20.1-7584acb244139816654f64e2fd57a00d3e31921e  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Blank_A4_2" pageWidth="595" pageHeight="842" columnWidth="595" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="1c862676-ef9a-427c-93ff-80a611ff2e02">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="Runtime"/>
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.unit." value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.topMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.bottomMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.leftMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.rightMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnSpacing" value="pixel"/>
+	<parameter name="subreportParameter1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="subreportParameter2" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="reportData" class="java.util.List"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="skumkey" class="java.lang.String"/>
+	<field name="skudesc" class="java.lang.String"/>
+	<field name="asndqty" class="java.lang.Integer"/>
+	<field name="skuat03" class="java.lang.String"/>
+	<field name="amount" class="java.lang.String"/>
+	<field name="asnmemo" class="java.lang.String"/>
+	<field name="eoasnky" class="java.lang.String"/>
+	<field name="copodky" class="java.lang.String"/>
+	<field name="ownerky" class="java.lang.String"/>
+	<field name="reqdate" class="java.lang.String"/>
+	<field name="denamlc" class="java.lang.String"/>
+	<field name="auomkey" class="java.lang.String"/>
+	<field name="rownum" class="java.lang.Integer"/>
+	<group name="Group1">
+		<groupHeader>
+			<band height="703">
+				<subreport>
+					<reportElement x="0" y="0" width="595" height="249" uuid="04ca6a6a-3edd-4b28-946a-0d0f41013a00"/>
+					<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{reportData})]]></dataSourceExpression>
+					<subreportExpression><![CDATA[$P{subreportParameter1}]]></subreportExpression>
+				</subreport>
+				<subreport>
+					<reportElement x="0" y="410" width="595" height="279" uuid="0c417d0d-14b9-44d6-a69d-235f219fb35c"/>
+					<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{reportData})]]></dataSourceExpression>
+					<subreportExpression><![CDATA[$P{subreportParameter2}]]></subreportExpression>
+				</subreport>
+			</band>
+		</groupHeader>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+</jasperReport>

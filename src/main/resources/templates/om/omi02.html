@@ -1,0 +1,1017 @@
+<!-- 	/*  OMI02 - OMI02 재고조정지시
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 오권식 
+	*   설명			: OMI02 재고조회 후 조정지시등록
+	*/
+ -->
+ 
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omi02_warekey" name="omi02_warekey"
+							data-cb-select="WH01" data-cb-variable="warekey"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"></select>
+					</div>
+				</div>
+				<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omi02_ownerky" name="omi02_ownerky"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/partner/owner" data-cb-select=""
+							data-cb-variable="ownerkyList">
+						</select>
+					</div>
+				</div>
+
+				<label for="inputGroupSelect02" class="setting-grid-title">[[#{om.omi02.stkstat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="omi02_stkstatCheckbox"></div>
+				</div>
+				<label for="inputGroupSelect01" class="setting-grid-title">[[#{om.omi02.skumkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('om.omr.skumkey')}"  id="omi02_skumkey" name="omi02_skumkey">
+					</div>
+				</div>
+				<label for="inputGroupSelect01" class="setting-grid-title">[[#{om.omi02.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('om.omr.skudesc')}" id="omi02_skudesc" name="omi02_skudesc">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="omi02_btnSearch">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white"
+					id="omi02_btnReset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="d-flex align-items-center d-flex setting-grid">
+					<label for="omi02_doctype" class="setting-grid-title">[[#{om.omi02.doctype}]]</label>
+					<div class="setting-grid-content">
+						<div class="input-group">
+							<select id="omi02_doctype">
+								<!-- <option value="" selected>[[#{ms.chooseAll}]]</option>   -->
+							</select>
+						</div>
+					</div>
+					<div class="edit-btn-wrapper">
+						<button class="btn-navy btn-green" id="omi02_btnSave">
+							<img class="ic-bt-save">[[#{bt.save}]]
+						</button>
+					</div>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="omi02Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+		$(function(){
+			const pageId = 'omi02';
+			let omi02List;
+			let rsncodeList = [];
+			let rsncodeFilter;
+
+	        let initDataList;
+
+			//============================================================
+			//그리드 세이브 버튼 이벤트
+			//============================================================
+			$('#'+pageId+'_btnSave').click(async function() {
+				const grid 			= omi02GridObject.getGrid();
+				const gridDataList 	= grid.getData();
+
+				const checkList = gridDataList.filter(function(e){
+					return e.state == 'Y';
+				});
+				for(const gridData of checkList){
+					if(!gridData.doctype){
+						alert('[[#{om.omi.doctype}]]');
+						omi02GridObject.getGrid().editCell({ rowIndx : gridData.pq_ri, dataIndx: 'doctype' });
+						return;
+					}
+					if(!gridData.rsncode){
+						alert('[[#{om.omi.rescode}]]');
+						omi02GridObject.getGrid().editCell({ rowIndx : gridData.pq_ri, dataIndx: 'rsncode' });
+						return;
+					}
+					if(!gridData.rtodqty){ //지시수량 미입력, 지시수량이 0인 경우
+						alert('[[#{om.omi.rtodqty}]]');
+						omi02GridObject.getGrid().editCell({ rowIndx : gridData.pq_ri, dataIndx: 'rtodqty' });
+						return;
+					}
+					if(!gridData.atkstat){
+						alert('[[#{om.omi.atkstat}]]');
+						omi02GridObject.getGrid().editCell({ rowIndx : gridData.pq_ri, dataIndx: 'atkstat' });
+						return;
+					}
+				}
+				//조정지시 저장
+				if(checkList.length){
+					if(confirm('[[#{ms.checksave}]]')){
+
+						const data = {
+								addList : checkList
+						};
+						try{
+							omi02GridObject.getGrid().showLoading();
+							const rData = await fetchUtil('POST','/om/inventory/omi02/save', data);
+							if(rData.status !==200){
+								throw new Error('[[#{ms.saveErr}]]');
+							}
+// 							alert('[[#{ms.saveSuccess}]]');
+						}catch(err){
+							throw new Error('[[#{ms.saveErr}]]');
+						}finally{
+							omi02GridObject.getGrid().hideLoading();
+							await searchOmi02List();
+							omi02GridObject.getGrid().option( 'dataModel', { data: omi02List } );
+							omi02GridObject.getGrid().refreshDataAndView();
+						}
+					}
+				}else{
+					alert('[[#{ms.choiceRowZero}]]');
+				}
+			});
+
+			//그리드 컬럼 정의
+			const omi02GridCm = [
+				{
+					title: '',
+					dataType: 'string',
+					dataIndx: 'state',
+					type: 'checkBoxSelection',
+					align: 'center',
+					maxWidth: '30',
+					maxHeight: '30',
+					menuIcon: false,
+					sortable: false,
+					editor: false,
+					cb: { all: false, header: true, check: 'Y', uncheck: 'N' },
+				},
+				{
+					title: '[[#{om.omi02.rowkey}]]',
+					dataType: 'string',
+					dataIndx: 'rowkey',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.stockky}]]',
+					dataType: 'string',
+					dataIndx: 'stockky',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.subsect}]]',
+					dataType: 'string',
+					dataIndx: 'subsect',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.truntyp}]]',
+					dataType: 'string',
+					dataIndx: 'truntyp',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.trunpid}]]',
+					dataType: 'string',
+					dataIndx: 'trunpid',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.lotnmky}]]',
+					dataType: 'string',
+					dataIndx: 'lotnmky',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.warekey}]]',
+					dataType: 'string',
+					dataIndx: 'warekey',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.whnamlc}]]',
+					dataType: 'string',
+					dataIndx: 'whnamlc',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.ownamlc}]]',
+					dataType: 'string',
+					dataIndx: 'ownamlc',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.ownerky}]]',
+					dataType: 'string',
+					dataIndx: 'ownerky',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.doccate}]]',
+					dataType: 'string',
+					dataIndx: 'doccate',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.doctype}]]',
+					dataType: 'string',
+					dataIndx: 'doctype',
+					//styleHead: { background: '[[#{grid.styleHead01}]]' },
+					editor: {
+						type: 'select',
+						init: function (ui) {
+							ui.$cell.find('select').pqSelect();
+							setTimeout(function () {
+								ui.$cell.find('select').pqSelect('open');
+							}, 250);
+						},
+						options: [],
+					},
+					render: function (ui) {
+						let option = ui.column.editor.options.find(function (obj) {
+							return (obj[ui.cellData] != null);
+						});
+						ui.rowData.doctype = option ? ui.cellData : '';
+						return option ? option[ui.cellData] : '';
+					},
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.skumkey}]]',
+					dataType: 'string',
+					dataIndx: 'skumkey',
+					width: '150',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.skudesc}]]',
+					dataType: 'string',
+					dataIndx: 'skudesc',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.rsncode}]]',
+					dataType: 'string',
+					dataIndx: 'rsncode',
+					styleHead: { background: '[[#{grid.styleHead01}]]' },
+					editor: {
+						type: 'select',
+						init: function (ui) {
+							ui.$cell.find('select').pqSelect();
+							setTimeout(function () {
+								ui.$cell.find('select').pqSelect('open');
+							}, 250);
+						},
+						options: [],
+					},
+					render: function (ui) {
+						let option = rsncodeList.find(function (obj) {
+							return (obj.rsncode === ui.cellData);
+						});
+						ui.rowData.rsncode = option ? ui.cellData : '';
+						return option ? option.rsncdnm : '';
+					},
+				},
+				{
+					title: '[[#{om.omi02.adjsrmk}]]',
+					dataType: 'string',
+					dataIndx: 'adjsrmk',
+					width: '100',
+					styleHead: { background: '[[#{grid.styleHead02}]]' },
+					dataTarget: ''
+				},
+				{
+					title: '[[#{om.omi02.rtodqty}]]',
+					dataType: 'integer',
+					dataIndx: 'rtodqty',
+					format: '#,###',
+					styleHead: { background: '[[#{grid.styleHead01}]]' },
+				},
+				{
+					title: '[[#{om.omi02.rtcfqty}]]',
+					dataType: 'integer',
+					dataIndx: 'rtcfqty',
+					editable: false,
+					format: '#,###',
+					styleHead: { background: '[[#{grid.styleHead01}]]' },
+					hidden : true
+				},
+				{
+					title: '[[#{om.omi02.atkstat}]]',
+					dataType: 'string',
+					dataIndx: 'atkstat',
+					styleHead: { background: '[[#{grid.styleHead01}]]' },
+					editor: {
+						type: 'select',
+						init: function (ui) {
+							ui.$cell.find('select').pqSelect();
+							setTimeout(function () {
+								ui.$cell.find('select').pqSelect('open');
+							}, 250);
+						},
+						options: [],
+					},
+					render: function (ui) {
+					    if(ui.column.editor.options.length === 1) {
+							const defaultOption = ui.column.editor.options[0];
+							const defaultKey = Object.keys(defaultOption)[0];
+							ui.rowData.atkstat = defaultKey;
+							return defaultOption[defaultKey];
+					    }
+
+					    // 옵션이 1개가 아니면 현재 선택된 값에 대한 처리를 유지
+					    let option = ui.column.editor.options.find(function (obj) {
+							return (obj[ui.cellData] != null);
+						});
+						ui.rowData.atkstat = option ? ui.cellData : '';
+						return option ? option[ui.cellData] : '';
+					  },
+					editable : function(){
+						const doctype = document.querySelector('#omi02_doctype').value;
+						let result = doctype === '310';
+						return !result;
+					} 
+				},
+				{
+					title: '[[#{om.omi02.areakey}]]',
+					dataType: 'string',
+					dataIndx: 'areakey',
+					editable: false,
+					hidden : true
+				},
+				{
+					title: '[[#{om.omi02.areanam}]]',
+					dataType: 'string',
+					dataIndx: 'areanam',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.zonekey}]]',
+					dataType: 'string',
+					dataIndx: 'zonekey',
+					editable: false,
+					hidden : true
+				},
+				{
+					title: '[[#{om.omi02.zonenam}]]',
+					dataType: 'string',
+					dataIndx: 'zonenam',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.locakey}]]',
+					dataType: 'string',
+					dataIndx: 'locakey',
+					editable: false,
+					hidden : true
+				},
+				{
+					title: '[[#{om.omi02.locanam}]]',
+					dataType: 'string',
+					dataIndx: 'locanam',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.stotqty}]]',
+					dataType: 'integer',
+					dataIndx: 'stotqty',
+					width: '150',
+					editable: false,
+					format: '#,###'
+				},
+				{
+					title: '[[#{om.omi02.sallqty}]]',
+					dataType: 'integer',
+					dataIndx: 'sallqty',
+					width: '150',
+					editable: false,
+					format: '#,###'
+				},
+				{
+					title: '[[#{om.omi02.sinbqty}]]',
+					dataType: 'integer',
+					dataIndx: 'sinbqty',
+					width: '150',
+					editable: false,
+					format: '#,###'
+				},
+				{
+					title: '[[#{om.omi02.soubqty}]]',
+					dataType: 'integer',
+					dataIndx: 'soubqty',
+					width: '150',
+					editable: false,
+					format: '#,###'
+				},
+				{
+					title: '[[#{om.omi02.sbloqty}]]',
+					dataType: 'integer',
+					dataIndx: 'sbloqty',
+					editable: false,
+					format: '#,###'
+				},
+				{
+					title: '[[#{om.omi02.stkstat}]]',
+					dataType: 'string',
+					dataIndx: 'stkstat',
+					editable: false,
+					hidden : true
+				},
+				{
+					title: '[[#{om.omi02.comcdtx}]]',
+					dataType: 'string',
+					dataIndx: 'comcdtx',
+					width: '150',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.suomkey}]]',
+					dataType: 'string',
+					dataIndx: 'suomkey',
+					editable: false
+				},
+				{
+					title: '[[#{om.omi02.credate}]]',
+					dataType: 'string',
+					dataIndx: 'credate',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.cretime}]]',
+					dataType: 'string',
+					dataIndx: 'cretime',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.creuser}]]',
+					dataType: 'string',
+					dataIndx: 'creuser',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.creuser}]]',
+					dataType: 'string',
+					dataIndx: 'creuser',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.lmodate}]]',
+					dataType: 'string',
+					dataIndx: 'lmodate',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.lmotime}]]',
+					dataType: 'string',
+					dataIndx: 'lmotime',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.lmouser}]]',
+					dataType: 'string',
+					dataIndx: 'lmouser',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.indibzl}]]',
+					dataType: 'string',
+					dataIndx: 'indibzl',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.indiarc}]]',
+					dataType: 'string',
+					dataIndx: 'indiarc',
+					editable: false,
+					hidden: true
+				},
+				{
+					title: '[[#{om.omi02.updtchk}]]',
+					dataType: 'integer',
+					dataIndx: 'updtchk',
+					editable: false,
+					hidden: true
+				}
+			];
+
+			const omi02GridObject = new GridUtil(omi02GridCm, '[[${gprogrid}]]', 'omi02Grid');
+			omi02GridObject.setFind();
+			omi02GridObject.setReset();
+
+			//그리드 생성 시 init
+			omi02GridObject.setCreate(async function (evt, ui) {
+				await _commonInit();
+
+				if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+					const html = '<option value="" selected>[[#{om.omr.all}]]</option>';
+					document.querySelector('#omi02_ownerky').insertAdjacentHTML('afterbegin', html);
+					$('#omi02_ownerky').pqSelect({ deselect : false });
+				}
+
+	    		// 231005 SMA 수정 -> 화주 로그인 관련 수정 요청
+/* 	    		 $('#omi02_ownerky').pqSelect().on('change', async function(){
+	    			const grid = omi02GridObject.getGrid();
+	    			if(grid.pdata.length) {
+	    				if(!confirm('[[#{ms.listViewRollback}]]')){
+	    					document.querySelector('#omi02_ownerky').value = omi02Ownerky;
+	    					$('#omi02_ownerky').pqSelect('refreshData');
+	    					return;
+	    				}
+	    				grid.option('dataModel', { data: [] });
+	    				grid.refreshDataAndView();
+	    			}
+	    			omi02Ownerky = document.querySelector('#omi02_ownerky').value;
+	    			//initList.skuwcList = await getSkuwcList();
+	    		 }); */
+
+				initDataList = await initData();
+				rsncodeList = initDataList.rsncodeList;
+
+
+				// 230927 SMA 추가 doctype 리스트를 검색영역에 추가
+				if(initDataList.doctypeList){
+					$("#omi02_doctype option").not("[value='']").remove();
+					 $.each(initDataList.doctypeList, function(index, value) {
+					        $('#omi02_doctype').append($("<option></option>").attr("value", value.combovl).text(value.combonm));
+					    });
+				}
+
+ 				comboCreateData('omi02Grid','rsncode', rsncodeList ,{combovl : 'rsncode', combonm : 'rsncdnm'});
+
+ 				comboCreateData('omi02Grid', 'doctype', initDataList.doctypeList, {
+					combovl : 'combovl',
+					combonm : 'combonm'
+				});
+ 				
+				comboCreateData('omi02Grid', 'atkstat', initDataList.stkstatList, {
+					combovl : 'combovl',
+					combonm : 'combonm'
+				});
+			})
+
+			//셀 수정시 자동 체크박스 체크 및 조정지시수량 벨리데이션
+			omi02GridObject.setBeforeValidate(function(event, ui) {
+				if (ui.source != 'undo'
+					&& (ui.source == 'edit' || ui.source == 'paste' || ui.source == 'checkbox')) {
+
+					for(const updateData of ui.updateList){
+						if(updateData.newRow.doctype) {
+							this.updateRow({
+								rowIndx : updateData.rowIndx,
+								newRow : {
+									state : 'Y'
+								},
+								checkEditable : false,
+							});
+						}
+					}
+				}
+				//조정지시수량 벨리데이션
+				if(ui.source === 'edit'){
+					for(const updateData of ui.updateList){
+						if(updateData.newRow.rtodqty){
+							let currentRow = this.getRowData({rowIndx : ui.updateList[0].rowIndx});
+							let currentStotqty = currentRow.stotqty;
+							let rtodqty = updateData.newRow.rtodqty;
+
+							if(rtodqty < 0){
+								alert('[[#{om.omi.rtodqty_negative}]]');
+								updateData.newRow.rtodqty = 0;
+								this.setSelection({ rowIndx: ui.updateList[0].rowIndx });
+								omi02GridObject.getGrid().editCell({ rowIndx: updateData.rowIndx, dataIndx: 'rtodqty' });
+							}else if(updateData.rowData.doctype === '320'){
+								if(currentStotqty - rtodqty < 0){
+									alert('[[#{om.omi.rtodqty_over}]]');
+									updateData.newRow.rtodqty = 0;
+									this.setSelection({ rowIndx: updateData.rowIndx });
+									omi02GridObject.getGrid().editCell({ rowIndx: updateData.rowIndx, dataIndx: 'rtodqty' });
+								}
+							}
+						}
+					}
+				}
+			});
+
+			omi02GridObject.setChange(function(evt, ui){
+				let doctypeAlertCheck = false;
+
+				if(ui.source === 'edit'){
+					for(const updateData of ui.updateList){
+						if(updateData.newRow.rsncode){
+							this.updateRow({
+								rowIndx : updateData.rowIndx,
+								 newRow : {
+									state : 'Y',
+									doccate : '300',
+									adjsrmk : '',
+									rtodqty : '',
+									atkstat : updateData.rowData.doctype === '310' ? updateData.rowData.stkstat : ''
+								},
+								checkEditable: false
+							});
+							// 231004 SMA 수정 -> 문서타입 검색영역
+/* 							if(tempDoctype !== updateData.rowData.doctype){
+								alert('[[#{ms.omi02.doctypeSelect}]]')
+           						this.updateRow({
+           							rowIndx : updateData.rowData.pq_ri,
+           							newRow : {
+           								state : 'N',
+           								doccate : '',
+           								doctype : '',
+           								rsncode : '',
+           								adjsrmk : '',
+           								rtodqty : '',
+           								atkstat : ''
+           							},
+           							checkEditable: false
+           						});
+							} */
+						}
+					}
+				}else if(ui.source === 'paste'){
+					for(const updateData of ui.updateList){
+						if(updateData.rowData.doctype){
+							this.updateRow({
+								rowIndx : updateData.rowIndx,
+								 newRow : {
+									state : 'Y',
+									doccate : '300',
+									rsncode : updateData.rowData.rsncode? updateData.rowData.rsncode : '',
+									adjsrmk : updateData.rowData.adjsrmk? updateData.rowData.adjsrmk : '',
+									rtodqty : updateData.rowData.rtodqty? updateData.rowData.rtodqty : '',
+									atkstat : updateData.rowData.doctype === '310' ? updateData.rowData.stkstat : ''
+								},
+								checkEditable: false
+							});
+						}
+					}
+// 					const doctypeMissMatchFilter = ui.updateList.filter(function(el){
+// 						return (el.rowData.doctype != '') && (el.rowData.doctype !== tempDoctype);
+// 					});
+					// 231004 SMA 수정 -> 문서타입 검색영역 이동
+/* 					if(doctypeMissMatchFilter.length){ //독타입이 다를때
+						alert('[[#{ms.omi02.doctypeSelect}]]')
+						for(const doctypeMissMatchData of doctypeMissMatchFilter){
+							if(tempDoctype !== doctypeMissMatchData.rowData.doctype){
+								this.updateRow({
+	    							rowIndx : doctypeMissMatchData.rowData.pq_ri,
+	    							newRow : {
+	    								state : 'N',
+	    								doccate : '',
+	    								doctype : '',
+	    								rsncode : '',
+	    								adjsrmk : '',
+	    								rtodqty : '',
+	    								atkstat : ''
+	    							},
+	    							checkEditable: false
+	    						});
+							}
+						}
+					}else{
+						for(const updateData of ui.updateList){
+							if(!updateData.rowData.doctype){
+								if(!doctypeAlertCheck){
+									doctypeAlertCheck = true;
+									alert('[[#{ms.omi02.firstDoctype}]]');
+								}
+								this.updateRow({
+	     							rowIndx : updateData.rowData.pq_ri,
+	     							newRow : {
+	     								state : 'N',
+	     								doccate : '',
+	     								doctype : '',
+	     								rsncode : '',
+	     								adjsrmk : '',
+	     								rtodqty : '',
+	     								atkstat : ''
+	     							},
+	     							checkEditable: false
+	     						});
+							}
+						}
+					} */
+				}else if(ui.source === 'clear'){
+					for(const updateData of ui.updateList){
+						this.updateRow({
+							rowIndx : updateData.rowIndx,
+							newRow : {
+								state : 'N',
+								doccate : '',
+								doctype : '',
+								rsncode : '',
+								adjsrmk : '',
+								rtodqty : '',
+								atkstat : ''
+							},
+							checkEditable: false
+						});
+					}
+				}
+			});
+			omi02GridObject.setCellSave(function (evt, ui){
+				if(ui.dataIndx === 'doctype'){
+					if(ui.newVal){
+						rsncodeFilter = rsncodeList.filter(function (obj){
+							return obj.doctype === ui.rowData.doctype
+						})
+						comboCreateData('omi02Grid','rsncode', rsncodeFilter ,{combovl : 'rsncode', combonm : 'rsncdnm'});
+					}
+				}
+			})
+
+			// 문서타입을 선택하면 나머지 선택영역 매핑
+			omi02GridObject.setCellClick(function (evt, ui){
+				if(ui.dataIndx ==='rsncode'){
+					rsncodeFilter = rsncodeList.filter(function (obj){
+						return obj.doctype === ui.rowData.doctype
+					})
+					comboCreateData('omi02Grid','rsncode', rsncodeFilter ,{combovl : 'rsncode', combonm : 'rsncdnm'});
+				}
+				if(ui.dataIndx === 'rsncode' && !ui.rowData.doctype){
+					alert('[[#{om.omi02.doctype}]][[#{ms.choiceValue}]]');
+					omi02GridObject.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'doctype' });
+				}else if(ui.dataIndx === 'adjsrmk' && !ui.rowData.doctype){
+					alert('[[#{om.omi02.doctype}]][[#{ms.choiceValue}]]');
+					omi02GridObject.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'doctype' });
+				}else if(ui.dataIndx === 'rtodqty' && !ui.rowData.doctype){
+					alert('[[#{om.omi02.doctype}]][[#{ms.choiceValue}]]');
+					omi02GridObject.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'doctype' });
+				}else if(ui.dataIndx === 'atkstat' && !ui.rowData.doctype){
+					alert('[[#{om.omi02.doctype}]][[#{ms.choiceValue}]]');
+					omi02GridObject.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'doctype' });
+				}
+			});
+			omi02GridObject.open(); // 그리드 오픈
+
+			//============================================================
+			// ajaxCall init
+			//============================================================
+			async function initData() {
+				const initDataList = await fetchUtil('GET', '/om/inventory/omi02/init', {doccate : '300'});
+
+ 				omi02List = await initDataList.json();
+				await setCheckboxByUsertyp("stkstat");
+
+				return omi02List;
+			}
+
+
+			//============================================================
+			// 재고현황조회 검색
+			//============================================================
+			async function searchOmi02List(){
+				const grid = pq.grid('#omi02Grid');
+				grid.showLoading();
+				
+				const omi02Param = {
+						skumkey : $('#'+pageId+'_skumkey').val(),
+						skudesc : $('#'+pageId+'_skudesc').val(),
+						warekey : $('#'+pageId+'_warekey').val(),
+						ownerky : $('#'+pageId+'_ownerky').val(),
+						stkstat: $("input[name='omi02_stkstat']:checked")
+			              .map(function () {
+			                return $(this).val();
+			              })
+			              .get(),
+			           cootype : $('#'+pageId+'_doctype').val(),
+				};
+				
+				const rData = callAjax('data', 'GET', '/om/inventory/omi02/grids/1', omi02Param);
+
+				// 231004 SMA 추가 -> 문서타입 검색영역 구분때문에
+				if (omi02Param.cootype) {
+					let selectedValue = $('#omi02_doctype').val();
+					let selectedItem = initDataList.doctypeList.find(item => item.combovl === selectedValue);
+
+					if(selectedItem) {
+					    comboCreateData('omi02Grid', 'doctype', [selectedItem], {
+					        combovl: 'combovl',
+					        combonm: 'combonm'
+					    });
+					}
+				}
+				if($('#omi02_doctype').val() === '310'){
+					const findStkstat = initDataList.stkstatList.find(item => item.combovl === '00');
+
+				    comboCreateData('omi02Grid', 'atkstat', [findStkstat], {
+				        combovl: 'combovl',
+				        combonm: 'combonm'
+				    });
+				}else{
+					comboCreateData('omi02Grid', 'atkstat', initDataList.stkstatList, {
+						combovl : 'combovl',
+						combonm : 'combonm'
+					});
+				}
+				if(rData){
+					omi02List = rData;
+					grid.option('dataModel', { data: omi02List, recIndx: 'rowkey' });
+				}
+				grid.hideLoading();
+				grid.refreshDataAndView();
+			}
+
+			//============================================================
+			//영역 검색 버튼 이벤트
+			//============================================================
+			$('#'+pageId+'_btnSearch').click(async function() {
+
+				await searchOmi02List();
+
+				if(!omi02GridObject.getGrid().pdata.length) {
+		    			//alert('[[#{ms.getDataZero}]]');
+		    			omi02GridObject.getGrid().option('dataModel', { data: [] });
+		    			omi02GridObject.getGrid().refreshDataAndView();
+		  	  	 }
+
+				// setChange() 함수 호출
+			    omi02GridObject.setChange();
+			});
+			
+			//문서타입 바뀔떄마다 바꿔주기
+			document.querySelector('#'+pageId+'_doctype').addEventListener('change', async function(){
+				const grid = pq.grid('#omi02Grid');
+
+				grid.showLoading();
+				
+				if(!omi02GridObject.getGrid().pdata.length) {
+	    			//alert('[[#{ms.getDataZero}]]');
+	    			omi02GridObject.getGrid().option('dataModel', { data: [] });
+	    			omi02GridObject.getGrid().refreshDataAndView();
+	    			grid.hideLoading();
+	    			return;
+	  	  	 }
+				await searchOmi02List();
+				grid.hideLoading();
+
+				
+
+				// setChange() 함수 호출
+			    omi02GridObject.setChange();
+			});
+
+
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function(){
+				$('#' + pageId + '_warekey').prop('selectedIndex', 0);
+				$('#' + pageId + '_ownerky').prop('selectedIndex', 0);
+				$('#' + pageId + '_ownerky').pqSelect('refreshData');
+				$('#'+pageId+'_skudesc').val('');
+				$('#'+pageId+'_skumkey').val('');
+
+		  		document.querySelectorAll('div[id*="omi02_"].input-check-group input').forEach(function(element) {
+					element.checked = element.id || element.disabled ? true : false;
+				});
+		  		omi02GridObject.searchList([]);
+			})
+
+			function comboCreateData(gridnm, colnm, obj, mapob, type) {
+				let grid = pq.grid('#' + gridnm);
+				let column = grid.getColumn({
+					dataIndx : colnm
+				});
+
+				let options = obj.map(function(obj) {
+					let rObj = {};
+					if (mapob != null && mapob.combovl != undefined
+							&& mapob.combonm != undefined) {
+						rObj[obj[mapob.combovl]] = obj[mapob.combonm];
+					} else {
+						rObj[obj.combovl] = obj.combonm;
+					}
+					return rObj;
+				});
+				column.editor.options = options;
+			}
+
+			/* 230821 체크박스 변경으로 인해 SMA 추가 */
+			async function setCheckboxByUsertyp(columnName) {
+
+	          let html = "";
+	          for (const column of omi02List[columnName + "List"]) {
+	            html += '<label class="check-box">';
+	            html +=
+	              '<input type="checkbox" name="omi02_' +
+	              columnName +
+	              '" value="' +
+	              column.combovl +
+	              '">';
+	            html += "<span>" + column.combonm + "</span></label>";
+	          }
+	          document
+	            .querySelector("#" + pageId + '_' + columnName + "Checkbox")
+	            .insertAdjacentHTML("beforeend", html);
+
+	          //3PL, 화주 공동화면. 3PL과 화주에게 다른 doctype checkbox 노출. 화주 : 400 입고, 420 부품사입고만 조회 가능 / 3PL : 전체 조회 가능
+	          if (omi02List[columnName + "List"].length !== 1) {
+	            let allCheckHTML = '<label class="check-box">';
+	            allCheckHTML +=
+	              '<input type="checkbox" id="omi02_' +
+	              columnName +
+	              'AllCheck" name="omi02_' +
+	              columnName +
+	              '" value="">';
+	            allCheckHTML += "<span>전체</span></label>";
+	            document
+	              .querySelector("#" + pageId + '_' + columnName + "Checkbox")
+	              .insertAdjacentHTML("afterBegin", allCheckHTML);
+	            document.querySelector(
+	              "#omi02_" + columnName + "AllCheck"
+	            ).checked = true;
+	            checkboxEvent(columnName);
+	            return;
+	          }
+
+	          const columnObj = document.querySelector(
+	            'input[name="omi02_' + columnName + '"]'
+	          );
+	          columnObj.checked = true;
+	          columnObj.addEventListener("click", function (event) {
+	            event.preventDefault();
+	          });
+	        }
+
+	        //checkboxEvent. 전체 선택 시 나머지 체크박스 해제. 전체를 제외한 체크박스 모두 선택 시 전체 선택.
+	        function checkboxEvent(columnName) {
+	          document
+	            .querySelectorAll('input[name="omi02_' + columnName + '"]')
+	            .forEach(function (element) {
+	              element.addEventListener("change", function () {
+	                document.querySelector(
+	                  "#omi02_" + columnName + "AllCheck"
+	                ).checked = false;
+	                const checkedObjs = document.querySelectorAll(
+	                  'input[name="omi02_' + columnName + '"]:checked'
+	                );
+	                const notAllCheckObjs = document.querySelectorAll(
+	                  'input[name="omi02_' +
+	                    columnName +
+	                    '"]:not(#omi02_' +
+	                    columnName +
+	                    "AllCheck)"
+	                );
+	                if (
+	                  notAllCheckObjs.length === checkedObjs.length ||
+	                  element.id ==="omi02_" + columnName + "AllCheck"
+	                ) {
+	                  document.querySelector(
+	                    "#omi02_" + columnName + "AllCheck"
+	                  ).checked = true;
+	                  for (const checkedObj of checkedObjs) {
+	                    checkedObj.checked = false;
+	                  }
+	                } else if (!checkedObjs.length) {
+	                  document.querySelector(
+	                    "#omi02_" + columnName + "AllCheck"
+	                  ).checked = true;
+	                }
+	              });
+	            });
+	        }
+			        /* 230821 체크박스 변경으로 인해 SMA 추가 */
+		});
+	</script>
+</div>
+</html>

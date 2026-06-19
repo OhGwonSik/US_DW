@@ -1,0 +1,1058 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdp30Ptnamlc" class="setting-grid-title">[[#{md.mptnma.ptnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mptnma.ptnamlc')}" id="mdp30Ptnamlc" name="mdp30Ptnamlc">
+					</div>
+				</div>
+				<label for="mdp30Denamlc" class="setting-grid-title">[[#{md.mdesma.denamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdesma.denamlc')}" id="mdp30Denamlc" name="mdp30Denamlc">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdp30Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdp30Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdp30Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdp30Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdp30
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.08.18
+	  - 설명 : 도착지등록
+	  ------------------------------------------
+	  - 수정자 : Choi K. H.
+	  - 수정일자 : 2023.11.06
+	  - 내용 : 도착지 우편번호에 DAUM 주소 API 적용
+	*/
+
+$(function(){
+	//----------- 전역변수 ------------//
+	let mdp30InitData;
+	let mdp30ComboData = {};
+	//----------- 전역변수 end ------------//
+
+	//===============================================================
+	// 검색 이벤트
+	//===============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(async function() {
+		 await getMdp30List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid')
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all: true});
+
+		//===============================================================
+		// 체크된 데이터 필수 값 & 중복 체크
+		//===============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['ptnrkey', 'destkey', 'denamlc'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+	      			});
+
+	    	  		return false;
+    			}
+    		}
+			for(let gData of grid.getData()){
+   				const keyCols = ['ptnrkey', 'destkey'];
+
+   				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+   					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData) + ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+   					alert(alertTxt);
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'ptnrkey' } )
+	      			});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(!confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdp30List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdp30Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdp30GridCM = [
+		{
+			title: '',
+			dataType: 'bool',
+			dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+			align: 'center',
+            type: 'checkbox',
+            sortable: false,
+            editor: false,
+            cb: {
+            	all: true,
+            	header: true
+            }
+     	},
+        {
+     		title: '[[#{common.grid.recIndx}]]',
+     		dataType: 'string',
+     		dataIndx: '[[#{common.grid.recIndx}]]',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mdesma.compkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'compkey',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mptnma.ptnrkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'ptnrkey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+                		search: true,
+                		singlePlaceholder: '',
+                		width: getSelectBoxWidthCondition(ui)
+                	});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdp30ComboData[ui.dataIndx],
+                prepend: { '' : ' ' }
+			},
+            render: ui => {
+                const option = mdp30ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	},
+            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{md.mdesma.destkey}]]',
+			dataType: 'string',
+			dataIndx: 'destkey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+            validations: [
+            	{
+            		type: 'minLen',
+            		value: 1,
+            		msg: '[[#{ms.validations.minLenLength(1)}]]'
+            	},
+            	{
+            		type: 'maxLen',
+            		value: 20,
+            		msg: '[[#{ms.validations.maxLenLength(20)}]]' }
+            	],
+            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+        },
+		{
+        	title: '[[#{md.mdesma.denamlc}]]',
+        	dataType: 'string',
+        	dataIndx: 'denamlc',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 1,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.deuseyn}]]',
+			dataType: 'string',
+			dataIndx: 'deuseyn',
+			align: 'center',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.deaddr1}]]',
+			dataType: 'string',
+			dataIndx: 'deaddr1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.deaddr2}]]',
+			dataType: 'string',
+			dataIndx: 'deaddr2',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]'  },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.deaddr3}]]',
+			dataType: 'string',
+			dataIndx: 'deaddr3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.deposcd}]]',
+			dataType: 'string',
+			dataIndx: 'deposcd',
+			editable: false,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.destlat}]]',
+			dataType: 'float',
+			dataIndx: 'destlat',
+			format: '###,###,###,###,###.0000000000',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000000000,
+					msg: '[[#{ms.validations.maxLenLength(15)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum15Dot10,
+					msg: '[[#{ms.validations.onlyNumber(15)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.destlon}]]',
+			dataType: 'float',
+			dataIndx: 'destlon',
+			format: '###,###,###,###,###.0000000000',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000000000,
+					msg: '[[#{ms.validations.maxLenLength(15)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum15Dot10,
+					msg: '[[#{ms.validations.onlyNumber(15)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.denatcd}]]',
+			dataType: 'string',
+			dataIndx: 'denatcd',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 3,
+					msg: '[[#{ms.validations.maxLenLength(3)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.denamko}]]',
+			dataType: 'string',
+			dataIndx: 'denamko',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]'
+				},
+				{
+					type: 'regexp',
+					value: regKorOnly,
+					msg: '[[#{ms.onlyInputKorean}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.denamen}]]',
+			dataType: 'string',
+			dataIndx: 'denamen',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]'
+				},
+				{
+					type: 'regexp',
+					value: regEngOnly,
+					msg: '[[#{ms.onlyInputEnglish}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.unavat1}]]',
+			dataType: 'string',
+			dataIndx: 'unavat1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+                		search: true,
+                		singlePlaceholder: '',
+                		width: getSelectBoxWidthCondition(ui)
+                	});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdp30ComboData['vhctncd'],
+                prepend: { '' : ' ' }
+			},
+            render: ui => {
+                const option = mdp30ComboData['vhctncd'].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	}
+		},
+		{
+			title: '[[#{md.mdesma.unavat2}]]',
+			dataType: 'string',
+			dataIndx: 'unavat2',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+                		search: true,
+                		singlePlaceholder: '',
+                		width: getSelectBoxWidthCondition(ui)
+                	});
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdp30ComboData['vhctncd'],
+                prepend: { '' : ' ' }
+			},
+            render: ui => {
+                const option = mdp30ComboData['vhctncd'].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	}
+		},
+		{
+			title: '[[#{md.mdesma.unavat3}]]',
+			dataType: 'string',
+			dataIndx: 'unavat3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			editor: {
+                type: 'select',
+                init: ui => {
+                	ui.$cell.find('select').pqSelect({
+                		search: true,
+                		singlePlaceholder: '',
+                		width: getSelectBoxWidthCondition(ui) }
+                	);
+                	ui.$cell.find('select').pqSelect('open');
+                },
+                options: ui => mdp30ComboData['vhctncd'],
+                prepend: { '' : ' ' }
+			},
+            render: ui => {
+                const option = mdp30ComboData['vhctncd'].find(obj => obj[ui.cellData]);
+
+                return { text: option ? option[ui.cellData] : ui.cellData };
+         	}
+		},
+		{
+			title: '[[#{md.mdesma.cusgro1}]]',
+			dataType: 'string',
+			dataIndx: 'cusgro1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.cusgro2}]]',
+			dataType: 'string',
+			dataIndx: 'cusgro2',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.cusgro3}]]',
+			dataType: 'string',
+			dataIndx: 'cusgro3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.sundavl}]]',
+			dataType: 'string',
+			dataIndx: 'sundavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.mondavl}]]',
+			dataType: 'string',
+			dataIndx: 'mondavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.tuedavl}]]',
+			dataType: 'string',
+			dataIndx: 'tuedavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.weddavl}]]',
+			dataType: 'string',
+			dataIndx: 'weddavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.thudavl}]]',
+			dataType: 'string',
+			dataIndx: 'thudavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.fridavl}]]',
+			dataType: 'string',
+			dataIndx: 'fridavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.satdavl}]]',
+			dataType: 'string',
+			dataIndx: 'satdavl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.nathval}]]',
+			dataType: 'string',
+			dataIndx: 'nathval',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			align: 'center',
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mdesma.dlvrqtm}]]',
+			dataType: 'string',
+			dataIndx: 'dlvrqtm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+ 			format: val => val?.replace(regDivideTime, divideTimeFormat),
+ 			editor: {
+ 				type: 'textbox',
+ 				init: timeEditor2,
+ 				getData: ui => ui.$cell.find('input').val()
+ 			}
+		},
+		{
+			title: '[[#{md.mdesma.routeky}]]',
+			dataType: 'string',
+			dataIndx: 'routeky',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.unlodmo}]]',
+			dataType: 'string',
+			dataIndx: 'unlodmo',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.cuspecd}]]',
+			dataType: 'string',
+			dataIndx: 'cuspecd',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mdesma.cusperm}]]',
+			dataType: 'string',
+			dataIndx: 'cusperm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					warn: true,
+					msg: '[[#{ms.validations.minLenLength(0)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					warn: true,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기초 세팅
+	const mdp30Grid = new GridUtil(mdp30GridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+	mdp30Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdp30Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+	mdp30Grid.setAdd(function(evt, ui){
+		const rowData = {
+			state: true,
+			compkey: '[[${userattr.compkey}]]',
+			deuseyn: 'Y',
+			sundavl: 'N',
+			mondavl: 'N',
+			tuedavl: 'N',
+			weddavl: 'N',
+			thudavl: 'N',
+			fridavl: 'N',
+			satdavl: 'N',
+			nathval: 'N',
+		};
+		const rowIndx = this.addRow({
+			rowData: rowData,
+			checkEditable: false
+		});
+
+		this.goToPage({ rowIndx : rowIndx });
+		this.focus({
+			rowIndxPage: rowIndx,
+			colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )
+		});
+	});
+
+	// Grid Cell 더블클릭 이벤트
+	mdp30Grid.setCellDblClick(function (evt, ui){
+		//도착지 우편번호 클릭시
+		if('deposcd' === ui.dataIndx){
+			//카카오 우편번호 api 호출(2023.11.06 최강호)
+			let zoneCode;
+
+			new daum.Postcode({
+				//검색결과 선택시 이벤트
+				oncomplete : data => zoneCode = data.zonecode,
+				onclose : state => {
+					if('COMPLETE_CLOSE' === state){
+						mdp30Grid.getGrid().updateRow({
+			 				rowIndx: ui.rowData.pq_ri,
+			 				newRow: {
+			 					state: true,
+			 					deposcd: zoneCode
+			 				},
+			 				checkEditable: false
+			 			});
+					}
+				}
+			}).open({
+				popupTitle: 'postcode',
+				popupKey: '[[${gprogrid}]]'+'PostcodePopup'
+			});
+		}
+	});
+
+	// Grid 생성시 이벤트
+	mdp30Grid.setCreate(async function (evt, ui) {
+		const response = await initMdp30();
+
+		mdp30InitData = response.item;
+
+		for(let key of Object.keys(mdp30InitData)){
+			const gData = mdp30InitData[key];
+			const options = gData.map(obj => {
+	        	let rObj = {};
+
+	        	rObj[obj['combovl']] = obj['combonm'] + '(' + obj['combovl'] + ')';
+
+	        	return rObj;
+			});
+
+			mdp30ComboData[key] = options;
+		}
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdp30Grid.setChange(async function(evt, ui){
+		if('edit' === ui.source || 'paste' === ui.source){
+    		const updateRowList = [];
+
+    		await ui.updateList.forEach(async updateData => {
+    			let newRow = {state : true};
+
+    			if(updateData.newRow.hasOwnProperty('destkey') && updateData.oldRow.hasOwnProperty('destkey')){
+    				newRow['destkey'] = updateData.newRow['destkey']?.toUpperCase();
+    			}
+
+    			if(updateData.newRow.hasOwnProperty('ptnrkey') && updateData.oldRow.hasOwnProperty('ptnrkey')){
+    				const option = mdp30ComboData['ptnrkey'].find( obj => obj[updateData.rowData['ptnrkey']]);
+
+    				newRow['ptnrkey'] = option ? updateData.rowData['ptnrkey'] : null;
+    			}
+
+    			const vhctncdCols = ['unavat1', 'unavat2', 'unavat3'];
+
+    			await vhctncdCols.forEach(cols => {
+        			if(updateData.newRow.hasOwnProperty(cols) && updateData.oldRow.hasOwnProperty(cols)){
+        				const option = mdp30ComboData['vhctncd'].find(obj =>obj[updateData.rowData[cols]]);
+
+    				    newRow[cols] = option ? updateData.rowData[cols] : null;
+        			}
+    			});
+
+    			if(updateData.newRow.hasOwnProperty('ptnrkey') && updateData.oldRow.hasOwnProperty('ptnrkey')){
+    				const option = mdp30ComboData['ptnrkey'].find( obj => obj[updateData.rowData['ptnrkey']]);
+
+    				newRow['ptnrkey'] = option ? updateData.rowData['ptnrkey'] : null;
+    			}
+
+    			updateRowList.push({
+    				rowIndx: updateData.rowIndx,
+    				newRow: newRow
+    			});
+    		});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	} else if('checkbox' === ui.source){
+    		const updateRowList = [];
+
+    		for(let updateData of ui.updateList){
+    			const checkboxCols = ['deuseyn', 'sundavl', 'mondavl', 'tuedavl', 'weddavl', 'thudavl', 'fridavl', 'satdavl', 'nathval'];
+    			let newRow = {state : true};
+
+    			for(let checkboxCol of checkboxCols){
+    				if(updateData.newRow.hasOwnProperty(checkboxCol)){
+            			updateRowList.push({
+            				rowIndx: updateData.rowIndx,
+            				newRow: newRow
+            			});
+           			}
+    			}
+   			}
+
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+
+		if('paste' === ui.source){
+			await ui.addList.forEach(addData =>
+    			addData.newRow = {
+       				state: true,
+       				compkey: '[[${userattr.compkey}]]',
+       				deuseyn: addData?.newRow?.deuseyn || 'Y',
+					sundavl: addData?.newRow?.sundavl || 'N',
+					mondavl: addData?.newRow?.mondavl || 'N',
+					tuedavl: addData?.newRow?.tuedavl || 'N',
+					weddavl: addData?.newRow?.weddavl || 'N',
+					thudavl: addData?.newRow?.thudavl || 'N',
+					fridavl: addData?.newRow?.fridavl || 'N',
+					satdavl: addData?.newRow?.satdavl || 'N',
+					nathval: addData?.newRow?.nathval || 'N',
+    		});
+			await this.updateRow({
+				rowList: ui.addList,
+				checkEditable: false
+			});
+    	}
+	});
+
+	// Grid 객체 생성
+	mdp30Grid.open();
+
+	// 페이지 초기화 함수
+	async function initMdp30(){
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+		const response = await fetchUtil('GET', url);
+
+		return response.json();
+	}
+
+	// 그리드 조회 함수
+	async function getMdp30List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const data = {
+				ptnamlc : $('#' + '[[${gprogrid}]]' + 'Ptnamlc').val().toUpperCase(),
+				denamlc : $('#' + '[[${gprogrid}]]' + 'Denamlc').val()
+		};
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// 그리드 저장 함수
+	async function saveMdp30List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.partner}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdp30Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdp30Response.status === 200){
+			await getMdp30List();
+		}
+
+		grid.hideLoading();
+	}
+});
+</script>
+</div>
+</html>

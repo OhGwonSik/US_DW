@@ -1,0 +1,474 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 창고 -->
+				<label for="bmb01Warekey" class="setting-grid-title ic-title-nece">[[#{bm.blgthd.warekey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="bmb01Warekey"></select>
+					</div>
+				</div>
+				<!-- 정산년월 -->
+				<label class="setting-grid-title ic-title-nece">[[#{bm.blgthd.blhyymm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" style="width: 100%;" max="2999-12" id="bmb01Blhyymm" onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="bmb01Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="bmb01Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<div class="edit-btn-wrapper">
+						<button type="button" class="btn-finish btn-navy btn-green" id="bmb01DeadLine">
+							<img class="ic-bt-save">[[#{bt.bm.deadline}]]
+						</button>
+					</div>
+				</div>
+			</div>
+			<!-- Head Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb01Grid"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : bmb01
+	  - 최초생성자  : BM
+	  - 최초생성일시 : 2023.10
+	  - 설명 : 물류비정산처리
+	  ------------------------------------------
+	*/
+
+$(function() {
+	//----------- 전역변수 ------------//
+	const pageId = '[[${gprogrid}]]';
+	const bmb01ComboData = {};
+	let bmb01InitData;
+	//----------- 전역변수 end ------------//
+
+	//----------- 검색영역 Event ------------//
+	$('#' + '[[${gprogrid}]]' + 'Blhyymm').val(moment().format('YYYY-MM')); //현재년도 현재 월
+
+	$('#' + '[[${gprogrid}]]' + 'Search').click(function(){
+		getBmb01List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		resetTabContainer(bmb01Grid.getGrid());
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// 초기화 함수
+	async function initBmb01(){
+		if(bmb01InitData){
+			return;
+		}
+
+		const response = await fetchUtil('GET', '/bm/billing/' + pageId + '/init');
+		const rData = await response.json();
+
+		bmb01InitData = rData.item;
+
+		for(const key of Object.keys(bmb01InitData)){
+			const gData = bmb01InitData[key];
+			let target = '';
+
+			if('warekey' === key){
+				target = '[[${gprogrid}]]' + 'Warekey';
+			}
+
+			if('' !== target){
+				$('#' + target + ' option').not('[value=""]').remove(); // 전체 option은 빼고 제거
+				gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'))
+			}
+
+			if('doccate' !== key || 'doctype' !== key){
+				const options = gData.map(obj => {
+		        	let rObj = {};
+
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+
+				bmb01ComboData[key] = options;
+			}
+		}
+	}
+
+	// Grid column model
+	const bmb01GridCM = [
+		{
+        	 title: '[[#{bm.blgtit.compkey}]]',
+        	 dataType: 'string',
+        	 dataIndx: 'compkey',
+        	 hidden: true,
+        	 editable: false,
+        	 width: 120
+		}, //회사
+		{
+			title: '[[#{bm.blgtit.warekey}]]',
+			dataType: 'string',
+			dataIndx: 'warekey',
+			hidden: true,
+			editable: false,
+			width: 120,  //창고
+  			editor: {
+        		type: 'select',
+                options: ui => bmb01ComboData[ui.dataIndx],
+			},
+            render: ui => {
+            	const option = bmb01ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+         },
+         {
+			title: '[[#{bm.blgtit.ownerky}]]',
+			dataType: 'string',
+			dataIndx: 'ownerky',
+			hidden: true,
+			editable: false,
+			width: 120,    //화주
+			editor: {
+        		type: 'select',
+                options: ui => bmb01ComboData[ui.dataIndx],
+			},
+            render: ui => {
+            	const option = bmb01ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+         },
+         {
+			title: '[[#{md.bflrma.ptnrkey}]]',
+			dataType: 'string',
+			dataIndx: 'ptnrkey',
+			hidden: true,
+			editable: false,
+			width: 120,    //대금구분업체 협력사
+			editor: {
+				type: 'select',
+				options: ui => bmb01ComboData[ui.dataIndx]
+			},
+            render: uI => {
+            	const option = bmb01ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+          },
+          {
+			title: '[[#{md.bvlrma.blrpmgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrpmgb',
+			hidden: true,
+			editable: false,
+			width: 120,   //대금구분
+   			editor: {
+        		type: 'select',
+                options: ui => bmb01ComboData[ui.dataIndx],
+			},
+            render: ui => {
+            	const option = bmb01ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+ 		 },
+         {
+			title: '[[#{md.bvlrma.blrcsgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrcsgb',
+			editable: false,
+			width: 120,   //계정
+  			editor: {
+        		type: 'select',
+                options: ui => bmb01ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb01ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return {
+              		text: option ? option[ui.cellData] : ui.cellData,
+        			cls : getSummaryCellClass(ui)
+              	};
+            }
+         },
+         {
+			title: '[[#{md.bvlrma.blrtkgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrtkgb',
+			editable: false,
+			width: 120,   //sub계정
+  			editor: {
+        		type: 'select',
+                options: ui => bmb01ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb01ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return {
+              		text: option ? option[ui.cellData] : ui.cellData,
+        			cls : getSummaryCellClass(ui)
+              	};
+            }
+		 },
+         {
+			title: '[[#{bm.blgtit.doccate}]]',
+			dataType: 'string',
+			dataIndx: 'doccate',
+			editable: false,
+			width: 120,  //문서유형
+  			editor: {
+        		type: 'select',
+	            options: ui => {
+	           		return bmb01InitData[ui.dataIndx].map(obj => {
+	           			if(obj['warekey'] === ui.rowData['warekey']){
+	        				let rObj = {};
+
+	        				rObj[obj[ui.dataIndx]] = obj['docctnm'];
+
+	        				return rObj;
+	           			}
+	           		}).filter(e => e);
+	          	},
+           		prepend: { '' : ' ' }
+       		},
+			render: ui => {
+				const option = bmb01InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey'] && obj[ui.dataIndx] === ui.cellData);
+
+				return {
+					text: option && ui.cellData ? option['docctnm'] : ui.cellData,
+					cls : getSummaryCellClass(ui)
+				};
+			}
+         },
+         {
+			title: '[[#{bm.blgtit.doctype}]]',
+			dataType: 'string',
+			dataIndx: 'doctype',
+			editable: false,
+			width: 120,   //문서타입
+  			editor: {
+        		type: 'select',
+	            options: ui => {
+	           		return bmb01InitData[ui.dataIndx].map(obj => {
+	           			if(obj['warekey'] === ui.rowData['warekey'] && obj['doccate'] === ui.rowData['doccate']){
+	        				let rObj = {};
+
+	        				rObj[obj[ui.dataIndx]] = obj['doctynm'];
+
+	        				return rObj;
+	           			}
+	           		}).filter(e => e);
+				},
+           	  	prepend: { '' : ' ' }
+   		  	},
+			render: ui => {
+				const option = bmb01InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey']
+																					&& obj['doccate'] === ui.rowData['doccate']
+																					&& obj[ui.dataIndx] === ui.cellData);
+
+				return {
+					text: option && ui.cellData ? option['doctynm'] : ui.cellData,
+					cls : getSummaryCellClass(ui)
+				};
+			}
+         },
+         {
+			title: '[[#{bm.blgtit.refcqty}]]',
+			dataType: 'integer',
+			dataIndx: 'refcqty',
+			summary: { type: 'sum'},
+			format: '#,###',
+			editable: false,
+			width: 120,
+ 			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+ 			}
+ 		 }, //수량
+		 {
+			title: '[[#{md.bvlrma.blrunit}]]',
+			dataType: 'string',
+			dataIndx: 'blrunit',
+			editable: false,
+			width: 120,
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+ 		 }, //단위
+		 {
+			title: '[[#{bm.blgtit.blrcost}]]',
+			dataType: 'integer',
+			dataIndx: 'blrcost',
+			summary: { type: 'sum'},
+			format: '#,###',
+			editable: false,
+			width: 120,
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		 }, //단가
+         {
+			title: '[[#{bm.blgtit.blramot}]]',
+			dataType: 'integer',
+			dataIndx: 'blramot',
+			summary: { type: 'sum'},
+			format: '#,###',
+			editable: false,
+			width: 120,
+			render : ui => {
+					return {
+						cls : getSummaryCellClass(ui)
+					}
+			}
+		 } //금액
+	];
+
+	// Grid Object 및 기본 세팅
+	const bmb01Grid = new GridUtil(bmb01GridCM, '[[${gprogrid}]]', 'bmb01Grid');
+
+	// Grid 높이 세팅
+	bmb01Grid.setHeight(650); // 요구사항
+
+	// Grid 탭모델 세팅
+	bmb01Grid.setTabModel([createDefaultTabObject()]);
+
+	// Grid 생성시 이벤트
+	bmb01Grid.setCreate(async function (evt, ui) {
+		await initBmb01();
+	});
+
+	// Grid 객체 생성
+ 	bmb01Grid.open();
+
+	// 정산 내역 조회
+	async function getBmb01List(){
+		//검색 영역 필수값 확인
+		if(!$('#' + '[[${gprogrid}]]' + 'Blhyymm').val()){
+			alert('[[#{ms.choose.blhyymm}]]');
+
+			return false;
+		}
+
+		const grid = bmb01Grid.getGrid();
+		const gridTab = bmb01Grid.getGrid().Tab();
+		const tabs = gridTab.tabs();
+		const tabModel = bmb01Grid.getGrid().option('tabModel');
+
+		tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.showLoading() : grid.showLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+		const blhyymm = $('#' + '[[${gprogrid}]]' + 'Blhyymm').val().replace(/-/g, ''); // 하이픈(-) 제거
+		const data = {
+			warekey: $('#' + '[[${gprogrid}]]' + 'Warekey').val(),
+			blhyymm: blhyymm
+		};
+		const response = await fetchUtil('GET', '/bm/billing/' + '[[${gprogrid}]]' + '/grids/1', data);
+
+		if(response.status===200){
+			const items = await response.json();
+
+			resetTabContainer(bmb01Grid.getGrid());
+
+			if(items.length){
+				const startIdxForInsert = tabModel.tabs.length-1;
+				const groupCols = ['blrcsgb', 'blrtkgb'];
+				const groupBy = ['ownerky', 'ptnrkey', 'blrpmgb'];
+				const groupByName = ['ownamlc', 'ptnamlc', 'blrpmnm'];
+				const summaryCols = ['refcqty', 'blramot'];
+
+				tabModel.tabs.push(... createTabModel(items, bmb01GridCM, groupCols, groupBy, groupByName, summaryCols)); // spread operator(배열 각 요소를 빼서 합침)
+
+				let tabModelLength = tabModel.tabs.length;
+
+				for(let idx=startIdxForInsert; idx<tabModelLength; idx++){
+					gridTab.create(idx);
+				}
+
+				gridTab.activate(startIdxForInsert+1); // 추가된 tab 중 첫번째 활성화
+
+				tabModelLength = tabModel.tabs.length; // 루프를 위해서 값 재할당
+
+				for(let tmIdx=0; tmIdx<tabModelLength; tmIdx++){
+					if(!tabs[tmIdx].hasOwnProperty('gridOptions') 	|| (tabs[tmIdx].hasOwnProperty('gridOptions') && !tabs[tmIdx].gridOptions)
+																					|| (tabs[tmIdx].gridOptions.hasOwnProperty('dataModel') && !tabs[tmIdx].gridOptions.dataModel)){
+						gridTab.remove(tmIdx);  // gridOption값 이 없거나 dataModel이 없으면 default tab으로 간주하여 삭제함
+						tmIdx = 0;
+						tabModelLength = tabModel.tabs.length; // remove 했다면 배열 크기가 바뀌어 꼬이기 때문에 다시 초기 값으로 변경 후 재루프함
+					}
+				}
+			}
+		}
+
+        grid.refreshDataAndView();
+        tabModel.tabs.length ? grid.Tab().activeTab()._inst.hideLoading() : grid.hideLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+	};
+
+	// 마감 버튼 이벤트
+	$('#' + '[[${gprogrid}]]' + 'DeadLine').click(async function(){
+		if(!$('#' + '[[${gprogrid}]]' + 'Blhyymm').val()){
+			alert('[[#{ms.choose.blhyymm}]]');
+
+			return false;
+		}
+
+		// 마감버튼 누를 시 프로시저 호출하고 끝
+		if(await confirm('[[#{ms.confirm.deadline}]]')){
+			const blhyymm = $('#' + '[[${gprogrid}]]' + 'Blhyymm').val().replace(/-/g, '');
+			const data = {
+				warekey: $('#' + '[[${gprogrid}]]' + 'Warekey').val(),
+				blhyymm: blhyymm
+			};
+
+			await finishBmb01List(data);
+		}
+	});
+
+	// 마감
+   	async function finishBmb01List(finishData){
+   		if(!finishData){
+   			return false;
+   		}
+
+   		const grid = bmb01Grid.getGrid();
+		const tabModel = bmb01Grid.getGrid().option('tabModel');
+
+        tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.showLoading() : grid.showLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+   		const finishBmb01Response = await fetchUtil('POST', '/bm/billing/' + '[[${gprogrid}]]' + '/grids/1', finishData);
+
+   		if(finishBmb01Response.status===200){
+			resetTabContainer(bmb01Grid.getGrid());
+   		}
+
+        tabModel.tabs.length>0 ? grid.Tab().activeTab()._inst.hideLoading() : grid.hideLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+   	}
+});
+	</script>
+</div>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<div class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</div>
+				<div class="setting-grid-content">
+					<div class="input-group text-edit">
+						<select id="wmt20Warekey"
+								data-cb-val="combovl"
+								data-cb-name="combonm"
+								data-cb-url="/md/common/organization/warehouse-user" data-cb-variable="warekeyList"
+								data-cb-select=""
+						></select>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="wmt20Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmt20Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+      $(function(){
+         const pageId = "[[${gprogrid}]]";
+         const list = "List";
+         let dataList;
+         
+         $('#'+ pageId + 'Save').click(async function () {
+            const grid = pq.grid('#'+ pageId + 'Grid');
+            const gridCheck = grid.Checkbox('state').getCheckedNodes().filter((obj) => obj.state == true);
+            const gridList = grid.getChanges({all : true});
+            if(gridCheck.length) {
+			   const columns = grid.columns;
+			   const columnKeys = Object.keys(grid.columns);
+               for(let gridRow of gridCheck){
+            	   for(let columnKey of columnKeys) {
+						if(columns[columnKey].styleHead?.['background-color'] === "[[#{grid.styleHead01}]]" && !gridRow[columnKey]){
+							let rowIndx = Number(gridRow.pq_ri + 1);
+							if(typeof columnKey === 'string'){
+				                alert(rowIndx + "[[#{wm.wmt20.rownum}]]" + " " + columns[columnKey].title + "[[#{ms.choiceValue}]]");   
+							}else if(typeof columnKey === 'Number') {
+								if(!Number(gridRow[columnKey])) {
+				                    alert(rowIndx + "[[#{wm.wmt20.rownum}]]" + " " + columns[columnKey].title + "[[#{ms.choiceValue}]]");   
+		               			}
+							}
+							return;
+						}
+	   			  	}
+               }
+               
+               gridList.addList = gridCheck;
+               if(confirm('[[#{ms.checksave}]]')){
+                  grid.showLoading();
+                  let wmt20Res = await fetchUtil( 'PATCH' , '/wm/task/' + pageId + '/save', gridList );
+                  try{
+                     if(wmt20Res.status !==200){
+                        throw new Error('[[#{ms.saveErr}]]');
+                     }
+//                      alert('[[#{ms.saveSuccess}]]');
+                     grid.option( 'dataModel', { data: [], recIndx: 'rowkey' } );
+                     grid.refreshDataAndView();
+                  } catch(err) {
+                     alert('code : ' + wmt20Res.status + '\n' + err + '\n' + wmt20Res.statusText); // get method 통신의 경우 
+                     //alert('code : ' + resContent.code, 'error : ' + resContent.message);   // exception 처리가 되는 method ajax 통신의 경우 
+                  }
+                  grid.hideLoading();
+               }
+            }else{
+               alert('[[#{ms.choiceRowZero}]]');
+            }
+         });
+         
+         const wmt20GridCM = [
+           { title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+                  type: 'checkbox', sortable: false, editor: false,
+                  cb: { all: false, header: true }
+              },
+           { title: '[[#{md.mskuwc.compkey}]]', dataType: 'string',  dataIndx: 'compkey', hidden : true , editable: false },
+           { title: '[[#{wm.wmt20.setarea}]]', dataType: 'string',  dataIndx: 'areakey' , filter : 'areakey',
+              	styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+                  editor: {
+                     type: 'select',
+                     init: function (ui) {
+                        ui.$cell.find('select').pqSelect({ search:true, singlePlaceholder: '' });
+                        setTimeout(function () {
+                           ui.$cell.find('select').pqSelect('open'); 
+                        }, 250);
+                     },
+                     options: [],
+                     prepend : { '' : '' }
+                  },
+                  render: function (ui) {
+                     let option = ui.column.editor.options.find(function (obj) {
+                          return (obj[ui.cellData] != null);
+                     });
+                     
+                 	   return option ? option[ui.cellData] : '';	
+                  }
+           }, 
+           { title: '[[#{wm.wmt20.setzone}]]', dataType: 'string',  dataIndx: 'zonekey' , filter : 'zonekey',
+           	styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+               editor: {
+                  type: 'select',
+                  init: function (ui) {
+                     ui.$cell.find('select').pqSelect({ search:true, singlePlaceholder: '' });
+                     setTimeout(function () {
+                        ui.$cell.find('select').pqSelect('open'); 
+                     }, 250);
+                  },
+                  options: [],
+                  prepend : { '' : '' }
+               },
+               render: function (ui) {
+                  let option = ui.column.editor.options.find(function (obj) {
+                       return (obj[ui.cellData] != null);
+                  });
+                  
+              	   return option ? option[ui.cellData] : '';	
+               }
+           }, 
+           { title: '[[#{wm.wmt20.setloca}]]', dataType: 'string',  dataIndx: 'locakey' , filter : 'locakey',
+            	styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+                editor: {
+                   type: 'select',
+                   init: function (ui) {
+                      ui.$cell.find('select').pqSelect({ search:true, singlePlaceholder: '' });
+                      setTimeout(function () {
+                         ui.$cell.find('select').pqSelect('open'); 
+                      }, 250);
+                   },
+                   options: [],
+                   prepend : { '' : '' }
+                },
+                render: function (ui) {
+                   let option = ui.column.editor.options.find(function (obj) {
+                        return (obj[ui.cellData] != null);
+                   });
+                   
+               	   return option ? option[ui.cellData] : '';	
+                }
+           }, 
+           { title: '[[#{grid.skuCode}]]', dataType: 'string',  dataIndx: 'skumkey', filter : 'skumkey' ,
+               styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+               editor: {
+                      type: 'select',
+                      init: function (ui) {
+                           ui.$cell.find('select').pqSelect({ search:true, singlePlaceholder: '' });
+                         setTimeout(function () {
+                            ui.$cell.find('select').pqSelect('open'); 
+                         }, 250);
+                      },
+                      options: [],
+                      prepend : { '' : ''}
+                  },
+                  render: function (ui) {
+                     let option = ui.column.editor.options.find(function (obj) {
+                          return (obj[ui.cellData] != null);
+                      });
+                     return option ? ui.cellData : '';
+                  }   
+            },   
+            { title: '[[#{grid.skunm}]]', dataType: 'string',  dataIndx: 'skudesc' , editable : false },
+            { title: '[[#{md.mowrma.ownerky}]]', dataType: 'string',  dataIndx: 'ownerky', hidden:true , editable: false },
+            { title: '[[#{md.mowrma.ownamlc}]]', dataType: 'string',  dataIndx: 'ownamlc', editable : false
+            },   
+            { title: '[[#{wm.wstkky.stockky}]]', dataType: 'string',  dataIndx: 'stockky', hidden: true , editable: false },
+            { title: '[[#{wm.wstkky.lotnmky}]]', dataType: 'string',  dataIndx: 'lotnmky', hidden: true , editable: false },
+            { title: '[[#{md.mskuwc.suomkey}]]', dataType: 'string',  dataIndx: 'suomkey', hidden: true , editable: false },
+            { title: '[[#{wm.wtakit.fordqty}]]', dataType: 'integer',  dataIndx: 'fordqty',
+               styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },   
+            },
+            { title: '[[#{md.mdocma.doccate}]]', dataType: 'string',  dataIndx: 'doccate', hidden: true , editable: false },
+            { title: '[[#{md.mdocma.doctype}]]', dataType: 'string',  dataIndx: 'doctype', hidden: true , editable: false },
+            { title: '[[#{md.mdocma.doctynm}]]', dataType: 'string',  dataIndx: 'doctynm', hidden: true , editable: false },
+         ];
+         
+         const wmt20Grid = new GridUtil(wmt20GridCM, pageId , pageId +'Grid');
+         
+         wmt20Grid.setCreate(async function (evt, ui) {
+        	 wmt20DataInit(this.colModel);
+         });
+         
+         wmt20Grid.setAdd(function(evt, ui){
+            wmt20AddRow();
+         });
+         
+         wmt20Grid.setDelete(function(evt, ui){
+            wmt20DeleteRow();
+         });
+         
+         wmt20Grid.setCellDblClick(function(evt, ui){
+        	 if(ui.dataIndx == 'locakey'){
+        		wmt20CellDblClick(this , ui);
+       		 }
+         });
+         
+         wmt20Grid.setChange(function (evt, ui) {
+        	const updateList = ui.updateList;
+            if(ui.source === 'edit' || ui.source === 'update') {
+				updateList.forEach((obj) => {
+					let newRow 		  = obj.newRow;
+					let updateRowData = obj.rowData;
+					if(newRow.hasOwnProperty('skumkey')){
+						let targetRow = new Object();
+						if(newRow.skumkey){
+							targetRow = dataList.skumkeyList.find((findObj) => {
+							   return findObj.combovl === newRow.skumkey;
+							});
+						}
+					    this.updateRow({
+							rowIndx :  updateRowData.pq_ri ,
+							 newRow : {
+								  state : 'Y' ,
+								skudesc : targetRow ? targetRow.combonm  : '' ,
+								ownerky : targetRow ? targetRow.ownerky  : '' ,
+								ownamlc : targetRow ? targetRow.ownamlc  : '',
+								suomkey : targetRow.suomkey ,
+								lotnmky : targetRow.lotnmky ,
+								stockky : targetRow.stockky 
+					      	}, checkEditable : false
+					   });
+	                }
+				});
+             }
+         });
+         
+         wmt20Grid.open();
+         
+         //============================================================   
+         // grid setting Data
+         //============================================================
+         async function wmt20Init(){
+            const wmt20Res = await fetchUtil('GET' , '/wm/task/' + pageId +'/init' , { warekey : $('#' + pageId + 'Warekey').val() });
+            try{
+               if(wmt20Res.status !== 200){
+                  throw new Error("[[#{ms.datanotfound}]]");
+               }
+               return wmt20Res.json();
+            }catch(err){
+               alert('code : ' + wmt20Res.status + '\n' + err + '\n' + wmt20Res.statusText); // get method 통신의 경우 
+            }
+         };
+         
+       //============================================================
+   	   // Data init
+   	   //============================================================
+   	   async function wmt20DataInit(param){
+			await _commonInit();
+   		    const initData = await wmt20Init();
+   		 	dataList = await initData.item;
+   		    const selectBoxColModel = param.filter((column) => column.filter).forEach((element, index) => {
+   	    	   let keyName = element.dataIndx + list;
+   	    	   let options = dataList[keyName].map(function(obj){
+                     let rObj = {};
+                     if(obj.combovl){
+                     	rObj[obj.combovl] = obj.combonm;
+                     }
+                     return rObj;
+                  });
+   	    	   element.editor.options = options;
+   		    });
+   	    }
+         
+        //============================================================   
+        //window key add row 이벤트
+        //============================================================
+        function wmt20AddRow(){
+           const addRowData = { 
+              state   : true,
+              compkey : "[[${userattr.compkey}]]",
+              warekey : $('#' + pageId + 'Warekey option:selected').val() ,
+              doccate : '500', 
+              doctype : '550', 
+              tasksts : 'NEW',
+              fordqty : 0,
+              areakey : dataList.areakeyList[0].combovl ,
+           	  zonekey : dataList.zonekeyList[0].combovl , 
+              shppday : moment().format('YYYY-MM-DD')
+           };
+           let grid = pq.grid('#' + pageId + 'Grid');
+           let rowIndx = grid.addRow({ rowData: addRowData, checkEditable: false });
+        }
+         
+        //============================================================   
+        //window key delete row 이벤트
+        //============================================================
+        function wmt20DeleteRow(){
+           const grid = pq.grid('#' + pageId + 'Grid');
+           let checkList = grid.Checkbox('state').getCheckedNodes();
+           let rows = [];
+           
+           if(checkList.length){
+              for(let checkRow of checkList){
+                 rows.push({rowIndx : checkRow.pq_ri});
+              }
+                
+              if(confirm('[[#{ms.rowDelete}]]')) {
+                 grid.deleteRow({ rowList: rows });
+                 grid.setSelection(null);
+              };
+           }else {
+              alert("[[#{ms.choiceRowZero}]]");   //선택된 Row가 없습니다.
+           }
+        }
+         
+       //============================================================   
+       //cell double click 이벤트
+       //============================================================
+       function wmt20CellDblClick(grid , param) {
+        	 let rowData  = param.rowData;
+        	 let dataIndx = param.dataIndx;
+        	 let column = grid.getColumn({ dataIndx : dataIndx });
+        	 let rData;
+        	 if(!rowData.zonekey.length){
+        		 alert("[[#{wm.wmt20.zonecheck}]]");
+        		 this.editCell({ dataIndx : 'setzone' , rowIndx : rowData.rowIndx });
+        		 return;
+        	 }
+        	 let dataIndxList = dataIndx + list;
+        	 let filterData = dataList[dataIndxList].filter((obj) => rowData.zonekey === obj.zonekey);
+        	 let options = filterData.map((obj) => {
+        		let rData = new Object();
+        		rData[obj.locakey] = obj.locanam; 
+        		return rData; 
+        	 });
+        	 column.editor.options = options;
+         }
+      });
+      </script>
+	</div>
+</html>

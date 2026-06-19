@@ -1,0 +1,505 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<form method="post" id="bmb10" onsubmit="return false;">
+		<div class="tab-contents">
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<!-- 1row  -->
+					<!-- 창고  -->
+					<label for="bmb10Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="bmb10Warekey"></select>
+                        </div>
+                    </div>
+					<label for="bmb10Btrdate" class="setting-grid-title">[[#{md.bflrma.blrdate}]]</label>
+                    <div class="setting-grid-content">
+                    	<div class="input-wrapper">      
+							<input style="width:100%;" type="month" id="bmb10Btrdate"  onkeyup="setInputDateDel(this)"/>
+						</div>	
+                    </div>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button class="btn-navy btn-green btn-green" id="bmb10Save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="bmb10Grid"></div>
+                </div>
+            </div>
+        </div>
+	</form>
+	<script>
+	
+	/*  bmb10 - 차량별공제비등록
+	*   최초 생성일시   : 2023-12-12 10:30
+	*   최초 생성자      : 고은별
+	*   설명      	: 차량별 공제비 내역을 등록할 수 있는 화면(등록한 내역은 고정운송비요율에 등록됨)
+	*   수정 내역  	:
+	*   수정일시		:
+	*   수정자		:
+	*   변경 사항		:
+	*/
+	
+	$(function() {
+		
+		const bmb10Init = initBmb10();
+		$('#bmb10Btrdate').val(moment().format('YYYY-MM')); //현재년도 현재 월
+
+		
+		//============================================================
+		//검색영역 창고나 정산년월 변경되면 그리드 초기화
+		//============================================================
+ 	    $("#bmb10Warekey, #bmb10Btrdate").change(function() { 
+	    	//resetSearchConditions();
+
+	        const grid = pq.grid('#bmb10Grid');
+	        if(grid.pdata.length > 0){
+	        	const result = confirm('[[#{ms.listViewRollback}]]');
+	        	if(result){
+	        		grid.option('dataModel', {data: []});
+	        		grid.refreshDataAndView();
+	        		grid.refreshDataAndView();
+	                grid.hideLoading();
+	        	}
+	        }
+	    }); 
+		
+		
+		
+		$('#bmb10Save').click(function(){
+			const grid = pq.grid('#bmb10Grid'), gridCheck = grid.Checkbox('state').getCheckedNodes();
+			const gridChange = grid.getChanges({all:true});
+				  gridChange.addList = gridChange.addList.filter(function(item) {
+			            return item.state !== false;
+			       });//state가 true인 값만 가져오기
+			      gridChange.updateList = gridChange.updateList.filter(function(item) {
+			            return item.state !== false;
+			       });//state가 true인 값만 가져오기
+ 			
+			
+			if(gridCheck.length>0){
+				//============================================================	 
+		    	//체크 데이터 중 필수 값 체크
+		    	//============================================================
+				for(let i=0; i<gridCheck.length; i++){
+		    	  	if(!gridCheck[i].vehicky){
+		    	  		alert((gridCheck[i].pq_ri+1)+'[[#{ms.row}]] '+'[[#{ms.requiredValue}]]');	//필수입력 값을 입력해주세요.
+						grid.editCell({rowIndx: gridCheck[i].pq_ri, dataIndx: 'vehicky'});
+		    	  		return false;
+		    	  	}
+
+		    	}	
+		    		
+				//===============================================================	
+				//체크된 데이터 중복 체크
+				//===============================================================
+					let gridData = grid.getData();
+					let checkedGridData = gridData.filter(item => item['state'] === true);
+
+				//updateList 체크 데이터 정제
+				for(let z=0; z<gridChange.updateList.length; z++){
+					if(gridChange.updateList[z].state !== true){
+						gridChange.updateList.splice(z, 1);
+						gridChange.oldList.splice(z, 1);
+					}
+				}
+				
+				//addList 체크 데이터 정제
+				for(let x=0; x<gridChange.addList.length; x++){
+					if(gridChange.addList[x].state !== true){
+						gridChange.addList.splice(x, 1);
+					}
+				}
+			
+				let result = confirm('[[#{ms.checksave}]]');
+				if(result === true){
+					const data = gridChange;
+					saveBmb10List(data);
+				}
+			} else {
+				alert('[[#{ms.choiceRowZero}]]');
+			} 
+		});
+		
+		
+		function initBmb10(){
+			let bmb10Init = callAjax("data", "GET", "/bm/billing/bmb10/init", {});
+
+			// 창고 리스트
+			if(bmb10Init.item.warekeyList){
+				$("#bmb10Warekey option").not("[value='']").remove();
+				$.each(bmb10Init.item.warekeyList, function(key, value) {
+					$('#bmb10Warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+				});
+			}
+			return bmb10Init;
+		}
+
+
+
+		const bmb10GridCM = [
+			{ title: "[[#{md.bftrma.rowkey}]]",dataType: "string", dataIndx: "rowkey", hidden: true , editable: false },
+			{ title: "", dataType: 'bool', dataIndx: "state", align: "center",
+	            type: 'checkbox', sortable: false, editor: false,
+	            cb: { all: false, header: true }
+			},
+	        { title: "[[#{bm.bftdtl.compkey}]]", dataType: "string", dataIndx: "compkey", hidden: true , editable: false }, //회사
+			{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey", editable: false, hidden: true},  //창고 추후 히든
+			{ title: "[[#{bm.bftdtl.ptnrkey}]]", dataType: "string", dataIndx: "ptnrkey" , //거래처
+ 				editable: false, hidden: true
+			},
+			{ title: "[[#{bm.bftdtl.btrpmgb}]]", dataType: "string", dataIndx: "btrpmgb" ,	//대금구분 히든처리할 것 값 고정
+				editable: false, hidden: true
+			},
+			{ title: "[[#{bm.bftdtl.btrdate}]]", dataType: "date", format:"yy-mm", dataIndx: "btrdate", //정산년월 히든처리할것 값 고정
+				cls: 'pq-calendar pq-side-icon',
+				editor: {
+					type: 'textbox',
+					init: monthEditor,
+					getData: function (ui) {
+						return ui.$cell.find("input").val();
+					}
+				},
+				validations: [ { type: 'regexp', value: '^[0-9]{4}-[0-9]{2}$', msg: 'Not in date format' } ],
+				editable: false, hidden: true
+			},
+			{ title: "[[#{bm.bftdtl.vehicky}]]", dataType: "string", dataIndx: "vehicky",								//차량코드(명칭)
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				editor: {
+					type: "select",
+		            init: function (ui) { 
+		            	ui.$cell.find("select").pqSelect({ search : true, singlePlaceholder: '' });
+		            	setTimeout(function () {
+		                	ui.$cell.find("select").pqSelect('open'); 
+		                }, 250);
+		            },
+					options: []
+				},
+  		        render: function (ui) {
+					let combonm; 
+					bmb10Init.item.vehickyList.forEach(function (element, index){
+						if(ui.rowData.vehicky === element.vehicky){
+							combonm = element.vhcsnam
+						}
+					})
+					return  combonm;
+				}
+			},
+			{ title: "[[#{bm.bmb10.transportation}]]", dataType: "integer", dataIndx: "transportation", format: '#,###', //운송료(청구)
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bmb10.supplyprice}]]", dataType: "integer", dataIndx: "supplyprice", format: '#,###', //공급가(차주)
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bmb10.vat}]]", dataType: "integer", dataIndx: "vatval", format: '#,###', //부가세(차주)
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bmb10.sum}]]", dataType: "integer", dataIndx: "sumval", format: '#,###', //합계(차주)
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btmitct}]]", dataType: "integer", dataIndx: "btmitct", format: '#,###', //관리비
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btprmct}]]", dataType: "integer", dataIndx: "btprmct", format: '#,###', //보험료
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btvatct}]]", dataType: "integer", dataIndx: "btvatct", format: '#,###', //부가세
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btenvct}]]", dataType: "integer", dataIndx: "btenvct", format: '#,###', //환경세
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btcarct}]]", dataType: "integer", dataIndx: "btcarct", format: '#,###', //자동차세
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btoduct}]]", dataType: "integer", dataIndx: "btoduct", format: '#,###', //기타공제
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btdpsct}]]", dataType: "integer", dataIndx: "btdpsct", format: '#,###', //예치금
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btcvict}]]", dataType: "integer", dataIndx: "btcvict", format: '#,###', //종합소득세
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.btiaict}]]", dataType: "integer", dataIndx: "btiaict", format: '#,###', //산재보험료
+				styleHead: { 'background-color':'[[#{grid.styleHead02}]]' }
+			},
+			{ title: "[[#{bm.bftdtl.indibzl}]]", dataType: "string", dataIndx: "indibzl" , editable: false, hidden: true}, //Busifness logic indicator
+			{ title: "[[#{bm.bftdtl.indiarc}]]", dataType: "string", dataIndx: "indiarc" , editable: false, hidden: true }, //Archive indicator
+			{ title: "[[#{bm.bftdtl.updtchk}]]", dataType: "string", dataIndx: "updtchk" , editable: false, hidden: true }, //Update check
+	
+		];
+		
+		//GridUtil(colModel, progrId, gridId) 
+		const bmb10Grid = new GridUtil(bmb10GridCM, '[[${gprogrid}]]', 'bmb10Grid');
+		
+		//그리드에 거래처, 차량 뿌려주기
+		bmb10Grid.setCreate(function (evt, ui) {
+			const initList = bmb10Init.item
+			if(initList.warekeyList){
+	    		var column = this.getColumn({ dataIndx: "warekey" });
+	        	var options = initList.warekeyList.map(function(obj){
+	            	var rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	//column.editor.options = options;
+	    	}
+
+			if(initList.vehickyList){//차량
+	    		var column = this.getColumn({ dataIndx: "vehicky" });
+	        	var options = initList.vehickyList.map(function(obj){
+	            	var rObj = {};
+	            	rObj[obj.vehicky] = obj.vhcsnam;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+		});
+	
+		
+		bmb10Grid.setAdd(function(evt, ui){
+			let rowData = { state : true,
+							compkey : "[[${userattr.compkey}]]",
+							warekey : $('#bmb10Warekey').val(),
+							btrpmgb : 'PAYMENT',
+							btrdate : $('#bmb10Btrdate').val(),
+							btmitct : 0, //관리비
+							btprmct : 0, //보험료
+							btvatct : 0, //부가세
+							btenvct : 0, //환경세
+							btcarct : 0, //자동차세
+							btoduct : 0, //기타공제
+							btdpsct : 0, //예치금
+							btcvict : 0, //종합소득세
+							btiaict : 0, //산재보험료
+							transportation : 0, //운송료(차주)
+							supplyprice : 0, //공급가(차주)
+							vatval : 0, //부가세(차주)
+							sumval : 0 //합계(차주)
+							};
+			let rowIndx = this.addRow({ rowData : rowData , checkEditable : false });
+			this.goToPage({ rowIndx : rowIndx });
+			//this.editCell({ rowIndx : rowIndx, dataIndx: 'vehicky' });
+		});
+		
+		bmb10Grid.setFind();
+		
+
+		function validateNegativeValue(grid, ui, dataIndx) {
+		    if (ui.rowData[dataIndx] < 0) {
+		        alert('[[#{bm.bmb10.notMinus}]]'); //공제비는 음수 입력이 불가능합니다.
+		        grid.updateRow({ rowIndx: ui.rowIndx, newRow: { [dataIndx]: '' }, checkEditable: false });
+		    }
+		}
+
+		bmb10Grid.setCellSave(function(evt, ui) {
+		    this.refreshRow({ rowIndx: ui.rowIndx });
+
+		    const validatedColumns = ['transportation', 'supplyprice', 'vatval', 'sumval'
+									, 'btmitct', 'btprmct', 'btvatct', 'btenvct', 'btoduct'
+									, 'btdpsct', 'btcvict', 'btiaict'];
+		    
+		    if (validatedColumns.includes(ui.dataIndx)) {
+		        validateNegativeValue(this, ui, ui.dataIndx);
+		    }
+		    
+		});
+
+		 
+		 bmb10Grid.setCellClick(function(evt, ui){
+				const initList = bmb10Init.item;
+			    // 창고값 가져오기
+			    const warekeyValue = ui.rowData.warekey;
+			    
+			    if (initList.vehickyList) {
+			        // 창고 고려하여 차량코드
+				    const foundVehicky = initList.vehickyList.filter(element => {
+				        if (warekeyValue) {
+				        	return element.warekey === warekeyValue;
+				        } 
+				        return false;
+			        });
+			        // 문서 타입 컬럼에 옵션 설정
+			        const vehickyColumn = this.getColumn({ dataIndx: "vehicky" });
+			        const vehickyOptions = foundVehicky.map(function(obj){
+			            return {[obj.vehicky]: obj.vhcsnam};
+			        });
+			        vehickyColumn.editor.options = vehickyOptions;
+			    }
+			    
+			});
+
+
+		bmb10Grid.setChange(function(evt, ui){
+			if('edit' === ui.source){
+	    		for(let i=0; i<ui.updateList.length; i++){
+ 					//row에 차량 있을 때 차량에 따라서 ptnrkey 설정
+		            if (ui.updateList[i].rowData.vehicky) {
+		                const initList = bmb10Init.item;
+		                const findPtnrkey = initList.vehickyList.find(function(element) {
+		                    return ui.updateList[i].rowData.vehicky === element.vehicky;
+		                });
+		                if (findPtnrkey) {
+		                    ui.updateList[i].rowData.ptnrkey = findPtnrkey.carrier;
+		                }
+		            } 
+ 					
+	    			this.updateRow( {
+	           			rowIndx : ui.updateList[i].rowIndx,
+	           		    newRow : { state : true },
+	           		    checkEditable: false
+	           		});
+	    		}
+	    	} else if('paste' === ui.source){
+	    		for(let i=0; i<ui.updateList.length; i++){
+	    			const newRow = {state : true};
+  	    			if(!Number.isInteger(ui.updateList[i].rowData.btmitct)){
+ 	    				ui.updateList[i].rowData.btmitct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btprmct)){
+ 	    				ui.updateList[i].rowData.btprmct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btvatct)){
+ 	    				ui.updateList[i].rowData.btvatct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btenvct)){
+ 	    				ui.updateList[i].rowData.btenvct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btcarct)){
+ 	    				ui.updateList[i].rowData.btcarct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btoduct)){
+ 	    				ui.updateList[i].rowData.btoduct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btdpsct)){
+ 	    				ui.updateList[i].rowData.btdpsct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btcvict)){
+ 	    				ui.updateList[i].rowData.btcvict=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.btiaict)){
+ 	    				ui.updateList[i].rowData.btiaict=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.transportation)){
+ 	    				ui.updateList[i].rowData.transportation=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.supplyprice)){
+ 	    				ui.updateList[i].rowData.supplyprice=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.vatval)){
+ 	    				ui.updateList[i].rowData.vatval=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.updateList[i].rowData.sumval)){
+ 	    				ui.updateList[i].rowData.sumval=0;
+ 	    			}
+	    			
+ 					//row에 차량 있을 때 차량에 따라서 ptnrkey 설정
+		            if (ui.updateList[i].rowData.vehicky) {
+		                const initList = bmb10Init.item;
+		                const findPtnrkey = initList.vehickyList.find(function(element) {
+		                    return ui.updateList[i].rowData.vehicky === element.vehicky;
+		                });
+		                if (findPtnrkey) {
+		                    ui.updateList[i].rowData.ptnrkey = findPtnrkey.carrier;
+		                }
+		            }
+ 					
+	    			this.updateRow({
+	        			rowIndx : ui.updateList[i].rowIndx,
+	        		    newRow : newRow,
+	        		    checkEditable: false
+	        		});
+	    		}
+	    		for(let i=0; i<ui.addList.length; i++){
+	    			ui.addList[i].newRow.state = true;
+	    			ui.addList[i].newRow.compkey = '[[${userattr.compkey}]]';
+	    			ui.addList[i].newRow.warekey = $('#bmb10Warekey').val();
+	    			ui.addList[i].newRow.btrpmgb = 'PAYMENT';
+	    			ui.addList[i].newRow.btrdate = $('#bmb10Btrdate').val();
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btmitct)){
+ 	    				ui.addList[i].newRow.btmitct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btprmct)){
+ 	    				ui.addList[i].newRow.btprmct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btvatct)){
+ 	    				ui.addList[i].newRow.btvatct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btenvct)){
+ 	    				ui.addList[i].newRow.btenvct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btcarct)){
+ 	    				ui.addList[i].newRow.btcarct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btoduct)){
+ 	    				ui.addList[i].newRow.btoduct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btdpsct)){
+ 	    				ui.addList[i].newRow.btdpsct=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btcvict)){
+ 	    				ui.addList[i].newRow.btcvict=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.btiaict)){
+ 	    				ui.addList[i].newRow.btiaict=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.transportation)){
+ 	    				ui.addList[i].newRow.transportation=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.supplyprice)){
+ 	    				ui.addList[i].newRow.supplyprice=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.vatval)){
+ 	    				ui.addList[i].newRow.vatval=0;
+ 	    			}
+ 	    			if(!Number.isInteger(ui.addList[i].newRow.sumval)){
+ 	    				ui.addList[i].newRow.sumval=0;
+ 	    			}
+
+	    			if (ui.addList[i].newRow.vehicky) {
+		    			const newRow = {state : true}
+		                const initList = bmb10Init.item;
+		                const findPtnrkey = initList.vehickyList.find(element => 
+		                ui.addList[i].rowData.vehicky === element.vehicky);
+		                if (findPtnrkey) {
+		                	ui.addList[i].rowData.ptnrkey = findPtnrkey.carrier;
+		                }
+		                newRow.ptnrkey=findPtnrkey.carrier
+		            } 
+	    			
+	    			
+	    		}
+	    	}
+		});
+		
+		bmb10Grid.open();
+		//bmb10List();
+
+	  async function saveBmb10List(saveData){
+			if(!saveData){
+				return false;
+			}
+			const grid = pq.grid('#bmb10Grid');
+			grid.showLoading();
+			const saveBmb10Response = await fetchUtil('POST', '/bm/billing/bmb10/confirm', saveData);
+			if(saveBmb10Response.status===200){
+				//alert('[[#{ms.saveSuccess}]]');
+				grid.option( "dataModel", { data:[] } );
+				grid.refreshDataAndView();
+			}
+			grid.hideLoading();
+		}
+		
+	});
+		
+	</script>
+</div>
+</html>

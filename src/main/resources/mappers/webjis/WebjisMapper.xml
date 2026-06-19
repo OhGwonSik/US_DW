@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.webjis.mapper.WebjisMapper">
+
+	<select id="selectIfsalsq" resultType="String">
+		/* selectIfsalsq */
+		SELECT FN_IF_IFSALSQ() as ifsalsq FROM DUAL
+	</select>
+	
+	<select id="selectCheckDateTimeIsEmpty" resultType="com.logistics.webjis.vo.WebjisVO">
+		SELECT IA.COMPKEY 
+	         , IA.IFSALSQ 
+	         , IA.plant 
+	         , IA.line 
+	         , IA.itemcate 
+			 , IA.palletNo 
+			 , DATE_FORMAT(IA.createDateTime, '%Y-%m-%d') AS createDateTime 
+			 , IA.printDateTime 
+			 , IA.seq 
+			 , IA.alc 
+			 , IA.carType 
+			 , IA.goodsCode 
+			 , IA.goodsName 
+			 , IA.bodyNo 
+			 , DATE_FORMAT(IA.receiveDateTime, '%Y-%m-%d') AS receiveDateTime 
+		     , IA.checkDateTime 
+		     , IA.UPDTCHK
+		     , IA.IFPRSTS
+		 FROM IFSAL21R IA 
+		INNER JOIN (
+			    SELECT COMPKEY, itemcate, plant, line, DATE_FORMAT(receiveDateTime, '%Y-%m-%d') AS receiveDateTime, MAX(seq) AS seq
+			      FROM IFSAL21R
+				  <where>
+					  AND COMPKEY = #{compkey}
+					  AND checkDateTime = ''
+					  <![CDATA[ AND DATE_FORMAT(receiveDateTime, '%Y-%m-%d') < DATE_FORMAT(SYSDATE(), '%Y-%m-%d') ]]>
+					  AND IFPRSTS = 'N'
+				  </where> 
+    			GROUP BY itemcate, plant, line, DATE_FORMAT(receiveDateTime, '%Y-%m-%d')
+	    ) IR
+		   ON IA.COMPKEY = IR.COMPKEY
+		  AND IA.itemcate = IR.itemcate
+		  AND IA.plant = IR.plant
+		  AND IA.line = IR.line
+		  AND DATE_FORMAT(IA.receiveDateTime, '%Y-%m-%d') = DATE_FORMAT(IR.receiveDateTime, '%Y-%m-%d')
+		  AND IA.seq = IR.seq
+	</select>
+	
+	<insert id="insertWebjis" parameterType="com.logistics.webjis.vo.WebjisVO">
+		/* insertWebjis */
+		INSERT INTO IFSAL21R
+		(
+			  COMPKEY
+			, IFSALSQ
+			, plant
+			, line
+			, itemcate
+			, palletNo
+			, createDateTime
+			, printDateTime
+			, seq
+			, alc
+			, carType
+			, goodsCode
+			, goodsName
+			, bodyNo
+			, receiveDateTime
+			, checkDateTime
+			, IFRCVUR
+		)
+		VALUES
+		(
+			  #{compkey}
+			, #{ifsalsq}
+			, #{plant}
+			, #{line}
+			, #{itemcate}
+			, #{palletNo}
+			, #{createDateTime}
+			, #{printDateTime}
+			, #{seq}
+			, #{alc}
+			, #{carType}
+			, 
+			<choose>
+				<when test='goodsCode != null and goodsCode != "" and goodsCode != "*"'>
+					CONCAT((SELECT SAATC05 FROM OCODMA WHERE COMPKEY = #{compkey} AND CARTYPE = #{carType}), '-', #{goodsCode})
+				</when>
+				<otherwise>
+					'ZZZ-ZZZZZ-ZZZZZ'
+				</otherwise>
+			</choose>
+			, #{goodsName}
+			, #{bodyNo}
+			, #{receiveDateTime}
+			, #{checkDateTime}
+			, #{ifrcvur}
+		)
+		ON DUPLICATE KEY UPDATE
+		  alc = #{alc}
+		, goodsCode =  
+			<choose>
+				<when test='goodsCode != null and goodsCode != "" and goodsCode != "*"'>
+					CONCAT((SELECT SAATC05 FROM OCODMA WHERE COMPKEY = #{compkey} AND CARTYPE = #{carType}), '-', #{goodsCode})
+				</when>
+				<otherwise>
+					'ZZZ-ZZZZZ-ZZZZZ'
+				</otherwise>
+			</choose>
+		, palletNo = #{palletNo}
+		, printDateTime = #{printDateTime}
+		, checkDateTime = #{checkDateTime}
+		, UPDTCHK = UPDTCHK + 1
+	</insert>
+	
+	<update id="updateCheckDateTime" parameterType="com.logistics.webjis.vo.WebjisVO">
+		UPDATE IFSAL21R
+		   SET palletNo = #{palletNo}
+		   	 , checkDateTime = #{checkDateTime}
+		     , alc = #{alc}
+		     , goodsCode = 
+			   <choose>
+					<when test='goodsCode != null and goodsCode != "" and goodsCode != "*"'>
+						CONCAT((SELECT SAATC05 FROM OCODMA WHERE COMPKEY = #{compkey} AND CARTYPE = #{carType}), '-', #{goodsCode})
+					</when>
+					<otherwise>
+						'ZZZ-ZZZZZ-ZZZZZ'
+					</otherwise>
+			   </choose>
+		     , printDateTime = #{printDateTime}
+		     , IFPRSTS = 'U'
+		     , UPDTCHK = UPDTCHK + 1
+		   <where>
+		   	  AND COMPKEY = #{compkey}
+		   	  AND itemcate = #{itemcate}
+		   	  AND seq = #{seq}
+		   	  AND bodyNo = #{bodyNo}
+		   	  AND UPDTCHK = ( 
+		   	                   SELECT UPDTCHK 
+		   	                	 FROM IFSAL21R
+		   	                	WHERE COMPKEY = #{compkey}   
+							   	  AND itemcate = #{itemcate}
+							   	  AND seq = #{seq}
+							   	  AND bodyNo = #{bodyNo}
+		   	                )
+		   	  AND IFPRSTS = 'N'
+		   </where>
+	</update>
+</mapper>

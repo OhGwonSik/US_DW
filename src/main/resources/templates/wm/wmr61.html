@@ -1,0 +1,558 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="wmr61_warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr61_warekey"></select>
+					</div>
+				</div>
+				<label for="wmr61_ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmr61_ownerky">
+							<option value="" selected>[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="wmr61_skudesc" class="setting-grid-title">[[#{wm.wtakit.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('wm.wtakit.skudesc')}" id="wmr61_skudesc" onkeyup="wmr61Keyup()">
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wtakit.docdate}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmr61_docdate_from" onkeyup="setInputDateDel(this)"/>
+						<span>~</span>
+						<input type="date" max="2999-12-31" id="wmr61_docdate_to"   onkeyup="setInputDateDel(this)"/>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wtakit.tasksts}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="wmr61_tasksts">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="wmr61_search" onclick="wmr61Search()"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="wmr61_reset" onclick="wmr61Refresh()"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-white" id="wmr61_cancel"><img class="ic-bt-delete">[[#{wm.wmr61.toCancel}]]</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmr61_grid"></div>
+			</div>
+		</div>
+	</div>
+	
+<script>
+$(function(){
+	/*  wmr61 - 적치조회
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 최강호 
+	*   설명			: 적치완료된 재고를 조회하고 적치를 취소할 수 있는 페이지
+	*   수정 내역		:
+	*   수정일시		:
+	*	수정자		: 
+	*	변경 사항		: 
+	*/
+	let wmr61InitData = wmr61Init();
+	
+	wmr61Reason();
+	
+	$("#wmr61_cancel").click(async function () {
+		let grid = pq.grid("#wmr61_grid") 
+		//let gridCheck = grid.Checkbox('state').getCheckedNodes();
+		let gridCheck = grid.getChanges({all: true});
+			gridCheck.updateList = gridCheck.updateList.filter(function(item) {
+				  return item.state === true;
+			});//state가 true인 값만 가져오기
+		
+		if(gridCheck.updateList.length > 0){
+			//============================================================	 
+	    	//체크된 데이터 값 체크
+	    	//============================================================
+			for(i=0;i<gridCheck.updateList.length;i++){
+				let gridPkrscd = wmr61ReasonList.find(obj => obj['warekey'] === gridCheck.updateList[i].warekey
+						&& obj['doccate'] === gridCheck.updateList[i].doccate 
+						&& obj['doctype'] === (gridCheck.updateList[i].doctype === '510' ? '519' : '529')
+						&& obj['combovl'] === gridCheck.updateList[i].pkrsncd);
+				
+				if(!gridCheck.updateList[i].pkrsncd || !gridPkrscd){
+					alert("[[#{wm.wtakit.pkrsncd}]]" + "[[#{ms.choiceValue}]]");	//취소 사유코드를/을 선택해주세요.
+					grid.setSelection( {rowIndx: gridCheck.updateList[i].pq_ri, dataIndx: 'pkrsncd'} );
+					return false;
+				}
+				if(gridCheck.updateList[i].tasksts === 'TSCANCEL'){
+					alert("[[#{wm.wmr61.alreadyCancel}]]");	//이미 취소한 항목을 다시 취소할 수 없습니다.
+					grid.setSelection( {rowIndx: gridCheck.updateList[i].pq_ri, dataIndx: 'comcdtx'} );
+					gridCheck.updateList[i].state=false;
+					return false;
+				}
+			}
+			
+			let result = confirm("[[#{ms.checkCancel}]]");
+			if(result == true){
+				let data = gridCheck;
+				grid.showLoading();
+				
+				try{
+					let response = await fetchUtil('POST', "/wm/inbond/wmr61/grids/1", data,);
+					if(response.status === 200){
+						grid.refreshDataAndView();
+						//alert("[[#{ms.saveSuccess}]]");
+	        			grid.hideLoading();
+	        			await wmr61Search();
+		        	}
+				} catch(err){
+					console.log(err);
+				} finally{
+					grid.hideLoading();
+				}
+			}
+		}else{
+			alert("[[#{ms.choiceRowZero}]]");
+		}
+	});
+	
+	let wmr61GridCM = [
+		{ title: "", dataType: 'bool', dataIndx: "state", maxWidth: 30, minWidth: 30,
+            type: 'checkbox', sortable: false, editor: false, cb: { all: false, header: true },
+            editable: function (ui) {
+				return editable = (ui.rowData.tasksts === 'TSCOMP') ? true : false;
+			}
+     	},
+     	{ title: "rowkey", dataType: "string", dataIndx: "rowkey", editable: false, hidden: true },
+		{ title: "[[#{wm.wtakit.compkey}]]", dataType: "string",  dataIndx: "compkey", editable: false, hidden: true },	//Company Key
+		{ title: "[[#{wm.wtakit.taskoky}]]", dataType: "string",  dataIndx: "taskoky", editable: false },	//작업문서
+		{ title: "[[#{wm.wtakit.taskoit}]]", dataType: "integer", dataIndx: "taskoit", editable: false },	//작업문서 아이템
+		{ title: "[[#{wm.wtakit.tasksts}]]", dataType: "string",  dataIndx: "tasksts", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},		//작업문서 상태
+		{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx: "warekey", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//창고
+		//{ title: "[[#{wm.wtakit.ordgrky}]]", dataType: "string",  dataIndx: "ordgrky", editable: false, hidden: true },	//작업그룹키
+		{ title: "[[#{wm.wtakit.truntyp}]]", dataType: "string",  dataIndx: "truntyp", editable: false, hidden: true },	//Transfer unit type
+		{ title: "[[#{wm.wtakit.trunpid}]]", dataType: "string",  dataIndx: "trunpid", editable: false, hidden: true },	//Transfer unit ID
+		{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx: "ownerky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//화주,
+		{ title: "[[#{wm.wtakit.doccate}]]", dataType: "string",  dataIndx: "doccate", editable: false, hidden: true},	//문서유형
+		{ title: "[[#{wm.wtakit.doctype}]]", dataType: "string",  dataIndx: "doctype", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//문서타입
+		{ title: "[[#{wm.wtakit.lotnmky}]]", dataType: "string",  dataIndx: "lotnmky", editable: false },	//LOT NUMBER
+		{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx: "skumkey", editable: false},	//부품키
+		{ title: "[[#{grid.skunm}]]", dataType: "string",  dataIndx: "skudesc", editable: false },	//부품명
+		{ title: "[[#{wm.wtakit.frareky}]]", dataType: "string",  dataIndx: "frareky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//From Area
+		{ title: "[[#{wm.wtakit.frzonky}]]", dataType: "string",  dataIndx: "frzonky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//From Zone
+		{ title: "[[#{wm.wtakit.frlocky}]]", dataType: "string",  dataIndx: "frlocky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//From Loc
+		{ title: "[[#{wm.wtakit.toareky}]]", dataType: "string",  dataIndx: "toareky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//To Area
+		{ title: "[[#{wm.wtakit.tozonky}]]", dataType: "string",  dataIndx: "tozonky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//To Zone
+		{ title: "[[#{wm.wtakit.tolocky}]]", dataType: "string",  dataIndx: "tolocky", editable: false,
+			editor: { type: "select", options: [] },
+            render: gridRenderAndValue
+		},	//To Loc
+		{ title: "[[#{wm.wtakit.fordqty}]]", dataType: "integer", dataIndx: "fordqty", editable: false,		//지시 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},	
+		{ title: "[[#{wm.wtakit.fuomeky}]]", dataType: "string",  dataIndx: "fuomeky", editable: false },	//From UOM
+		{ title: "[[#{wm.wtakit.tcmpqty}]]", dataType: "integer", dataIndx: "tcmpqty", editable: false,		//완료수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wtakit.tuomeky}]]", dataType: "string",  dataIndx: "tuomeky", editable: false },	//To UOM
+		{ title: "[[#{wm.wmr.stockky}]]", dataType: "integer", dataIndx: "stotqty", editable: false,		//총재고 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wstkky.sallqty}]]", dataType: "integer", dataIndx: "sallqty", editable: false,		//할당 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wstkky.sinbqty}]]", dataType: "integer", dataIndx: "sinbqty", editable: false,		//입고중 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wstkky.soubqty}]]", dataType: "integer", dataIndx: "soubqty", editable: false,		//출고중 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wstkky.sbloqty}]]", dataType: "integer", dataIndx: "sbloqty", editable: false,		//블락 수량
+			summary: { type: "sum" }, format :  "#,###"
+		},
+		{ title: "[[#{wm.wtakit.stkstat}]]", dataType: "string",  dataIndx: "stkstat", editable: false,
+			editor: { type: "select", options: [] }, 
+			render: gridRenderAndValue
+		},	//재고상태
+/* 		{ title: "[[#{wm.wtakit.parsncd}]]", dataType: "string",  dataIndx: "parsncd", editable: false },	//이동 사유코드
+		{ title: "[[#{wm.wtakit.parsnnm}]]", dataType: "string",  dataIndx: "parsnnm", editable: false },	//이동 사유내용 */
+		{ title: "[[#{wm.wtakit.pkrsncd}]]", dataType: "string",  dataIndx: "pkrsncd",	//취소 사유코드
+			styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+			editable: function (ui) {
+				return editable = (ui.rowData.tasksts === 'TSCOMP') ? true : false;
+			},
+			editor: {
+				type: "select",
+				init: function (ui) {
+					ui.$cell.find("select").pqSelect({ search:false, singlePlaceholder: '' });
+					setTimeout(function () {
+	                	ui.$cell.find("select").pqSelect('open'); 
+	                }, 250); 
+				},
+				options: function(ui){
+					return wmr61ReasonList.filter((obj) => 
+						obj['warekey'] === ui.rowData.warekey &&
+						obj['doccate'] === ui.rowData.doccate &&
+						obj['doctype'] == (ui.rowData.doctype === '510' ? '519': '529')
+					).map(obj=>{return{
+						[obj.combovl]:obj.combonm
+					}});
+				},
+				prepend : { "" : '[[#{ms.selectOption}]]' }
+			},
+			render: function(ui){
+				return  wmr61ReasonList.find((obj) => 
+				obj['warekey'] === ui.rowData.warekey &&
+				obj['doccate'] === ui.rowData.doccate &&
+				obj['doctype'] == (ui.rowData.doctype === '510' ? '519': '529')
+				&& obj[ui.dataIndx] === ui.cellData)?.combonm || "";
+			}
+		},
+		{ title: "[[#{wm.wtakit.pkrsnnm}]]", dataType: "string",  dataIndx: "pkrsnnm",	//취소 내용
+			styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+			editable: function (ui) {
+				return editable = (ui.rowData.tasksts === 'TSCOMP') ? true : false;
+			},
+			validations : [{ type: 'minLen', value: 0, warn: true }, { type: 'maxLen', value: 200, msg: "[[#{ms.validations.maxLenLength(200)}]]" }]
+		},
+		{ title: "[[#{wm.wtakit.expidat}]]", dataType: "string",  dataIndx: "expidat", editable: false, hidden: true },	//유통기한
+		{ title: "[[#{wm.wtakit.eoasnky}]]", dataType: "string",  dataIndx: "eoasnky", editable: false },	//입고예정 문서
+		{ title: "[[#{wm.wtakit.eoasnit}]]", dataType: "integer", dataIndx: "eoasnit", editable: false },	//ASN item number
+		{ title: "[[#{wm.wtakit.rcvdcky}]]", dataType: "string",  dataIndx: "rcvdcky", editable: false },	//입고문서 번호
+		{ title: "[[#{wm.wmr61.rcvdcit}]]", dataType: "integer", dataIndx: "rcvdcit", editable: false },	//입고문서 아이템 번호
+		{ title: "[[#{wm.wtakit.storfky}]]", dataType: "string",  dataIndx: "storfky", editable: false },	//재고키 참고번호
+		{ title: "[[#{wm.wtakit.credate}]]", dataType: "string",  dataIndx: "credate", editable: false },	//생성일자
+		{ title: "[[#{wm.wtakit.cretime}]]", dataType: "string",  dataIndx: "cretime", editable: false },	//생성시간
+		{ title: "[[#{wm.wtakit.creuser}]]", dataType: "string",  dataIndx: "creuser", editable: false },	//생성자
+		{ title: "[[#{wm.wtakit.lmodate}]]", dataType: "string",  dataIndx: "lmodate", editable: false },	//수정일자
+		{ title: "[[#{wm.wtakit.lmotime}]]", dataType: "string",  dataIndx: "lmotime", editable: false },	//수정시간
+		{ title: "[[#{wm.wtakit.lmouser}]]", dataType: "string",  dataIndx: "lmouser", editable: false }	//수정자
+	];
+	
+	let wmr61Grid = new GridUtil(wmr61GridCM, '[[${gprogrid}]]', 'wmr61_grid');
+	wmr61Grid.setFind();
+	wmr61Grid.setReset();
+	
+	wmr61Grid.setChange(function (evt, ui) {
+    	if(ui.source === 'edit' || ui.source === 'paste'){
+    		for(i=0; i<ui.updateList.length; i++){
+    			let newRow = ui.updateList[i].newRow;
+    			let rowData = ui.updateList[i].rowData;
+    			let gridPkrscd = wmr61ReasonList.find(obj => obj['warekey'] === rowData.warekey
+						&& obj['doccate'] === rowData.doccate 
+						&& obj['doctype'] === (rowData.doctype === '510' ? '519' : '529')
+						&& obj['combovl'] === newRow.pkrsncd);
+    			
+    			if((newRow.pkrsncd && gridPkrscd) || newRow.pkrsnnm){
+    				this.updateRow( {
+               			rowIndx : ui.updateList[i].rowIndx,
+               		    newRow : { state : true },
+               		    checkEditable: false
+               		});
+    			}
+    		}
+    	}	
+	});
+	
+	wmr61Grid.setRowInit(function(ui){
+		if(ui.rowData.tasksts !== 'TSCOMP'){
+			return { style: 'background-color: #e4e4eb' , cls : 'pq-cell-disable' };
+		}
+	});
+	
+	wmr61Grid.setCreate(async function(evt, ui){
+		if(wmr61InitData.warekeyList){
+			let column = this.getColumn({ dataIndx: "warekey" });
+        	let options = wmr61InitData.warekeyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+		if(wmr61InitData.ownerkyList){
+    		let column = this.getColumn({ dataIndx: "ownerky" });
+        	let options = wmr61InitData.ownerkyList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(wmr61InitData.taskstsList){
+    		let column = this.getColumn({ dataIndx: "tasksts" });
+        	let options = wmr61InitData.taskstsList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		if(wmr61InitData.stkstatList){
+    		let column = this.getColumn({ dataIndx: "stkstat" });
+        	let options = wmr61InitData.stkstatList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.combovl] = obj.combonm;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+    	}
+		
+		$('#wmr61_ownerky').pqSelect({
+			deselect: false
+		});
+	});
+	
+	wmr61Grid.open();
+	
+	//============================================================
+	//적치취소 사유코드를 가져오는 이벤트
+	//============================================================
+	async function wmr61Reason(){
+		let reason = await fetchUtil('GET', '/wm/inbound/wmr21/reason', {rscate1: 'CANCEL', doccate: '500'});
+		let resContent = await reason.json();
+		wmr61ReasonList = resContent;
+		return wmr61ReasonList;
+	}
+});
+
+function wmr61Init(){
+	$('#wmr61_docdate_from').val(moment().subtract(1, "d").format("YYYY-MM-DD"));	// 어제
+	$('#wmr61_docdate_to').val(moment().format("YYYY-MM-DD"));	//오늘
+	
+	let wmr61InitData = callAjax('data', 'GET', "/wm/inbound/wmr61/init/1"); 
+	
+	// 창고 리스트
+	if(wmr61InitData.warekeyList){
+		$("#wmr61_warekey option").not("[value='']").remove();
+		$.each(wmr61InitData.warekeyList, function(key, value) {
+			$('#wmr61_warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	}
+	
+	// 화주 리스트
+	if(wmr61InitData.ownerkyList){
+		$("#wmr61_ownerky option").not("[value='']").remove();
+		$.each(wmr61InitData.ownerkyList, function(key, value) { 
+			$('#wmr61_ownerky').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+		});
+	}
+	
+	if(wmr61InitData.taskstsList){
+		$.each(wmr61InitData.taskstsList, function(key, value){
+			let isChecked = true;
+			
+			if(value.combovl === 'NEW'){
+				return;
+			}
+			if(value.combovl === 'TSCANCEL'){
+		        isChecked = false;
+		    }
+			if(value.combovl === 'SHPOUT'){
+				return;
+			}
+			
+			let checkBoxDiv = $('<div class="check-box">');
+            let checkBoxInput = $('<input type="checkbox" name="wmr61_tasksts" id="wmr61_tasksts_' + value.combovl + '" value="' + value.combovl + '">');
+            checkBoxInput.prop('checked', isChecked);
+            let checkBoxLabel = $('<label for="wmr61_tasksts_' + value.combovl + '">' + value.combonm + '</label>');
+		
+            checkBoxDiv.append(checkBoxInput);
+            checkBoxDiv.append(checkBoxLabel);
+            $('#wmr61_tasksts').append(checkBoxDiv);
+		});
+	}
+	
+	return wmr61InitData;
+}
+
+//============================================================
+//input 키보드 엔터 이벤트
+//============================================================
+function wmr61Keyup(){
+	let key = this.event.key || this.event.keyCode;
+	if (key === 'Enter' || key === 13) {
+		wmr61Search();
+	}
+}
+
+async function wmr61Search(){
+	let grid = pq.grid("#wmr61_grid");
+	let data = { 
+		warekey : $('#wmr61_warekey').val()
+	  , ownerky : $('#wmr61_ownerky').val()
+	  , tasksts : checkTasksts()
+	  , skudesc : $('#wmr61_skudesc').val()
+	  , docdatefrom : $('#wmr61_docdate_from').val()
+	  , docdateto : $('#wmr61_docdate_to').val()
+	};
+	let searchInit = await fetchUtil("GET", "/wm/inbound/wmr61/init/1", {warekey: data.warekey});
+	
+	grid.showLoading();
+	let response = await fetchUtil("GET", "/wm/inbound/wmr61/grids/1", data);
+	
+	try{
+		if(response.status===200){	
+			let wmr61SearchInit = await searchInit.json();
+			if(wmr61SearchInit.areakeyList){
+	    		let column = grid.getColumn({ dataIndx: "frareky" });
+	        	let options = wmr61SearchInit.areakeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr61SearchInit.areakeyList){
+	    		let column = grid.getColumn({ dataIndx: "toareky" });
+	        	let options = wmr61SearchInit.areakeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr61SearchInit.zonekeyList){
+	    		let column = grid.getColumn({ dataIndx: "frzonky" });
+	        	let options = wmr61SearchInit.zonekeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr61SearchInit.zonekeyList){
+	    		let column = grid.getColumn({ dataIndx: "tozonky" });
+	        	let options = wmr61SearchInit.zonekeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr61SearchInit.locakeyList){
+	    		let column = grid.getColumn({ dataIndx: "frlocky" });
+	        	let options = wmr61SearchInit.locakeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr61SearchInit.locakeyList){
+	    		let column = grid.getColumn({ dataIndx: "tolocky" });
+	        	let options = wmr61SearchInit.locakeyList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			if(wmr61SearchInit.gridDoctypeList){
+	    		let column = grid.getColumn({ dataIndx: "doctype" });
+	        	let options = wmr61SearchInit.gridDoctypeList.map(function(obj){
+	            	let rObj = {};
+	            	rObj[obj.combovl] = obj.combonm;
+	            	return rObj;
+	    		});
+	        	column.editor.options = options;
+	    	}
+			
+			resContent = await response.json();
+			 if(resContent.length===0){
+				grid.hideLoading();
+			}
+			grid.option( "dataModel", { data: resContent, recIndx: "rowkey" } );
+			grid.refreshDataAndView();
+		}
+	}catch(err){
+		console.log(err);
+	}finally{
+		grid.hideLoading();
+	}
+}
+
+//============================================================	
+//체크 tasksts 필터 이벤트
+//============================================================
+function checkTasksts(){
+	let tasksts = "";
+	
+	$('input:checkbox[name=wmr61_tasksts]').each(function (index) {
+		tasksts += $(this).is(":checked") ? ","+$(this).val() : ""
+	});
+	
+	if(tasksts.indexOf(',') === 0){
+		tasksts = tasksts.substr(1);
+	}
+	
+	return tasksts;
+}
+
+//============================================================
+//검색조건 초기화
+//============================================================
+function wmr61Refresh(){
+	let grid = pq.grid('#wmr61_grid');
+	
+	document.getElementById("wmr61_warekey").value = $('#wmr61_warekey option:first').val();
+	
+	$('#wmr61_ownerky').pqSelect();
+	let pqSelectElement = $('#wmr61_ownerky')[0];
+	pqSelectElement.selectedIndex = 0;
+	$('#wmr61_ownerky').pqSelect('refreshData');
+	
+	document.getElementById("wmr61_skudesc").value = '';
+	
+	$('.check-box input[name="wmr61_tasksts"]').not('[value="TSCANCEL"]').prop('checked', true);
+	
+	$('#wmr61_docdate_from').val(moment().subtract(1, "d").format("YYYY-MM-DD"));	// 어제
+	$('#wmr61_docdate_to').val(moment().format("YYYY-MM-DD"));	//오늘
+	
+	grid.option('dataModel', { data : [] });
+	grid.refreshDataAndView();
+}
+
+</script>
+	 
+</div>
+</html>

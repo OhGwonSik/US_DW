@@ -1,0 +1,957 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="omp01_rcvwhky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omp01_rcvwhky" name="omp01_rcvwhky"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-select="" data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<label for="omp01_ownerky" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omp01_ownerky" name="omp01_ownerky"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/partner/owner" data-cb-select=""
+							data-cb-variable="ownerkyList">
+								<option value="">[[#{ms.select}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="omp01_btnSave">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="omp01_pqgrid"></div>
+			</div>
+		</div>
+	</div>
+	<div class="modal fade" id="omp01QtyModal" tabindex="-1" role="dialog"
+	aria-labelledby="omp01QtyModalTitle" aria-hidden="true"
+	data-backdrop='static' data-keyboard='false'>
+		<div class="modal-dialog" role="document">
+			<div class="modal-content popup-register modal-con" style="top:120px; display:flex;">
+				<div class="modal-top" id="omp01QtyModalTitle">
+					<h5 class="box-title">[[#{menu.om.omp01}]]</h5>
+				</div>
+				<div class="modal-body">
+					<div class="setting-grid">
+						<label for="omp01_m_poitqty" class="setting-grid-title ic-title-nece">[[#{om.ocopur.poitqty}]]</label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="number"
+								id="omp01_m_poitqty" onfocus="this.select()"
+								th:placeholder="${#messages.msg('om.ocopur.poitqty')}">
+							</div>
+						</div>
+						<label for="omp01_m_custkey" class="setting-grid-title ic-title-nece">[[#{om.ocopur.custkey}]]</label>
+						<div class="setting-grid-content" id="omp01_modalCustkeyDiv">
+							<div class="input-group">
+								<select id="omp01_m_custkey"
+								name="omp01_custkey" data-cb-val="ptnrkey" data-cb-name="ptnamlc"
+								data-cb-url="/om/purchase/common/partner/customer"
+								data-cb-select="" data-cb-variable="custkeyList">
+								</select>
+							</div>
+						</div>
+						<label for="omp01_m_destkey" class="setting-grid-title ic-title-nece">[[#{om.ocopur.destkey}]]</label>
+						<div class="setting-grid-content">
+							<div class="input-group">
+								<select id="omp01_m_destkey" name="omp01_destkey" disabled>
+									<option value="">[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]</option>
+								</select>
+							</div>
+						</div>
+						<label for="omp01_m_reqdate" class="setting-grid-title ic-title-nece">[[#{om.ocopur.reqdate}]]</label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="date" max="2999-12-31" id="omp01_m_reqdate" onkeyup="setInputDateDel(this)" />
+							</div>
+						</div>
+						<label for="omp01_m_reqtime" class="setting-grid-title ic-title-nece">[[#{om.ocopur.reqtime}]]</label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="time" step="1" value="08:00:00" id="omp01_m_reqtime" />
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-bottom">
+					<button type="button" class="btn-white" id="omp01_saveQtyModal">[[#{bt.save}]]</button>
+					<button type="button" class="btn-save btn-navy btn-green" id="omp01_closeQtyModal">[[#{bt.close}]]</button>
+				</div>
+			</div>
+		</div>
+	</div>
+<script>
+/* *******************************************************************************
+ * 최초 생성일시 : 2023-07-30
+ * 최초 생성자 : 한지수
+ * 설명 : 3PL이 부품사에게 부품에 대해 입고를 요청하는 페이지입니다.
+ *********************************************************************************/
+$(function() {
+	const pageId = 'omp01';
+
+	let omp01GridColModel;	
+	let omp01GridObject;
+	let omp01GridUI;
+	let omp01GridEditData;
+	let initList;
+	let omp01Ownerky;
+	let omp01Rcvwhky;
+	const tempDestkeyArr = [];
+	
+	document.querySelector('#omp01_m_reqdate').setAttribute('min', setDate());
+
+	//ownerky, warekey change event. 추가된 그리드 row 존재 시 초기화 여부 confirm. 확인 시 초기화, 취소 시 원래 값 보존.
+	document.querySelector('#omp01_rcvwhky').addEventListener('change', async function() {
+		const grid = omp01GridObject.getGrid();	
+		if(grid.pdata.length) {
+			if(!confirm('[[#{ms.listViewRollback}]]')){
+				document.querySelector('#omp01_rcvwhky').value = omp01Rcvwhky;
+				return;
+			}
+			grid.option('dataModel', { data: [] });
+			grid.refreshDataAndView();
+		}
+		omp01Rcvwhky = document.querySelector('#omp01_rcvwhky').value;
+		initList.skuwcList = await getSkuwcList();
+	}); 
+	
+	//modal custkey change event. 고객 미선택 시 도착지 비활성화. 선택 시 활성화. 
+	document.querySelector('#omp01_m_custkey').addEventListener('change', async function() {
+		const param = document.querySelector('#omp01_m_custkey').value;
+		if(!param) {
+			document.querySelector('#omp01_m_destkey').disabled = true;
+			document.querySelector('#omp01_m_destkey').innerHTML = '<option value="">[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]</option>';	//고객을/를 선택해주세요.
+			return;
+		}
+		const destkeyList = await getDestkeyByCustkey(param, tempDestkeyArr);
+		let html = '';
+		if(!destkeyList.length) {
+			html += '<option value="">[[#{om.common.noDestkey}]]</option>';
+			document.querySelector('#omp01_m_destkey').innerHTML = html;
+			document.querySelector('#omp01_m_destkey').disabled = true;
+			return;
+		}
+		for(const destkey of destkeyList) {
+			html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+		}
+		document.querySelector('#omp01_m_destkey').innerHTML = html;
+		document.querySelector('#omp01_m_destkey').disabled = false;
+	});
+	
+	//발주수량 input event. '-' 입력 시 빈문자로 초기화. 1이상 1000이하 값만 설정되며 4자리수 제한. 
+	document.querySelector('#omp01_m_poitqty').addEventListener('input', function() {
+		this.value = this.value.replace(/\b0/g, '').slice(0, 4);
+	});
+	
+	//============================================================	 
+	//그리드 세이브 버튼 이벤트 
+	//============================================================
+	$('#'+pageId+'_btnSave').click(async function() { 
+		
+		const grid 			= omp01GridObject.getGrid();
+		const gridDataList 	= grid.getData();  
+		
+		const checkList = gridDataList.filter(function(e) {		
+			return e.state === 'Y';
+		});
+
+		if(!checkList.length) {
+			alert('[[#{ms.choiceRowZero}]]');
+			return;
+		}
+
+		//필수 조건 validation
+		for(const checkData of checkList) { 
+			for(const requiredInput in grid.columns) {
+				if(grid.columns[requiredInput].styleHead && grid.columns[requiredInput].styleHead['background-color'] === '[[#{grid.styleHead01}]]') {
+					if(!checkData[requiredInput]) { 
+						alert((checkData.pq_ri + 1) + ' Row ' + '[[#{ms.requiredValue}]]' + ' (' + grid.columns[requiredInput].title + ')');
+						if(requiredInput === 'destkey') {
+				 			const destkeyList = await getDestkeyByCustkey(checkData.custkey, tempDestkeyArr);
+				 			comboCreateData('omp01_pqgrid', 'destkey', destkeyList, { combovl : 'destkey', combonm : 'denamlc' });
+						}
+						grid.editCell({ rowIndx : checkData.pq_ri, dataIndx : requiredInput });
+						return;
+					}
+				}
+			}
+		}
+		
+		if(confirm('[[#{ms.checksave}]]')) {
+			const data = { addList: checkList };
+			omp01GridObject.getGrid().showLoading();
+			const rData = await fetchUtil('POST', '/om/purchase/omp01/save', data);	
+			if(rData.status === 200) {
+				omp01GridObject.getGrid().option('dataModel', { data: [] });
+				omp01GridObject.getGrid().refreshDataAndView();
+			}
+			omp01GridObject.getGrid().hideLoading();
+		}
+	});
+	
+	omp01GridColModel = [
+		{ title: '', dataType: 'String',  dataIndx: 'state', type: 'checkBoxSelection', align: 'center'
+			, maxWidth:'30', maxHeight:'30', menuIcon: false, sortable: false, editor: false,
+			cb: { all: false, header: true, check: 'Y', uncheck: 'N' }
+		},
+		{ title: '[[#{om.ocopur.compkey}]]',  dataType: 'string', dataIndx: 'compkey', hidden: true, editable: false },						// Company 
+		{ title: '[[#{om.ocopur.doccate}]]',  dataType: 'string', dataIndx: 'doccate', hidden: true, editable: false,						// 문서유형
+			render : function(ui) {
+				return initList.cootypeList[0].ococtnm;
+			}	
+		},						
+		{ title: '[[#{om.ocopur.doctype}]]',  dataType: 'string', dataIndx: 'doctype', editable: false,										// 문서타입
+			render : function(ui) {
+				return initList.cootypeList[0].combonm;
+			}
+		},				
+		{ title: '[[#{grid.skuCode}]]',  dataType: 'string', dataIndx: 'skumkey', 															// 상품코드
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },
+			editor: {
+				type: 'select',
+                attr: 'multiple="multiple"',
+                init: function (ui) {   
+                	ui.$cell.find('select').pqSelect({ checkbox : true });
+                	setTimeout(function () {
+	                	ui.$cell.find('select').pqSelect('open'); 
+            			$('.pq-left-input:contains("[[#{om.common.outOfStock}]]")').closest('label').addClass('out-of-stock');  
+            			
+            	    	$('.pq-select-menu').on('scroll', function() {
+            	    		$('.pq-left-input:contains("[[#{om.common.outOfStock}]]")').closest('label').addClass('out-of-stock');  
+            	    	});
+	                }, 250);
+				},
+				options: []
+			},
+			render : gridRenderAndValue
+		},				
+		{ title: '[[#{grid.skunm}]]',  dataType: 'string', dataIndx: 'skudesc', editable: false, hidden: true },							// 상품명
+		{ title: '[[#{om.ocopur.skuskey}]]',  dataType: 'string', dataIndx: 'skuskey', editable: false, hidden: true },						// 대표상품
+		{ title: '[[#{om.ocopur.poitqty}]]',  dataType: 'integer', dataIndx: 'poitqty', format: '#,###',									// 발주수량					
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },
+			summary: { type: 'sum' } 
+		},	
+		{ title: '[[#{wm.wstkky.stotqty}]]',  dataType: 'integer', dataIndx: 'stotqty', format: '#,###', editable: false, hidden: true,		// 총 재고수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.stotqty ? ui.rowData.stotqty : 0;
+			}
+		},		
+		{ title: '[[#{md.mskuwc.propqty}]]',  dataType: 'integer', dataIndx: 'propqty', format: '#,###', editable: false,					// 적정재고수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.propqty ? ui.rowData.propqty : 0;
+			} 
+		},		
+		{ title: '[[#{md.mskuwc.salfqty}]]',  dataType: 'integer', dataIndx: 'salfqty', format: '#,###', editable: false,					// 안전재고수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.salfqty ? ui.rowData.salfqty : 0;
+			} 
+		},
+		{ title: '[[#{md.mskuwc.miniqty}]]',  dataType: 'integer', dataIndx: 'miniqty', format: '#,###', editable: false,					// 최소발주수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.miniqty ? ui.rowData.miniqty : 0;
+			} 
+		},	
+		{ title: '[[#{md.mpakma.packqty}]]',  dataType: 'integer', dataIndx: 'packqty', format: '#,###', editable: false,					// 입수량
+			summary: { type: 'sum' },
+			render : function(ui) {
+				return ui.rowData.packqty ? ui.rowData.packqty : 0;
+			}
+		},					
+		{ title: '[[#{om.omp01.poitbox}]]',  dataType: 'integer', dataIndx: 'poitbox', editable: false, format: '#,###',					// 박스수량
+			summary: { type: 'sum' }, 
+			render : function(ui) {
+				return ui.rowData.packqty && ui.rowData.poitqty ? ui.rowData.poitbox : 0;
+			}	
+		},
+		{ title: '[[#{om.ocopur.podmemo}]]',  dataType: 'string', dataIndx: 'podmemo', 														// 발주요구사항
+			styleHead : { 'background-color' : '[[#{grid.styleHead02}]]' }	
+		},	
+		{ title: '[[#{om.ocopur.reqdate}]]',  dataType: 'date', dataIndx: 'reqdate', format:'yy-mm-dd',										// 입고 요청일
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },
+			cls: 'pq-calendar pq-side-icon',
+			editor: {
+            	type: 'textbox',
+                init: function(ui) {
+                	const $inp = ui.$cell.find('input');
+                    const format = ui.column.format || 'yy-mm-dd';
+                    let val = $inp.val();
+                    val = val ? $.datepicker.formatDate(format, new Date(val)) : '';
+
+                    $inp.attr('readonly', 'readonly')
+                        .val(val)
+                        .datepicker({
+                            changeMonth: true,
+                            changeYear: true,
+                            dateFormat: format,
+                            showAnim: '',
+                            onSelect: function () {
+                                this.firstOpen = true;
+                            },
+                            beforeShow: function (input, inst) {
+                                setTimeout(function () {
+                                    $('.ui-datepicker').css('z-index', 999999999999);
+                                });
+                            },
+                            onClose: function () {
+                                this.focus();
+                            },
+                            minDate: setDate()
+                		});
+                },
+                getData: function (ui) {
+                    const dt = $.datepicker.parseDate(ui.column.format, ui.$cell.find('input').val());
+                    return $.datepicker.formatDate('yy-mm-dd', dt);	
+                }
+			}
+		},
+		{ title: '[[#{om.ocopur.reqtime}]]',  dataType: 'string', dataIndx: 'reqtime', format:'HH:mm:ss',				   					// 입고 요청시간
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },
+			editor: {
+	            type: 'textbox',
+				init: function(ui) {
+					const $inp = ui.$cell.find('input');  
+					$inp.datetimepicker({
+					    format: 'HH:mm:ss',
+					    stepping: 1,
+					    icons: {
+							up: "bi bi-chevron-up",
+				 	 		down: "bi bi-chevron-down"
+			    		},
+			    		minDate : new Date().setHours(8, 0, 0, 0)
+					});
+				},
+	 			getData: function (ui) {
+	 				return ui.$cell.find('input').val();
+	 			}
+			}
+		},			
+		{ title: '[[#{om.ocopur.custkey}]]',  dataType: 'string', dataIndx: 'custkey', 														// 고객
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },
+			editor: {
+				type: 'select',
+                init: function (ui) {
+                	ui.$cell.find('select').pqSelect();
+                	setTimeout(function () {
+	                	ui.$cell.find('select').pqSelect('open'); 
+	                }, 250);
+				},
+				options: [],
+				prepend: { '' : '' }
+			},
+			render: function(ui) {                  
+				for(const option of ui.column.editor.options) {                      
+					for(const value in option) {                         
+						if(option[ui.cellData] || option[value] === ui.cellData) {                             
+							ui.rowData[ui.dataIndx] = value;                             
+							return option[value];                         
+						}                     
+					}                 
+				}                 
+				ui.rowData[ui.dataIndx] = '';                 
+				return '';             
+			}
+		},										
+		{ title: '[[#{om.ocopur.destkey}]]',  dataType: 'string', dataIndx: 'destkey', 														// 도착지
+			styleHead : { 'background-color' : '[[#{grid.styleHead01}]]' },	
+			editor: {
+				type: 'select',
+                init: function (ui) {
+                	ui.$cell.find('select').pqSelect(); 
+                	setTimeout(function () {
+	                	ui.$cell.find('select').pqSelect('open'); 
+	                }, 250);
+				},
+				options: [],
+				prepend: { '' : '' }
+			},
+			render : function(ui) {
+				let option;
+				if(ui.rowData.custkey && tempDestkeyArr[ui.rowData.custkey]) {
+					option = tempDestkeyArr[ui.rowData.custkey].find(function(obj) {
+						return (obj.destkey === ui.cellData);
+					});
+				}
+				ui.rowData[ui.dataIndx] = option ? ui.cellData : '';
+				return option ? option.denamlc : '';
+			}
+		},		
+		{ title: '[[#{om.ocopur.reqmemo}]]',  dataType: 'string', dataIndx: 'reqmemo',  													// 입고 요구사항
+			styleHead : { 'background-color' : '[[#{grid.styleHead02}]]'}	
+		},		
+		{ title: '[[#{om.ocopur.vendkey}]]',  dataType: 'string', dataIndx: 'vendkey',  													// vendkey
+			styleHead : { 'background-color' : '[[#{grid.styleHead02}]]' },	
+			editor: {
+				type: 'select',
+                init: function (ui) {
+                	ui.$cell.find('select').pqSelect();
+                	setTimeout(function () {
+	                	ui.$cell.find('select').pqSelect('open'); 
+	                }, 250);
+				},
+				options: []
+			},
+			render: gridRenderAndValue
+		},
+		{ title: '[[#{om.ocopur.puomkey}]]',  dataType: 'string', dataIndx: 'puomkey', editable: false },									// 발주 UOM
+		{ title: '[[#{grid.ownamlc}]]',  dataType: 'string', dataIndx: 'ownerky', editable: false,											// 화주
+			render : function(ui) {
+				return document.querySelector('#omp01_ownerky :checked').innerHTML;
+			}	
+		},			
+		{ title: '[[#{grid.whnamlc}]]',  dataType: 'string', dataIndx: 'rcvwhky', editable: false, hidden: true,						// 입고창고
+			render : function(ui) {
+				return document.querySelector('#omp01_rcvwhky :checked').innerHTML;
+			}		
+		},						
+		{ title: '[[#{om.ocopur.purdate}]]',  dataType: 'string', dataIndx: 'purdate', editable: false },									// 발주일자	
+		{ title: '[[#{om.ocopur.purtime}]]',  dataType: 'string', dataIndx: 'purtime', editable: false },									// 발주시간
+	];
+	
+	omp01GridObject = new GridUtil(omp01GridColModel, '[[${gprogrid}]]', pageId + '_pqgrid');
+	omp01GridObject.setReset();
+	
+	//pqGrid 이벤트발생시 validate 함수
+	omp01GridObject.setBeforeValidate(function(event, ui) { 
+		if(ui.source !== 'undo' && (ui.source === 'edit' || ui.source === 'paste' || ui.source === 'checkbox')) {		
+			for(const updateData of ui.updateList) {
+				this.updateRow({
+	       			rowIndx : updateData.rowIndx,
+	       		    newRow : {
+	    				state : 'Y',
+	    				compkey : '[[${userattr.compkey}]]'
+	       		    },
+	       		    checkEditable: false
+	       		});
+			}
+        }
+	});
+	
+	omp01GridObject.setDelete(function(event, ui) {
+		const checkList = this.Checkbox('state').getCheckedNodes();
+       	if(!checkList.length) {
+       		alert('[[#{ms.choiceRowZero}]]');
+       		return;
+       	}
+       	
+   		if(confirm(checkList.length + '[[#{ms.allRowDelete}]]')) {
+  			for(const checkData of checkList) {
+  				this.deleteRow({ rowIndx: checkData.pq_ri });
+  	   		}
+   		}
+	});
+	
+	omp01GridObject.setAdd(function(event, ui){
+		/*
+		 * addButton
+		 * 이벤트 발생시 컬럼 초기값 세팅
+		 */
+    	if(!$('#omp01_ownerky').val()){
+    		alert('[[#{om.ocopur.ownerky}]]' + '[[#{ms.choiceValue}]]');	// 화주를/을 선택해주세요.
+    		return;
+    	}
+		if(!$('#omp01_rcvwhky').val()){
+    		alert('[[#{om.ocopur.rcvwhky}]]' + '[[#{ms.choiceValue}]]');	// 입고 창고를/을 선택해주세요.
+    		return;
+    	}
+		 
+		const rowData = {
+				state : 'Y',
+				compkey : '[[${userattr.compkey}]]',
+				doccate : initList.cootypeList[0].coocate,
+				doctype : initList.cootypeList[0].combovl,
+				rcvwhky : omp01Rcvwhky,
+				ownerky : omp01Ownerky,
+				purdate : moment().format('YYYY-MM-DD'),
+				purtime : moment().format('HH:mm:ss'),
+				custkey : custkeyList.length === 1 ? custkeyList[0].ptnrkey : '' 
+		};
+		
+    	const rowIndx = this.addRow({
+    		newRow: rowData,
+    		checkEditable: false 											//colModel의 editable 옵션 무시
+    	});
+    	
+    	this.goToPage({ rowIndx: rowIndx });
+    	this.editFirstCellInRow({ rowIndx: rowIndx }); 
+    });
+	
+	omp01GridObject.setCreate(async function(event, ui) { 
+		await _commonInit();
+
+		omp01Rcvwhky = document.querySelector('#omp01_rcvwhky').value;
+		omp01Ownerky = document.querySelector('#omp01_ownerky').value;			
+		$('#omp01_ownerky').pqSelect({ deselect : false }).on('change', async function(){ 
+			const grid = omp01GridObject.getGrid();	
+			if(grid.pdata.length) {
+				if(!confirm('[[#{ms.listViewRollback}]]')){
+					document.querySelector('#omp01_ownerky').value = omp01Ownerky;
+					$('#omp01_ownerky').pqSelect('refreshData');
+					return;
+				}
+				grid.option('dataModel', { data: [] });
+				grid.refreshDataAndView();
+			}
+			omp01Ownerky = document.querySelector('#omp01_ownerky').value;
+			initList.skuwcList = await getSkuwcList();
+		});
+		
+		const data = {
+				warekey : omp01Rcvwhky,
+				ownerky : omp01Ownerky
+		};
+		
+		const initData = await fetchUtil('GET', '/om/purchase/omp01/init', data); 
+		initList = await initData.json();  
+		
+	    comboCreateData('omp01_pqgrid', 'vendkey', initList.venderList, { combovl : 'ptnrkey', combonm : 'ptnamlc' });
+	    comboCreateData('omp01_pqgrid', 'custkey', custkeyList, { combovl : 'ptnrkey', combonm : 'ptnamlc' });
+	    
+	    if(custkeyList.length === 1) { 
+	    	document.querySelector('label[for="omp01_m_custkey"]').style.display = 'none';
+	    	document.querySelector('#omp01_modalCustkeyDiv').style.display = 'none';
+	    	document.querySelector('#omp01_m_destkey').disabled = false;
+			const destkeyList = await getDestkeyByCustkey(custkeyList[0].ptnrkey, tempDestkeyArr);
+			let html = '';
+			for(const destkey of destkeyList) {
+				html += '<option value="' + destkey.destkey + '">' + destkey.denamlc + '</option>';
+			}
+
+			document.querySelector('#omp01_m_destkey').innerHTML = html;
+	    }else{
+	    	let html = '<option value="" selected>[[#{om.common.choicePlz}]]</option>';
+	    	document.querySelector('#omp01_m_custkey').insertAdjacentHTML('afterBegin', html);
+	    }
+	    
+		const options = initList.skuwcList.map(function(obj) {
+			const rObj = {};
+			let text = '[' + obj.skumkey + '] ' + obj.skudesc + ' ([[#{om.omp01.stotqty}]] :' + obj.stotqty + ')';
+			text += obj.salfqty > obj.stotqty ? ' [[#{om.common.outOfStock}]]' : '';
+			rObj[obj.skumkey] = text;	
+			return rObj;
+		});
+		
+		omp01GridObject.getGrid().getColumn({ dataIndx : 'skumkey' }).editor.options = options; 
+	});
+	
+ 	omp01GridObject.setChange(async function(event, ui) { 
+ 		if(ui.source === 'edit') {	
+        	if(ui.updateList[0].newRow.hasOwnProperty('skumkey')) { 
+        		if(ui.updateList[0].oldRow && !ui.updateList[0].newRow.skumkey) {			// 부품 셀렉트박스 값 비울 때
+        			ui.source = 'clear';
+        			omp01GridObject.change(event, ui);
+        			return;
+        		}else if(ui.updateList[0].newRow.skumkey) {	
+            		omp01GridEditData = [];
+            		const skumkeyList = ui.updateList[0].newRow.skumkey.split(',');	
+            		let findData;
+            		for(const skumkeyData of skumkeyList) { 
+            			findData = initList.skuwcList.find(function(data) { 	
+            				return data.skumkey === skumkeyData 
+            			});	
+            			omp01GridEditData.push(findData);
+            		}
+        			if(skumkeyList.length > 1) {
+                		omp01GridUI = ui;
+                		$('#omp01QtyModal').modal('show');
+        			}else{ 
+        				const newRow = {
+    							skumkey : findData.skumkey, 
+    	   						skudesc : findData.skudesc,
+    	   						skuskey : findData.skuskey,
+    	   						puomkey : findData.suomkey || 'EA',
+    	   						packqty : findData.packqty,
+    	   						stotqty : findData.stotqty,
+    	   						miniqty : findData.miniqty,
+    	   						propqty : findData.propqty,
+    	   						salfqty : findData.salfqty
+       					};
+           				this.updateRow({
+           					rowIndx : ui.updateList[0].rowIndx,
+                       		newRow : newRow,
+                        	checkEditable : false
+    					}); 
+        			}
+        		}
+        	}
+        	
+        	if(ui.updateList[0].newRow.poitqty || ui.updateList[0].newRow.skumkey) { 
+				if(ui.updateList[0].rowData.propqty && ui.updateList[0].rowData.poitqty + ui.updateList[0].rowData.stotqty > ui.updateList[0].rowData.propqty) {	
+					if(!confirm('[[#{om.omp.checkPropqtyConfirm}]]')) {															// 발주수량과 적정재고수량 존재 시 
+						ui.updateList[0].rowData.poitqty = '';
+					}
+				}
+        		
+        		if(ui.updateList[0].rowData.packqty) {																			// 발주 수량과 박스 수량 존재 시 
+        			ui.updateList[0].rowData.poitbox = Math.ceil(ui.updateList[0].rowData.poitqty / ui.updateList[0].rowData.packqty);
+        		}
+        	}
+		}else if(ui.source === 'paste' || ui.source === 'undo' || ui.source === 'redo') {
+			/*
+			 * 그리드 붙여넣기 이벤트(paste)
+			 * add버튼으로 생성된 row 수 보다 붙여넣기하는 데이터의 row 수가 클 때 addList, 그 이외에는 updateList
+			 * 실행 취소(Ctrl+Z) : undo, 다시 실행(Ctrl+Y) : redo
+			*/
+			const alertObj = {
+					firstTimeAlert : false,
+					firstQtyAlert : false,
+					poitqtyConfirm : false,
+					poitqtyCheck : false
+			};
+	 		
+       		pasteRowData(ui.updateList, alertObj);	
+       		pasteRowData(ui.addList, alertObj);  
+		}else if(ui.source === 'clear') {																			// keyboard delete event
+			for(const updateData of ui.updateList){
+            	if(updateData.newRow.hasOwnProperty('skumkey')) {
+               		omp01GridObject.getGrid().updateRow({
+               			rowIndx : updateData.rowIndx,
+               		    newRow : {
+       						skumkey : '', 
+       						skudesc : '',
+       						skuskey : '',
+       						stotqty : '',
+       						miniqty : '',
+       						propqty : '',
+       						salfqty : '',
+       						puomkey : '',
+       						packqty : ''
+          				},
+                	    checkEditable: false
+                	});
+				}	
+			}
+		}
+ 	    omp01GridObject.getGrid().refresh();
+	});
+ 	
+ 	// 그리드 내 도착지 선택 시 고객에 따른 도착지 select box 생성.
+ 	omp01GridObject.setCellClick(async function(event, ui) { 
+ 		if(ui.dataIndx === 'destkey') {	
+ 			if(!ui.rowData.custkey) {
+ 				alert('[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]');
+ 				omp01GridObject.getGrid().setSelection({ rowIndx : ui.rowIndx, dataIndx : 'custkey' });
+ 				omp01GridObject.getGrid().editCell({ rowIndx : ui.rowIndx, dataIndx : 'custkey' });
+ 				return;
+ 			}
+ 			const destkeyList = await getDestkeyByCustkey(ui.rowData.custkey, tempDestkeyArr);
+ 			comboCreateData('omp01_pqgrid', 'destkey', destkeyList, { combovl : 'destkey', combonm : 'denamlc' });
+ 		}
+ 	});
+ 	
+ 	// 발주 수량 및 입고 요청일 validation.
+ 	omp01GridObject.setCellSave(function (event, ui) {	
+		if(ui.dataIndx === 'poitqty') { 
+			if(ui.newVal < 1 || ui.newVal > 9999) {
+				alert(ui.newVal < 1 ? '[[#{om.omp01.correctQtyInput}]]' : '[[#{ms.validations.maxLenLength(4)}]]'); 	// 올바른 수량을 입력해주세요 || 최대 4자리입니다.
+				ui.rowData.poitqty = '';
+			}
+		}else if(ui.dataIndx === 'reqdate') {
+			if(moment(ui.rowData.reqdate).isBefore(moment().format('YYYY-MM-DD'))) { 
+				alert('[[#{om.omp01.correctReqdate}]]' + ' [[#{om.omp01.unableBeforeToday}]]'); 					// 올바른 입고요청일을 입력해주세요. 금일 이전은 선택이 불가능합니다.
+				ui.rowData.reqdate = moment().format('YYYY-MM-DD');
+			}
+		}
+		omp01GridObject.getGrid().refreshView();				
+ 	});
+ 	
+ 	omp01GridObject.setCellKeyDown(function(event, ui) { 															
+ 		if(ui.dataIndx !== 'destkey' || event.key === 'Control') {  
+ 			return;
+ 		}
+ 		
+		if(!ui.rowData.custkey) {	  
+			alert('[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]');
+			omp01GridObject.getGrid().setSelection({ rowIndx : ui.rowIndx, dataIndx : 'custkey' });
+			ui.column.editor.options = [];
+			ui.colIndx = omp01GridObject.getGrid().getColIndx({ dataIndx : 'custkey' });
+			return;
+		}
+		
+		if(!tempDestkeyArr[ui.rowData.custkey]) {
+			tempDestkeyArr[ui.rowData.custkey] = callAjax('data', 'GET', '/om/purchase/common/destination/' + ui.rowData.custkey);
+		}
+		
+		comboCreateData('omp01_pqgrid', 'destkey', tempDestkeyArr[ui.rowData.custkey], { combovl : 'destkey', combonm : 'denamlc' }); 
+ 	});
+	
+	omp01GridObject.open(); 
+	
+	//============================================================	
+	//  모달 화면 이벤트
+	//============================================================
+		
+	$('#omp01_saveQtyModal').click(function () { 
+		omp01QtyModalAction();
+	});
+	
+	//모달 open 시 값 초기화
+	$('#omp01QtyModal').on('shown.bs.modal', function() {
+		document.querySelector('#omp01_m_custkey').selectedIndex = 0;
+		if(custkeyList.length !== 1) {
+			document.querySelector('#omp01_m_destkey').disabled = true;
+			document.querySelector('#omp01_m_destkey').innerHTML = '<option value="">[[#{om.ocopur.custkey}]][[#{ms.choiceValue}]]</option>';
+		}else{
+			document.querySelector('#omp01_m_destkey').selectedIndex = 0;
+		}
+		document.querySelector('#omp01_m_poitqty').value = '';
+		document.querySelector('#omp01_m_reqdate').value = moment().format('YYYY-MM-DD');
+		document.querySelector('#omp01_m_reqtime').value = '08:00:00';
+		document.querySelector('#omp01_m_poitqty').focus();
+	});
+	
+	// 모달 키보드 이벤트
+	$('#omp01QtyModal').keyup(function(event) {
+		if(event.key === 'Escape') { 						 // esc 
+			if(confirm('[[#{ms.modifyRollback}]]')) {	
+				$('#omp01QtyModal').modal('hide');
+				omp01GridUI.source = 'clear';
+				omp01GridObject.change('', omp01GridUI);	 // grid의 change 이벤트 발생(setChange: ui.source)
+           		omp01GridObject.getGrid().editCell({ rowIndx : omp01GridUI.updateList[0].rowIndx, dataIndx : 'skumkey' });
+			}
+		}
+	});
+	
+	//modal close button click
+	$('#omp01_closeQtyModal').click(function() {
+		if(confirm('[[#{ms.modifyRollback}]]')) {
+			$('#omp01QtyModal').modal('hide');	
+			omp01GridUI.source = 'clear';
+			omp01GridObject.change('', omp01GridUI);		 // grid의 change 이벤트 발생(setChange: ui.source)
+       		omp01GridObject.getGrid().editCell({ rowIndx : omp01GridUI.updateList[0].rowIndx , dataIndx : 'skumkey' });
+		}
+	});
+	
+	//=======================================================
+  	// 1개 이상의 상품을 선택하여 수량 입력 모달 SAVE 후 실행하는 이벤트
+  	//=======================================================
+    function omp01QtyModalAction() { 
+
+		const modalObjs = document.querySelectorAll('[id*="omp01_m_"]');
+ 		for(const modalObj of modalObjs) { 
+ 			if(!modalObj.value || (modalObj.value < modalObj.min)) {
+ 				alert(document.querySelector('label[for="'+ modalObj.id + '"]').innerHTML + '[[#{ms.checkValue}]]');
+ 				modalObj.value = modalObj.min ? modalObj.min : '';
+ 				modalObj.focus();
+ 				return;
+ 			}
+ 		}
+ 		
+ 		let poitqtyConfirm = false;
+ 		let poitqtyCheck = false;
+ 		let isUpdateRow = false;
+ 		
+        for(const modalEditData of omp01GridEditData) {	
+        	const newRow = {
+					skumkey : modalEditData.skumkey, 
+ 					skudesc : modalEditData.skudesc,
+ 					skuskey : modalEditData.skuskey,
+ 					poitqty : document.querySelector('#omp01_m_poitqty').value,
+					custkey : document.querySelector('#omp01_m_custkey').value,
+					destkey : document.querySelector('#omp01_m_destkey').value,
+					reqtime : document.querySelector('#omp01_m_reqtime').value,
+					reqdate : document.querySelector('#omp01_m_reqdate').value,
+					puomkey : modalEditData.suomkey || 'EA',
+					packqty : modalEditData.packqty,
+					poitbox : modalEditData.packqty ? Math.ceil(document.querySelector('#omp01_m_poitqty').value / modalEditData.packqty) : 0,
+					stotqty : modalEditData.stotqty,
+					miniqty : modalEditData.miniqty,
+					propqty : modalEditData.propqty,
+					salfqty : modalEditData.salfqty
+     		}
+        	
+        	if(modalEditData.propqty && Number(newRow.poitqty) + modalEditData.stotqty > modalEditData.propqty) { 												// 적정재고초과 체크
+        		if(!poitqtyConfirm) {
+        			if(confirm('[[#{om.omp.checkPropqtyConfirm}]]\r\n[[#{om.omp.checkPropqtyConfirm2}]]')) {
+               			poitqtyCheck = true;
+        			}
+           			poitqtyConfirm = true;
+        		}
+        	
+            	if(poitqtyConfirm && !poitqtyCheck) {
+            		continue;
+            	}
+        	}
+        	
+       		if(!isUpdateRow) {
+       			omp01GridObject.getGrid().updateRow({
+       				rowIndx : omp01GridUI.updateList[0].rowIndx,
+       				newRow : newRow,
+       				checkEditable : false
+       			});
+       			isUpdateRow = true;
+       		}else{
+       			newRow.state = 'Y';
+       			newRow.compkey = '[[${userattr.compkey}]]';
+       			newRow.doccate = initList.cootypeList[0].coocate;
+       			newRow.doctype = initList.cootypeList[0].combovl;
+       			newRow.rcvwhky = omp01Rcvwhky;
+       			newRow.ownerky = omp01Ownerky;
+       			newRow.purdate = moment().format('YYYY-MM-DD');
+       			newRow.purtime = moment().format('HH:mm:ss');
+       			omp01GridObject.getGrid().addRow({
+       				newRow : newRow,
+       				checkEditable : false
+       			});
+       		}
+       	} 
+		$('#omp01QtyModal').modal('hide');	
+    }; 
+
+	//=======================================================
+  	// sku search
+  	//=======================================================    
+    async function getSkuwcList() {
+    	const data = {
+    			warekey : omp01Rcvwhky,
+    			ownerky : omp01Ownerky
+    	};
+    	
+    	const skuData = await fetchUtil('GET', '/om/purchase/common/skuwc', data);	
+    	const skuDataList = await skuData.json();
+    	
+    	const options = skuDataList.map(function(obj) {
+			const rObj = {};
+			let text = '[' + obj.skumkey + '] ' + obj.skudesc + ' ([[#{om.omp01.stotqty}]] :' + obj.stotqty + ')';
+			text += obj.salfqty > obj.stotqty ? ' [[#{om.common.outOfStock}]]' : '';
+			rObj[obj.skumkey] = text;	
+			return rObj;
+    	});
+    	
+    	omp01GridObject.getGrid().getColumn({ dataIndx : 'skumkey' }).editor.options = options;
+    	
+    	return skuDataList;
+    }
+	
+	//=======================================================
+  	// ui.source === 'paste', 'undo', 'redo'
+  	//=======================================================    
+    function pasteRowData(gridDataList, alertObj) {	
+    	for(const gridData of gridDataList) {	
+        	if(gridData.newRow.hasOwnProperty('skumkey')) {
+        		const findData = initList.skuwcList.find(function(data) {  
+        			return data.skumkey === gridData.newRow.skumkey
+        		});
+            	
+    			gridData.rowData.skumkey = findData ? findData.skumkey : '';
+    			gridData.rowData.skudesc = findData ? findData.skudesc : '';
+    			gridData.rowData.skuskey = findData ? findData.skuskey : '';
+    			gridData.rowData.puomkey = findData ? findData.suomkey : '';
+    			gridData.rowData.packqty = findData ? findData.packqty : '';
+    			gridData.rowData.stotqty = findData ? findData.stotqty : '';
+				gridData.rowData.miniqty = findData ? findData.miniqty : '';	
+				gridData.rowData.propqty = findData ? findData.propqty : '';
+				gridData.rowData.salfqty = findData ? findData.salfqty : '';
+				gridData.rowData.custkey = findData && custkeyList.length === 1 ? custkeyList[0].ptnrkey : ''; 
+    		}
+        	
+        	if(!gridData.oldRow) { 																										// addList
+				gridData.rowData.state = 'Y';
+				gridData.rowData.compkey = '[[${userattr.compkey}]]';
+				gridData.rowData.doccate = initList.cootypeList[0].coocate;
+				gridData.rowData.doctype = initList.cootypeList[0].combovl;
+				gridData.rowData.rcvwhky = omp01Rcvwhky;
+				gridData.rowData.ownerky = omp01Ownerky;
+				gridData.rowData.purdate = moment().format('YYYY-MM-DD');
+				gridData.rowData.purtime = moment().format('HH:mm:ss');
+        	}
+        	
+        	if(gridData.newRow.reqtime) {
+    			//time validation
+    			const datetimeRegexp = /^(?:[01]\d|2[0-4]):[0-5]\d:[0-5]\d$/; 
+    			if(!datetimeRegexp.test(gridData.newRow.reqtime)) {
+    				if(!alertObj.firstTimeAlert) {
+    					alert('[[#{om.omp01.invalidTimeFormat}]]');																		// 잘못된 시간 형식입니다.
+    					alertObj.firstTimeAlert = true;
+    				}
+    				gridData.rowData.reqtime = '';
+    			}
+    		}       
+        	
+        	if(gridData.newRow.custkey) {
+				if(custkeyList.length === 1) {
+					gridData.rowData.custkey = custkeyList[0].ptnrkey;
+				}  
+				
+				if(gridData.newRow.destkey) {
+	     			tempDestkeyArr[gridData.newRow.custkey] = callAjax('data', 'GET', '/om/purchase/common/destination/' + gridData.newRow.custkey);					// callAjax 사용 사유 : event freeze가 되어야 의도대로 붙여넣기가 가능.
+	       			comboCreateData('omp02_pqgrid', 'destkey', tempDestkeyArr[gridData.newRow.custkey], { combovl : 'destkey', combonm : 'denamlc' }); 
+				}
+        	}
+        		
+        	if(gridData.newRow.poitqty < 1 || gridData.newRow.poitqty > 9999) {
+        		if(!alertObj.firstQtyAlert) {
+            		alert(gridData.newRow.poitqty < 1 ? '[[#{om.omp01.correctQtyInput}]]' : '[[#{ms.validations.maxLenLength(4)}]]'); 	// 올바른 수량을 입력해주세요 & 최대 4자리입니다.
+            		alertObj.firstQtyAlert = true;
+        		}
+        		gridData.rowData.poitqty = '';
+        	}	        	
+        	
+        	if(gridData.newRow.poitqty || gridData.newRow.skumkey) { 
+               	if(gridData.rowData.propqty && gridData.rowData.poitqty + gridData.rowData.stotqty > gridData.rowData.propqty) { 		// 발주수량 + 총재고수량 > 적정재고수량 
+               		if(!alertObj.poitqtyConfirm) {
+               			if(confirm('[[#{om.omp.checkPropqtyConfirm}]]\r\n[[#{om.omp.checkPropqtyConfirm2}]]')) {
+               				alertObj.poitqtyCheck = true;
+               			}
+               			alertObj.poitqtyConfirm = true;
+               		}
+               		if(alertObj.poitqtyConfirm && !alertObj.poitqtyCheck) { 
+               			omp01GridObject.getGrid().deleteRow({ rowIndx : gridData.rowData.pq_ri });
+               		}
+            	}
+        	}
+        	
+        	if(gridData.rowData.poitqty && gridData.rowData.packqty) {																	// 발주 수량 및 포장 수량 존재 시 박스 수량 계산.
+        		gridData.rowData.poitbox = Math.ceil(gridData.rowData.poitqty / gridData.rowData.packqty);
+        	}
+    	}
+    }
+});
+
+//MPTNMA : 고객에 따른 도착지 조회. array에 미존재 시 DB에서 조회 후 array에 추가.
+async function getDestkeyByCustkey(param, arr) {
+	
+	if(!arr[param]) {
+		const destkeyData = await fetchUtil('GET', '/om/purchase/common/destination/' + param);
+		arr[param] = await destkeyData.json();
+	}
+	
+	return arr[param];
+}
+
+//============================================================	
+//캘린더 날짜 선택 제한
+//============================================================
+function setDate() {	
+	const nowDate = Date.now();
+	
+	const timeOff = new Date().getTimezoneOffset() * 6000;
+	
+	return new Date(nowDate-timeOff).toISOString().split('T')[0];
+}
+</script>
+</div>
+</html>

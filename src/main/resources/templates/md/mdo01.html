@@ -1,0 +1,418 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdo01Compkey" class="setting-grid-title">[[#{md.mcomma.compkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" class="form-control" th:placeholder="${#messages.msg('md.mcomma.compkey')}" id="mdo01Compkey" name="mdo01Compkey" />
+					</div>
+				</div>
+				<label for="mdo01Conamlc" class="setting-grid-title">[[#{md.mcomma.conamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" class="form-control" th:placeholder="${#messages.msg('md.mcomma.conamlc')}" id="mdo01Conamlc" name="mdo01Conamlc" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdo01Search" >
+					<img><span>[[#{bt.search}]]</span>
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdo01Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdo01Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdo01Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdo01
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.07
+	  - 설명 : 회사등록
+	  ------------------------------------------
+	*/
+$(function(){
+
+	//============================================================
+	//검색 화면 이벤트
+	//============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(async function() {
+		const grid = pq.grid('#'  + '[[${gprogrid}]]' + 'Grid');
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const data = {
+				compkey: $('#'  + '[[${gprogrid}]]' + 'Compkey').val().toUpperCase(),
+				conamlc: $('#'  + '[[${gprogrid}]]' + 'Conamlc').val()
+		};
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function() {
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid')
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length === 0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({all: true});
+
+		//============================================================
+    	// 체크 데이터 중 필수 & 중복 값 체크
+    	//============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['compkey', 'conamlc'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+	      				rowIndxPage: gCheck.pq_ri,
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+	      			});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+				const keyCols = ['compkey'];
+
+				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData) + '[[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+					alert(alertTxt);
+	      			grid.focus({
+	      				rowIndxPage: (gCheck.pq_ri),
+	      				colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: 'compkey' } )
+	      			});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdo01List(gridChange);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdo01Grid);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdo01GridCM = [
+		{ title: '', dataType: 'bool', dataIndx: '[[#{common.grid.checkBoxName.state}]]', align: 'center',
+			type: 'checkbox', sortable: false, editor: false,
+            cb: { all: false, header: true }
+     	},
+		{ title: '[[#{common.grid.recIndx}]]', dataType: 'string', dataIndx: '[[#{common.grid.recIndx}]]', hidden: true, editable: false},
+		{ title: '[[#{md.mcomma.compkey}]]', dataType: 'string', dataIndx: 'compkey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]'],
+    		validations: [{ type: 'minLen', value: 1, msg: '[[#{ms.validations.minLenLength(1)}]]' },
+    						  { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]' }]
+		},
+		{ title: '[[#{md.mcomma.conamlc}]]', dataType: 'string', dataIndx: 'conamlc',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			validations: [{ type: 'minLen', value: 1, msg: '[[#{ms.validations.minLenLength(1)}]]' },
+						      { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]' }]
+		},
+		{ title: '[[#{md.mcomma.couseyn}]]', dataType: 'string', dataIndx: 'couseyn',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			align: 'center', type: 'checkbox', editor: false,
+            cb: { all: false, header: true, check: 'Y', uncheck: 'N' }
+		},
+		{ title: '[[#{md.mcomma.conamko}]]', dataType: 'string', dataIndx: 'conamko',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							  { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]', warn: true },
+							  { type: 'regexp', value: regKorOnly, msg: '[[#{ms.onlyInputKorean}]]'}]
+		},
+		{ title: '[[#{md.mcomma.conamen}]]', dataType: 'string', dataIndx: 'conamen',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+						      { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]', warn: true },
+							  { type: 'regexp', value: regEngOnly, msg: '[[#{ms.onlyInputEnglish}]]'}]
+		},
+		{ title: '[[#{md.mcomma.coaddr1}]]', dataType: 'string', dataIndx: 'coaddr1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coaddr2}]]', dataType: 'string', dataIndx: 'coaddr2',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+						      { type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coaddr3}]]', dataType: 'string', dataIndx: 'coaddr3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.complat}]]', dataType: 'float', dataIndx: 'complat', format: '###,###,###,###,###.0000000000', hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'gte', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							  { type: 'lte', value: 1000000000000000, msg: '[[#{ms.validations.maxLenLength(15)}]]', warn: true },
+							  { type: 'regexp', value: regNum15Dot10, msg: '[[#{ms.validations.onlyNumber(15)}]]', warn: true}]
+		},
+		{ title: '[[#{md.mcomma.complon}]]', dataType: 'float', dataIndx: 'complon', format: '###,###,###,###,###.0000000000', hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'gte', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							  { type: 'lte', value: 1000000000000000, msg: '[[#{ms.validations.maxLenLength(15)}]]', warn: true },
+							  { type: 'regexp', value: regNum15Dot10, msg: '[[#{ms.validations.onlyNumber(15)}]]', warn: true}]
+		},
+		{ title: '[[#{md.mcomma.cociynm}]]', dataType: 'string', dataIndx: 'cociynm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							  { type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coregnm}]]', dataType: 'string', dataIndx: 'coregnm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 100, msg: '[[#{ms.validations.maxLenLength(100)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coteln1}]]', dataType: 'string', dataIndx: 'coteln1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coteln2}]]', dataType: 'string', dataIndx: 'coteln2',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+				              { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coteln3}]]', dataType: 'string', dataIndx: 'coteln3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.cotaxcd}]]', dataType: 'string', dataIndx: 'cotaxcd',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							  { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coposbx}]]', dataType: 'string', dataIndx: 'coposbx',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+				              { type: 'maxLen', value: 10, msg: '[[#{ms.validations.maxLenLength(10)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coposcd}]]', dataType: 'string', dataIndx: 'coposcd',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 10, msg: '[[#{ms.validations.maxLenLength(10)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.corepnm}]]', dataType: 'string', dataIndx: 'corepnm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							  { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.coreptl}]]', dataType: 'string', dataIndx: 'coreptl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.corepem}]]', dataType: 'string', dataIndx: 'corepem',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.comannm}]]', dataType: 'string', dataIndx: 'comannm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.comantl}]]', dataType: 'string', dataIndx: 'comantl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 20, msg: '[[#{ms.validations.maxLenLength(20)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.comanem}]]', dataType: 'string', dataIndx: 'comanem',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'minLen', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+							   { type: 'maxLen', value: 60, msg: '[[#{ms.validations.maxLenLength(60)}]]', warn: true }]
+		},
+		{ title: '[[#{md.mcomma.cotmzon}]]', dataType: 'integer', dataIndx: 'cotmzon', format: '#,###',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [{ type: 'gte', value: 0, msg: '[[#{ms.validations.minLenLength(0)}]]', warn: true },
+						      { type: 'lte', value: 1000000000, msg: '[[#{ms.validations.maxLenLength(9)}]]', warn: true },
+			 				  { type: 'regexp', value: regNum9Digit, msg: '[[#{ms.validations.onlyNumber(9)}]]', warn: true}]
+		},
+		{ title: '[[#{md.mcomma.credate}]]', dataType: 'string', dataIndx: 'credate',  editable: false },
+		{ title: '[[#{md.mcomma.cretime}]]', dataType: 'string', dataIndx: 'cretime',  editable: false },
+		{ title: '[[#{md.mcomma.creuser}]]', dataType: 'string', dataIndx: 'creuser',  editable: false },
+		{ title: '[[#{md.mcomma.lmodate}]]', dataType: 'string', dataIndx: 'lmodate',  editable: false },
+		{ title: '[[#{md.mcomma.lmotime}]]', dataType: 'string', dataIndx: 'lmotime',  editable: false },
+		{ title: '[[#{md.mcomma.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false }
+	];
+
+	// Grid Object 및 기초 세팅
+    const mdo01Grid = new GridUtil(mdo01GridCM, '[[${gprogrid}]]',  '[[${gprogrid}]]' + 'Grid');
+
+	// Grid 검색 세팅
+    mdo01Grid.setFind();
+
+	// Grid 초기화 세팅
+    mdo01Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+    mdo01Grid.setAdd(function(evt, ui){
+    	const rowIndx = this.addRow({
+    		rowData: {
+    			state : true,
+    			couseyn: 'Y'
+    		},
+    		checkEditable: false
+    	});
+
+    	this.goToPage({ rowIndx: rowIndx });
+    	this.editCell({
+    		rowIndx: rowIndx,
+    		dataIndx: 'compkey'
+    	});
+    });
+
+	// Grid 데이터 변경 이벤트
+    mdo01Grid.setChange(async function(evt, ui) {
+    	if('edit' === ui.source || 'paste' === ui.source){
+			const updateRowList = [];
+
+			await ui.updateList.forEach(async updateData => {
+				let newRow = {state : true};
+
+    			if(updateData.newRow.hasOwnProperty('compkey') && updateData.oldRow.hasOwnProperty('compkey')){
+    				newRow['compkey'] = updateData.newRow['compkey']?.toUpperCase();
+    			}
+
+    			updateRowList.push({
+    				rowIndx: updateData.rowIndx,
+    				newRow : newRow
+    			});
+			});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false,
+			});
+    	} else if('checkbox' === ui.source){
+			const updateRowList = [];
+
+			await ui.updateList.forEach( updateData => {
+				let newRow = {state : true};
+
+    			if(updateData.newRow.hasOwnProperty('couseyn')){
+        			updateRowList.push({rowIndx: updateData.rowIndx, newRow : newRow});
+        		}
+			});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+    	if('paste' === ui.source){
+    		await ui.addList.forEach(addData => addData.newRow = {
+   					state: true,
+   					couseyn: addData.newRow['couseyn'] ? addData.newRow['couseyn'] : 'Y'
+       		});
+    		await this.updateRow({
+    			rowList: ui.addList,
+    			checkEditable: false
+    		});
+    	}
+    });
+
+	// Grid 객체 생성
+    mdo01Grid.open();
+
+	// Grid 조회 함수
+	async function getMdo01List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		grid.showLoading();
+
+		const data = { compkey : $('#' + '[[${gprogrid}]]' + 'Compkey').val().toUpperCase(), compmlc : $('#' + '[[${gprogrid}]]' + 'Compmlc').val() };
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+
+		grid.hideLoading();
+	}
+
+	// Grid 저장 함수
+	async function saveMdo01List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdo01Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdo01Response.status === 200){
+			await getMdo01List();
+		}
+
+		grid.hideLoading();
+	}
+});
+</script>
+</div>
+</html>

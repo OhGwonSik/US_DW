@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!--  mainMenu 시작 메뉴 로케이션 작업중 2023.10.25-->
+<div th:fragment="fragments-mainMenu" class="location">
+	<div class="nav-home"><img class="ic-navi-home">Home</div>
+	<img class="ic-navi-arrow"><span th:text = "${menuInfo.SYSTEM_NM}"></span> 
+	<img class="ic-navi-arrow"><span th:text = "${menuInfo.MENU_PNM}"></span> 
+	<img class="ic-navi-arrow"><span th:text = "${menuInfo.MENU_NM}"></span>	
+	<img class="ic-bookmark" th:refid="${menuInfo.MENU_ID}" th:refnm="${menuInfo.MENU_NM}" />
+	<input type="hidden" id="menuInfo_SYSTEM_ID" th:value="${menuInfo.SYSTEM_ID}" />
+	<input type="hidden" id="menuInfo_MENU_PID" th:value="${menuInfo.MENU_PID}" />
+	<input type="hidden" id="menuInfo_MENU_ID" th:value="${menuInfo.MENU_ID}" />
+
+	
+	<!-- US_OP 즐겨찾기 function -->
+ 	<script>
+ 	/*		$(function() {
+					bookmark.forEach(function(bm) {
+				if(bm.MENU_ID == $("#menuInfo_MENU_ID").val()) {
+					$(".ic-bookmark").addClass("on");
+				}
+ 			});
+ 			$(".ic-bookmark").off("click"); // 이전 이벤트 핸들러를 제거합니다.
+ 			$(".ic-bookmark").on("click", function(e) {
+ 				e.stopPropagation();
+ 				if($(this).hasClass("on")) {
+ 					$(this).removeClass("on");
+ 					//setBookmark($(this).parent("li").attr("id"), "N");
+ 					setBookmark($(this).attr("refid"), $(this).attr("refnm"), "N");
+ 				} else {
+ 					$(this).addClass("on");
+ 					//setBookmark($(this).parent("li").attr("id"), "Y");
+ 					setBookmark($(this).attr("refid"), $(this).attr("refnm"), "Y");
+ 				}
+ 			}); 
+ 		});*/
+ 	</script> 
+</div>
+<!--  mainMenu 종료 -->
+</html>

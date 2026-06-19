@@ -1,0 +1,510 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmo11Warekey"></select>
+					</div>
+				</div>
+				<label class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmo11Ownerky">
+							<option value="">[[#{wm.wmo11.all}]]</option>
+						</select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wshpit.allgrky}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="wmo11Allgrky" th:placeholder="${#messages.msg('wm.wshpit.allgrky')}">
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wshpit.picktyp}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="wmo11Picktyp"></select>
+					</div>
+				</div>
+				<label class="setting-grid-title">[[#{wm.wshpit.shppday}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" max="2999-12-31" id="wmo11ShsdateFrom" onkeyup="setInputDateDel(this)"/>
+						<span>~</span>
+						<input type="date" max="2999-12-31" id="wmo11ShsdateTo" onkeyup="setInputDateDel(this)"/>
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="wmo11Search"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="wmo11Reset"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="wmo11Save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="wmo11AllgroupPqgrid"></div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-grid-wrapper con-box">
+				<div id="wmo11SkuPqgrid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	$(function(){
+		const pageId = "[[${gprogrid}]]";
+		const wmo11HeadGridId = "#" + pageId + "AllgroupPqgrid";
+		const wmo11ItemGridId = "#" + pageId + "SkuPqgrid";
+		
+		let wmo11AllGroupGridObject;
+		let wmo11SkuGridColModel;
+		let wmo11SkuGridObject;
+	
+		$('#' + pageId + 'Search').click(function() {
+			searchWmo11AllGroupList();
+		});	
+		
+		$('#' + pageId + 'Reset').click(function(){
+			resetSearchConditions();
+			$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+			wmo11AllGroupGridObject.searchList([]);
+			wmo11SkuGridObject.searchList([]);
+		});
+		
+		$('#' + pageId + 'Save').click(async function () {
+			const itemGrid = pq.grid(wmo11ItemGridId);
+			const headGrid = pq.grid(wmo11HeadGridId);
+			let itemGridCheck = itemGrid.Checkbox('state').getCheckedNodes();
+			let itemGridList = wmo11SkuGridObject.getChanges({all : true});
+			let headGridList = wmo11AllGroupGridObject.getChanges({all : true});
+			
+			if(itemGridCheck.length) {
+				const headGridCheck = headGrid.Checkbox('state').getCheckedNodes();
+				for(const itemGridRow of itemGridCheck) {
+					itemGridRow['taskoky'] = headGridCheck[0].taskoky;
+					itemGridRow['taskoit'] = headGridCheck[0].taskoit;
+					itemGridRow['shpdcky'] = headGridCheck[0].shpdcky;
+					itemGridRow['shpdcit'] = headGridCheck[0].shpdcit;
+					itemGridRow['cooutky'] = headGridCheck[0].cooutky;
+					itemGridRow['cooutit'] = headGridCheck[0].cooutit;
+					itemGridRow['oeretky'] = headGridCheck[0].oeretky;
+					itemGridRow['oeretit'] = headGridCheck[0].oeretit;
+					itemGridRow['picktyp'] = headGridCheck[0].picktyp;
+					itemGridRow['toareky'] = headGridCheck[0].toareky;
+					itemGridRow['tozonky'] = headGridCheck[0].tozonky;
+					itemGridRow['tolocky'] = headGridCheck[0].tolocky;
+					
+					if(!itemGridRow.tchnqty){
+						alert('[[#{wm.wmo11.tchnqtyZero}]]');
+						itemGrid.editCell({ rowIndx : itemGridRow.pq_ri , dataIndx : 'tchnqty'});
+						return;
+					}
+				}
+				
+				itemGridList.updateList = itemGridCheck;
+				headGridList.updateList = headGridCheck;
+				if(confirm("[[#{ms.checksave}]]")){
+					headGrid.showLoading();
+					itemGrid.showLoading();
+					
+					const res = await fetchUtil( 'PATCH' , '/wm/outbound/' + pageId + '/wmo11AllocChange', { headGrid : headGridList , itemGrid : itemGridList } );
+					if(res.ok){
+						await searchWmo11AllGroupList();
+					}
+					
+					headGrid.hideLoading();
+					itemGrid.hideLoading();
+				}
+			}else{
+				alert("[[#{ms.choiceRowZero}]]");
+			}
+		});
+	
+		
+		const wmo11AllGroupGridColModel 	= [
+			{ title: "", dataType: "String",  dataIndx: "state", type: "checkBoxSelection"
+				, align: "center"
+				, maxWidth:"30", maxHeight:"30"
+				, menuIcon: false
+				, sortable: false, editor: false,
+				cb: {all: false, header: true, check:"Y", uncheck:"N"}
+			},
+			{ title: "[[#{wm.wshpit.rowkey}]]",  dataType: "string",  dataIndx:"rowkey",  hidden: true, editable:false },
+			{ title: "[[#{wm.wtakit.taskoky}]]", dataType: "string",  dataIndx:"taskoky", editable:false },
+			{ title: "[[#{wm.wtakit.taskoit}]]", dataType: "integer",  dataIndx:"taskoit", editable:false },
+			{ title: "[[#{wm.wshpit.compkey}]]", dataType: "string",  dataIndx:"compkey", hidden: true, editable:false },
+			{ title: "[[#{grid.whnamlc}]]", dataType: "string",  dataIndx:"warekey", hidden: true, editable:false },
+			{ title: "[[#{grid.ownamlc}]]", dataType: "string",  dataIndx:"ownerky", hidden: true, editable:false },
+			{ title: "[[#{wm.wshpit.allgrky}]]", dataType: "string",  dataIndx:"allgrky", editable:false },
+			{ title: "[[#{md.mdocma.doctynm}]]", dataType: "string",  dataIndx:"doctynm", editable:false },
+			{ title: "[[#{wm.wmo11.shpdcky}]]", dataType: "string",  dataIndx:"shpdcky", editable:false },
+			{ title: "[[#{wm.wshpit.shpdcit}]]", dataType: "integer",  dataIndx:"shpdcit", editable:false },
+			{ title: "[[#{wm.wshpit.cooutky}]]", dataType: "string",  dataIndx:"cooutky", editable:false },
+			{ title: "[[#{wm.wshpit.cooutit}]]", dataType: "integer",  dataIndx:"cooutit", editable:false },
+			{ title: "[[#{wm.wshpit.oeretky}]]", dataType: "string",  dataIndx:"oeretky", editable:false },
+			{ title: "[[#{wm.wshpit.oeretit}]]", dataType: "integer",  dataIndx:"oeretit", editable:false },
+			{ title: "[[#{wm.wshpit.picktyp}]]", dataType: "string",  dataIndx:"picktyp", hidden:true , editable:false },
+			{ title: "[[#{wm.wshpit.picktyp}]]", dataType: "string",  dataIndx:"picknam", editable:false },
+			{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx:"skumkey", editable:false },
+			{ title: "[[#{grid.skunm}]]", dataType: "string",  dataIndx:"skudesc", editable:false },
+			{ title: "[[#{wm.wtakit.frareky}]]", dataType: "string",  dataIndx:"frareky", hidden:true ,editable:false },
+			{ title: "[[#{wm.wtakit.frareky}]]", dataType: "string",  dataIndx:"frarenm", editable:false },
+			{ title: "[[#{wm.wtakit.frzonky}]]", dataType: "string",  dataIndx:"frzonky", hidden:true ,editable:false },
+			{ title: "[[#{wm.wtakit.frzonky}]]", dataType: "string",  dataIndx:"frzonnm", editable:false },
+			{ title: "[[#{wm.wtakit.frlocky}]]", dataType: "string",  dataIndx:"frlocky", hidden:true , editable:false },
+			{ title: "[[#{wm.wtakit.frlocky}]]", dataType: "string",  dataIndx:"frlocnm", editable:false },
+			{ title: "[[#{wm.wtakit.toareky}]]", dataType: "string",  dataIndx:"toareky", hidden:true , editable:false },
+			{ title: "[[#{wm.wtakit.tozonky}]]", dataType: "string",  dataIndx:"tozonky", hidden:true , editable:false },
+			{ title: "[[#{wm.wtakit.tolocky}]]", dataType: "string",  dataIndx:"tolocky", hidden:true , editable:false },
+	// 		{ title: "[[#{wm.wshpit.stkotky}]]", dataType: "string",  dataIndx:"stkotky", editable:false },
+			{ title: "[[#{wm.wshpit.shcuqty}]]", dataType: "integer", dataIndx:"shcuqty", editable:false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{wm.wshpit.rgitqty}]]", dataType: "integer", dataIndx:"rgitqty", editable:false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{wm.wmo11.fordqty}]]", dataType: "integer", dataIndx:"fordqty", editable:false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{wm.wshpit.credate}]]", width: 100, dataType: "string", dataIndx: "credate", format: "yy-mm-dd" , editable: false ,},
+			{ title: "[[#{wm.wshpit.cretime}]]", width: 100, dataType: "string", dataIndx: "cretime", editable: false },
+			{ title: "[[#{wm.wshpit.creuser}]]", width: 100, dataType: "string", dataIndx: "crename",  editable: false },
+		]
+		
+		/**
+		 * Group Grid
+	 	 **/
+		wmo11AllGroupGridObject = new GridUtil(wmo11AllGroupGridColModel, pageId , pageId + "AllgroupPqgrid");
+		
+	// 	wmo11AllGroupGridObject.setBeforeCheck(function(event, ui){
+	// 		return ui.check = ui.dataIndx === 'state' ? false : true ; 
+	// 	});
+		
+		wmo11AllGroupGridObject.setRowDblClick(async function(event, ui){
+			const groupList = wmo11AllGroupGridObject.getGrid().getData();
+	   		let param = {
+	    		compkey : ui.rowData.compkey,
+	    		warekey : ui.rowData.warekey,
+	    		skumkey : ui.rowData.skumkey,
+	    		ownerky : ui.rowData.ownerky,
+	    		taskoky : ui.rowData.taskoky,
+	    		taskoit : ui.rowData.taskoit 
+	    	};
+	
+	       	await searchWmo11SkuList(param);
+	       	// HeadGrid row Check
+	       	groupList.forEach((obj , index) => {
+	   			let rowIndx = index === ui.rowIndx ? ui.rowData.pq_ri : index;
+	   			let state = index === ui.rowIndx ? 'Y' : 'N';
+		       	this.updateRow({
+		   			rowIndx : rowIndx ,
+		   		    newRow : { 
+		   		    	state : state
+		   		    },
+		   		    checkEditable: false
+		   		});
+	   		});
+		});
+		
+	 	wmo11AllGroupGridObject.setFind();
+	    wmo11AllGroupGridObject.open();
+	    
+	    /**
+		 * Sku Grid
+	 	 **/
+	    wmo11SkuGridColModel = [
+	    	{ title: "", dataType: "String",  dataIndx: "state", type: "checkBoxSelection"
+				, align: "center"
+				, maxWidth:"30", maxHeight:"30"
+				, menuIcon: false
+				, sortable: false, editor: false,
+				cb: {all: false, header: true, check:"Y", uncheck:"N"}
+			},
+			{ title: "[[#{wm.wstkky.rowkey}]]",  dataType: "string",  dataIndx:"rowkey",  hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.compkey}]]", dataType: "string",  dataIndx:"compkey", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.warekey}]]", dataType: "string",  dataIndx:"warekey", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.ownerky}]]", dataType: "string",  dataIndx:"ownerky", hidden: true, editable:false },
+			{ title: "[[#{md.mowrma.ownamlc}]]", dataType: "string",  dataIndx:"ownamlc", editable:false },
+			{ title: "[[#{wm.wtakit.taskoky}]]", dataType: "string",  dataIndx:"taskoky", editable:false },
+			{ title: "[[#{wm.wtakit.taskoit}]]", dataType: "integer", dataIndx:"taskoit", editable:false },
+			{ title: "[[#{grid.skuCode}]]", dataType: "string",  dataIndx:"skumkey", editable:false },
+			{ title: "[[#{grid.skunm}]]", dataType: "string",  dataIndx:"skudesc", editable:false },
+			{ title: "[[#{wm.wstkky.stockky}]]", dataType: "string",  dataIndx:"stockky", editable:false },
+			{ title: "[[#{wm.wstkky.lotnmky}]]", dataType: "string",  dataIndx:"lotnmky", editable:false },
+			{ title: "[[#{wm.wstkky.areakey}]]", dataType: "string",  dataIndx:"areakey", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.areakey}]]", dataType: "string",  dataIndx:"areanam", editable:false },
+			{ title: "[[#{wm.wstkky.zonekey}]]", dataType: "string",  dataIndx:"zonekey", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.zonekey}]]", dataType: "string",  dataIndx:"zonenam", editable:false },
+			{ title: "[[#{wm.wstkky.locakey}]]", dataType: "string",  dataIndx:"locakey", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.locakey}]]", dataType: "string",  dataIndx:"locanam", editable:false },
+			{ title: "[[#{wm.wstkky.suomkey}]]", dataType: "string",  dataIndx:"suomkey", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.sirbcod}]]", dataType: "string",  dataIndx:"sirbcod", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.proddat}]]", dataType: "string",  dataIndx:"proddat", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.shelife}]]", dataType: "integer",  dataIndx:"shelife", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.expidat}]]", dataType: "string",  dataIndx:"expidat", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotfrky}]]", dataType: "string",  dataIndx:"lotfrky", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat01}]]", dataType: "string",  dataIndx:"lotat01", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat02}]]", dataType: "string",  dataIndx:"lotat02", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat03}]]", dataType: "string",  dataIndx:"lotat03", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat04}]]", dataType: "string",  dataIndx:"lotat04", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat05}]]", dataType: "string",  dataIndx:"lotat05", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat06}]]", dataType: "string",  dataIndx:"lotat06", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat07}]]", dataType: "string",  dataIndx:"lotat07", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat08}]]", dataType: "string",  dataIndx:"lotat08", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat09}]]", dataType: "string",  dataIndx:"lotat09", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat10}]]", dataType: "string",  dataIndx:"lotat10", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat11}]]", dataType: "string",  dataIndx:"lotat11", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat12}]]", dataType: "string",  dataIndx:"lotat12", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat13}]]", dataType: "string",  dataIndx:"lotat13", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat14}]]", dataType: "string",  dataIndx:"lotat14", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat15}]]", dataType: "string",  dataIndx:"lotat15", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat16}]]", dataType: "string",  dataIndx:"lotat16", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat17}]]", dataType: "string",  dataIndx:"lotat17", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat18}]]", dataType: "string",  dataIndx:"lotat18", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat19}]]", dataType: "string",  dataIndx:"lotat19", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.lotat20}]]", dataType: "string",  dataIndx:"lotat20", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.rcvdcky}]]", dataType: "string",  dataIndx:"rcvdcky", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.rcvdcit}]]", dataType: "integer",  dataIndx:"rcvdcit", hidden: true, editable:false },
+			{ title: "[[#{wm.wstkky.stkstat}]]", dataType: "string",  dataIndx:"stkstat", hidden: true, editable:false },
+			{ title: "[[#{wm.wmo11.stotqty}]]", dataType: "integer",  dataIndx:"stotqty", editable:false ,
+				summary: { type: "sum" }, format: "#,###"	
+			},
+			{ title: "[[#{wm.wmo11.tchnqty}]]", dataType: "integer", dataIndx:"tchnqty",
+				styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				summary: { type: "sum" }, format: "#,###"
+			},
+		]
+	    
+	    wmo11SkuGridObject = new GridUtil(wmo11SkuGridColModel, pageId, pageId + 'SkuPqgrid');
+	    
+	    wmo11SkuGridObject.setCreate(async function(evt, ui){
+	    	initData = await wmo11GridInit();
+			const dataKeys = Object.keys(initData);
+			const colModels = ui.colModel;
+			for(const dataKey of dataKeys){
+				for(const colModel of colModels){
+					const column = colModel.dataIndx;
+			 		const gridColumn = this.getColumn({dataIndx : column});
+					if(dataKey.indexOf(column) !== -1){
+						const options = initData[dataKey].map(function(obj){
+							let rObj = {};
+				 			rObj[obj.combovl] = obj.combonm;
+				 			return rObj;
+						});
+			 			gridColumn.editor.options = options;
+					}
+				}
+			}
+	    });
+	    
+	    wmo11SkuGridObject.setChange(function (evt, ui) {
+			if (ui.source == 'edit' || ui.source == 'paste'){
+				let updateList  = ui.updateList[0];
+	       		let rownum 		= ui.updateList[0].rowIndx;
+	       		let rowData		= ui.updateList[0].rowData;
+	       		let newRow		= ui.updateList[0].newRow;
+	       		
+	       		if(newRow.hasOwnProperty('tchnqty')){
+	       			// 입력수량 - 가용수량 비교
+		       		if(newRow.tchnqty > rowData.stotqty){
+		       			alert('[[#{wm.wmo11.checkTchnqty}]]');
+		       			this.updateRow({
+							rowIndx:rownum ,
+		    	   		    newRow: { 
+		    	   		    	state : 'N',
+		    	   		    	tchnqty : 0
+		    	   		    }
+		    	   		});
+		       			
+		       		}else{
+		       			const itemGrid = pq.grid(wmo11ItemGridId);
+		       			const itemCheckedList = pq.grid(wmo11ItemGridId).Checkbox('state').getCheckedNodes().filter((obj) => obj.state === 'Y');
+		       			const headCheckedList = pq.grid(wmo11HeadGridId).Checkbox('state').getCheckedNodes().filter((obj) => obj.state === 'Y');
+		       			let sumFordqty = 0;
+		       			// Head Check Row 확인
+		       			if(!headCheckedList.length){
+		       				alert('[[#{ms.choiceHeadRowZero}]]');
+		       				this.updateRow({
+	       						rowIndx: rowData.pq_ri ,
+	    	    	   		    newRow: { 
+	    	    	   		    	state : 'N',
+	    	    	   		    	tchnqty : 0
+	    	    	   		    },
+	       					});
+		       				return;
+		       			}
+		       			itemCheckedList.forEach((obj) => {
+		       				sumFordqty += Number(obj.tchnqty);
+		       			});
+		       			sumFordqty += Number(newRow['tchnqty']);
+		       			
+	       				let state   = headCheckedList[0].fordqty < sumFordqty ? 'N' : 'Y';
+	       				let tchnqty = headCheckedList[0].fordqty < sumFordqty ? 0 : newRow['tchnqty'];
+	       				console.log(tchnqty)
+	       				if(headCheckedList[0].fordqty < sumFordqty) {
+	       					alert('[[#{wm.wmo11.totalCount}]]' + ' ' + headCheckedList[0].fordqty + '[[#{wm.wmo11.totalQty}]]');
+	       					sumFordqty -= Number(newRow['tchnqty']);
+	       				}
+	       				
+       					this.updateRow({
+       						rowIndx: rowData.pq_ri ,
+    	    	   		    newRow: { 
+    	    	   		    	state : state,
+    	    	   		    	tchnqty : tchnqty
+    	    	   		    },
+       					});
+		       		}
+	       		}
+			}
+	    });
+	
+	    wmo11SkuGridObject.setCreate(async function(event, ui){
+	    	const initData = await wmo11SearchInitData();
+	    	await comboInit(initData);
+		});
+	    
+	    wmo11SkuGridObject.setFind();
+	    wmo11SkuGridObject.open();
+		
+		
+	  	//============================================================	 
+		// 그리드 생성 시 init데이터
+		//============================================================
+		async function wmo11GridInit(){
+			const res = await fetchUtil('GET' , '/wm/outbound/' + pageId +'/grid/init' ,'');
+			if(res.ok){
+				return res.json();	
+			}
+			return;
+		};
+		
+		//============================================================	 
+		// 검색영역 Init
+		//============================================================
+		async function wmo11SearchInitData(){
+			const res = await fetchUtil('GET' , '/wm/outbound/' + pageId + '/init');
+			if(res.ok){
+				return res.json();	
+			}
+			return;
+		}
+		
+		async function comboInit(param){
+			const item = param.item;
+			comboCreateData(null, pageId + 'Warekey', item.warekeyList, {combovl : 'combovl', combonm : 'combonm'});
+			comboCreateData(null, pageId + 'Ownerky', item.ownerkyList, {combovl : 'combovl', combonm : 'combonm'});
+			comboCreateData(null, pageId + 'Picktyp', item.picktypList);
+			$('#'+pageId+'ShsdateFrom').val(moment().subtract(1, 'days').format('YYYY-MM-DD'));
+			$("#"+pageId+"ShsdateTo").val(moment().format("YYYY-MM-DD"));
+		}
+	   	
+	  	//============================================================	 
+		//  HeadGrid 조회
+		//============================================================
+		async function searchWmo11AllGroupList(){
+	  		let headGrid = pq.grid(wmo11HeadGridId);
+	  		let itemGrid = pq.grid(wmo11ItemGridId);
+	  		
+			let param = { 
+				warekey : $('#' + pageId + 'Warekey').val(),
+				ownerky : $('#' + pageId + 'Ownerky').val(),
+				allgrky : $('#' + pageId + 'Allgrky').val(),
+				picktyp : $('#' + pageId + 'Picktyp').val(),
+				shsdatefrom : $('#' + pageId + 'ShsdateFrom').val().replaceAll('-',''),
+				shsdateto : $('#' + pageId + 'ShsdateTo').val().replaceAll('-','')
+			}
+			
+			headGrid.showLoading();
+			itemGrid.showLoading();
+
+			const res = await fetchUtil('GET' , '/wm/outbound/' + pageId + '/grid/1',  param);
+			if(res.ok){
+				const resData = await res.json();
+				
+				headGrid.option( 'dataModel', { data: resData } );
+		        headGrid.refreshDataAndView();
+		        
+		        itemGrid.option( 'dataModel', { data: [] } );
+		        itemGrid.refreshDataAndView();
+			}
+			
+			headGrid.hideLoading();
+			itemGrid.hideLoading();   
+		}
+	  	
+		//============================================================	 
+		//  ItemGrid 조회
+		//============================================================
+		async function searchWmo11SkuList(param){
+			const itemGrid = pq.grid(wmo11ItemGridId);
+			if(param != null){
+				itemGrid.showLoading();
+				
+				const res = await fetchUtil('GET' , '/wm/outbound/' + pageId + '/grid/2',  param);
+				if(res.ok){
+					const resData = await res.json();
+				 	
+					itemGrid.option( 'dataModel', { data: resData });
+				 	itemGrid.refreshDataAndView();
+				}
+				itemGrid.hideLoading();
+			}
+		}
+		
+		//============================================================	 
+		//  검색영역 콤보박스 생성
+		//============================================================
+		function comboCreateData(gridnm, colnm, obj, mapob, type){
+			if(!gridnm){
+				$("#" + colnm + " option").not("[value='']").remove();	//초기화
+				if(mapob != null && mapob.combovl != undefined && mapob.combonm != undefined){
+					$.each(obj, function(key, value) {
+						$('#' + colnm) .append($("<option></option>").attr("value",value[mapob.combovl]).text(value[mapob.combonm])); 
+					});
+				}else{
+					$.each(obj, function(key, value) { 
+						$('#' + colnm) .append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+					});
+				}
+				
+				if(colnm === pageId + "[[#{wm.wmo11.ownerkyValue}]]"){
+					$('#' + colnm).pqSelect({
+						deselect : false
+					});
+				}
+			}
+			else{
+				let grid 	= pq.grid("#" + gridnm);
+				let column 	= grid.getColumn({ dataIndx: colnm });
+	
+				let options = obj.map(function(obj){
+		        	let rObj = {};
+		        	if(mapob != null && mapob.combovl != undefined && mapob.combonm != undefined){
+		        		rObj[obj[mapob.combovl]] = obj[mapob.combonm];
+		        	}else{
+						rObj[obj.combovl] = obj.combonm;
+		        	}
+					return rObj;
+				});
+		
+				column.editor.options = options;
+			}
+		}
+		
+	});
+	</script>
+	<!--  mainConten 종료 -->
+</div>
+</html>

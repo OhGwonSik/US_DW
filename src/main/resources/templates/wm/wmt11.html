@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent">
+		<div class="tab-contents">
+            <div class="location"></div>
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmt11_warekey"></select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmt11_ownerky">
+                            	<option value="" selected>[[#{ms.chooseAll}]]</option>
+                            </select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{wm.wtakit.taskoky}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('wm.wtakit.taskoky')}" id="wmt11_taskoky">
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{md.mskuma.skumkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('md.mskuma.skumkey')}" id="wmt11_skumkey">
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{md.mskuma.skudesc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('md.mskuma.skudesc')}" id="wmt11_skudesc">
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" onclick="wmt11Search()"><img>[[#{bt.search}]]</button>
+                	<button type="button" class="btn-clear btn-white" id="wmt11_reset" onclick="wmt11Refresh()"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button class="btn-navy btn-green" id="wmt11_save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+                        <button class="btn-white" id="wmt11_cancel"><img class="ic-bt-delete">[[#{bt.cancel}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="wmt11_grid"></div>
+                </div>
+            </div>
+        </div>
+	<script>
+		$(function(){
+			/*  wmt11 - 이동확정
+			*   최초 생성일시	: 2023-12-12 11:30
+			*   최초 생성자	: 최강호 
+			*   설명			: 이동지시를 확정하거나 취소하는 페이지
+			*   수정 내역		:
+			*   수정일시		:
+			*	수정자		: 
+			*	변경 사항		: 
+			*/
+			
+			let wmt11InitData = wmt11Init();
+			//============================================================
+			// 재고 이동확정 이벤트
+			//============================================================
+		 	$('#wmt11_save').click(async function(){
+		 		let grid = pq.grid("#wmt11_grid");
+				let gridData = grid.getChanges({all:true});
+				gridData.updateList = gridData.updateList.filter(function(item){
+					return item.state === true;
+				});//state가 true인 값만 가져오기
+				
+				if(gridData.updateList.length > 0 ){
+					let result = confirm("[[#{ms.checksave}]]");//저장 하시겠습니까?
+					if(result == true){
+						grid.showLoading();
+			 			try{
+			 				let response = await fetchUtil('POST', '/wm/task/wmt11/grids/1', gridData);
+			 				if(response.status === 200){
+								//alert("[[#{ms.saveSuccess}]]");//저장 성공하였습니다.
+								grid.hideLoading();
+								wmt11Search();
+							}
+			 			}catch(err){
+			 				console.log(err);
+			 			}finally{
+			 				grid.hideLoading();
+			 			}
+					}
+		 		}else{
+		 			 alert("[[#{ms.choiceRowZero}]]"); //선택된 Row가 없습니다.
+					 return false;
+		 		}
+		 	});
+			
+		//============================================================
+		// 재고 이동취소 이벤트
+		//============================================================		
+		$('#wmt11_cancel').click(async function(){
+			let grid = pq.grid("#wmt11_grid");
+			let gridData = grid.getChanges({all:true});
+			gridData.updateList = gridData.updateList.filter(function(item){
+				return item.state !== false;
+			});//state가 true인 값만 가져오기
+			
+			if(gridData.updateList.length > 0 ){
+				let result = confirm("[[#{ms.checksave}]]");//저장 하시겠습니까?
+				if(result == true){
+					grid.showLoading();
+		 			try{
+		 				let response = await fetchUtil('POST', '/wm/task/wmt11/grids/2', gridData);
+		 				if(response.status === 200){
+							//alert("[[#{ms.saveSuccess}]]");//저장 성공하였습니다.
+							grid.hideLoading();
+							wmt11Search();
+						}
+		 			}catch(err){
+		 				console.log(err);
+		 			}finally{
+		 				grid.hideLoading();
+		 			}
+				}
+	 		}else{
+	 			 alert("[[#{ms.choiceRowZero}]]"); //선택된 Row가 없습니다.
+				 return false;
+	 		}
+		});
+			
+			let wmt11ColModel = [
+						{ title: "", maxWidth: 30, minWidth: 30, dataIndx: "state", resizable: false,
+			                menuIcon: false,
+			                type: 'checkBoxSelection', sortable: false, editor: false,
+			                dataType: 'bool',
+			                cb: { all: false, header: true },
+			            },
+						{ title: "rowkey", dataType: "String", dataIndx: "rowkey", hidden: true, editable: false },
+						{ title: "[[#{wm.wtakit.compkey}]]", dataType: "string", dataIndx: "compkey" , hidden: true , editable: false }, //회사키
+						{ title: "[[#{wm.wtakit.taskoky}]]", dataType: "string", dataIndx: "taskoky" , editable: false },  //작업문서
+						{ title: "[[#{wm.wtakit.taskoit}]]", dataType: "integer", dataIndx: "taskoit" , editable: false }, //작업문서 아이템
+						{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey" , editable: false , //창고키
+							editor: { type: "select", options: [] },
+						 	render : gridRenderAndValue
+						},
+						{ title: "[[#{grid.ownamlc}]]", dataType: "string", dataIndx: "ownerky" , editable: false, //화주
+							editor: { type: "select", options: [] },
+						 	render : gridRenderAndValue
+						},
+						{ title: "[[#{wm.wtakit.doccate}]]", dataType: "string", dataIndx: "doccate" , hidden: true , editable: false }, //문서유형
+						{ title: "[[#{wm.wtakit.doctype}]]", dataType: "string", dataIndx: "doctype" , editable : false , //문서타입
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						},
+						
+						{ title: "[[#{wm.wtakit.tasksts}]]", dataType: "string", dataIndx: "tasksts" , hidden: true , editable: false }, //작업상태
+						{ title: "[[#{grid.skuCode}]]", dataType: "string", dataIndx: "skumkey" , editable: false }, //부품코드
+						{ title: "[[#{grid.skunm}]]", dataType: "string", dataIndx: "skudesc" , editable: false }, //부품명
+						{ title: "[[#{wm.wtakit.frareky}]]", dataType: "string", dataIndx: "frareky" , editable: false,
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						}, // from area
+						{ title: "[[#{wm.wtakit.frzonky}]]", dataType: "string", dataIndx: "frzonky" , editable: false,
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						}, //from zone
+						{ title: "[[#{wm.wtakit.frlocky}]]", dataType: "string", dataIndx: "frlocky" , editable: false,
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						}, //from location
+						{ title: "[[#{wm.wtakit.toareky}]]", dataType: "string", dataIndx: "toareky" , editable: false,
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						}, //to area
+						{ title: "[[#{wm.wtakit.tozonky}]]", dataType: "string", dataIndx: "tozonky" , editable: false,
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						}, //to zone
+						{ title: "[[#{wm.wtakit.tolocky}]]", dataType: "string", dataIndx: "tolocky" , editable: false,
+							editor: { type: "select", options: [] },
+			   	        	render: gridRenderAndValue
+						}, //to location
+						{ title: "[[#{wm.wtakit.fordqty}]]", dataType: "integer" , dataIndx: "fordqty" , format: '###,###,###' , editable: false  , //지시수량		
+							summary: { type: "sum" }
+						},
+						{ title: "[[#{wm.wtakit.tcmpqty}]]", dataType: "integer", dataIndx: "tcmpqty" , format: '###,###,###' ,  editable: false  , //완료수량
+							summary: { type: "sum" },
+						},
+						{ title: "[[#{wm.wtakit.stkstat}]]", dataType: "string", dataIndx: "stkstat" , editable: false,
+							editor: {
+			   	                type: "select",
+			   	                init: function (ui) {
+			   	                	ui.$cell.find("select").pqSelect({ search:false, singlePlaceholder: '', searchId:"wmt10_parsncd" });
+			   	                	setTimeout(function () {
+			   		                	ui.$cell.find("select").pqSelect('open'); 
+			   		                }, 250);
+			   	                },
+			                    options: [],
+			                    prepend : { "" : '옵션을 선택해주세요' }
+			   	        	},
+							render: gridRenderAndValue
+						},
+						{ title: "[[#{wm.wtakit.pkrsncd}]]", dataType: "string", dataIndx: "pkrsncd" , //취소사유
+							styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+							editor: {
+				                type: "select",
+				                init: function (ui) {
+				                	ui.$cell.find("select").pqSelect({search:false , singlePlaceholder: '' });
+				                	setTimeout(function () {
+					                	ui.$cell.find("select").pqSelect('open'); 
+					                }, 250);
+				                },
+			                    options: [],
+			                    prepend : { "" : '옵션을 선택해주세요' }
+					        },
+					        editable: function (ui) {
+				                   return editable = (ui.rowData.sbloqty > 0) ? false : true;
+					        },
+					        render: gridRenderAndValue
+						},
+						{ title: "[[#{wm.wtakit.pkrsnnm}]]", dataType: "string", dataIndx: "pkrsnnm" , //취소사유내용
+							styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },	
+						    validations: [
+			                    { type: 'minLen', value:1 , msg: "Required", warn: true },{ type: 'maxLen', value:200 , msg: "[[#{ms.validations.maxLenLength(200)}]]" },
+				            ] 
+						},
+						{ title: "[[#{wm.wtakit.expidat}]]", dataType: "string", dataIndx: "expidat" , editable: false, hidden: true }, //생성일자
+						{ title: "[[#{wm.wtakit.credate}]]", dataType: "string", dataIndx: "credate" , editable: false }, //생성일자
+						{ title: "[[#{wm.wtakit.cretime}]]", dataType: "string", dataIndx: "cretime" , editable: false }, //생성시간
+						{ title: "[[#{wm.wtakit.creuser}]]", dataType: "string", dataIndx: "creuser" , editable: false }, //생성 사용자
+						{ title: "[[#{wm.wtakit.lmodate}]]", dataType: "string", dataIndx: "lmodate" , editable: false }, //수정일자
+						{ title: "[[#{wm.wtakit.lmotime}]]", dataType: "string", dataIndx: "lmotime" , editable: false }, //수정시간
+						{ title: "[[#{wm.wtakit.lmouser}]]", dataType: "string", dataIndx: "lmouser" , editable: false }, //수정 사용자
+						{ title: "[[#{wm.wtakit.indibzl}]]", dataType: "string", dataIndx: "indibzl" , hidden: true , editable: false },
+						{ title: "[[#{wm.wtakit.indiarc}]]", dataType: "string", dataIndx: "indiarc" , hidden: true , editable: false },
+						{ title: "[[#{wm.wtakit.updtchk}]]", dataType: "string", dataIndx: "updtchk" , hidden: true , editable: false },
+					];
+					let wmt11Gul = new GridUtil(wmt11ColModel , '[[${gprogrid}]]' , 'wmt11_grid');
+				    
+				    wmt11Gul.setFind();
+				    wmt11Gul.setReset();
+					
+				    wmt11Gul.setCreate(function(evt, ui){
+				    	if(wmt11InitData.warekeyList){
+							let column = this.getColumn({ dataIndx: "warekey" });
+				        	let options = wmt11InitData.warekeyList.map(function(obj){
+				            	let rObj = {};
+				            	rObj[obj.combovl] = obj.combonm;
+				            	return rObj;
+				    		});
+				        	column.editor.options = options;
+						}
+						if(wmt11InitData.ownerkyList){
+				    		let column = this.getColumn({ dataIndx: "ownerky" });
+				        	let options = wmt11InitData.ownerkyList.map(function(obj){
+				            	let rObj = {};
+				            	rObj[obj.combovl] = obj.combonm;
+				            	return rObj;
+				    		});
+				        	column.editor.options = options;
+				    	}
+						$('#wmt11_ownerky').pqSelect({
+							deselect: false
+						});
+				    });
+				    
+				    wmt11Gul.setCellClick(function(evt, ui){
+				    	if(ui.dataIndx === 'pkrsncd'){
+				    		let wmt11Pkrsncd = callAjax('data', 'GET', '/md/common/code/reason-code', { doccate : ui.rowData.doccate, doctype: ui.rowData.doctype, rscate1: 'CANCEL', warekey: ui.rowData.warekey});
+					    	if(wmt11Pkrsncd){
+					    		let column = this.getColumn({ dataIndx: "pkrsncd" });
+					        	let options = wmt11Pkrsncd.map(function(obj){
+					            	let rObj = {};
+					            	rObj[obj.combovl] = obj.combonm;
+					            	return rObj;
+					    		});
+					        	column.editor.options = options;
+					    	}
+				    	}
+				    });
+				    
+				    wmt11Gul.setCellKeyDown(function(evt, ui){
+				    	if(ui.dataIndx === 'pkrsncd' && evt.key === 'Enter'){
+				    		let wmt11Pkrsncd = callAjax('data', 'GET', '/md/common/code/reason-code', { doccate : ui.rowData.doccate, doctype: ui.rowData.doctype, rscate1: 'CANCEL', warekey: ui.rowData.warekey});
+					    	if(wmt11Pkrsncd){
+					    		let column = this.getColumn({ dataIndx: "pkrsncd" });
+					        	let options = wmt11Pkrsncd.map(function(obj){
+					            	let rObj = {};
+					            	rObj[obj.combovl] = obj.combonm;
+					            	return rObj;
+					    		});
+					        	column.editor.options = options;
+					    	}
+				    	}
+				    });
+				    
+				    wmt11Gul.setChange(function(evt, ui){
+				    	if(ui.source === 'edit' || ui.source === 'paste'){
+				    		for(i=0; i<ui.updateList.length; i++){
+				    			let newRow = ui.updateList[i].newRow;
+				    			if(newRow.pkrsncd || newRow.pkrsnnm){
+				    				this.updateRow( {
+				            			rowIndx : ui.updateList[i].rowIndx,
+				            		    newRow : { state : true },
+				            		    checkEditable: false
+				            		});
+				    			}
+				    		}
+				    	}
+			    	});
+		    	wmt11Gul.open();
+			});
+		
+		//============================================================
+		//input 키보드 엔터 이벤트
+		//============================================================
+		function wmt11Keyup(){
+			let key = this.event.key || this.event.keyCode;
+			if (key === 'Enter' || key === 13) {
+				wmt11Search();
+			}
+		}
+		//============================================================
+		// 검색 이벤트
+		//============================================================
+		async function wmt11Search(){
+			let grid = pq.grid("#wmt11_grid");
+			if($('#wmt11_warekey').val() == ""){
+				alert("[[#{wm.wstkky.choWarekey}]]"); //창고를 선택해주세요.
+				return false;
+			}
+			grid.showLoading();
+			let data = { warekey : $('#wmt11_warekey option:selected').val() ,
+						 ownerky : $('#wmt11_ownerky option:selected').val(),
+						 skumkey : $('#wmt11_skumkey').val(), 
+						 skudesc : $('#wmt11_skudesc').val().toUpperCase() ,
+						 taskoky : $('#wmt11_taskoky').val().toUpperCase()   
+						};
+			let searchInit = await fetchUtil('GET', '/wm/task/wmt11/init/1', {warekey: data.warekey});
+			
+			let response = await fetchUtil("GET", "/wm/task/wmt11/grids/1" , data );
+			
+			try{
+				if(response.status === 200){
+				let wmt11SearchInit = await searchInit.json();
+					if(wmt11SearchInit.doctypeList){
+						let column = grid.getColumn({ dataIndx: "doctype" });
+			        	let options = wmt11SearchInit.doctypeList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+					}
+					if(wmt11SearchInit.areakeyList){
+			    		let column = grid.getColumn({ dataIndx: "frareky" });
+			        	let options = wmt11SearchInit.areakeyList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmt11SearchInit.zonekeyList){
+			    		let column = grid.getColumn({ dataIndx: "frzonky" });
+			        	let options = wmt11SearchInit.zonekeyList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmt11SearchInit.locakeyList){
+			    		let column = grid.getColumn({ dataIndx: "frlocky" });
+			        	let options = wmt11SearchInit.locakeyList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					
+					if(wmt11SearchInit.areakeyList){
+			    		let column = grid.getColumn({ dataIndx: "toareky" });
+			        	let options = wmt11SearchInit.areakeyList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmt11SearchInit.zonekeyList){
+			    		let column = grid.getColumn({ dataIndx: "tozonky" });
+			        	let options = wmt11SearchInit.zonekeyList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmt11SearchInit.locakeyList){
+			    		let column = grid.getColumn({ dataIndx: "tolocky" });
+			        	let options = wmt11SearchInit.locakeyList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmt11SearchInit.stkstatList){
+		        		let column = grid.getColumn({ dataIndx: "stkstat" });
+			        	let options = wmt11SearchInit.stkstatList.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+		        	}
+					
+					resContent = await response.json();
+					grid.option("dataModel", { data: resContent, recIndx: "rowkey" });
+					grid.refreshDataAndView();
+				}
+			}catch(err){
+				console.log(err);
+			}finally{
+				grid.hideLoading();
+			}
+		}
+		function wmt11Init(){
+			let wmt11InitData = callAjax('data', 'GET', '/wm/task/wmt11/init/1');
+			
+			if(wmt11InitData.warekeyList){
+				$("#wmt11_warekey option").not("[value='']").remove();
+				$.each(wmt11InitData.warekeyList, function(key, value) {
+					$('#wmt11_warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+				});
+			}
+			
+			if(wmt11InitData.ownerkyList){
+				$("#wmt11_owenerky option").not("[value='']").remove();
+				$.each(wmt11InitData.ownerkyList, function(key, value) {
+					$('#wmt11_ownerky').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+				});
+			}
+			
+			return wmt11InitData;
+		}
+		
+		//============================================================
+		//검색조건 초기화
+		//============================================================
+		function wmt11Refresh(){
+			let grid = pq.grid('#wmt11_grid');
+			
+			document.getElementById("wmt11_warekey").value = $('#wmt11_warekey option:first').val();
+			
+			$('#wmt11_ownerky').pqSelect();
+			let pqSelectElement = $('#wmt11_ownerky')[0];
+			pqSelectElement.selectedIndex = 0;
+			$('#wmt11_ownerky').pqSelect('refreshData');
+			
+			document.getElementById("wmt11_skumkey").value = '';
+			document.getElementById("wmt11_skudesc").value = '';
+			document.getElementById("wmt11_taskoky").value = '';
+			
+			grid.option('dataModel', { data : [] });
+			grid.refreshDataAndView();
+		}
+		
+		</script>
+	</div>
+</html>

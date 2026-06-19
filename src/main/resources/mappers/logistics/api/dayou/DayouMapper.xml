@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.api.dayou.mapper.DayouMapper">
+	<select id="selectIfsalsq" resultType="String">
+		/* selectIfsalsq */
+		SELECT FN_IF_IFSALSQ() as ifsalsq FROM DUAL
+	</select>
+	<insert id="saveDayou" parameterType="com.logistics.api.dayou.vo.DayouVO">
+		/* saveDayou */
+		INSERT INTO IFSAL11R
+		(
+			COMPKEY
+			,IFSALSQ
+			<if test='carCd != null and carCd != ""'>
+				,CAR_CD
+			</if>
+			<if test='carBodyNo != null and carBodyNo != ""'>
+				,CAR_BODY_NO
+			</if>
+			<if test='entryExitNo != null and entryExitNo != ""'>
+				,ENTRY_EXIT_NO
+			</if>
+			<if test='seq != null and seq != ""'>
+				,SEQ
+			</if>
+			<if test='itemCd1 != null and itemCd1 != ""'>
+				,ITEM_CD1
+			</if>
+			<if test='itemCd2 != null and itemCd2 != ""'>
+				,ITEM_CD2
+			</if>
+			<if test='itemCd3 != null and itemCd3 != ""'>
+				,ITEM_CD3
+			</if>
+			<if test='itemCd4 != null and itemCd4 != ""'>
+				,ITEM_CD4
+			</if>
+			<if test='itemCd4 != null and itemCd5 != ""'>
+				,ITEM_CD5
+			</if>
+			<if test='itemProcess != null and itemProcess != ""'>
+				,ITEM_PROCESS
+			</if>
+			<if test='whFrom != null and whFrom != ""'>
+				,WH_FROM
+			</if>
+			<if test='whTo != null and whTo != ""'>
+				,WH_TO
+			</if>
+			<if test='deliveryDt != null and deliveryDt != ""'>
+				,DELIVERY_DT
+			</if>
+			<if test='deliveryReqDt != null and deliveryReqDt != ""'>
+				,DELIVERY_REQ_DT
+			</if>
+			<if test='departureDt != null and departureDt != ""'>
+				,DEPARTURE_DT
+			</if>
+			<if test='departureDtTm != null and departureDtTm != ""'>
+				,DEPARTURE_DT_TM
+			</if>
+			<!--,IFPRSTS
+			,IFRCVDT
+			,IFRCVTM
+			,IFRCVUR
+			,IFERRNM
+			,IFCMPDT
+			,IFCMPTM
+			,IFCMPUR
+			,INDIBZL
+			,INDIARC
+			,UPDTCHK-->
+		)
+		VALUES
+		(
+			#{compkey}
+			, (SELECT FN_IF_IFSALSQ() as ifsalsq FROM DUAL)
+			<if test='carCd != null and carCd != ""'>
+				,#{carCd}
+			</if>
+			<if test='carBodyNo != null and carBodyNo != ""'>
+				,#{carBodyNo}
+			</if>
+			<if test='entryExitNo != null and entryExitNo != ""'>
+				,#{entryExitNo}
+			</if>
+			<if test='seq != null and seq != ""'>
+				,#{seq}
+			</if>
+			<if test='itemCd1 != null and itemCd1 != ""'>
+				,#{itemCd1}
+			</if>
+			<if test='itemCd2 != null and itemCd2 != ""'>
+				,#{itemCd2}
+			</if>
+			<if test='itemCd3 != null and itemCd3 != ""'>
+				,#{itemCd3}
+			</if>
+			<if test='itemCd4 != null and itemCd4 != ""'>
+				,#{itemCd4}
+			</if>
+			<if test='itemCd5 != null and itemCd5 != ""'>
+				,#{itemCd5}
+			</if>
+			<if test='itemProcess != null and itemProcess != ""'>
+				,#{itemProcess}
+			</if>
+			<if test='whFrom != null and whFrom != ""'>
+				,#{whFrom}
+			</if>
+			<if test='whTo != null and whTo != ""'>
+				,#{whTo}
+			</if>
+			<if test='deliveryDt != null and deliveryDt != ""'>
+				,#{deliveryDt}
+			</if>
+			<if test='deliveryReqDt != null and deliveryReqDt != ""'>
+				,#{deliveryReqDt}
+			</if>
+			<if test='departureDt != null and departureDt != ""'>
+				,#{departureDt}
+			</if>
+			<if test='departureDtTm != null and departureDtTm != ""'>
+				,#{departureDtTm}
+			</if>
+			<!--, #{ifprsts}
+			, #{ifrcvdt}
+			, #{ifrcvtm}
+			, #{ifrcvur}
+			, #{iferrnm}
+			, #{ifcmpdt}
+			, #{ifcmptm}
+			, #{ifcmpur}
+			, #{indibzl}
+			, #{indiarc}
+			, #{updtchk}
+			-->
+		)
+		<!--ON DUPLICATE KEY UPDATE
+		printDateTime = #{printDateTime},
+		checkDateTime = #{checkDateTime},
+		IFRCVDT = DATE_FORMAT(NOW() , '%Y%m%d'),
+		IFRCVTM = DATE_FORMAT(NOW() , '%H%i%s'),
+		UPDTCHK = UPDTCHK + 1-->
+	</insert>
+</mapper>

@@ -1,0 +1,1203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.bm.mapper.BillingMapper">
+
+<!-- bmb01 물류비 정산 조회 -->
+<select id="selectBmb01List" resultType="com.logistics.bm.domain.BillingDTO">
+/* selectBmb01List */
+    WITH BVMA AS (
+                SELECT A.COMPKEY, A.WAREKEY, A.OWNERKY, A.PTNRKEY, A.BLRPMGB, A.BLRCSGB, A.BLRTKGB, A.BLRUNIT, A.DOCCATE, A.DOCTYPE, A.BLRCOST, A.BLRTKNM
+                     , CASE WHEN A.BLRDTGB = 'Y' AND A.BLRMFGB = 'PM' THEN DATE_FORMAT(DATE_SUB(CONCAT(#{blhyymm}, A.BLRCFDT), INTERVAL 1 MONTH),'%Y%m%d')
+                        WHEN A.BLRDTGB = 'Y' AND A.BLRMFGB = 'TM' THEN DATE_FORMAT(CONCAT(#{blhyymm}, A.BLRCFDT),'%Y%m%d')
+                       ELSE DATE_FORMAT(CONCAT(#{blhyymm},'01'),'%Y%m%d') END AS STRDATE
+                     , CASE WHEN A.BLRDTGB = 'Y' AND A.BLRMTGB = 'PM' THEN DATE_FORMAT(DATE_SUB(CONCAT(#{blhyymm}, A.BLRCTDT), INTERVAL 1 MONTH),'%Y%m%d')
+                            WHEN A.BLRDTGB = 'Y' AND A.BLRMTGB = 'TM' THEN DATE_FORMAT(CONCAT(#{blhyymm}, A.BLRCTDT),'%Y%m%d')
+                       ELSE DATE_FORMAT(LAST_DAY(CONCAT(#{blhyymm},'01')),'%Y%m%d') END AS LSTDATE
+                 FROM BVLRMA A
+                INNER JOIN (
+                        SELECT COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE, MAX(BLRDATE) AS BLRDATE
+                          FROM BVLRMA
+                         WHERE COMPKEY = #{userData.compkey}
+                           AND WAREKEY = #{warekey}
+                <![CDATA[  AND BLRDATE <= #{blhyymm} ]]>
+                           AND BLUSEYN = 'Y'
+                         GROUP BY COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE
+                     ) B
+                    ON A.COMPKEY = B.COMPKEY
+                    AND A.WAREKEY = B.WAREKEY
+                    AND A.OWNERKY = B.OWNERKY
+                    AND A.PTNRKEY = B.PTNRKEY
+                    AND A.BLRPMGB = B.BLRPMGB
+                    AND A.BLRCSGB = B.BLRCSGB
+                    AND A.BLRTKGB = B.BLRTKGB
+                    AND A.BLRUNIT = B.BLRUNIT
+                    AND A.DOCCATE = B.DOCCATE
+                    AND A.DOCTYPE = B.DOCTYPE
+                    AND A.BLRDATE = B.BLRDATE
+    ), BPMA AS (
+                SELECT A.COMPKEY, A.WAREKEY, A.OWNERKY, A.PTNRKEY, A.BLRPMGB, A.BLRCSGB, A.BLRTKGB, A.BLRUNIT, A.DOCCATE, A.DOCTYPE, A.BLRTQTY, A.BLRCOST, A.BLRTKNM
+                     , CASE WHEN A.BLRDTGB = 'Y' AND A.BLRMFGB = 'PM' THEN DATE_FORMAT(DATE_SUB(CONCAT(#{blhyymm}, A.BLRCFDT), INTERVAL 1 MONTH),'%Y%m%d')
+                            WHEN A.BLRDTGB = 'Y' AND A.BLRMFGB = 'TM' THEN DATE_FORMAT(CONCAT(#{blhyymm}, A.BLRCFDT),'%Y%m%d')
+                        ELSE DATE_FORMAT(CONCAT(#{blhyymm},'01'),'%Y%m%d') END AS STRDATE
+                     , CASE WHEN A.BLRDTGB = 'Y' AND A.BLRMTGB = 'PM' THEN DATE_FORMAT(DATE_SUB(CONCAT(#{blhyymm}, A.BLRCTDT), INTERVAL 1 MONTH),'%Y%m%d')
+                            WHEN A.BLRDTGB = 'Y' AND A.BLRMTGB = 'TM' THEN DATE_FORMAT(CONCAT(#{blhyymm}, A.BLRCTDT),'%Y%m%d')
+                        ELSE DATE_FORMAT(LAST_DAY(CONCAT(#{blhyymm},'01')),'%Y%m%d') END AS LSTDATE
+                  FROM BPLRMA A
+                 INNER JOIN (
+                            SELECT COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE, BLRTQTY, MAX(BLRDATE) AS BLRDATE
+                              FROM BPLRMA
+                             WHERE COMPKEY = #{userData.compkey}
+                               AND WAREKEY = #{warekey}
+                    <![CDATA[  AND BLRDATE <= #{blhyymm} ]]>
+                               AND BLUSEYN = 'Y'
+                             GROUP BY COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, BLRUNIT, DOCCATE, DOCTYPE, BLRTQTY
+                    ) B
+                    ON A.COMPKEY = B.COMPKEY
+                    AND A.WAREKEY = B.WAREKEY
+                    AND A.OWNERKY = B.OWNERKY
+                    AND A.PTNRKEY = B.PTNRKEY
+                    AND A.BLRPMGB = B.BLRPMGB
+                    AND A.BLRCSGB = B.BLRCSGB
+                    AND A.BLRTKGB = B.BLRTKGB
+                    AND A.BLRUNIT = B.BLRUNIT
+                    AND A.DOCCATE = B.DOCCATE
+                    AND A.DOCTYPE = B.DOCTYPE
+                    AND A.BLRTQTY = B.BLRTQTY
+                    AND A.BLRDATE = B.BLRDATE
+    )
+    SELECT BV.COMPKEY, BV.WAREKEY, BV.OWNERKY, MO.OWNAMLC
+         , BV.PTNRKEY, MP.PTNAMLC
+         , BV.BLRPMGB, MC.COMCDTX AS BLRPMNM
+         , CASE WHEN BV.BLRTKNM != NULL OR TRIM(BV.BLRTKNM) != '' THEN BV.BLRTKNM
+                ELSE BV.BLRCSGB
+            END AS BLRCSGB
+         , BV.BLRTKGB, BV.BLRUNIT, BV.DOCCATE, BV.DOCTYPE, BV.BLRCOST
+         , CASE WHEN BV.DOCCATE = ST.DOCCATE AND BV.DOCTYPE = ST.DOCTYPE THEN ST.REFCQTY
+                WHEN BV.DOCCATE = RC.DOCCATE AND BV.DOCTYPE = RC.DOCTYPE THEN RC.REFCQTY
+                WHEN BV.DOCCATE = SH.DOCCATE AND BV.DOCTYPE = SH.DOCTYPE THEN SH.REFCQTY
+           ELSE 0 END AS REFCQTY
+         , CASE WHEN BV.DOCCATE = ST.DOCCATE AND BV.DOCTYPE = ST.DOCTYPE THEN ST.BLRAMOT
+                WHEN BV.DOCCATE = RC.DOCCATE AND BV.DOCTYPE = RC.DOCTYPE THEN RC.BLRAMOT
+                WHEN BV.DOCCATE = SH.DOCCATE AND BV.DOCTYPE = SH.DOCTYPE THEN SH.BLRAMOT
+           ELSE 0 END AS BLRAMOT
+      FROM BVMA BV
+     INNER JOIN MOWRMA MO
+        ON BV.COMPKEY = MO.COMPKEY
+       AND BV.OWNERKY = MO.OWNERKY
+     INNER JOIN MPTNMA MP
+        ON BV.COMPKEY = MP.COMPKEY
+       AND BV.PTNRKEY = MP.PTNRKEY
+     INNER JOIN V_MCODEM MC
+        ON BV.COMPKEY = MC.COMPKEY
+       AND BV.BLRPMGB = MC.COMCDVL
+       AND MC.COMCDKY = 'BLRPMGB'
+      LEFT JOIN (
+                SELECT ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, ST.DOCCATE, ST.DOCTYPE, ST.SKUGR01, SUM(ST.REFCQTY) AS REFCQTY, ST.BLRUNIT, SUM(ST.BLRAMOT) AS BLRAMOT
+                  FROM (
+                        SELECT ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, BV.DOCCATE, BV.DOCTYPE, ST.SKUMKEY, SK.SKUGR01, BV.BLRUNIT
+                             , CASE WHEN BV.BLRUNIT = ST.SUOMKEY THEN IFNULL(SUM(ST.STOTQTY),0)
+                                    WHEN BV.BLRUNIT != ST.SUOMKEY THEN IFNULL(CEILING(SUM(ST.STOTQTY) / PK.PACKQTY),0)
+                               ELSE 0 END AS REFCQTY
+                             , CASE WHEN BV.BLRUNIT = ST.SUOMKEY THEN IFNULL(SUM(ST.STOTQTY),0) * BV.BLRCOST
+                                    WHEN BV.BLRUNIT != ST.SUOMKEY THEN IFNULL(CEILING(SUM(ST.STOTQTY) / PK.PACKQTY),0) * BV.BLRCOST
+                               ELSE 0 END AS BLRAMOT
+                          FROM BSTKDY ST
+                         INNER JOIN BVMA BV
+                            ON ST.COMPKEY = BV.COMPKEY
+                           AND ST.WAREKEY = BV.WAREKEY
+                           AND ST.OWNERKY = BV.OWNERKY
+                           AND BV.DOCCATE = '600'
+                           AND BV.DOCTYPE = '690'
+                         INNER JOIN MSKUWC SK
+                            ON ST.COMPKEY = SK.COMPKEY
+                           AND ST.WAREKEY = SK.WAREKEY
+                           AND ST.OWNERKY = SK.OWNERKY
+                           AND ST.SKUMKEY = SK.SKUMKEY
+                           AND SK.SKUGR01 = BV.BLRTKGB
+                          LEFT JOIN MPAKMA PK
+                            ON SK.COMPKEY = PK.COMPKEY
+                           AND SK.WAREKEY = PK.WAREKEY
+                           AND SK.PACKKEY = PK.PACKKEY
+                           AND PK.TRUNTYP = BV.BLRUNIT
+                         WHERE ST.COMPKEY = #{userData.compkey}
+                           AND ST.WAREKEY = #{warekey}
+                           AND ST.STKDATE BETWEEN BV.STRDATE AND BV.LSTDATE
+                         GROUP BY ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, BV.DOCCATE, BV.DOCTYPE, ST.SKUMKEY, SK.SKUGR01, BV.BLRUNIT
+                     ) ST
+                 WHERE 1=1
+                 GROUP BY ST.COMPKEY, ST.WAREKEY, ST.OWNERKY, ST.DOCCATE, ST.DOCTYPE, ST.SKUGR01, ST.BLRUNIT
+         ) ST
+        ON BV.COMPKEY = ST.COMPKEY
+       AND BV.WAREKEY = ST.WAREKEY
+       AND BV.OWNERKY = ST.OWNERKY
+       AND BV.DOCCATE = ST.DOCCATE
+       AND BV.DOCTYPE = ST.DOCTYPE
+       AND BV.BLRTKGB = ST.SKUGR01
+       AND BV.BLRUNIT = ST.BLRUNIT
+      LEFT JOIN (
+                SELECT RC.COMPKEY, RC.WAREKEY, RC.OWNERKY, RC.DOCCATE, RC.DOCTYPE, RC.SKUGR01, SUM(RC.REFCQTY) AS REFCQTY, RC.BLRUNIT, SUM(RC.BLRAMOT) AS BLRAMOT
+                  FROM (
+                        SELECT RC.COMPKEY, RC.WAREKEY, RC.OWNERKY, RC.DOCCATE, RC.DOCTYPE, RC.SKUMKEY, SK.SKUGR01, BV.BLRUNIT
+                             , CASE WHEN BV.BLRUNIT = RC.RCHSUOM THEN IFNULL(SUM(RC.RCHSQTY),0)
+                                    WHEN BV.BLRUNIT != RC.RCHSUOM THEN IFNULL(CEILING(SUM(RC.RCHSQTY) / PK.PACKQTY),0)
+                               ELSE 0 END AS REFCQTY
+                             , CASE WHEN BV.BLRUNIT = RC.RCHSUOM THEN IFNULL(SUM(RC.RCHSQTY),0) * BV.BLRCOST
+                                    WHEN BV.BLRUNIT != RC.RCHSUOM THEN IFNULL(CEILING(SUM(RC.RCHSQTY) / PK.PACKQTY),0) * BV.BLRCOST
+                               ELSE 0 END AS BLRAMOT
+                          FROM WRCVIT RC
+                         INNER JOIN BVMA BV
+                            ON RC.COMPKEY = BV.COMPKEY
+                           AND RC.WAREKEY = BV.WAREKEY
+                           AND RC.OWNERKY = BV.OWNERKY
+                           AND RC.DOCCATE = BV.DOCCATE
+                           AND RC.DOCTYPE = BV.DOCTYPE
+                         INNER JOIN MSKUWC SK
+                            ON RC.COMPKEY = SK.COMPKEY
+                           AND RC.WAREKEY = SK.WAREKEY
+                           AND RC.OWNERKY = SK.OWNERKY
+                           AND RC.SKUMKEY = SK.SKUMKEY
+                           AND SK.SKUGR01 = BV.BLRTKGB
+                          LEFT JOIN MPAKMA PK
+                            ON SK.COMPKEY = PK.COMPKEY
+                           AND SK.WAREKEY = PK.WAREKEY
+                           AND SK.PACKKEY = PK.PACKKEY
+                           AND PK.TRUNTYP = BV.BLRUNIT
+                         WHERE RC.COMPKEY = #{userData.compkey}
+                           AND RC.WAREKEY = #{warekey}
+                           AND RC.POSTDAT BETWEEN BV.STRDATE AND BV.LSTDATE
+                           AND RC.RCVITST IN ('RVCOMP','RVPART')
+                           AND IFNULL(TRIM(RC.RCVRSCD),'') != 'Z1'
+                         GROUP BY RC.COMPKEY, RC.WAREKEY, RC.OWNERKY, RC.DOCCATE, RC.DOCTYPE, RC.SKUMKEY, SK.SKUGR01, BV.BLRUNIT
+                     ) RC
+                 WHERE 1=1
+                 GROUP BY RC.COMPKEY, RC.WAREKEY, RC.OWNERKY, RC.DOCCATE, RC.DOCTYPE, RC.SKUGR01, RC.BLRUNIT
+         ) RC
+        ON BV.COMPKEY = RC.COMPKEY
+       AND BV.WAREKEY = RC.WAREKEY
+       AND BV.OWNERKY = RC.OWNERKY
+       AND BV.DOCCATE = RC.DOCCATE
+       AND BV.DOCTYPE = RC.DOCTYPE
+       AND BV.BLRTKGB = RC.SKUGR01
+       AND BV.BLRUNIT = RC.BLRUNIT
+      LEFT JOIN (
+                SELECT SH.COMPKEY, SH.WAREKEY, SH.OWNERKY, SH.DOCCATE, SH.DOCTYPE, SH.SKUGR01, SUM(SH.REFCQTY) AS REFCQTY, SH.BLRUNIT, SUM(SH.BLRAMOT) AS BLRAMOT
+                  FROM (
+                        SELECT OS.COMPKEY, OS.TOWARKY AS WAREKEY, OS.OWNERKY, OS.DOCCATE, OS.DOCTYPE, OS.SKUMKEY, SK.SKUGR01, BV.BLRUNIT
+                             , CASE WHEN BV.BLRUNIT = OS.SUOMKEY THEN IFNULL(SUM(OS.SHCFQTY),0)
+                                    WHEN BV.BLRUNIT != OS.SUOMKEY THEN IFNULL(CEILING(SUM(OS.SHCFQTY) / PK.PACKQTY),0)
+                               ELSE 0 END AS REFCQTY
+                             , CASE WHEN BV.BLRUNIT = OS.SUOMKEY THEN IFNULL(SUM(OS.SHCFQTY),0) * BV.BLRCOST
+                                    WHEN BV.BLRUNIT != OS.SUOMKEY THEN IFNULL(CEILING(SUM(OS.SHCFQTY) / PK.PACKQTY),0) * BV.BLRCOST
+                               ELSE 0 END AS BLRAMOT
+                          FROM OCOSAL OS
+                         FORCE INDEX(IX_OCOSAL05)
+                         INNER JOIN BVMA BV
+                            ON OS.COMPKEY = BV.COMPKEY
+                           AND OS.TOWARKY = BV.WAREKEY
+                           AND OS.OWNERKY = BV.OWNERKY
+                           AND OS.DOCCATE = BV.DOCCATE
+                           AND OS.DOCTYPE = BV.DOCTYPE
+                         INNER JOIN MSKUWC SK
+                            ON OS.COMPKEY = SK.COMPKEY
+                           AND OS.TOWARKY = SK.WAREKEY
+                           AND OS.OWNERKY = SK.OWNERKY
+                           AND OS.SKUMKEY = SK.SKUMKEY
+                           AND SK.SKUGR01 = BV.BLRTKGB
+                          LEFT JOIN MPAKMA PK
+                            ON SK.COMPKEY = PK.COMPKEY
+                           AND SK.WAREKEY = PK.WAREKEY
+                           AND SK.PACKKEY = PK.PACKKEY
+                           AND PK.TRUNTYP = BV.BLRUNIT
+                         WHERE OS.COMPKEY = #{userData.compkey}
+                           AND OS.TOWARKY = #{warekey}
+                           AND OS.POSTDAT BETWEEN BV.STRDATE AND BV.LSTDATE
+                           AND OS.OUBSTAT = 'SHPF'
+                         GROUP BY OS.COMPKEY, OS.TOWARKY, OS.OWNERKY, OS.DOCCATE, OS.DOCTYPE, OS.SKUMKEY, SK.SKUGR01, BV.BLRUNIT
+                     ) SH
+                 WHERE 1=1
+                 GROUP BY SH.COMPKEY, SH.WAREKEY, SH.OWNERKY, SH.DOCCATE, SH.DOCTYPE, SH.SKUGR01, SH.BLRUNIT
+         ) SH
+        ON BV.COMPKEY = SH.COMPKEY
+       AND BV.WAREKEY = SH.WAREKEY
+       AND BV.OWNERKY = SH.OWNERKY
+       AND BV.DOCCATE = SH.DOCCATE
+       AND BV.DOCTYPE = SH.DOCTYPE
+       AND BV.BLRTKGB = SH.SKUGR01
+       AND BV.BLRUNIT = SH.BLRUNIT
+     WHERE 1=1
+     /* 금액 0 일 경우 제외. */
+    HAVING BLRAMOT > 0
+     UNION ALL
+    SELECT A.COMPKEY, A.WAREKEY, A.OWNERKY, MO.OWNAMLC
+         , A.PTNRKEY, MP.PTNAMLC
+         , A.BLRPMGB, MC.COMCDTX AS BLRPMNM
+         , CASE WHEN A.BLRTKNM != NULL OR TRIM(A.BLRTKNM) != '' THEN A.BLRTKNM
+                ELSE A.BLRCSGB
+            END AS BLRCSGB
+         , A.BLRTKGB
+         , '-' AS BLRUNIT, '-' AS DOCCATE, '-' AS DOCTYPE
+         , A.BLRCOST
+         , 0 AS REFCQTY, A.BLRCOST AS BLRAMOT
+      FROM BFLRMA A
+     INNER JOIN MOWRMA MO
+        ON A.COMPKEY = MO.COMPKEY
+       AND A.OWNERKY = MO.OWNERKY
+     INNER JOIN MPTNMA MP
+        ON A.COMPKEY = MP.COMPKEY
+       AND A.PTNRKEY = MP.PTNRKEY
+     INNER JOIN V_MCODEM MC
+        ON A.COMPKEY = MC.COMPKEY
+       AND A.BLRPMGB = MC.COMCDVL
+       AND MC.COMCDKY = 'BLRPMGB'
+     INNER JOIN (
+            SELECT COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB, MAX(BLRDATE) AS BLRDATE
+              FROM BFLRMA
+             WHERE COMPKEY = #{userData.compkey}
+               AND WAREKEY = #{warekey}
+    <![CDATA[  AND BLRDATE <= #{blhyymm} ]]>
+               AND BLUSEYN = 'Y'
+             GROUP BY COMPKEY, WAREKEY, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB, BLRTKGB
+         ) B
+        ON A.COMPKEY = B.COMPKEY
+       AND A.WAREKEY = B.WAREKEY
+       AND A.OWNERKY = B.OWNERKY
+       AND A.PTNRKEY = B.PTNRKEY
+       AND A.BLRPMGB = B.BLRPMGB
+       AND A.BLRCSGB = B.BLRCSGB
+       AND A.BLRTKGB = B.BLRTKGB
+       AND A.BLRDATE = B.BLRDATE
+     WHERE 1=1
+</select>
+
+
+<!-- SP_BM_CLEAN 호출 -->
+<select id="sp_bm_clean" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+  /*sp_bm_clean*/
+  CALL sp_bm_clean
+  	(
+   	   #{userData.compkey}
+   	 , #{warekey}
+   	 , #{blhyymm}
+   	 , #{userData.useract}
+   	 , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+	 , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	)
+</select>
+
+<!-- SP_BM_DEADLINE 호출 -->
+<select id="sp_bm_deadline" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+  /*sp_bm_deadline*/
+  CALL sp_bm_deadline
+ 	 (
+   	   #{userData.compkey}
+   	 , #{warekey}
+   	 , #{blhyymm}
+   	 , #{userData.useract}
+   	 , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+	 , #{oresult, mode=OUT, jdbcType=INTEGER}
+  	 )
+</select>
+
+    <!-- bmb02 Head 물류비 검증 대상 조회 -->
+    <select id="selectBmb02HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb02HeadList */
+        SELECT BH.COMPKEY, BH.WAREKEY, BH.BLHDCKY, BI.BLHDCIT
+             , BH.LCVRFYN   /* 정산검증여부 */
+             , BI.OWNERKY, MO.OWNAMLC
+             , BI.BFLCODE, BI.BVLCODE, BI.BPLCODE
+             , BI.PTNRKEY, MP.PTNAMLC
+             , BI.BLRPMGB, MC.COMCDTX AS BLRPMNM
+             , CASE WHEN BI.BLRTKNM != NULL OR TRIM(BI.BLRTKNM) != '' THEN BI.BLRTKNM
+                    ELSE BI.BLRCSGB
+                END AS BLRCSGB
+             , BI.BLRTKGB
+             , BI.BLRUNIT, BI.DOCCATE, BI.DOCTYPE
+             , BI.REFCQTY
+             , BI.BLRCOST
+             , BI.BLRAMOT
+             , BI.BLRAMOT*(BI.BLRSUTX/100) AS BLRAMTX
+             , (BI.BLRAMOT*(BI.BLRSUTX/100))+BI.BLRAMOT AS BLRSUMY
+             , BI.BLRREMK   /* 비고 */
+          FROM BLGTHD BH
+         INNER JOIN BLGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BLHDCKY = BI.BLHDCKY
+         INNER JOIN MOWRMA MO
+            ON BH.COMPKEY = MO.COMPKEY
+           AND BI.OWNERKY = MO.OWNERKY
+         INNER JOIN V_MCODEM MC
+            ON BH.COMPKEY = MC.COMPKEY
+           AND BI.BLRPMGB = MC.COMCDVL
+           AND MC.COMCDKY = 'BLRPMGB'
+         INNER JOIN MPTNMA MP
+            ON BH.COMPKEY = MP.COMPKEY
+           AND BI.PTNRKEY = MP.PTNRKEY
+         WHERE BH.COMPKEY = #{userData.compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BLHYYMM = REPLACE(#{blhyymm},'-','')
+           AND BI.BLITYPE = 'SUM'
+           AND BH.LCCNFYN = 'N'
+    </select>
+
+    <!-- SP_BM_VERIFY 호출 -->
+    <select id="sp_bm_verify" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_verify */
+        CALL sp_bm_verify
+            ( #{userData.compkey}, #{warekey}, #{blhdcky}, #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+    <!-- SP_BM_CANCEL 호출 -->
+    <select id="sp_bm_cancel" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_cancel */
+        CALL sp_bm_cancel
+            ( #{userData.compkey}, #{warekey}, #{blhdcky}, #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+    <!-- bmb02 물류비 기타비용 추가 -->
+    <insert id="insertBmb02EtcCost" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* insertBmb02EtcCost */
+       <foreach collection="etcList"  item="etc" separator=";" >
+	        INSERT
+	          INTO BLGTIT( 
+          		  COMPKEY, WAREKEY, BLHDCKY, BLHDCIT, BLRUNIT, DOCCATE, DOCTYPE
+         		, BLITYPE, OWNERKY, PTNRKEY, BLRPMGB, BLRCSGB
+         		, BLRCOST, BLRAMOT, BLRSUTX, BLRREMK
+	          	, CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+	        VALUES(
+        		#{etc.compkey}, #{etc.warekey}, #{etc.blhdcky}, FN_BM_BLHDCIT(#{etc.compkey}, #{etc.warekey}, #{etc.blhdcky}), '-', '-', '-'
+        		, 'SUM', #{etc.ownerky}, #{etc.ptnrkey}, #{etc.blrpmgb}, #{etc.blrcsgb}
+        		, #{etc.blrcost}, #{etc.blramot}, 10, #{etc.blrremk}
+	             , to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+	             , to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+       </foreach>
+    </insert>
+
+    <!-- bmb02 물류비 비고 UPDATE -->
+    <update id="updateBmb02Blrremk" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* updateBmb02Blrremk */
+        <foreach collection="updateBlrremkList"  item="etc" separator=";" >
+            UPDATE BLGTIT
+               SET BLRREMK = #{etc.blrremk}
+                 , LMODATE = to_char(NOW() ,'YYYYMMDD')
+                 , LMOTIME = to_char(NOW() ,'hh24miss')
+                 , LMOUSER = #{userData.useract}
+             WHERE COMPKEY = #{etc.compkey}
+               AND WAREKEY = #{etc.warekey}
+               AND BLHDCKY = #{etc.blhdcky}
+               AND BLHDCIT = #{etc.blhdcit}
+               AND BLITYPE = 'SUM'
+        </foreach>
+    </update>
+
+    <!-- bmb02 Item 물류비 검증 대상 조회 -->
+    <select id="selectBmb02ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb02ItemList */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BLHDCKY
+             , BI.DOCCATE, BI.DOCTYPE, BI.OWNERKY, BI.PTNRKEY
+             , BI.SKUMKEY, BI.SKUDESC
+             , CASE WHEN BI.BLRUNIT = BI.SUOMKEY THEN IFNULL(SUM(BI.REFCQTY),0)
+                    WHEN BI.BLRUNIT != BI.SUOMKEY THEN IFNULL(CEILING(SUM(BI.REFCQTY) / PK.PACKQTY),0)
+                ELSE 0 END AS REFCQTY
+             , BI.BLRUNIT, BI.BLRPMGB, BI.BLRCSGB, BI.BLRTKGB
+             , BI.BLRCOST
+             , CASE WHEN BI.BLRUNIT = BI.SUOMKEY THEN IFNULL(SUM(BI.REFCQTY),0) * BI.BLRCOST
+                    WHEN BI.BLRUNIT != BI.SUOMKEY THEN IFNULL(CEILING(SUM(BI.REFCQTY) / PK.PACKQTY),0) * BI.BLRCOST
+                ELSE 0 END AS BLRAMOT
+          FROM BLGTHD BH
+         INNER JOIN BLGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BLHDCKY = BI.BLHDCKY
+         INNER JOIN MSKUWC SK
+            ON BI.COMPKEY = SK.COMPKEY
+           AND BI.WAREKEY = SK.WAREKEY
+           AND BI.OWNERKY = SK.OWNERKY
+           AND BI.SKUMKEY = SK.SKUMKEY
+           AND BI.BLRTKGB = SK.SKUGR01
+          LEFT JOIN MPAKMA PK
+            ON SK.COMPKEY = PK.COMPKEY
+           AND SK.WAREKEY = PK.WAREKEY
+           AND SK.PACKKEY = PK.PACKKEY
+           AND PK.TRUNTYP = BI.BLRUNIT
+         WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BLHDCKY = #{blhdcky}
+           AND BI.OWNERKY = #{ownerky}
+           AND BI.PTNRKEY = #{ptnrkey}
+           AND BI.BLRPMGB = #{blrpmgb}
+           AND BI.BLRCSGB = #{blrcsgb}
+           AND BI.BLRTKGB = #{blrtkgb}
+           AND BI.BLRUNIT = #{blrunit}
+           AND BI.DOCCATE = #{doccate}
+           AND BI.DOCTYPE = #{doctype}
+           AND BI.BLITYPE = 'ROW'
+           AND BH.LCCNFYN = 'N'
+    <choose>
+        <when test='bplcode != null and bplcode != "" and bplcode != " "'>
+           AND BI.BPLCODE = #{bplcode}
+        </when>
+        <when test='bvlcode != null and bvlcode != "" and bvlcode != " "'>
+           AND BI.BVLCODE = #{bvlcode}
+        </when>
+    </choose>
+         GROUP BY BI.COMPKEY, BI.WAREKEY, BI.BLHDCKY, BI.DOCCATE, BI.DOCTYPE, BI.OWNERKY, BI.PTNRKEY
+                , BI.SKUMKEY, BI.SKUDESC, BI.BLRUNIT, BI.BLRPMGB, BI.BLRCSGB, BI.BLRTKGB, BI.BLRCOST
+    </select>
+
+    <!-- bmb03 Head 물류비 확정 대상 조회 -->
+    <select id="selectBmb03HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb03HeadList */
+        SELECT COMPKEY, WAREKEY, BLHDCKY, CONCAT(SUBSTR(BLHYYMM, 1, 4),'-',SUBSTR(BLHYYMM, 5, 2)) AS BLHYYMM
+             , DATE_FORMAT(BLSDATE, '%Y-%m-%d') AS BLSDATE, DATE_FORMAT(BLEDATE, '%Y-%m-%d') AS BLEDATE
+             , LCDDATE, fn_sy_usernam(COMPKEY, LCDUSER) as LCDUSER, LCVRFYN, LCVDATE , fn_sy_usernam(COMPKEY, LCVUSER) as LCVUSER, LCCNFYN, LCCDATE, fn_sy_usernam(COMPKEY, LCCUSER) as LCCUSER
+             , FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER, INDIBZL, INDIARC, UPDTCHK
+          FROM BLGTHD
+         WHERE COMPKEY = #{userData.compkey}
+           AND WAREKEY = #{warekey}
+           AND LCCNFYN = 'N'
+        <choose>
+            <when test='blhyymmfrom != null and blhyymmfrom != "" and blhyymmto == ""'>
+                <![CDATA[ AND BLHYYMM >= REPLACE(#{blhyymmfrom},'-','') ]]>
+            </when>
+            <when test='blhyymmto != null and blhyymmto != "" and blhyymmfrom == ""'>
+                <![CDATA[ AND BLHYYMM <= REPLACE(#{blhyymmto},'-','') ]]>
+            </when>
+            <otherwise>
+                AND BLHYYMM BETWEEN REPLACE(#{blhyymmfrom},'-','') AND REPLACE(#{blhyymmto},'-','')
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- bmb03 Item 조회 -->
+    <select id="selectBmb03ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb03ItemList */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BLHDCKY, BI.OWNERKY, BI.PTNRKEY
+             , BI.BLRPMGB
+             , CASE WHEN BI.BLRTKNM != NULL OR TRIM(BI.BLRTKNM) != '' THEN BI.BLRTKNM
+                    ELSE BI.BLRCSGB
+                END AS BLRCSGB
+             , BI.BLRTKGB
+             , BI.BLRUNIT, BI.DOCCATE, BI.DOCTYPE
+             , BI.REFCQTY
+             , BI.BLRCOST
+             , BI.BLRAMOT
+             , BI.BLRAMOT*(BI.BLRSUTX/100) AS BLRAMTX
+             , (BI.BLRAMOT*(BI.BLRSUTX/100))+BI.BLRAMOT AS BLRSUMY
+             , BI.BLRREMK   /* 비고 */
+          FROM BLGTHD BH
+         INNER JOIN BLGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BLHDCKY = BI.BLHDCKY
+        WHERE BH.COMPKEY = #{compkey}
+          AND BH.WAREKEY = #{warekey}
+          AND BH.BLHDCKY = #{blhdcky}
+          AND BI.BLITYPE = 'SUM'
+          AND BH.LCCNFYN = 'N'
+        ORDER BY BI.COMPKEY, BI.WAREKEY, BI.BLHDCKY, BI.OWNERKY, BI.PTNRKEY, BI.BLRPMGB, BI.BLRCSGB, BI.BLRTKGB
+    </select>
+
+    <select id="sp_bm_confirm" statementType="CALLABLE" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_confirm */
+        CALL sp_bm_confirm(
+              #{compkey}
+            , #{warekey}
+            , #{blhdcky}
+            , #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+        )
+    </select>
+
+    <!-- bmb04 Head 물류비 내역 조회 -->
+    <select id="selectBmb04HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb04HeadList */
+        SELECT COMPKEY, WAREKEY, BLHDCKY, CONCAT(SUBSTR(BLHYYMM, 1, 4),'-',SUBSTR(BLHYYMM, 5, 2)) AS BLHYYMM
+             , DATE_FORMAT(BLSDATE, '%Y-%m-%d') AS BLSDATE, DATE_FORMAT(BLEDATE, '%Y-%m-%d') AS BLEDATE
+             , LCDDATE, fn_sy_usernam(COMPKEY, LCDUSER) as LCDUSER, LCVRFYN, LCVDATE, fn_sy_usernam(COMPKEY, LCVUSER) as LCVUSER, LCCNFYN, LCCDATE, fn_sy_usernam(COMPKEY, LCCUSER) as LCCUSER
+             , FN_COM_TODATE(CREDATE) as CREDATE, FN_COM_TOTIME(CRETIME) as CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER, FN_COM_TODATE(LMODATE) as LMODATE, FN_COM_TOTIME(LMOTIME) as LMOTIME, fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER, INDIBZL, INDIARC, UPDTCHK
+          FROM BLGTHD
+         WHERE COMPKEY = #{userData.compkey}
+           AND WAREKEY = #{warekey}
+        <choose>
+            <when test='blhyymmfrom != null and blhyymmfrom != "" and blhyymmto == ""'>
+                <![CDATA[ AND BLHYYMM >= REPLACE(#{blhyymmfrom},'-','') ]]>
+            </when>
+            <when test='blhyymmto != null and blhyymmto != "" and blhyymmfrom == ""'>
+                <![CDATA[ AND BLHYYMM <= REPLACE(#{blhyymmto},'-','') ]]>
+            </when>
+            <otherwise>
+                AND BLHYYMM BETWEEN REPLACE(#{blhyymmfrom},'-','') AND REPLACE(#{blhyymmto},'-','')
+            </otherwise>
+        </choose>
+        <if test='blhdcky != null and blhdcky != ""'>
+            AND upper(BLHDCKY) LIKE CONCAT('%', upper(#{blhdcky}), '%')
+        </if>
+        <choose>
+            <when test='blrstat == "LCVRFYN"'>
+            AND LCVRFYN = 'Y'
+            </when>
+            <when test='blrstat == "LCCNFYN"'>
+            AND LCCNFYN = 'Y'
+            </when>
+        </choose>
+    </select>
+
+    <!-- bmb04 Item 조회 -->
+    <select id="selectBmb04ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb04ItemList */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BLHDCKY, BI.OWNERKY, BI.PTNRKEY
+             , BI.BLRPMGB
+             , CASE WHEN BI.BLRTKNM != NULL OR TRIM(BI.BLRTKNM) != '' THEN BI.BLRTKNM
+                    ELSE BI.BLRCSGB
+                END AS BLRCSGB
+             , BI.BLRTKGB
+             , BI.BLRUNIT, BI.DOCCATE, BI.DOCTYPE
+             , BI.REFCQTY
+             , BI.BLRCOST
+             , BI.BLRAMOT
+             , BI.BLRAMOT*(BI.BLRSUTX/100) AS BLRAMTX
+             , (BI.BLRAMOT*(BI.BLRSUTX/100))+BI.BLRAMOT AS BLRSUMY
+             , BI.BLRREMK   /* 비고 */
+          FROM BLGTHD BH
+         INNER JOIN BLGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BLHDCKY = BI.BLHDCKY
+         WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BLHDCKY = #{blhdcky}
+           AND BI.BLITYPE = 'SUM'
+       ORDER BY BI.COMPKEY, BI.WAREKEY, BI.BLHDCKY, BI.OWNERKY, BI.PTNRKEY, BI.BLRPMGB, BI.BLRCSGB, BI.BLRTKGB
+    </select>
+
+    <!-- bmb05 운송비마감 조회 -->
+    <select id="selectBmb05List" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb05List */
+        WITH BVMA AS (
+                        SELECT A.COMPKEY, A.WAREKEY, A.PTNRKEY, A.BTRPMGB, A.BTRCSGB, A.BTRTKGB, A.SHTRTKY, A.VEHICKY, C.VHCFNAM
+                             , A.BTRUNIT, A.DOCCATE, A.DOCTYPE, A.BTRCOST, A.BTRSUTX, A.BTRTKNM
+                             , CASE WHEN A.BTRDTGB = 'Y' AND A.BTRMFGB = 'PM' THEN DATE_FORMAT(DATE_SUB(CONCAT(#{bthyymm}, A.BTRCFDT), INTERVAL 1 MONTH),'%Y%m%d')
+                                    WHEN A.BTRDTGB = 'Y' AND A.BTRMFGB = 'TM' THEN DATE_FORMAT(CONCAT(#{bthyymm}, A.BTRCFDT),'%Y%m%d')
+                                    ELSE DATE_FORMAT(CONCAT(#{bthyymm},'01'),'%Y%m%d')
+                                END AS STRDATE
+                             , CASE WHEN A.BTRDTGB = 'Y' AND A.BTRMTGB = 'PM' THEN DATE_FORMAT(DATE_SUB(CONCAT(#{bthyymm}, A.BTRCTDT), INTERVAL 1 MONTH),'%Y%m%d')
+                                    WHEN A.BTRDTGB = 'Y' AND A.BTRMTGB = 'TM' THEN DATE_FORMAT(CONCAT(#{bthyymm}, A.BTRCTDT),'%Y%m%d')
+                                    ELSE DATE_FORMAT(LAST_DAY(CONCAT(#{bthyymm},'01')),'%Y%m%d')
+                                END AS LSTDATE
+                          FROM BVTRMA A
+                         INNER JOIN TVHCMA C
+                            ON A.COMPKEY = C.COMPKEY
+                           AND A.WAREKEY = C.WAREKEY
+                           AND A.VEHICKY = C.VEHICKY
+                         INNER JOIN (
+                                    SELECT COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, SHTRTKY, VEHICKY, BTRUNIT, DOCCATE, DOCTYPE, MAX(BTRDATE) AS BTRDATE
+                                      FROM BVTRMA
+                                     WHERE COMPKEY = #{userData.compkey}
+                                       AND WAREKEY = #{warekey}
+                            <![CDATA[  AND BTRDATE <= #{bthyymm} ]]>
+                                       AND BTUSEYN = 'Y'
+                                     GROUP BY COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, SHTRTKY, VEHICKY, BTRUNIT, DOCCATE, DOCTYPE
+                             ) B
+                            ON A.COMPKEY = B.COMPKEY
+                            AND A.WAREKEY = B.WAREKEY
+                            AND A.PTNRKEY = B.PTNRKEY
+                            AND A.BTRPMGB = B.BTRPMGB
+                            AND A.BTRCSGB = B.BTRCSGB
+                            AND A.BTRTKGB = B.BTRTKGB
+                            AND IFNULL(A.SHTRTKY,'') = IFNULL(B.SHTRTKY,'')
+                            AND A.VEHICKY = B.VEHICKY
+                            AND A.BTRUNIT = B.BTRUNIT
+                            AND A.DOCCATE = B.DOCCATE
+                            AND A.DOCTYPE = B.DOCTYPE
+                            AND A.BTRDATE = B.BTRDATE
+        )
+        /* 개별운송비가 아닌 경우 처리 */
+        SELECT BV.COMPKEY, BV.WAREKEY
+             , BV.PTNRKEY, MP.PTNAMLC
+             , BV.BTRPMGB, MC.COMCDTX AS BTRPMNM
+             /* 계정 순위 >> 1.명세표구분명 2. 829 타입은 명칭+노선, 나머지 타입은 계정코드 */
+             , CASE WHEN BV.BTRTKNM != NULL OR TRIM(BV.BTRTKNM) != '' THEN BV.BTRTKNM
+                    WHEN BV.DOCTYPE = '829' THEN CONCAT(
+                            (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BV.COMPKEY AND COMCDVL = BV.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                            ,'('
+                            , (SELECT SHTRTNM FROM TSHRHD WHERE COMPKEY = BV.COMPKEY AND WAREKEY = BV.WAREKEY AND SHTRTKY = BV.SHTRTKY)
+                            ,')')
+                    ELSE BV.BTRCSGB
+                END AS BTRCSGB
+             , BV.DOCCATE, BV.DOCTYPE
+             , TM.MDESTKY   /* 공장(대표도착지) */
+             , BV.VEHICKY   /* 차량코드 */
+             , BV.VHCFNAM   /* 차량번호 */
+             , TM.OWNERNM AS USERACT  /* 차주(기사명) */
+             , BV.BTRCOST   /* 단가 */
+             , IFNULL(TH.REFCQTY,0) AS REFCQTY /* 운행횟수 */
+             , (BV.BTRCOST*IFNULL(TH.REFCQTY,0)) AS BTRAMOT /* 금액 */
+          FROM BVMA BV
+         INNER JOIN TVHCMA TM
+            ON BV.COMPKEY = TM.COMPKEY
+           AND BV.WAREKEY = TM.WAREKEY
+           AND BV.VEHICKY = TM.VEHICKY
+         INNER JOIN MPTNMA MP
+            ON BV.COMPKEY = MP.COMPKEY
+           AND BV.PTNRKEY = MP.PTNRKEY
+         INNER JOIN V_MCODEM MC
+            ON BV.COMPKEY = MC.COMPKEY
+           AND BV.BTRPMGB = MC.COMCDVL
+           AND MC.COMCDKY = 'BTRPMGB'
+          LEFT JOIN (
+                    SELECT TH.COMPKEY, TH.WAREKEY
+                         , COUNT(DISTINCT TH.VHPLNKY) as REFCQTY
+                         , BV.PTNRKEY, BV.BTRPMGB
+                         , TH.SHTRTKY, TH.VEHICKY, TH.DOCCATE, TH.DOCTYPE
+                      FROM TPLNHD TH
+                     INNER JOIN BVMA BV
+                        ON TH.COMPKEY = BV.COMPKEY
+                       AND TH.WAREKEY = BV.WAREKEY
+                       AND TH.VEHICKY = BV.VEHICKY
+                       AND TH.DOCCATE = BV.DOCCATE
+                       AND (CASE WHEN BV.DOCTYPE = '829' THEN (TH.SHTRTKY = BV.SHTRTKY AND TH.DOCTYPE = BV.DOCTYPE)
+                                 ELSE TH.DOCTYPE = BV.DOCTYPE END)
+                     WHERE TH.POSTDAT BETWEEN BV.STRDATE AND BV.LSTDATE
+                       AND TH.PLNSTAT = 'FINISH'
+                       AND TH.PBILLYN = 'N'
+                     GROUP BY TH.COMPKEY, TH.WAREKEY, BV.PTNRKEY, BV.BTRPMGB, TH.SHTRTKY, TH.VEHICKY, TH.DOCCATE, TH.DOCTYPE
+             ) TH
+            ON BV.COMPKEY = TH.COMPKEY
+           AND BV.WAREKEY = TH.WAREKEY
+           AND BV.PTNRKEY = TH.PTNRKEY
+           AND BV.BTRPMGB = TH.BTRPMGB
+           AND BV.VEHICKY = TH.VEHICKY
+           AND BV.DOCCATE = TH.DOCCATE
+           AND (CASE WHEN BV.DOCTYPE = '829' THEN (TH.SHTRTKY = BV.SHTRTKY AND TH.DOCTYPE = BV.DOCTYPE)
+                     ELSE TH.DOCTYPE = BV.DOCTYPE END)
+         WHERE 1=1
+            /* 금액 0 일 경우 제외. */
+        HAVING BTRAMOT > 0
+         UNION ALL
+        /* 개별운송비용 처리 */
+        SELECT COMPKEY, WAREKEY, PTNRKEY, PTNAMLC, BTRPMGB, BTRPMNM, BTRCSGB, DOCCATE
+             , DOCTYPE, MDESTKY, VEHICKY, VHCFNAM, USERACT, BTRCOST, REFCQTY, BTRAMOT
+          FROM (
+                 SELECT TH.COMPKEY, TH.WAREKEY, PT.PTNRKEY, PT.PTNAMLC
+                      , 'PAYMENT' AS BTRPMGB, MC.COMCDTX AS BTRPMNM
+                      , 'TRPCT' AS BTRCSGB, TH.DOCCATE, TH.DOCTYPE
+                      , TV.MDESTKY   /* 공장(대표도착지) */
+                      , TH.VEHICKY, TV.VHCFNAM   /* 차량번호 */
+                      , TV.OWNERNM AS USERACT  /* 차주(기사명) */
+                      , 0 AS BTRCOST
+                      , COUNT(DISTINCT TH.VHPLNKY) as REFCQTY
+                      , SUM(TH.PBILPAY) AS BTRAMOT /* 개별운송비용 */
+                   FROM TPLNHD TH
+                  INNER JOIN TVHCMA TV
+                     ON TH.COMPKEY = TV.COMPKEY
+                    AND TH.WAREKEY = TV.WAREKEY
+                    AND TH.VEHICKY = TV.VEHICKY
+                  INNER JOIN MPTNMA PT
+                     ON TH.COMPKEY = PT.COMPKEY
+                    AND TV.CARRIER = PT.PTNRKEY
+                  INNER JOIN V_MCODEM MC
+                     ON TH.COMPKEY = MC.COMPKEY
+                    AND MC.COMCDKY = 'BTRPMGB'
+                    AND MC.COMCDVL = 'PAYMENT'
+                  WHERE 1=1
+                    AND TH.POSTDAT BETWEEN DATE_FORMAT(CONCAT(#{bthyymm},'01'),'%Y%m%d') AND DATE_FORMAT(LAST_DAY(CONCAT(#{bthyymm},'01')),'%Y%m%d')
+                    AND TH.COMPKEY = #{userData.compkey}
+                    AND TH.WAREKEY = #{warekey}
+                    AND TH.DOCCATE = '800'
+                    AND TH.DOCTYPE IN ('820','830','870') /* 셔틀 납품, 권역 납품, 긴급운송 */
+                    AND TH.PLNSTAT = 'FINISH'
+                    AND TH.PBILLYN = 'Y'
+                  GROUP BY TH.COMPKEY, TH.WAREKEY, PT.PTNRKEY, PT.PTNAMLC, MC.COMCDVL, MC.COMCDTX, TV.MDESTKY, TH.VEHICKY, TH.DOCCATE, TH.DOCTYPE, TV.VHCFNAM, TV.OWNERNM
+             ) A
+         WHERE 1=1
+         UNION ALL
+        SELECT BF.COMPKEY, BF.WAREKEY
+             , BF.PTNRKEY, MP.PTNAMLC
+             , BF.BTRPMGB, MC.COMCDTX AS BTRPMNM
+             ,  CASE WHEN BF.BTRTKNM != NULL OR TRIM(BF.BTRTKNM) != '' THEN BF.BTRTKNM
+                     ELSE BF.BTRCSGB
+               END AS BTRCSGB
+             , '-' AS DOCCATE, '-' AS DOCTYPE
+             , TM.MDESTKY
+             , BF.VEHICKY, TM.VHCFNAM, TM.OWNERNM AS USERACT
+             , BF.BTRCOST, 0 AS REFCQTY, BF.BTRCOST AS BTRAMOT
+          FROM BFTRMA BF
+         INNER JOIN TVHCMA TM
+            ON BF.COMPKEY = TM.COMPKEY
+           AND BF.WAREKEY = TM.WAREKEY
+           AND BF.VEHICKY = TM.VEHICKY
+         INNER JOIN MPTNMA MP
+            ON BF.COMPKEY = MP.COMPKEY
+           AND BF.PTNRKEY = MP.PTNRKEY
+         INNER JOIN V_MCODEM MC
+            ON BF.COMPKEY = MC.COMPKEY
+           AND BF.BTRPMGB = MC.COMCDVL
+           AND MC.COMCDKY = 'BTRPMGB'
+         INNER JOIN (
+                    SELECT COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, VEHICKY, MAX(BTRDATE) AS BTRDATE
+                      FROM BFTRMA
+                     WHERE COMPKEY = #{userData.compkey}
+                       AND WAREKEY = #{warekey}
+            <![CDATA[  AND BTRDATE <= #{bthyymm} ]]>
+                       AND BTUSEYN = 'Y'
+                     GROUP BY COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, BTRCSGB, BTRTKGB, VEHICKY
+             ) B
+            ON BF.COMPKEY = B.COMPKEY
+           AND BF.WAREKEY = B.WAREKEY
+           AND BF.PTNRKEY = B.PTNRKEY
+           AND BF.BTRPMGB = B.BTRPMGB
+           AND BF.BTRCSGB = B.BTRCSGB
+           AND BF.BTRTKGB = B.BTRTKGB
+           AND BF.VEHICKY = B.VEHICKY
+           AND BF.BTRDATE = B.BTRDATE
+         WHERE 1=1
+         ORDER BY COMPKEY, WAREKEY, PTNRKEY, BTRPMGB, VEHICKY, BTRCSGB
+    </select>
+
+    <!-- SP_BM_T_CLEAN 호출 -->
+    <select id="sp_bm_t_clean" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+        /*sp_bm_clean*/
+        CALL sp_bm_t_clean
+            (
+            #{userData.compkey}
+            , #{warekey}
+            , #{bthyymm}
+            , #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+    <!-- SP_BM_T_DEADLINE 호출 -->
+	<select id="sp_bm_t_deadline" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+	  /*sp_bm_t_deadline*/
+	  CALL sp_bm_t_deadline
+	 	 (
+	   	   #{userData.compkey}
+	   	 , #{warekey}
+	   	 , #{bthyymm}
+	   	 , #{userData.useract}
+	   	 , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+		 , #{oresult, mode=OUT, jdbcType=INTEGER}
+	  	 )
+	</select>
+
+    <!-- bmb06 Head 운송비 검증 대상 조회 -->
+    <select id="selectBmb06HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb06HeadList */
+        SELECT BH.COMPKEY, BH.WAREKEY, BH.BTHDCKY, BI.BTHDCIT
+             , BH.TCVRFYN   /* 정산검증여부 */
+             , BI.BFTCODE, BI.BVTCODE
+             , BI.DOCCATE, BI.DOCTYPE
+             , BI.PTNRKEY, MP.PTNAMLC
+             , BI.BTRPMGB, MC.COMCDTX AS BTRPMNM
+             /* 계정명칭 순위 >> 1.명세표구분명 2. 829 타입은 계정명+노선, 나머지 타입은 계정명 */
+             , CASE WHEN BI.BTRTKNM != NULL OR TRIM(BI.BTRTKNM) != '' THEN BI.BTRTKNM
+                    WHEN BI.DOCTYPE = '829' THEN CONCAT(
+                                (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BI.COMPKEY AND COMCDVL = BI.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                                ,'('
+                                , (SELECT SHTRTNM FROM TSHRHD WHERE COMPKEY = BI.COMPKEY AND WAREKEY = BI.WAREKEY AND SHTRTKY = BI.SHTRTKY)
+                                ,')')
+                    ELSE (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BI.COMPKEY AND COMCDVL = BI.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                END AS BTRCSNM  /* 계정명칭 */
+             , BI.BTRCSGB   /* 계정 */
+             , BI.BTRUNIT
+             , BI.MDESTKY   /* 공장(대표도착지) */
+             , BI.VEHICKY   /* 차량코드 */
+             , TM.OWNERNM AS USERACT  /* 차주(기사명) */
+             , BI.BTRCOST   /* 단가 */
+             , BI.REFCQTY   /* 운행횟수/연장시간 */
+             , BI.BTRAMOT   /* 금액 */
+             , BI.BTRREMK   /* 비고 */
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BI.BTHDCKY
+         INNER JOIN TVHCMA TM
+            ON BH.COMPKEY = TM.COMPKEY
+           AND BH.WAREKEY = TM.WAREKEY
+           AND BI.VEHICKY = TM.VEHICKY
+         INNER JOIN V_MCODEM MC
+            ON BH.COMPKEY = MC.COMPKEY
+           AND BI.BTRPMGB = MC.COMCDVL
+           AND MC.COMCDKY = 'BTRPMGB'
+         INNER JOIN MPTNMA MP
+            ON BH.COMPKEY = MP.COMPKEY
+           AND BI.PTNRKEY = MP.PTNRKEY
+         WHERE BH.COMPKEY = #{userData.compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHYYMM = REPLACE(#{bthyymm},'-','')
+           AND BI.BTITYPE = 'SUM'
+           AND BH.TCCNFYN = 'N'
+         ORDER BY BH.COMPKEY, BH.WAREKEY, BI.PTNRKEY, BI.BTRPMGB, BI.MDESTKY, BI.VEHICKY, BI.BTRCSGB
+    </select>
+
+    <!-- SP_BM_T_VERIFY 호출 -->
+    <select id="sp_bm_t_verify" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_t_verify */
+        CALL sp_bm_t_verify
+            ( #{userData.compkey}, #{warekey}, #{bthdcky}, #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+    <!-- SP_BM_T_CANCEL 호출 -->
+    <select id="sp_bm_t_cancel" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_t_cancel */
+        CALL sp_bm_t_cancel
+            ( #{userData.compkey}, #{warekey}, #{bthdcky}, #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+    <!-- bmb06 운송비 기타비용 추가 -->
+    <insert id="insertBmb06EtcCost" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* insertBmb06EtcCost */
+        <foreach collection="etcList"  item="etc" separator=";" >
+            INSERT
+            INTO BTGTIT(COMPKEY, WAREKEY, BTHDCKY, BTHDCIT, BTITYPE, DOCCATE, DOCTYPE
+                      , PTNRKEY, BTRPMGB, BTRCSGB, VEHICKY, BTRUNIT, MDESTKY
+                      , BTRCOST, BTRAMOT, BTRSUTX, BTRREMK, REFCQTY
+                      , CREDATE, CRETIME, CREUSER, LMODATE, LMOTIME, LMOUSER )
+            VALUES(
+            #{etc.compkey}, #{etc.warekey}, #{etc.bthdcky}, FN_BM_BTHDCIT(#{etc.compkey}, #{etc.warekey}, #{etc.bthdcky}), 'SUM', '-', '-'
+            , #{etc.ptnrkey}, #{etc.btrpmgb}, #{etc.btrcsgb}, #{etc.vehicky}, #{etc.btrunit}, #{etc.mdestky}
+            , #{etc.btrcost}, #{etc.btramot}, 0, #{etc.btrremk}, #{etc.refcqty}
+            , to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+            , to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+        </foreach>
+    </insert>
+
+    <!-- bmb06 운송비 비고 UPDATE -->
+    <update id="updateBmb06Btrremk" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* updateBmb06Btrremk */
+        <foreach collection="updateBtrremkList"  item="etc" separator=";" >
+	        UPDATE BTGTIT
+	           SET BTRREMK = #{etc.btrremk}
+	             , LMODATE = to_char(NOW() ,'YYYYMMDD')
+	             , LMOTIME = to_char(NOW() ,'hh24miss')
+	             , LMOUSER = #{userData.useract}
+	         WHERE COMPKEY = #{etc.compkey}
+               AND WAREKEY = #{etc.warekey}
+               AND BTHDCKY = #{etc.bthdcky}
+               AND BTHDCIT = #{etc.bthdcit}
+               AND BTITYPE = 'SUM'
+         </foreach>
+    </update>
+
+    <!-- bmb06 Item 운송비 검증 대상 조회 -->
+    <select id="selectBmb06ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb06ItemList */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.BTHDCIT, BI.BTITYPE
+             , BI.BFTCODE, BI.BVTCODE, BI.DOCCATE, BI.DOCTYPE, BI.MDESTKY
+             , BI.VEHICKY, BI.PTNRKEY, FN_COM_TODATE(BI.POSTDAT) AS POSTDAT
+             , BI.SKUMKEY, BI.SKUDESC
+             , BI.REFCQTY, BI.BTRPMGB, BI.BTRCSGB, BI.BTRTKGB, BI.BTRUNIT
+             , BI.BTRCOST, BI.BTRSUTX, BI.BTRTKNM, BI.SUOMKEY, BI.BTRAMOT
+             , BI.VHPLNKY, BI.VHPLNIT
+             , FN_COM_TODATE(BI.CREDATE) AS CREDATE, FN_COM_TOTIME(BI.CRETIME) AS CRETIME, fn_sy_usernam(BI.COMPKEY, BI.CREUSER) as CREUSER
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BH.BTHDCKY
+         WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHDCKY = #{bthdcky}
+           AND BI.PTNRKEY = #{ptnrkey}
+           AND BI.BTRPMGB = #{btrpmgb}
+           AND BI.BTRCSGB = #{btrcsgb}
+           AND BI.BTRUNIT = #{btrunit}
+           AND BI.DOCCATE = #{doccate}
+           AND BI.DOCTYPE = #{doctype}
+           AND BI.VEHICKY = #{vehicky}
+        <if test='bvtcode != null and bvtcode != ""'>
+           AND BI.BVTCODE = #{bvtcode}
+        </if>
+           AND BI.BTITYPE = 'ROW'
+           AND BH.TCCNFYN = 'N'
+    </select>
+
+    <!-- bmb07 Head 운송비 확정 대상 조회 -->
+    <select id="selectBmb07HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb07HeadList */
+        SELECT COMPKEY, WAREKEY, BTHDCKY
+             , CONCAT(SUBSTR(BTHYYMM, 1, 4),'-',SUBSTR(BTHYYMM, 5, 2)) AS BTHYYMM
+             , DATE_FORMAT(BTSDATE, '%Y-%m-%d') AS BTSDATE
+             , DATE_FORMAT(BTEDATE, '%Y-%m-%d') AS BTEDATE
+             , TCDDATE, fn_sy_usernam(COMPKEY, TCDUSER) as TCDUSER, TCVRFYN, TCVDATE, fn_sy_usernam(COMPKEY, TCVUSER) as TCVUSER, TCCNFYN, TCCDATE, fn_sy_usernam(COMPKEY, TCCUSER) as TCCUSER
+             , FN_COM_TODATE(CREDATE) AS CREDATE, FN_COM_TOTIME(CRETIME) AS CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER, FN_COM_TODATE(LMODATE) AS LMODATE, FN_COM_TOTIME(LMOTIME) AS LMOTIME,  fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER , INDIBZL, INDIARC, UPDTCHK
+          FROM BTGTHD
+         WHERE COMPKEY = #{userData.compkey}
+           AND WAREKEY = #{warekey}
+           AND TCCNFYN = 'N'
+        <choose>
+            <when test='bthyymmfrom != null and bthyymmfrom != "" and bthyymmto == ""'>
+                <![CDATA[ AND BTHYYMM >= REPLACE(#{bthyymmfrom},'-','') ]]>
+            </when>
+            <when test='bthyymmto != null and bthyymmto != "" and bthyymmfrom == ""'>
+                <![CDATA[ AND BTHYYMM <= REPLACE(#{bthyymmto},'-','') ]]>
+            </when>
+            <otherwise>
+                AND BTHYYMM BETWEEN REPLACE(#{bthyymmfrom},'-','') AND REPLACE(#{bthyymmto},'-','')
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- bmb07 Item 조회 -->
+    <select id="selectBmb07ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb07ItemList */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.PTNRKEY
+             , BI.BTRPMGB
+             /* 계정명칭 순위 >> 1.명세표구분명 2. 829 타입은 계정명+노선, 나머지 타입은 계정명 */
+             , CASE WHEN BI.BTRTKNM != NULL OR TRIM(BI.BTRTKNM) != '' THEN BI.BTRTKNM
+                    WHEN BI.DOCTYPE = '829' THEN CONCAT(
+                                (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BI.COMPKEY AND COMCDVL = BI.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                                ,'('
+                                , (SELECT SHTRTNM FROM TSHRHD WHERE COMPKEY = BI.COMPKEY AND WAREKEY = BI.WAREKEY AND SHTRTKY = BI.SHTRTKY)
+                                ,')')
+                    ELSE (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BI.COMPKEY AND COMCDVL = BI.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                END AS BTRCSNM  /* 계정명칭 */
+             , BI.BTRCSGB   /* 계정 */
+             , BI.BTRTKGB   /* sub계정 */
+             , BI.VEHICKY   /* 차량코드 */
+             , TM.OWNERNM AS USERACT  /* 차주(기사명) */
+             , BI.MDESTKY, BI.BTRUNIT, BI.DOCCATE, BI.DOCTYPE
+             , BI.REFCQTY, BI.BTRCOST, BI.BTRAMOT
+             , BI.BTRREMK   /* 비고 */
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BI.BTHDCKY
+         INNER JOIN TVHCMA TM
+            ON BH.COMPKEY = TM.COMPKEY
+           AND BH.WAREKEY = TM.WAREKEY
+           AND BI.VEHICKY = TM.VEHICKY
+         WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHDCKY = #{bthdcky}
+           AND BI.BTITYPE = 'SUM'
+           AND BH.TCCNFYN = 'N'
+         ORDER BY BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.PTNRKEY, BI.VEHICKY, BI.BTRPMGB, BI.BTRCSGB, BI.BTRTKGB
+    </select>
+
+    <!-- SP_BM_T_CONFIRM 호출 -->
+    <select id="sp_bm_t_confirm" statementType="CALLABLE" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_t_confirm */
+        CALL sp_bm_t_confirm(
+            #{compkey}
+            , #{warekey}
+            , #{bthdcky}
+            , #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+    <!-- bmb08 Head 운송비 내역 조회 -->
+    <select id="selectBmb08HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb08HeadList */
+        SELECT COMPKEY, WAREKEY, BTHDCKY, CONCAT(SUBSTR(BTHYYMM, 1, 4),'-',SUBSTR(BTHYYMM, 5, 2)) AS BTHYYMM
+             , DATE_FORMAT(BTSDATE, '%Y-%m-%d') AS BTSDATE, DATE_FORMAT(BTEDATE, '%Y-%m-%d') AS BTEDATE
+             , TCDDATE, fn_sy_usernam(COMPKEY, TCDUSER) AS TCDUSER, TCVRFYN, TCVDATE, fn_sy_usernam(COMPKEY, TCVUSER) AS TCVUSER, TCCNFYN, TCCDATE, fn_sy_usernam(COMPKEY, TCCUSER) AS TCCUSER 
+             , FN_COM_TODATE(CREDATE) AS CREDATE, FN_COM_TOTIME(CRETIME) AS CRETIME, fn_sy_usernam(COMPKEY, CREUSER) as CREUSER, FN_COM_TODATE(LMODATE) AS LMODATE, FN_COM_TOTIME(LMOTIME) AS LMOTIME , fn_sy_usernam(COMPKEY, LMOUSER) as LMOUSER, INDIBZL, INDIARC, UPDTCHK
+          FROM BTGTHD
+         WHERE COMPKEY = #{userData.compkey}
+           AND WAREKEY = #{warekey}
+        <choose>
+            <when test='bthyymmfrom != null and bthyymmfrom != "" and bthyymmto == ""'>
+                <![CDATA[ AND BTHYYMM >= REPLACE(#{bthyymmfrom},'-','') ]]>
+            </when>
+            <when test='bthyymmto != null and bthyymmto != "" and bthyymmfrom == ""'>
+                <![CDATA[ AND BTHYYMM <= REPLACE(#{bthyymmto},'-','') ]]>
+            </when>
+            <otherwise>
+                AND BTHYYMM BETWEEN REPLACE(#{bthyymmfrom},'-','') AND REPLACE(#{bthyymmto},'-','')
+            </otherwise>
+        </choose>
+        <if test='bthdcky != null and bthdcky != ""'>
+            AND upper(BTHDCKY) LIKE CONCAT('%', upper(#{bthdcky}), '%')
+        </if>
+        <choose>
+            <when test='btrstat == "TCVRFYN"'>
+                AND TCVRFYN = 'Y'
+            </when>
+            <when test='btrstat == "TCCNFYN"'>
+                AND TCCNFYN = 'Y'
+            </when>
+        </choose>
+    </select>
+
+    <!-- bmb08 Item 운송비 내역 조회 -->
+    <select id="selectBmb08ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb08ItemList */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.PTNRKEY
+             , BI.BTRPMGB
+             /* 계정명칭 순위 >> 1.명세표구분명 2. 829 타입은 계정명+노선, 나머지 타입은 계정명 */
+             , CASE WHEN BI.BTRTKNM != NULL OR TRIM(BI.BTRTKNM) != '' THEN BI.BTRTKNM
+                    WHEN BI.DOCTYPE = '829' THEN CONCAT(
+                                (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BI.COMPKEY AND COMCDVL = BI.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                                ,'('
+                                , (SELECT SHTRTNM FROM TSHRHD WHERE COMPKEY = BI.COMPKEY AND WAREKEY = BI.WAREKEY AND SHTRTKY = BI.SHTRTKY)
+                                ,')')
+                    ELSE (SELECT COMCDTX FROM V_MCODEM WHERE COMPKEY = BI.COMPKEY AND COMCDVL = BI.BTRCSGB AND COMCDKY IN ('BTRFSGB','BTRVSGB'))
+                END AS BTRCSNM  /* 계정명칭 */
+             , BI.BTRCSGB   /* 계정 */
+             , BI.BTRTKGB   /* sub계정 */
+             , BI.VEHICKY   /* 차량코드 */
+             , TM.OWNERNM AS USERACT  /* 차주(기사명) */
+             , BI.MDESTKY, BI.BTRUNIT, BI.DOCCATE, BI.DOCTYPE
+             , BI.REFCQTY, BI.BTRCOST, BI.BTRAMOT
+             , BI.BTRREMK   /* 비고 */
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BI.BTHDCKY
+         INNER JOIN TVHCMA TM
+            ON BH.COMPKEY = TM.COMPKEY
+           AND BH.WAREKEY = TM.WAREKEY
+           AND BI.VEHICKY = TM.VEHICKY
+         WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHDCKY = #{bthdcky}
+           AND BI.BTITYPE = 'SUM'
+         ORDER BY BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.PTNRKEY, BI.VEHICKY, BI.BTRPMGB, BI.BTRCSGB, BI.BTRTKGB
+    </select>
+
+    <!-- bmb09 Head 차량별 정산내역 조회 -->
+    <select id="selectBmb09HeadList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb09HeadList */
+        SELECT BH.COMPKEY, BH.WAREKEY, BH.BTHDCKY
+             , ROW_NUMBER() OVER (  PARTITION BY BH.COMPKEY, BH.WAREKEY, BH.BTHDCKY ORDER BY BI.VEHICKY ) AS BTHDCIT
+             , SUM(BI.REFCQTY) AS REFCQTY   /* 운행횟수 */
+             , BI.BTRPMGB   /* 대금구분 */
+             , BI.VEHICKY   /* 차량코드 */
+             , SUM(BI.BTRAMOT) AS BTRAMOT   /* 금액 */
+             , TM.OWNERNM   /* 기사명 */
+             , TP.USERACT   /* 차주 계정 */
+             , FN_COM_TODATE(BH.CREDATE) AS CREDATE, FN_COM_TOTIME(BH.CRETIME) AS CRETIME, FN_SY_USERNAM(BH.COMPKEY, BH.CREUSER) AS CREUSER
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BI.BTHDCKY
+         INNER JOIN TVHCMA TM
+            ON BH.COMPKEY = TM.COMPKEY
+           AND BH.WAREKEY = TM.WAREKEY
+           AND BI.VEHICKY = TM.VEHICKY
+          LEFT JOIN TPVASS TP
+            ON BH.COMPKEY = TP.COMPKEY
+           AND BH.WAREKEY = TP.WAREKEY
+           AND BI.VEHICKY = TP.VEHICKY
+         WHERE BH.COMPKEY = #{userData.compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHYYMM = REPLACE(#{bthyymm},'-','')
+           AND BI.BTITYPE = 'SUM'
+           AND (BI.DOCTYPE IN ('829') OR TRIM(BI.BFTCODE) IS NOT NULL)
+           AND BI.BTRPMGB = 'PAYMENT'
+         GROUP BY BH.COMPKEY, BH.WAREKEY, BH.BTHDCKY, BI.BTRPMGB, BI.VEHICKY, TM.OWNERNM
+    </select>
+
+    <!-- bmb09 Item 차량별 정산내역 조회 -->
+    <select id="selectBmb09ItemList" resultType="com.logistics.bm.domain.BillingDTO">
+        /* selectBmb09ItemList */
+        /* 변동비(기사실적) */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.DOCCATE, BI.DOCTYPE
+             , BI.BTRCSGB
+             , FN_COM_TODATE(BI.POSTDAT) AS POSTDAT
+             , SUM(BI.REFCQTY) AS REFCQTY   /* 운행횟수/연장시간 */
+             , MAX(BI.BTRCOST) AS BTRCOST   /* 단가(원) */
+             , SUM(BI.BTRAMOT) AS BTRAMOT   /* 금액 */
+             , BI.SHTRTKY   /* 셔틀노선 */
+             , FN_COM_TODATE(BI.CREDATE) AS CREDATE, FN_COM_TOTIME(BI.CRETIME) AS CRETIME, FN_SY_USERNAM(BI.COMPKEY, BI.CREUSER) as CREUSER
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BH.BTHDCKY
+        WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHDCKY = #{bthdcky}
+           AND BI.BTRPMGB = #{btrpmgb}
+           AND BI.VEHICKY = #{vehicky}
+           AND BI.BTITYPE = 'ROW'
+           AND (BI.DOCTYPE IN ('829'))
+         GROUP BY BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.DOCCATE, BI.DOCTYPE, BI.BTRCSGB, BI.POSTDAT, BI.SHTRTKY
+         UNION ALL
+        /* 고정비 */
+        SELECT BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.DOCCATE, BI.DOCTYPE
+             , BI.BTRCSGB
+             , FN_COM_TODATE(BI.POSTDAT) AS POSTDAT
+             , SUM(BI.REFCQTY) AS REFCQTY   /* 운행횟수/연장시간 */
+             , MAX(BI.BTRCOST) AS BTRCOST   /* 단가(원) */
+             , SUM(BI.BTRAMOT) AS BTRAMOT   /* 금액 */
+             , BI.SHTRTKY   /* 셔틀노선 */
+             , FN_COM_TODATE(BI.CREDATE) AS CREDATE, FN_COM_TOTIME(BI.CRETIME) AS CRETIME, FN_SY_USERNAM(BI.COMPKEY, BI.CREUSER) as CREUSER
+          FROM BTGTHD BH
+         INNER JOIN BTGTIT BI
+            ON BH.COMPKEY = BI.COMPKEY
+           AND BH.WAREKEY = BI.WAREKEY
+           AND BH.BTHDCKY = BH.BTHDCKY
+         WHERE BH.COMPKEY = #{compkey}
+           AND BH.WAREKEY = #{warekey}
+           AND BH.BTHDCKY = #{bthdcky}
+           AND BI.BTRPMGB = #{btrpmgb}
+           AND BI.VEHICKY = #{vehicky}
+           AND BI.BTITYPE = 'SUM'
+           AND BI.DOCTYPE = '-' /* 임시 */
+         GROUP BY BI.COMPKEY, BI.WAREKEY, BI.BTHDCKY, BI.DOCCATE, BI.DOCTYPE, BI.BTRCSGB, BI.POSTDAT, BI.SHTRTKY
+         ORDER BY POSTDAT
+    </select>
+    
+    
+    <!-- bmb10 : HEAD 번호 채번 -->
+	<select id="fn_bm_bftdtky" resultType="String">
+		/* fn_bm_bftdtky */
+		select fn_bm_bftdtky() as bftdtky from dual
+	</select>
+	
+	<!-- bmb10 : 차량별공제비등록 insert 대금구분 제외하기-->
+	<insert id="insertBmb10Cost" parameterType="com.logistics.bm.domain.BillingDTO">
+		/* insertBmb10Cost */
+		INSERT
+		  INTO BFTDTL (
+					  COMPKEY, WAREKEY, BFTDTKY, BFTDTIT
+					, PTNRKEY, VEHICKY, BTRDATE, BTMITCT
+					, BTPRMCT, BTVATCT, BTENVCT, BTCARCT 
+					, BTODUCT, BTDPSCT, BTCVICT, BTIAICT
+					, CREDATE, CRETIME, CREUSER
+					, LMODATE, LMOTIME, LMOUSER
+					  )
+		VALUES
+			( #{compkey} , #{warekey} , #{bftdtky} , fn_bm_bftdtit(#{compkey}, #{warekey}, #{bftdtky} )
+			, #{ptnrkey} , #{vehicky} , REPLACE(#{btrdate},'-','') , #{btmitct}
+			, #{btprmct} , #{btvatct} , #{btenvct} , #{btcarct}
+			, #{btoduct} , #{btdpsct} , #{btcvict} , #{btiaict}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract}
+			, to_char(NOW() ,'YYYYMMDD'), to_char(NOW() ,'hh24miss'), #{userData.useract} )
+	</insert>
+
+    <!-- SP_BM_T_DEDUCTION 호출 -->
+    <select id="sp_bm_t_deduction" statementType="CALLABLE" resultType="com.logistics.bm.domain.BillingDTO" parameterType="com.logistics.bm.domain.BillingDTO">
+        /* sp_bm_t_deduction */
+        CALL sp_bm_t_deduction
+            ( #{userData.compkey}, #{warekey}, #{bftdtky}, #{btrdate}, #{userData.useract}
+            , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+            , #{oresult, mode=OUT, jdbcType=INTEGER}
+            )
+    </select>
+
+</mapper>

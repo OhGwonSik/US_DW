@@ -1,0 +1,122 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainSideBar">
+<!--  mainSideBar 시작 --> 
+<div id="menuModal">
+	<div class="menu-top">
+		<button class="modal-close btn-menu-close"></button>
+		<button class="btn-logout" onclick='pdaLogout()'>로그아웃</button>
+		<div class="user-wrap">
+			<div class="company-name">ID</div>
+			<div class="user-name">
+				<b th:text="${userattr.useract}" class="user-name"></b>
+				<span>님</span>
+			</div>
+		</div>
+	</div>
+	<div class="menu-body">
+		<ul id="MenuBar">
+			<li>
+				<a data-progid="tmp05" th:data-title="#{menu.tm.tmp05}">
+					<img>
+					<span>[[#{menu.tm.tmp05}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="tmp06" th:data-title="#{menu.tm.tmp06}">
+					<img>
+					<span>[[#{menu.tm.tmp06}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="tmp07" th:data-title="#{menu.tm.tmp07}">
+					<img>
+					<span>[[#{menu.tm.tmp07}]]</span>
+				</a>
+			</li>			
+			<li>
+				<a data-progid="wmp93" th:data-title="#{menu.wm.wmp93}">
+					<img>
+					<span>[[#{menu.wm.wmp93}]]</span>
+				</a>
+			</li>		
+			<li>
+				<a data-progid="wmp20" th:data-title="#{menu.wm.wmp20}">
+					<img>
+					<span>[[#{menu.wm.wmp20}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="wmp30" th:data-title="#{menu.wm.wmp30}">
+					<img>
+					<span>[[#{menu.wm.wmp30}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="wmp40" th:data-title="#{menu.wm.wmp40}">
+					<img>
+					<span>[[#{menu.wm.wmp40}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="wmp50" th:data-title="#{menu.wm.wmp50}">
+					<img>
+					<span>[[#{menu.wm.wmp50}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="wmp60" th:data-title="#{menu.wm.wmp60}">
+					<img>
+					<span>[[#{menu.wm.wmp60}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="wmp70" th:data-title="#{menu.wm.wmp70}">
+					<img>
+					<span>[[#{menu.wm.wmp70}]]</span>
+				</a>
+			</li>
+			<li>
+				<a data-progid="wmp80" th:data-title="#{menu.wm.wmp80}">
+					<img>
+					<span>[[#{menu.wm.wmp80}]]</span>
+				</a>
+			</li>							
+		</ul>
+	</div>
+</div>
+<!--  mainSideBar 종료 -->
+<script type="text/javascript">
+	// 메뉴트리 구성
+// 	getUserPdaMenuList();
+	
+	// search 입력
+	function searchcmdKeyevent(o){
+		if(event.keyCode==13){ 
+			var tprogcmd = o.value.toLowerCase();
+			mainSearchKeyevent(tprogcmd);					
+		}
+	}
+	
+	//  Side Menu 열기/닫기
+	$(document).ready(function () {
+		$("#sidebar").mCustomScrollbar({
+			theme: "minimal"
+		});
+		
+		$('#sidebarCollapse').on('click', function () {
+			$('#mainSidebar, #mainContent').toggleClass('active');
+			$('.collapse.in').toggleClass('in');
+			$('a[aria-expanded=true]').attr('aria-expanded', 'false');
+		});
+		
+		pdaLogout = async function (){
+			const response = await fetchUtil('GET','/logout');
+			
+			if(response.status){
+				location.href= rPath + '/mlogin?account_code=' + '[[${userattr.compkey}]]';
+			}
+		}
+	});
+</script>    
+</div>
+</html>

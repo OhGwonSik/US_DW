@@ -1,0 +1,341 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+                	<label for="tma12_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+	                <div class="setting-grid-content">
+	                    <div class="input-group">
+                           <select id="tma12_towarky" name="tma12_towarky"
+						data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user"
+						data-cb-variable="warekeyList">
+						</select>
+					</div>
+	                </div>
+				<label for="tma12_carrier" class="setting-grid-title">[[#{tm.tma12.carrier}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tma12_carrier" name="tma12_carrier"
+						data-cb-val="ptnrkey" data-cb-name="ptnamlc"
+						data-cb-url="/tm/dispatch/common/carrierlist">
+							<option value="">[[#{tm.common.all}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="tma12_doctype" class="setting-grid-title">[[#{tm.tma11.doctype}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tma12_doctype" name="tma12_doctype"></select>
+					</div>
+				</div>
+				<label for="tma12_destkey" class="setting-grid-title">[[#{tm.tplnit.destkey}]]</label>
+	                <div class="setting-grid-content">
+	                <div class="input-group">
+                        <select id="tma12_destkey" name="tma12_destkey"
+							data-cb-val="destkey" data-cb-name="denamlc" data-cb-url="/tm/area/common/destlist"
+							data-cb-variable="destkeyList">
+							<option value="">[[#{tm.common.all}]]</option>
+						</select>
+                   </div>
+	               </div>
+	            <label for="tma12_vhcsnam" class="setting-grid-title">[[#{tm.tvhcma.vhcsnam}]]</label>
+	                <div class="setting-grid-content">
+	                    <div class="input-wrapper">
+	                        <input type="text" id="tma12_vhcsnam" th:placeholder="${#messages.msg('tm.tvhcma.vhcsnam')}">
+	                    </div>
+	                </div>
+				<label for="tma12_postdat" class="setting-grid-title">[[#{tm.tma12.postdat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" id="tma12_postdat" onkeyup="setInputDateDel(this)">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="tma12_search"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="tma12_reset"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="tma12_pqgrid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/* *******************************************************
+	 * 최초 생성일시 : 2023-07-19
+	 * 최초 생성자 : 최재환
+	 * 설명 : 창고별로 일별실적통계를 확인할 수 있는 화면입니다.
+	 *********************************************************/
+	 
+	const pageId = 'tma12';
+	let grid;
+	$(function(){
+
+		const postdat = document.querySelector('#tma12_postdat');
+		const thisMonth = moment().format('YYYY-MM');
+		postdat.value = thisMonth;
+
+		//============================================================
+		//그리드 CM
+		//============================================================
+		const tma12GridCM = [
+			{ title: '[[#{tm.tma12.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', hidden: true},
+			{ title: '[[#{tm.tma12.carrier}]]', dataType: 'string', dataIndx: 'ptnamlc', editable: false},
+			{ title: '[[#{tm.tma12.denamlc}]]', dataType: 'string', dataIndx: 'denamlc', editable: false},
+			{ title: '[[#{grid.vhcsnam}]]', dataType: 'string', dataIndx: 'vhcsnam', editable: false},
+			{ title: '[[#{tm.tma12.usernam}]]', dataType: 'string', dataIndx: 'usernam', editable: false},
+			{ title: '[[#{tm.tma12.vhctncd}]]', dataType: 'string', dataIndx: 'vhctncd', editable: false},
+			{ title: '[[#{tm.tma12.postday01}]]', dataType: 'integer', dataIndx: 'postday01', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday02}]]', dataType: 'integer', dataIndx: 'postday02', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday03}]]', dataType: 'integer', dataIndx: 'postday03', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday04}]]', dataType: 'integer', dataIndx: 'postday04', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday05}]]', dataType: 'integer', dataIndx: 'postday05', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday06}]]', dataType: 'integer', dataIndx: 'postday06', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday07}]]', dataType: 'integer', dataIndx: 'postday07', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday08}]]', dataType: 'integer', dataIndx: 'postday08', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday09}]]', dataType: 'integer', dataIndx: 'postday09', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday10}]]', dataType: 'integer', dataIndx: 'postday10', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday11}]]', dataType: 'integer', dataIndx: 'postday11', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday12}]]', dataType: 'integer', dataIndx: 'postday12', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday13}]]', dataType: 'integer', dataIndx: 'postday13', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday14}]]', dataType: 'integer', dataIndx: 'postday14', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday15}]]', dataType: 'integer', dataIndx: 'postday15', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday16}]]', dataType: 'integer', dataIndx: 'postday16', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday17}]]', dataType: 'integer', dataIndx: 'postday17', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday18}]]', dataType: 'integer', dataIndx: 'postday18', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday19}]]', dataType: 'integer', dataIndx: 'postday19', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday20}]]', dataType: 'integer', dataIndx: 'postday20', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday21}]]', dataType: 'integer', dataIndx: 'postday21', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday22}]]', dataType: 'integer', dataIndx: 'postday22', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday23}]]', dataType: 'integer', dataIndx: 'postday23', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday24}]]', dataType: 'integer', dataIndx: 'postday24', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday25}]]', dataType: 'integer', dataIndx: 'postday25', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday26}]]', dataType: 'integer', dataIndx: 'postday26', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday27}]]', dataType: 'integer', dataIndx: 'postday27', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday28}]]', dataType: 'integer', dataIndx: 'postday28', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday29}]]', dataType: 'integer', dataIndx: 'postday29', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday30}]]', dataType: 'integer', dataIndx: 'postday30', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.postday31}]]', dataType: 'integer', dataIndx: 'postday31', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma12.totalCount}]]', dataType: 'integer', dataIndx: 'totalCount', format: '#,###', editable: false,
+				summary: { type: "sum" }}
+		]
+
+		const tma12Grid = new GridUtil(tma12GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+		
+		tma12Grid.setCreate(async function(evt, ui) {
+			await _commonInit();
+			await tma12DoctypeSetting();
+		});
+
+		tma12Grid.open();
+
+		$('#'+ pageId +'_search').click(async function () {
+			// 검색버튼 클릭 시 데이터 조회
+			await tma12_initData();
+		});
+		
+		//초기화 이벤트
+		$('#'+ pageId +'_reset').click(async function() {
+			$('#'+ pageId +'_postdat').val(thisMonth);
+
+			$('#' + pageId + '_towarky').val($('#' + pageId + '_towarky option:first').val());
+			$('#' + pageId + '_carrier').val($('#' + pageId + '_carrier option:first').val());
+			$('#' + pageId + '_destkey').val($('#' + pageId + '_destkey option:first').val());
+
+			$('#'+ pageId +'_vhcsnam').val('');
+			
+			await tma12DoctypeSetting();
+
+			grid = pq.grid('#' + pageId + '_pqgrid');
+
+			grid.showLoading();
+
+			grid.option('dataModel', {data: []}); // 해당 그리드 초기화
+			grid.option('summaryData', []);
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+
+		});
+
+	});
+
+	//============================================================
+	//데이터 조회
+	//============================================================
+	async function tma12_initData() {
+		grid = pq.grid('#'+ pageId +'_pqgrid');
+
+		const data = {
+				// 검색할 조건을 가지고 있는 변수
+				warekey: $('#' + pageId + '_towarky').val(),
+				carrier: $('#' + pageId + '_carrier').val(),
+				destkey: $('#' + pageId + '_destkey').val(),
+				vhcsnam: $('#' + pageId + '_vhcsnam').val().replace(/(\s*)/g, ''),
+				postdat: $('#' + pageId + '_postdat').val().replaceAll('-', ''),
+				doctype: $('#' + pageId + '_doctype').val()
+		}
+		grid.showLoading();
+		try{
+			const response = await fetchUtil('GET', "/tm/dispatch/tma12/grids/1", data);
+
+			//============================================================
+			//그리드 Option
+			//============================================================
+			if(response.status === 200) {
+				const resContent = await response.json();
+
+				grid.option('dataModel', {
+					data: resContent,
+					recIndx: 'rowkey'
+				});
+				grid.option('summaryData', [{
+					postday01: calculateSum('postday01'),
+					postday02: calculateSum('postday02'),
+					postday03: calculateSum('postday03'),
+					postday04: calculateSum('postday04'),
+					postday05: calculateSum('postday05'),
+					postday06: calculateSum('postday06'),
+					postday07: calculateSum('postday07'),
+					postday08: calculateSum('postday08'),
+					postday09: calculateSum('postday09'),
+					postday10: calculateSum('postday10'),
+					postday11: calculateSum('postday11'),
+					postday12: calculateSum('postday12'),
+					postday13: calculateSum('postday13'),
+					postday14: calculateSum('postday14'),
+					postday15: calculateSum('postday15'),
+					postday16: calculateSum('postday16'),
+					postday17: calculateSum('postday17'),
+					postday18: calculateSum('postday18'),
+					postday19: calculateSum('postday19'),
+					postday20: calculateSum('postday20'),
+					postday21: calculateSum('postday21'),
+					postday22: calculateSum('postday22'),
+					postday23: calculateSum('postday23'),
+					postday24: calculateSum('postday24'),
+					postday25: calculateSum('postday25'),
+					postday26: calculateSum('postday26'),
+					postday27: calculateSum('postday27'),
+					postday28: calculateSum('postday28'),
+					postday29: calculateSum('postday29'),
+					postday30: calculateSum('postday30'),
+					postday31: calculateSum('postday31'),
+					totalCount: calculateSum('totalCount')
+				}]);
+				grid.refreshDataAndView();
+				grid.hideLoading();
+			}
+		} catch(err){
+			alert('[[#{ms.fetchError}]]');
+		} finally{
+			grid.hideLoading();
+		}
+	}
+	
+	//============================================================
+	//doctype setting
+	//============================================================
+	async function tma12DoctypeSetting() {
+		let mdocmaList = await fetchUtil('GET', '/tm/dispatch/common/doctypelist', {warekey: $('#' + pageId + '_towarky').val()});
+		mdocmaList = await mdocmaList.json();
+		
+		$('#' + pageId + '_doctype option').remove();
+		$('#' + pageId + '_doctype').append($('<option></option>').attr('value', '').text('[[#{tm.common.all}]]'));
+		
+		for(mdocma of mdocmaList) {
+			$('#' + pageId + '_doctype').append($('<option></option>').attr('value', mdocma.combovl).text(mdocma.combonm));
+		}
+	}
+	
+	//============================================================
+	//창고 change 이벤트
+	//============================================================
+	$('#' + pageId + '_towarky').change(async function() {
+		await tma12DoctypeSetting();
+	});
+
+	//============================================================
+	//일별 집계 함수 calculateSum
+	//============================================================
+	function calculateSum(idx){
+		// 최초조회시 세팅
+		grid = pq.grid('#'+ pageId +'_pqgrid');
+		let colData = grid.getData({
+			dataIndx: ['rowkey', idx]
+		});
+		let colSum = 0;
+		for(let i = 0;i<colData.length;i++){
+			colSum+=colData[i][idx];
+		}
+		return colSum;
+	}
+
+	//============================================================
+	//검색 엔터키 이벤트
+	//============================================================
+
+    async function enterKeySearch(event) {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+
+        if (event.key === 'Enter') {
+
+			grid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+
+			await tma12_initData(); // 헤드그리드 재조회
+        }
+    }
+
+    // 모든 input 요소 가져오기
+    const inputElements = document.querySelectorAll('.input-wrapper');
+
+    // 각 input 요소에 이벤트 리스너 추가
+    inputElements.forEach(input => {
+        input.addEventListener('keyup', enterKeySearch);
+    });
+
+	</script>
+</div>
+</html>

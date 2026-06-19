@@ -1,0 +1,539 @@
+<!-- 	/*  OMI01 - OMI01 재고현황조회
+	*   최초 생성일시	: 2023-12-12 11:30
+	*   최초 생성자	: 오권식 
+	*   설명			: OMI01 재고 조회
+	*/
+ -->
+ 
+ 
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omi01_warekey" name="omi01_warekey"
+							data-cb-select="WH01" data-cb-variable="warekey"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"></select>
+					</div>
+				</div>
+				<!-- 230821 SMA 추가 -->
+				<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omi01_ownerky" name="omi01_ownerky"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/partner/owner" data-cb-select=""
+							data-cb-variable="ownerkyList">
+						</select>
+					</div>
+				</div>
+				<label for="omi01_areakey" class="setting-grid-title">[[#{om.omi01.areakey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="omi01_areakey" name="omi01_areakey">
+						<option value="">[[#{om.omr.all}]]</option></select>
+					</div>
+				</div>
+				<!-- 230821 SMA 추가 -->
+				<label for="inputGroupSelect02" class="setting-grid-title">[[#{om.omi01.skumkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('om.omr.skumkey')}" id="omi01_skumkey" name="omi01_skumkey">
+					</div>
+				</div>
+				<label for="inputGroupSelect01" class="setting-grid-title">[[#{om.omi01.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('om.omr.skudesc')}" id="omi01_skudesc" name="omi01_skudesc">
+					</div>
+				</div>
+				<label for="inputGroupSelect02" class="setting-grid-title">[[#{om.omi01.stkstat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="omi01_stkstatCheckbox"></div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="omi01_btnSearch">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white"
+					id="omi01_btnReset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+			</div>
+			<ul class="nav nav-tabs" id="omi01_tab">
+				<li class="nav-item"><a class="nav-link active"
+					data-toggle="tab" href="#omi01_total" data-tab-type="total">[[#{om.omi01.total}]]</a></li>
+				<li class="nav-item"><a class="nav-link" data-toggle="tab"
+					href="#omi01_sku" data-tab-type="sku">[[#{om.omi01.sku}]]</a></li>
+				<li class="nav-item"><a class="nav-link" data-toggle="tab"
+					href="#omi01_loc" data-tab-type="loc">[[#{om.omi01.loca}]]</a></li>
+			</ul>
+			<div class="tab-content">
+				<div class="list-grid-wrapper con-box tab-pane show active"
+					id="omi01_total">
+					<div id="omi01_total_grid"></div>
+				</div>
+				<div class="list-grid-wrapper con-box tab-pane active"
+					id="omi01_sku">
+					<div id="omi01_sku_grid"></div>
+				</div>
+				<div class="list-grid-wrapper con-box tab-pane active"
+					id="omi01_loc">
+					<div id="omi01_loc_grid"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+	// data-tab-type="total" 랑 <div class="tab-pane show active" id="omi01_total"> id 뒤에 total이 똑같아야함
+	// <div id="omi01_total_grid"></div> _(언더바)로 구별 해야함
+		$(function() {
+			const pageId = 'omi01';
+			let omi01SkumkeyGroupList;
+			let omi01LocakeyGroupList;
+			let omi01GridObject;
+			let omi01GridSkumkeyObject;
+			let omi01GridLocakeyObject;	
+			let initData;
+	        let omi01Warekey;
+	        let omi01Ownerky;
+			
+	    	
+			omi01GridTotalList();
+			omi01GridSkumkeyList();
+			omi01GridLocationList();
+			tabGridInit();
+			
+			// 페이지 진입시 자동조회 하는 기능 230925 테스트 이후 다시 제거
+			getInventoryList();
+// 			getSkumkeyGroupList();
+// 			getLocakeyGroupList();
+
+		
+			//============================================================
+			//재고 전체 조회 컬럼 정의
+			//==========================================
+			function omi01GridTotalList(){
+				const omi01GridCm = [
+					{ title: '[[#{om.omi01.rowkey}]]',  dataType: 'string', dataIndx: 'rowkey', hidden: true, editable:false },
+					{ title: '[[#{om.omi01.stockky}]]',  dataType: 'string', dataIndx: 'stockky', hidden: true, editable:false },// 재고키
+					{ title: '[[#{om.omi01.warekey}]]',  dataType: 'string', dataIndx: 'warekey', editable:false }, //창고명
+					{ title: '[[#{om.omi01.ownerky}]]',  dataType: 'string', dataIndx: 'ownerky', editable:false  }, //화주명
+					{ title: '[[#{om.omi01.skumkey}]]',  dataType: 'string', dataIndx: 'skumkey', editable:false }, // 부품코드
+					{ title: '[[#{om.omi01.skudesc}]]',  dataType: 'string', dataIndx: 'skudesc', editable:false  }, //부품명
+					{ title: '[[#{om.omi01.areakey}]]',  dataType: 'string', dataIndx: 'areakey', editable:false  }, //area Key
+					{ title: '[[#{om.omi01.zonekey}]]',  dataType: 'string', dataIndx: 'zonekey', editable:false  }, //zone Key
+					{ title: '[[#{om.omi01.locakey}]]',  dataType: 'string', dataIndx: 'locakey', editable:false  }, //Location Key
+					{ title: '[[#{om.omi01.stotqty}]]',  dataType: 'integer', dataIndx: 'stotqty', editable:false , // 총재고 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.sallqty}]]',  dataType: 'integer', dataIndx: 'sallqty', editable:false , //할당 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.sinbqty}]]',  dataType: 'integer', dataIndx: 'sinbqty', editable:false , //입고중 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.soubqty}]]',  dataType: 'integer', dataIndx: 'soubqty', editable:false , //출고중 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},				
+					{ title: '[[#{om.omi01.sbloqty}]]',  dataType: 'integer', dataIndx: 'sbloqty', editable:false , //블락 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.stkstat}]]',  dataType: 'String', dataIndx: 'stkstat', editable:false },	//재고상태
+					{ title: '[[#{om.omi01.suomkey}]]',  dataType: 'String', dataIndx: 'suomkey', editable:false }, //단위
+					{
+						title :'[[#{om.omi01.prodat}]]', dataType: 'String', dataIndx: 'prodat', editable:false //생산일자
+					},
+				];
+				omi01GridObject = new GridUtil(omi01GridCm, '[[${gprogrid}]]', 'omi01_total_grid');
+				omi01GridObject.setFind();
+		        omi01GridObject.setCreate(async function(event, ui){
+		        	await _commonInit();
+		        	
+					if(!('[[${userattr.ownerky}]]')) { 													//3PL ROLE 접근 시 전체 option 태그 삽입.
+						const html = '<option value="" selected>[[#{om.omr.all}]]</option>';
+						document.querySelector('#omi01_ownerky').insertAdjacentHTML('afterbegin', html); 
+						$('#omi01_ownerky').pqSelect({ deselect : false }); 
+					}
+		            omi01Warekey = document.querySelector('#omi01_warekey').value;
+		    		omi01Ownerky = document.querySelector('#omi01_ownerky').value;	
+		    		
+		    		// 231005 SMA 수정 -> 화주 로그인 관련 수정 요청
+/* 		    		 $('#omi01_ownerky').pqSelect().on('change', async function(){ 
+		    			const grid = omi01GridObject.getGrid();	
+		    			if(grid.pdata.length) {
+		    				if(!confirm('[[#{ms.listViewRollback}]]')){
+		    					document.querySelector('#omi01_ownerky').value = omi01Ownerky;
+		    					$('#omi01_ownerky').pqSelect('refreshData');
+		    					return;
+		    				}
+		    				grid.option('dataModel', { data: [] });
+		    				grid.refreshDataAndView();
+		    			}
+		    			omi01Ownerky = document.querySelector('#omi01_ownerky').value;
+		    			//initList.skuwcList = await getSkuwcList();
+		    		 }); */
+		    		
+		        });
+				omi01GridObject.open();
+			};
+			//============================================================
+			//상품별 조회 컬럼 정의
+			//============================================================	
+			function omi01GridSkumkeyList(){
+				let omi01GridSkumkeyCm = [
+					{ title: '[[#{om.omi01.rowkey}]]',  dataType: 'string', dataIndx: 'rowkey', hidden: true, editable:false },
+					{ title: '[[#{om.omi01.stockky}]]',  dataType: 'string', dataIndx: 'stockky', hidden: true, editable:false },// 재고키
+					{ title: '[[#{om.omi01.warekey}]]',  dataType: 'string', dataIndx: 'warekey', editable:false }, //창고명
+					{ title: '[[#{om.omi01.ownerky}]]',  dataType: 'string', dataIndx: 'ownerky', editable:false }, //화주명
+					{ title: '[[#{om.omi01.skumkey}]]',  dataType: 'string', dataIndx: 'skumkey', editable:false}, // 부품코드
+					{ title: '[[#{om.omi01.skudesc}]]',  dataType: 'string', dataIndx: 'skudesc', editable:false }, //부품명
+					{ title: "[[#{om.omi01.rcvqty}]]", dataType: "integer", dataIndx: "rcvsqty" , format: '###,###,###' ,  editable: false ,
+						summary: { type: "sum" }
+					},//입고에어리어 수량
+					{ title: "[[#{om.omi01.stgqty}]]", dataType: "integer", dataIndx: "stgsqty" , format: '###,###,###' ,  editable: false ,
+						summary: { type: "sum" }
+					},//보관에어리어 수량
+					{ title: "[[#{om.omi01.takqty}]]", dataType: "integer", dataIndx: "taksqty" , format: '###,###,###' ,  editable: false ,
+						summary: { type: "sum" }
+					},//작업에어리어 수량
+					{ title: '[[#{om.omi01.stotqty}]]',  dataType: 'integer', dataIndx: 'stotqty', editable:false , // 총재고 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.sallqty}]]',  dataType: 'integer', dataIndx: 'sallqty', editable:false , //할당 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.sinbqty}]]',  dataType: 'integer', dataIndx: 'sinbqty', editable:false , //입고중 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.soubqty}]]',  dataType: 'integer', dataIndx: 'soubqty', editable:false , //출고중 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},				
+					{ title: '[[#{om.omi01.sbloqty}]]',  dataType: 'integer', dataIndx: 'sbloqty', editable:false , //블락 수량
+						summary: { type: 'sum' }, format: '#,###'
+					},
+					{ title: '[[#{om.omi01.stkstat}]]',  dataType: 'String', dataIndx: 'stkstat', editable:false },	//재고상태
+					{ title: '[[#{om.omi01.suomkey}]]',  dataType: 'String', dataIndx: 'suomkey', editable:false }, //단위
+					{
+						title :'[[#{om.omi01.prodat}]]', dataType: 'String', dataIndx: 'prodat', editable:false, hidden: true //생산일자
+					},
+				];		 
+				omi01GridSkumkeyObject = new GridUtil(omi01GridSkumkeyCm, '[[${gprogrid}]]', 'omi01_sku_grid');
+				omi01GridSkumkeyObject.setFind();
+				omi01GridSkumkeyObject.open();
+			};
+			
+			
+			//============================================================
+			//로케이션별 조회 컬럼 정의
+			//============================================================
+			function omi01GridLocationList(){				
+			 	const omi01GridLocationCm = [
+ 					{ title: '[[#{om.omi01.rowkey}]]',  dataType: 'string', dataIndx: 'rowkey', hidden: true, editable:false },
+ 					{ title: '[[#{om.omi01.stockky}]]',  dataType: 'string', dataIndx: 'stockky', hidden: true, editable:false },// 재고키
+ 					{ title: '[[#{om.omi01.warekey}]]',  dataType: 'string', dataIndx: 'warekey', editable:false }, //창고명
+ 					{ title: '[[#{om.omi01.ownerky}]]',  dataType: 'string', dataIndx: 'ownerky', editable:false }, //화주명
+ 					{ title: '[[#{om.omi01.skumkey}]]',  dataType: 'string', dataIndx: 'skumkey', editable:false}, // 부품코드
+ 					{ title: '[[#{om.omi01.skudesc}]]',  dataType: 'string', dataIndx: 'skudesc', editable:false }, //부품명
+ 					{ title: '[[#{om.omi01.areakey}]]',  dataType: 'string', dataIndx: 'areakey', editable:false }, //area Key
+ 					{ title: '[[#{om.omi01.zonekey}]]',  dataType: 'string', dataIndx: 'zonekey', editable:false }, //zone Key
+ 					{ title: '[[#{om.omi01.locakey}]]',  dataType: 'string', dataIndx: 'locakey', editable:false }, //Location Key
+ 					{ title: '[[#{om.omi01.stotqty}]]',  dataType: 'integer', dataIndx: 'stotqty', editable:false , // 총재고 수량
+ 						summary: { type: 'sum' }, format: '#,###'
+ 					},
+ 					{ title: '[[#{om.omi01.sallqty}]]',  dataType: 'integer', dataIndx: 'sallqty', editable:false , //할당 수량
+ 						summary: { type: 'sum' }, format: '#,###'
+ 					},
+ 					{ title: '[[#{om.omi01.sinbqty}]]',  dataType: 'integer', dataIndx: 'sinbqty', editable:false , //입고중 수량
+ 						summary: { type: 'sum' }, format: '#,###'
+ 					},
+ 					{ title: '[[#{om.omi01.soubqty}]]',  dataType: 'integer', dataIndx: 'soubqty', editable:false , //출고중 수량
+ 						summary: { type: 'sum' }, format: '#,###'
+ 					},				
+ 					{ title: '[[#{om.omi01.sbloqty}]]',  dataType: 'integer', dataIndx: 'sbloqty', editable:false , //블락 수량
+ 						summary: { type: 'sum' }, format: '#,###'
+ 					},
+ 					{ title: '[[#{om.omi01.stkstat}]]',  dataType: 'String', dataIndx: 'stkstat', editable:false },	//재고상태
+ 					{ title: '[[#{om.omi01.suomkey}]]',  dataType: 'String', dataIndx: 'suomkey', editable:false }, //단위
+ 					{
+ 						title :'[[#{om.omi01.prodat}]]', dataType: 'String', dataIndx: 'prodat', editable:false, hidden: true //생산일자
+ 					},
+				];
+				omi01GridLocakeyObject = new GridUtil(omi01GridLocationCm, '[[${gprogrid}]]', 'omi01_loc_grid');
+				omi01GridLocakeyObject.setFind();
+				omi01GridLocakeyObject.open();
+				
+			};
+		
+			//============================================================	 
+			//영역 검색 버튼 이벤트
+			//============================================================	
+			$('#omi01_btnSearch').click(function(){
+				const param = $('#omi01_tab .nav-link.active');
+				const tab = param.data('tab-type');
+				searchOmi01List(tab);
+			});	
+		
+			async function searchOmi01List(tabType){
+				const totalGrid = pq.grid('#omi01_total_grid');
+				const skuGrid = pq.grid('#omi01_sku_grid');
+				const locGrid = pq.grid ('#omi01_loc_grid');
+				
+				const omi01Param = { 
+						skumkey : $('#'+pageId+'_skumkey').val(),
+						skudesc : $('#'+pageId+'_skudesc').val(),
+						warekey : $('#'+pageId+'_warekey').val(),
+						ownerky : $('#'+pageId+'_ownerky').val(),
+						areakey : $('#'+pageId+'_areakey').val(),
+						stkstat: $("input[name='omi01_stkstat']:checked")
+			              .map(function () {
+			                return $(this).val();
+			              })
+			              .get(),
+				};
+				if (tabType == 'total'){
+					totalGrid.showLoading();
+					const response = await fetchUtil('GET', '/om/inventory/omi01/grids/1', omi01Param);
+					if(response.status !==200){ // get 메소드는 aop 처리를 하지 않아 정상이 아니면 error라고 판단
+						throw new Error('[[#{sy.common.datanotfound}]]'); // error 생성(message를 catch 구문으로 보냄 / 추후에 properties 공용 메시지로 교체예정)
+					}
+					initData = await response.json();
+					
+			        if (initData.inventoryList.length == 0) {
+			        	  //alert('[[#{ms.getDataZero}]]');
+			        }
+					//await setCheckboxByUsertyp("stkstat");
+					//처음 값 넣기
+					totalGrid.hideLoading();
+					omi01GridObject.searchList(initData.inventoryList); 
+				} else if (tabType == 'sku'){
+					skuGrid.showLoading();
+					const response = await fetchUtil('GET', '/om/inventory/omi01/grids/group-skumkey', omi01Param);
+					if(response.status !==200){ // get 메소드는 aop 처리를 하지 않아 정상이 아니면 error라고 판단
+						throw new Error('[[#{sy.common.datanotfound}]]'); // error 생성(message를 catch 구문으로 보냄 / 추후에 properties 공용 메시지로 교체예정)
+					}
+					omi01SkumkeyGroupList = await response.json();
+					
+			        if (omi01SkumkeyGroupList.length == 0) {
+			        	  //alert('[[#{ms.getDataZero}]]');
+			        }
+			        skuGrid.hideLoading();
+					omi01GridSkumkeyObject.searchList(omi01SkumkeyGroupList);
+				} else if (tabType == 'loc'){
+					locGrid.showLoading();
+					const response = await fetchUtil('GET', '/om/inventory/omi01/grids/group-location', omi01Param);
+					if(response.status !==200){ // get 메소드는 aop 처리를 하지 않아 정상이 아니면 error라고 판단
+						throw new Error('[[#{sy.common.datanotfound}]]'); // error 생성(message를 catch 구문으로 보냄 / 추후에 properties 공용 메시지로 교체예정)
+					}
+					omi01LocakeyGroupList = await response.json();
+					
+			        if (omi01LocakeyGroupList.length == 0) {
+			        	  //alert('[[#{ms.getDataZero}]]');
+			        }
+			        locGrid.hideLoading();
+					omi01GridLocakeyObject.searchList(omi01LocakeyGroupList);
+				}
+			}		
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function(){
+				$('#' + pageId + '_warekey').prop('selectedIndex', 0);
+				
+				$('#' + pageId + '_ownerky').prop('selectedIndex', 0);
+				$('#' + pageId + '_ownerky').pqSelect('refreshData');
+
+				$('#' + pageId + '_areakey').prop('selectedIndex', 0);
+				$('#' + pageId + '_areakey').pqSelect('refreshData');
+				
+				$('#'+pageId+'_skudesc').val('');
+				$('#'+pageId+'_skumkey').val('');
+				
+				const param = $('#omi01_tab .nav-link.active');
+				const tab = param.data('tab-type');
+				
+		  		document.querySelectorAll('div[id*="omi01_"].input-check-group input').forEach(function(element) {
+					element.checked = element.id || element.disabled ? true : false;
+				});
+		  		
+		  		omi01GridObject.searchList([]);
+		  		
+		  		omi01GridSkumkeyObject.searchList([]);
+		  		
+		  		omi01GridLocakeyObject.searchList([]);
+			})
+		
+			//================================
+			//탭 메뉴 구현
+			//================================
+			function tabGridInit(){
+				$('.tab-content .tab-pane').removeClass('active');
+				$('.tab-content .tab-pane.show').addClass('active');
+			}
+			
+			//================================
+			//탭 클릭시 이벤트
+			//================================
+			$('#omi01_tab .nav-link').click(function(){
+				const tabType = $(this).data('tab-type');
+				setTimeout(function() {
+					// 탭 클릭시 자동조회하는 로직 230925 테스트 이후 다시 제거
+					//searchOmi01List(tabType);
+				}, 50);
+			});
+	  	    
+			//================================
+			//재고조회 값 불러오기
+			//================================
+			async function getInventoryList(){
+	                
+					const response = await fetchUtil('GET', '/om/inventory/omi01/grids/1');
+					if(response.status !==200){ // get 메소드는 aop 처리를 하지 않아 정상이 아니면 error라고 판단
+						throw new Error('[[#{sy.common.datanotfound}]]'); // error 생성(message를 catch 구문으로 보냄 / 추후에 properties 공용 메시지로 교체예정)
+					}
+					initData = await response.json();
+					if(initData.areakeyList){
+						const areaFilter = initData.areakeyList.filter(function(element){
+							return element.combovl !== 'SHP' && element.combovl !== 'SYS'; 
+						});
+						$("#omi01_areakey option").not("[value='']").remove();
+						$.each(areaFilter, function(key, value) {
+							$('#omi01_areakey').append($("<option></option>").attr("value",value.combovl).text(value.combonm)); 
+						});
+					}
+					$('#omi01_areakey').pqSelect({ deselect : false }); 
+					
+					// 230927 수정
+/* 			        if (initData.inventoryList.length == 0) {
+			        	  alert('[[#{ms.getDataZero}]]');
+			        } */
+			          
+					await setCheckboxByUsertyp("stkstat");
+					//처음 값 넣기
+// 					omi01GridObject.searchList(initData.inventoryList);
+			}				
+			async function getSkumkeyGroupList(){
+				const response = await fetchUtil('GET', '/om/inventory/omi01/grids/group-skumkey');
+				if(response.status !==200){ // get 메소드는 aop 처리를 하지 않아 정상이 아니면 error라고 판단
+					throw new Error('[[#{sy.common.datanotfound}]]'); // error 생성(message를 catch 구문으로 보냄 / 추후에 properties 공용 메시지로 교체예정)
+				}
+				omi01SkumkeyGroupList = await response.json();
+				omi01GridSkumkeyObject.searchList(omi01SkumkeyGroupList);
+			}
+			async function getLocakeyGroupList(){
+				const response = await fetchUtil('GET', '/om/inventory/omi01/grids/group-location');
+				if(response.status !==200){ // get 메소드는 aop 처리를 하지 않아 정상이 아니면 error라고 판단
+					throw new Error('[[#{sy.common.datanotfound}]]'); // error 생성(message를 catch 구문으로 보냄 / 추후에 properties 공용 메시지로 교체예정)
+				}
+				omi01LocakeyGroupList = await response.json();
+				omi01GridLocakeyObject.searchList(omi01LocakeyGroupList);
+			}		
+			
+		/* 230821 체크박스 변경으로 인해 SMA 추가 */
+		async function setCheckboxByUsertyp(columnName) {
+          //omr03Ownerky = '[[${userattr.ownerky}]]';
+
+          let html = "";
+          for (const column of initData[columnName + "List"]) {
+            if (column.combovl === "CAN") {
+              continue;
+            }
+
+            html += '<label class="check-box">';
+            html +=
+              '<input type="checkbox" name="omi01_' +
+              columnName +
+              '" value="' +
+              column.combovl +
+              '">';
+            html += "<span>" + column.combonm + "</span></label>";
+          }
+          document
+            .querySelector("#" + pageId + '_' + columnName + "Checkbox")
+            .insertAdjacentHTML("beforeend", html);
+
+          //3PL, 화주 공동화면. 3PL과 화주에게 다른 doctype checkbox 노출. 화주 : 400 입고, 420 부품사입고만 조회 가능 / 3PL : 전체 조회 가능
+          if (initData[columnName + "List"].length !== 1) {
+            let allCheckHTML = '<label class="check-box">';
+            allCheckHTML +=
+              '<input type="checkbox" id="omi01_' +
+              columnName +
+              'AllCheck" name="omi01_' +
+              columnName +
+              '" value="">';
+            allCheckHTML += "<span>전체</span></label>";
+            document
+              .querySelector("#" + pageId + '_' + columnName + "Checkbox")
+              .insertAdjacentHTML("afterBegin", allCheckHTML);
+            document.querySelector(
+              "#omi01_" + columnName + "AllCheck"
+            ).checked = true;
+            checkboxEvent(columnName);
+            return;
+          }
+
+          const columnObj = document.querySelector(
+            'input[name="omi01_' + columnName + '"]'
+          );
+          columnObj.checked = true;
+          columnObj.addEventListener("click", function (event) {
+            event.preventDefault();
+          });
+        }
+
+        //checkboxEvent. 전체 선택 시 나머지 체크박스 해제. 전체를 제외한 체크박스 모두 선택 시 전체 선택.
+        function checkboxEvent(columnName) {
+          document
+            .querySelectorAll('input[name="omi01_' + columnName + '"]')
+            .forEach(function (element) {
+              element.addEventListener("change", function () {
+                document.querySelector(
+                  "#omi01_" + columnName + "AllCheck"
+                ).checked = false;
+                const checkedObjs = document.querySelectorAll(
+                  'input[name="omi01_' + columnName + '"]:checked'
+                );
+                const notAllCheckObjs = document.querySelectorAll(
+                  'input[name="omi01_' +
+                    columnName +
+                    '"]:not(#omi01_' +
+                    columnName +
+                    "AllCheck)"
+                );
+                if (
+                  notAllCheckObjs.length === checkedObjs.length ||
+                  element.id === "omi01_"+columnName + "AllCheck"
+                ) {
+                  document.querySelector(
+                    "#omi01_" + columnName + "AllCheck"
+                  ).checked = true;
+                  for (const checkedObj of checkedObjs) {
+                    checkedObj.checked = false;
+                  }
+                } else if (!checkedObjs.length) {
+                  document.querySelector(
+                    "#omi01_" + columnName + "AllCheck"
+                  ).checked = true;
+                }
+              });
+            });
+        }
+		        /* 230821 체크박스 변경으로 인해 SMA 추가 */
+		});
+	</script>
+</div>
+</html>

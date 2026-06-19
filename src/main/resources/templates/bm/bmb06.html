@@ -1,0 +1,1018 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 창고 -->
+				<label for="bmb06Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="bmb06Warekey" name="bmb06Warekey">
+						</select>
+					</div>
+				</div>
+				<!-- 정산년월 -->
+				<label class="setting-grid-title ic-title-nece">[[#{bm.btgthd.bthyymm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" style="width:100%" max="2999-12" id="bmb06Bthyymm" onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="bmb06Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="bmb06Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-white" id="bmb06Receipt">
+						<img class="ic-bt-print">[[#{bt.bm.receipt}]]
+					</button>
+					<button class="btn-navy btn-green" id="bmb06CancelDeadLine">
+						<img class="ic-bt-cancel-g">[[#{bt.bm.canceldeadline}]]
+					</button>
+					<button class="btn-navy btn-green" id="bmb06Verify">
+						<img class="ic-bt-save">[[#{bt.bm.verification}]]
+					</button>
+					<button class="btn-navy btn-green" id="bmb06ModalOpen">
+						<img class="ic-bt-add-g">[[#{bt.bm.othercost}]]
+					</button>
+				</div>
+			</div>
+			<!-- Head Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb06HeadPqgrid"></div>
+				</div>
+			</div>
+			<!-- Item Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb06ItemPqgrid"></div>
+				</div>
+			</div>
+			<!-- 로딩 이미지 부분 -->
+			<div class="spinner" id="spinner">
+			</div>
+		</div>
+	</div>
+	<div class="modal fade" id="bmb06Modal" tabindex="-1" role="dialog" aria-labelledby="bmb06ModalTitle" aria-hidden="true" data-backdrop='static' data-keyboard='false'>
+		<div class="modal-dialog" role="document">
+			<div class="modal-content popup-register modal-con" style="top: 120px; display: flex;">
+				<div class="modal-top" id="bmb06ModalTitle">
+					<h5 class="box-title">[[#{bt.bm.othercost}]]</h5>
+					<button type="button" id="modalHeadClose" class="close" data-bs-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<div class="setting-grid">
+						<label class="setting-grid-title ic-title-nece"> [[#{bm.btgtit.btrcsgb}]] </label>
+						<div class="setting-grid-content">
+							<div class="input-group">
+								<select id="bmb06Btrcsgb">
+									<option value="">[[#{bm.btgtit.btrcsgb}]][[#{ms.choiceValue}]]</option>
+								</select>
+							</div>
+						</div>
+						<label class="setting-grid-title ic-title-nece"> [[#{grid.vhcsnam}]] </label>
+						<div class="setting-grid-content">
+							<div class="input-group">
+								<select id="bmb06Vehicky">
+									<option value="">[[#{grid.vhcsnam}]][[#{ms.choiceValue}]]</option>
+								</select>
+							</div>
+						</div>
+						<label class="setting-grid-title ic-title-nece">[[#{bm.btgtit.btramot}]]</label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="text" id="bmb06OtherCost" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\d(?=(?:\d{3})+$)/g, '$&,')" disabled onfocus="this.select()" th:placeholder="${#messages.msg('bm.btgtit.btrcsgb')} + ${#messages.msg('ms.choiceValue')}">
+							</div>
+						</div>
+						<label class="setting-grid-title" id=bmb06Time> [[#{bm.bmb06.refcqty}]] </label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="text" id="bmb06Refcqty" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\d(?=(?:\d{3})+$)/g, '$&,')" onfocus="this.select()" th:placeholder="${#messages.msg('bm.bmb06.refcqty')}">
+							</div>
+						</div>
+						<label class="setting-grid-title"> [[#{bm.btgtit.btrremk}]] </label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="text" id="bmb06Btrtknm" onfocus="this.select()" th:placeholder="${#messages.msg('bm.btgtit.btrremk')}">
+							</div>
+						</div>
+						<div class="setting-grid-content" style="display: none;">
+							<div class="input-group">
+								<select id="bmb06Ownernm" disabled>
+									<option value="">[[#{grid.vhcsnam}]][[#{ms.choiceValue}]]</option>
+								</select>
+							</div>
+						</div>
+						<div class="setting-grid-content" style="display: none;">
+							<div class="input-group">
+								<select id="bmb06Destkey" disabled>
+									<option value="">[[#{grid.vhcsnam}]][[#{ms.choiceValue}]]</option>
+								</select>
+							</div>
+						</div>
+						<div class="setting-grid-content" style="display: none;">
+							<div class="input-group">
+								<select id="bmb06Cdcate2" disabled>
+									<option value="">[[#{bm.btgtit.btrcsgb}]][[#{ms.choiceValue}]]</option>
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-bottom">
+					<button type="button" class="btn-save btn-navy btn-green" id="bmb06SaveModal">[[#{bt.save}]]</button>
+					<button type="button" class="btn-white btn-close" id="bmb06CloseModal" data-bs-dismiss="modal">[[#{bt.cancel}]]</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+	
+	/*  bmb06 - 운송비검증처리
+	*   최초 생성일시   : 2023-12-12 10:30
+	*   최초 생성자      : 최강호
+	*   설명      	: 마감처리된 운송비를 상세 확인, 기타비용을 추가할 수 있는 검증화면 
+	*   수정 내역  	:
+	*   수정일시		:
+	*   수정자		:
+	*   변경 사항		:
+	*/
+	
+$(function() {
+	//모달 오픈시 모달에 대한 포커스를 수정하여 모달 내 pqSelect에서 검색 가능하게 함
+	$.fn.modal.Constructor.prototype._enforceFocus = function () {};
+
+	bmb06WarekeySelectBox();
+	const pageId = '[[${gprogrid}]]';
+	let initData;
+	let bmb06Warekey;
+	let bmb06HeadGridObject;
+	let bmb06ItemGridObject;
+
+	$('#'+pageId+'Bthyymm').val(moment().format('YYYY-MM')); //당월
+
+	$('#'+pageId+'Search').click(async function() {
+		await searchbmb06HeadList();
+	});
+
+	$('#'+pageId+'Reset').click(function(){
+		resetSearchConditions();
+		resetTabContainer(bmb06HeadGridObject.getGrid());
+		makeEmptyGrid(bmb06HeadGridObject);
+		makeEmptyGrid(bmb06ItemGridObject);
+
+		document.querySelector('#bmb06Verify').disabled = false;
+		document.querySelector('#bmb06ModalOpen').disabled = false;
+	});
+
+	$('#'+pageId+'Receipt').click(async function() {
+		// 거래명세표 출력
+		const headGrid = bmb06HeadGridObject.getGrid();
+		const hgTabs = headGrid.Tab().tabs(); //전체 탭
+		const hgActiveTab = headGrid.Tab().activeTab(); //활성화된 탭
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data; //활성화된 탭의 데이터
+
+		if(hgTabs.length === 0 || !dataTarget || dataTarget?.length === 0){
+			alert('[[#{ms.nodataForPrintOut}]]');
+			return;
+		}
+
+		if(confirm('[[#{ms.print.receipt}]]')) {
+			const report = [];
+			$('#spinner').css('display', '');
+
+			//두 탭 모두 필요한 경우
+			for(let idx=0; idx<hgTabs.length; idx++){
+				const reportObj = {
+						compkey : '[[${userattr.compkey}]]',
+						warekey : hgTabs[idx].gridOptions.dataModel.data[0].warekey,
+						ptnrkey : hgTabs[idx].gridOptions.dataModel.data[0].ptnrkey,
+						bthdcky : hgTabs[idx].gridOptions.dataModel.data[0].bthdcky,
+						btrpmgb: hgTabs[idx].gridOptions.dataModel.data[0].btrpmgb,
+						type : 'bmb20'
+				};
+				report.push(reportObj);
+			}
+			const sendReport = {
+					reportList : report,
+					progrid	: '[[${gprogrid}]]',
+					warekey : bmb06Warekey,
+					type : 'bmb20'
+			}
+			await reportPrint(sendReport, 'bm');
+			bmb06HeadGridObject.getGrid().hideLoading();
+			bmb06ItemGridObject.getGrid().hideLoading();
+		}
+	});
+
+	$('#'+pageId+'CancelDeadLine').click(async function() {
+		// 마감취소
+		await cancelLogisCostDeadLine();
+	});
+
+	$('#'+pageId+'Verify').click(async function() {
+		// 검증완료
+		await verifyingLogisCost();
+	});
+
+	$('#' + pageId + 'ModalOpen').click(function() {
+		document.querySelector('#bmb06OtherCost').disabled = true;
+
+		const headGrid = bmb06HeadGridObject.getGrid();
+		const tabModel = headGrid.option('tabModel');
+		const hgTabs = headGrid.Tab().tabs();
+		const hgActiveTab = headGrid.Tab().activeTab();
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		//조회된 그리드가 없을시 alert, return
+		if(hgTabs.length === 0 || !dataTarget || dataTarget.length === 0){
+			alert('[[#{ms.noSearchError}]]');
+			return;
+		}
+
+		$('#' + pageId +'Modal').modal('show');
+
+		//init에서 계정이 기타비용 연장비인 것들만 필터로 가져옴,
+		const btrcsgbList = initData.btrcsgbList.filter(item => item.cdcate1 ==='ETC');
+
+		if(btrcsgbList.length !== 0){
+			$("#bmb06Btrcsgb option").not("[value='']").remove();
+			$.each(btrcsgbList, function(key, value) {
+				$('#bmb06Btrcsgb').append($("<option></option>").attr("value",value.combovl).text(value.combonm));
+			});
+		}
+	});
+
+	//모달 내 계정 수정 이벤트
+	$('#bmb06Btrcsgb').on('change', async function(){
+		//계정이 기타비용일 경우
+		if($('#bmb06Btrcsgb').val() === 'ETC'){
+			document.querySelector('#bmb06OtherCost').disabled = false;
+			document.querySelector('#bmb06OtherCost').placeholder = "[[#{bm.btgtit.btramot}]]";
+			document.querySelector('#bmb06Time').innerHTML = "[[#{bm.bmb06.refcqty}]]";
+			document.querySelector('#bmb06Refcqty').placeholder = "[[#{bm.bmb06.refcqty}]]";
+		} //계정이 연장비용일 경우
+			else if($('#bmb06Btrcsgb').val() === 'EXTCT'){
+				document.querySelector('#bmb06OtherCost').disabled = false;
+				document.querySelector('#bmb06OtherCost').placeholder = "[[#{bm.btgtit.btramot}]]";
+				document.querySelector('#bmb06Time').innerHTML = "[[#{bm.bmb06.exttime}]]";
+				document.querySelector('#bmb06Refcqty').placeholder = "[[#{bm.bmb06.exttime}]]";
+		} else{
+			document.querySelector('#bmb06OtherCost').disabled = true;
+			document.querySelector('#bmb06OtherCost').placeholder = "[[#{bm.btgtit.btrcsgb}]][[#{ms.choiceValue}]]";
+		}
+		
+		const btrUnitList = initData.btrcsgbList.filter(item => item.combovl === $('#bmb06Btrcsgb').val());
+		if(btrUnitList.length !== 0){
+			$("#bmb06Cdcate2 option").remove();
+ 			$.each(btrUnitList, function(key, value) {
+ 				$('#bmb06Cdcate2').append($("<option></option>").attr("value",value.cdcate2).text(value.cdcate2));
+ 			});
+		}
+	});
+
+	$('#' + pageId + 'Modal').on('shown.bs.modal', function (e) {
+		$('#bmb06Vehicky').pqSelect({
+			 deselect: false
+		 });
+		
+		$('#bmb06Vehicky').pqSelect('refreshData');
+	 });
+
+	//모달 내 차량코드 수정 이벤트
+	$('#bmb06Vehicky').on('change', async function(){
+		const param = $('#bmb06Vehicky').val();
+		//차량코드 선택시 운송기사를 가져오기 위한 filter
+		const tmmList = initData.tmList.filter(item => item.warekey === bmb06Warekey
+													&& item.vehicky === param);
+
+		//차량코드 선택시 도착지를 가져오기 위한 filter
+		const destkyList = initData.mdestkyList.filter(item => item.combovl === tmmList[0].mdestky);
+		//운송기사
+		if(tmmList.length !== 0){
+ 			$("#bmb06Ownernm option").remove();
+ 			$.each(tmmList, function(key, value) {
+ 				$('#bmb06Ownernm').append($("<option></option>").attr("value",value.ownernm).text(value.ownernm));
+ 			});
+		}
+
+		//도착지
+		if(destkyList.length !== 0){
+			$("#bmb06Destkey option").remove();
+ 			$.each(destkyList, function(key, value) {
+ 				$('#bmb06Destkey').append($("<option></option>").attr("value",value.combovl).text(value.combonm));
+ 			});
+		}
+	});
+
+	const bmb06HeadGridColModel = [
+		{ title: '[[#{bm.btgthd.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable:false, hidden: true },
+		{ title: '[[#{bm.btgthd.warekey}]]', dataType: 'string', dataIndx: 'warekey', editable:false, hidden: true,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		},
+		{ title: '[[#{bm.btgthd.ptnrkey}]]', dataType: 'string', dataIndx: 'ptnrkey', width:150, editable:false, hidden: true,
+			render : function(ui){
+				return {
+					cls: getSummaryCellClass(ui)
+				}
+			}	
+		},
+		{ title: '[[#{md.bvtrma.ptnrkey}]]', dataType: 'string', dataIndx: 'ptnamlc', width:150, editable:false, hidden: true,
+			render : function(ui){
+				return {
+					cls: getSummaryCellClass(ui)
+				}
+			}
+		},
+		{ title: '[[#{bm.btgthd.bthdcky}]]', dataType: 'string', dataIndx: 'bthdcky', width:150, editable:false, hidden: true  },
+		{ title: "[[#{bm.bmb06.mdestky}]]", dataType: "string", align: 'center', width:150, dataIndx: "mdestky", hidden: false, editable:false,
+			 editor: { type: "select", options: [] },
+			 render: function (ui) {
+	        		let option = ui.column.editor.options.find(function(obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : '',
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		 }, //도착지
+		{ title: "[[#{grid.vhcsnam}]]", dataType: "string", align: 'center', width:200, dataIndx: "vehicky", hidden: false, editable:false,
+			 editor: { type: 'select', options: [] },
+			 render: function (ui) {
+	        		let option = ui.column.editor.options.find(function (obj) {
+	                    return (obj[ui.cellData] != null);
+	                });
+	            	return {
+	            		text: option ? option[ui.cellData] : '',
+	            		cls: getSummaryCellClass(ui)
+	            	}
+	            }
+		}, //차량번호
+		{ title: '[[#{bm.btgtit.bftcode}]]', dataType: 'string', width:150, dataIndx: 'bftcode', editable:false, hidden: true  }, //고정운송요율코드
+		{ title: '[[#{bm.btgtit.bvtcode}]]', dataType: 'string', width:150, dataIndx: 'bvtcode', editable:false, hidden: true }, //변동운송요율코드
+		{ title: '[[#{bm.btgtit.doccate}]]', dataType: 'string', width:150, dataIndx: 'doccate', editable:false, hidden: true }, //문서유형
+		{ title: '[[#{bm.btgtit.btrpmgb}]]', dataType: 'string', width:150, dataIndx: 'btrpmgb', editable:false, hidden: true,
+			editor: { type: 'select', options: [] },
+			render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return {
+            		text: option ? option[ui.cellData] : '',
+            		cls: getSummaryCellClass(ui)
+            	}
+            }
+		},//대금구분
+		{ title: "[[#{bm.bmb06.useract}]]", dataType: "string", align: 'center', dataIndx: "useract", width: 150, hidden: false, editable:false,
+			render : function(ui){
+				return {
+					cls: getSummaryCellClass(ui)
+				}
+			}
+		}, //기사명
+		{ title: '[[#{bm.btgtit.btrcsgb}]]', dataType: 'string', align: 'center', dataIndx: 'btrcsnm', width:200, editable:false,
+			editor: { type: 'select', options: [] },
+			render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return {
+            		text: option ? option[ui.cellData] : ui.cellData,
+            		cls: getSummaryCellClass(ui)
+            	}
+            }
+		},//계정
+		{ title: '[[#{bm.btgtit.btrcsgb}]]', dataType: 'string', width:150, dataIndx: 'btrcsgb', editable:false, hidden: true }, //검색용 계정코드
+		{ title: '[[#{bm.btgtit.doctype}]]', dataType: 'string', width:150, dataIndx: 'doctype', editable:false, hidden: false,
+			editor: { type: 'select', options: [] },
+			render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return {
+            		text: option ? option[ui.cellData] : '-',
+            		cls: getSummaryCellClass(ui)
+            	}
+            }
+		}, //문서타입
+		{ title: '[[#{bm.btgtit.btrcost}]]', dataType: 'integer', dataIndx: 'btrcost', width:150, editable:false,
+			summary: { type: 'sum' }, format: '#,###',
+			editable : function(ui){
+            	const headGrid = bmb06HeadGridObject.getGrid();
+        		const hgActiveTab = headGrid.Tab().activeTab();
+            	return hgActiveTab._inst.iUCData.adata.findIndex(e => e.rowData.pq_ri === ui.rowIndx) >= 0;
+            },
+            render : function(ui){
+            	if(this.isEditableCell({ rowIndx : ui.rowIndx, dataIndx : ui.dataIndx })){
+            		return {
+            			style : 'background-color : [[#{grid.styleHead02}]]; font-weight: bold;',
+            		}
+            	}
+            	return {
+            		cls: getSummaryCellClass(ui)
+            	}
+            }
+		},//단가(원)
+		{ title: '[[#{bm.bmb06.refcqty}]]', dataType: 'integer', dataIndx: 'refcqty', width:150, editable:false,
+			summary: { type: 'sum' }, format: '#,###',
+			render : function(ui){
+				return {
+					cls: getSummaryCellClass(ui)
+				}
+			}
+
+			//운송횟수 편집가능하게 해야할 경우
+// 			,editable : function(ui){
+//             	const headGrid = bmb06HeadGridObject.getGrid();
+//         		const hgActiveTab = headGrid.Tab().activeTab();
+//             	return hgActiveTab._inst.iUCData.adata.findIndex(e => e.rowData.pq_ri === ui.rowIndx) >= 0;
+//             },
+//             render : function(ui){
+//             	if(this.isEditableCell({ rowIndx : ui.rowIndx, dataIndx : ui.dataIndx })){
+//             		return {
+//             			style : 'background-color : [[#{grid.styleHead02}]]; font-weight: bold;'
+//             		}
+//             	}
+//             }
+		},//운행횟수
+		{ title: '[[#{bm.btgtit.btramot}]]', dataType: 'integer', dataIndx: 'btramot', width:150, editable:false,
+			summary: { type: 'sum' }, format: '#,###',
+			render : function(ui){
+				return {
+					cls: getSummaryCellClass(ui)
+				}
+			}
+		},//공급가액
+		{ title: '[[#{bm.btgtit.btrremk}]]', dataType: 'string', dataIndx: 'btrremk', width:150, editable:false,
+			validations : [{ type: 'minLen', value: 0, warn: true }, { type: 'maxLen', value: 200, msg: "[[#{ms.validations.maxLenLength(200)}]]" }],
+			editable : function(ui){
+            	const headGrid = bmb06HeadGridObject.getGrid();
+        		const hgActiveTab = headGrid.Tab().activeTab();
+        		return hgActiveTab.gridOptions.dataModel.data.findIndex(e => e.pq_ri === ui.rowIndx) >= 0 && ui.rowData.tcvrfyn !== 'Y';
+            	//return hgActiveTab._inst.iUCData.adata.findIndex(e => e.rowData.pq_ri === ui.rowIndx) >= 0;
+            },
+            render : function(ui){
+            	if(this.isEditableCell({ rowIndx : ui.rowIndx, dataIndx : ui.dataIndx })){
+            		return { style: 'background-color: [[#{grid.styleHead02}]]' , cls: getSummaryCellClass(ui) };
+            	} else{
+            		return { cls: getSummaryCellClass(ui) };
+            	}
+            }
+		}, //비고
+		{ title: '[[#{bm.btgthd.tcvrfyn}]]', dataType: 'string', width:150, dataIndx: 'tcvrfyn', editable:false, hidden: true,
+			type: 'checkbox', editor: false,  cb: { all: false, header: false, check: "Y", uncheck: "N" },
+			render: function (ui) {
+                let cb = ui.column.cb, cellData = ui.cellData, checked = cb.check === cellData ? 'checked' : '';
+            }
+		}, //정산검증여부
+		{ title: '[[#{bm.btgtit.btrunit}]]', dataType: 'string', width:150, dataIndx: 'btrunit', editable:false, hidden: true } //단위
+	]
+
+	bmb06HeadGridObject = new GridUtil(bmb06HeadGridColModel, '[[${gprogrid}]]', pageId+'HeadPqgrid');
+	bmb06HeadGridObject.setTabModel([createDefaultTabObject()]);
+
+	bmb06HeadGridObject.setCreate(async function (evt, ui) {
+		await _commonInit();
+	});
+
+	bmb06HeadGridObject.setRowDblClick(async function(event, ui) {
+		const target = ui.rowData;
+		const etcTarget= initData.btrcsgbList.find((item) => item.combovl === target.btrcsgb && item.cdcate1 === 'ETC');
+		if(target.btrcsgb === etcTarget?.combovl || !target.btrcsgb){
+			return;
+		}
+
+		//해당 컬럼을 더블클릭 했을 시 return
+		if('mdestky' === ui.dataIndx || 'useract' === ui.dataIndx || 'vehicky' === ui.dataIndx){
+			return;
+		}
+
+		//해당 컬럼을 제외하고 더블클릭시 색상 변경
+		const groupCols = ['mdestky' ,'useract', 'vehicky', 'btrremk'];
+		const changeCols = Object.keys(this.columns).filter(col => !groupCols.includes(col)); // group column들은 제외하고 강조하기 위한 배열 생성
+
+		for(let rowIdx=0; rowIdx<this.pdata.length; rowIdx++){ // 선택한 row 강조
+			for(let col of changeCols){
+				rowIdx === ui.rowIndx ? this.addClass({rowIndx : ui.rowIndx, dataIndx : col, cls: 'color-blue font-weight-bold', refresh: true})
+					 							 : this.removeClass({rowIndx : rowIdx, dataIndx : col, cls: 'color-blue font-weight-bold', refresh: true});
+			}
+		}
+
+		const params = {
+				compkey : target.compkey,
+			    warekey : target.warekey,
+				bthdcky : target.bthdcky,
+				ptnrkey : target.ptnrkey,
+				btrpmgb : target.btrpmgb,
+				btrcsgb : target.btrcsgb,
+				btrunit : target.btrunit,
+				doccate : target.doccate,
+				doctype : target.doctype,
+				bvtcode : target.bvtcode,
+				vehicky : target.vehicky
+			}
+
+		if(target.bvtcode?.trim() || target.doctype !== '-' ){ // 변동요율코드가 있거나 보여지는 문서타입이 '-'가 아닐때 조회실행
+			await searchbmb06ItemList(params);
+			turnOnGridGruopSummary(bmb06ItemGridObject.getGrid());
+			return;
+		} else{
+			makeEmptyGrid(bmb06ItemGridObject);
+			return;
+		}
+	});
+
+	bmb06HeadGridObject.setBeforeValidate(function(event, ui){
+     	if('edit' === ui.source || 'paste' === ui.source){
+     		const updateRowList = [];
+			for(const updateData of ui.updateList){
+				const newRow = {};
+				const etcTarget= initData.btrcsgbList.find((item) => item.combovl === updateData.rowData.btrcsgb && item.cdcate1 === 'ETC');
+    			if((updateData.newRow.hasOwnProperty('btrcost') || updateData.newRow.hasOwnProperty('refcqty')) && !updateData.rowData.bftcode?.trim()
+															&& !updateData.rowData.bvtcode?.trim()
+															&& etcTarget?.combovl === updateData.rowData.btrcsgb
+															&& 'number' === typeof(updateData.rowData.btrcost)){
+    				//금액 = 단가 * 운행횟수
+    				updateData.rowData['btramot'] = updateData.newRow.btrcost * (updateData.rowData.refcqty || 1);
+
+    				//운송횟수 편집 가능할 경우
+//     				if(updateData.newRow.refcqty){
+//     					updateData.rowData['btramot'] = updateData.rowData.btrcost * (updateData.newRow.refcqty || 1);
+//     					console.log(updateData.rowData['btramot']);
+//     					newRow['refcqty'] = updateData.rowData['refcqty'];
+//     				}
+
+    				newRow['btramot'] = updateData.rowData['btramot'];
+    				updateRowList.push({rowIndx: parseInt(updateData.rowIndx), newRow : newRow});
+    			}
+			}
+			//updateRow()에 updateRowList 넣음
+			this.updateRow({rowList: updateRowList, checkEditable: false, refresh: true});
+    	}
+	});
+
+	bmb06HeadGridObject.setChange(function(event, ui){
+    	if('add' === ui.source){
+    		for(const addData of ui.addList){
+    			const etcTarget= initData.btrcsgbList.find((item) => item.combovl === addData.rowData.btrcsgb && item.cdcate1 === 'ETC');
+    			if(addData.newRow.hasOwnProperty('btrcost') && !addData.rowData.bftcode?.trim()
+    																			&& !addData.rowData.bvtcode?.trim()
+																				&& etcTarget?.combovl === addData.rowData.btrcsgb
+																				&& 'number' === (typeof addData.rowData.btrcost)){
+   				 addData.rowData['btramot'] = addData.rowData.btrcost * (addData.rowData.refcqty || 1);
+   				 addData.rowData['refcqty'] = addData.rowData.refcqty;
+   				}
+    		}
+    	}
+	});
+	bmb06HeadGridObject.setHeight(400);
+	bmb06HeadGridObject.open();
+
+	const bmb06ItemGridColModel = [
+		{ title: '[[#{bm.btgtit.compkey}]]', dataType: 'string', dataIndx: 'compkey', editable:false, hidden:true},
+		{ title: '[[#{grid.whnamlc}]]', dataType: 'string', dataIndx: 'warekey', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		},//창고
+		{ title: '[[#{bm.btgtit.bthdcky}]]', dataType: 'string', dataIndx: 'bthdcky', editable:false},//정산문서번호
+		{ title: '[[#{bm.btgtit.bthdcit}]]', dataType: 'integer', dataIndx: 'bthdcit', editable:false},//정산문서 아이템
+		{ title: '[[#{bm.btgtit.btitype}]]', dataType: 'string', dataIndx: 'btitype', editable:false}, //데이터그룹 방식
+		{ title: '[[#{bm.btgtit.bftcode}]]', dataType: 'string', dataIndx: 'bftcode', editable:false}, //고정운송요율코드
+		{ title: '[[#{bm.btgtit.bvtcode}]]', dataType: 'string', dataIndx: 'bvtcode', editable:false}, //변동운송요율코드
+		{ title: '[[#{bm.btgtit.doccate}]]', dataType: 'string', dataIndx: 'doccate', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		}, //문서유형
+		{ title: '[[#{bm.btgtit.doctype}]]', dataType: 'string', dataIndx: 'doctype', editable:false,
+			editor: { type: 'select', options: [] },
+			render: function (ui) {
+        		let option = ui.column.editor.options.find(function (obj) {
+                    return (obj[ui.cellData] != null);
+                });
+            	return option ? option[ui.cellData] : "-";
+            }
+		}, //문서타입
+		{ title: "[[#{bm.bmb06.mdestky}]]", dataType: "string", dataIndx: "mdestky", hidden: false, editable:false,
+			 editor: { type: "select", options: [] },
+			 render: gridRenderAndValue
+		 }, //도착지
+		{ title: "[[#{grid.vhcsnam}]]", dataType: "string", dataIndx: "vehicky", hidden: false, editable:false,
+			 editor: { type: 'select', options: [] },
+			 render: gridRenderAndValue
+		}, //차량번호
+		{ title: '[[#{bm.btgtit.ptnrkey}]]', dataType: 'string', dataIndx: 'ptnrkey', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		}, //대금구분업체
+		{ title: '[[#{bm.btgtit.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable:false}, //영업일자
+// 		{ title: '[[#{grid.skuCode}]]', dataType: 'string', dataIndx: 'skumkey', editable:false}, //sku
+// 		{ title: '[[#{grid.skunm}]]', dataType: 'string', dataIndx: 'skudesc', editable:false}, //sku명
+		{ title: '[[#{bm.btgtit.btrpmgb}]]', dataType: 'string', dataIndx: 'btrpmgb', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		}, //대금구분
+		{ title: '[[#{bm.btgtit.btrcsgb}]]', dataType: 'string', dataIndx: 'btrcsgb', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		}, //계정
+		{ title: '[[#{bm.btgtit.btrtkgb}]]', dataType: 'string', dataIndx: 'btrtkgb', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		}, //sub 계정
+		{ title: '[[#{bm.btgtit.btrunit}]]', dataType: 'string', dataIndx: 'btrunit', editable:false,
+			editor: { type: 'select', options: [] },
+			render: gridRenderAndValue
+		}, //단위
+		{ title: '[[#{bm.btgtit.btrcost}]]', dataType: 'integer', dataIndx: 'btrcost', editable:false,
+			summary: { type: 'sum' }, format: '#,###'
+		},//단가(원)
+		{ title: '[[#{bm.btgtit.btrremk}]]', dataType: 'string', dataIndx: 'btrremk', editable:false  }, //비고
+		{ title: '[[#{bm.btgtit.suomkey}]]', dataType: 'string', dataIndx: 'suomkey', editable:false  }, //문서실적단위
+		{ title: '[[#{bm.btgtit.btramot}]]', dataType: 'integer', dataIndx: 'btramot', editable:false,
+			summary: { type: 'sum' }, format: '#,###'
+		}, //금액
+		{ title: '[[#{bm.btgtit.vhplnky}]]', dataType: 'string', dataIndx: 'vhplnky', editable: false}, //운송계획
+		{ title: '[[#{bm.btgtit.vhplnit}]]', dataType: 'integer', dataIndx: 'vhplnit', editable: false, format: '#,###'}, //운송계획 아이템
+		{ title: '[[#{bm.btgtit.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false},
+		{ title: '[[#{bm.btgtit.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false},
+		{ title: '[[#{bm.btgtit.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+	];
+
+	bmb06ItemGridObject = new GridUtil(bmb06ItemGridColModel, '[[${gprogrid}]]', pageId+'ItemPqgrid');
+	bmb06ItemGridObject.setHeight(230);
+	bmb06ItemGridObject.open();
+
+	//============================================================
+	// 검색 버튼 이벤트
+	//============================================================
+	async function searchbmb06HeadList(){
+		//검색 영역 필수값 (창고,정산년월To)
+		if(!$('#'+pageId+'Bthyymm').val()){
+			alert('[[#{ms.choose.bthyymm}]]');	//정산년월을 선택해주세요.
+			return false;
+		}
+
+		bmb06HeadGridObject.getGrid().showLoading();
+
+		if(bmb06HeadGridObject.tabModel.tabs.length > 0){
+			bmb06HeadGridObject.getGrid().Tab().activeTab()._inst.showLoading();
+		}
+		bmb06ItemGridObject.getGrid().showLoading();
+
+		bmb06Warekey = $('#'+pageId+'Warekey').val();
+		const param = {
+							warekey : bmb06Warekey,
+							bthyymm : $('#'+pageId+'Bthyymm').val()
+						}
+
+		await bmb06Init();
+
+		const rData = await fetchUtil('GET', '/bm/billing/'+ pageId + '/grid-head', param);
+
+		try{
+			if(rData.status===200){
+				const items = await rData.json();
+				const headGridTab = bmb06HeadGridObject.getGrid().Tab();
+				const tabModel = bmb06HeadGridObject.getGrid().option('tabModel');
+				const tabs = headGridTab.tabs();
+				resetTabContainer(bmb06HeadGridObject.getGrid());
+
+				if(items.length === 0){
+					//탭에 대한 showLoading
+					bmb06HeadGridObject.getGrid().Tab().activeTab()._inst.hideLoading();
+					bmb06ItemGridObject.getGrid().hideLoading();
+				} else{
+					const startIdxForInsert = tabModel.tabs.length-1;
+					const mergeCols = ['mdestky', 'vehicky']; //머지 할 컬럼
+					const groupBy = ['ptnrkey', 'btrpmgb']; //탭 이름 key
+					const groupByName = ['ptnamlc', 'btrpmnm']; //탭 이름 value
+					const summaryCols = ['btrcost', 'refcqty', 'btramot']; //summary 할 컬럼 refcqty, btrcost
+					tabModel.tabs.push(... createTabModel(items, bmb06HeadGridColModel, mergeCols, groupBy, groupByName, summaryCols, isSkipSingleSummary=false)); // spread operator(배열 각 요소를 빼서 합침)
+
+					let tabModelLength = tabModel.tabs.length;
+
+					for(let idx=startIdxForInsert; idx<tabModelLength; idx++){
+						headGridTab.create(idx);
+					}
+					headGridTab.refresh();
+					headGridTab.activate(startIdxForInsert+1); // 추가된 tab 중 첫번째 활성화
+
+					tabModelLength = tabModel.tabs.length; // 루프를 위해서 값 재할당
+
+					for(let tmIdx=0; tmIdx<tabModelLength; tmIdx++){
+						if(!tabs[tmIdx].hasOwnProperty('gridOptions') 	|| (tabs[tmIdx].hasOwnProperty('gridOptions') && !tabs[tmIdx].gridOptions)
+																						|| (tabs[tmIdx].gridOptions.hasOwnProperty('dataModel') && !tabs[tmIdx].gridOptions.dataModel)){
+							headGridTab.remove(tmIdx);  // gridOption값 이 없거나 dataModel이 없으면 default tab으로 간주하여 삭제함
+							tmIdx = 0;
+							tabModelLength = tabModel.tabs.length; // remove 했다면 배열 크기가 바뀌어 꼬이기 때문에 다시 초기 값으로 변경 후 재루프함
+						}
+					}
+					//검증완료한 경우 검증처리, 기타비용추가 버튼 비활성화
+					if(items[0].tcvrfyn !== 'N'){
+						document.querySelector('#bmb06Verify').disabled = true;
+						document.querySelector('#bmb06ModalOpen').disabled = true;
+					} else{
+						document.querySelector('#bmb06Verify').disabled = false;
+						document.querySelector('#bmb06ModalOpen').disabled = false;
+					}
+				}
+			}
+		}catch(err){
+			console.log(err);
+		}finally{
+			//탭에 대한 hideLoading
+			bmb06HeadGridObject.getGrid().Tab().activeTab()._inst.hideLoading();
+			bmb06ItemGridObject.getGrid().option( 'dataModel', { data: [] } );
+			bmb06ItemGridObject.getGrid().refreshDataAndView();
+			bmb06ItemGridObject.getGrid().hideLoading();
+		}
+	}
+
+	//============================================================
+	// 아이템 그리드 검색
+	//============================================================
+	async function searchbmb06ItemList(params){
+		if(!params){
+			return;
+		}
+		bmb06ItemGridObject.getGrid().showLoading();
+		const rData = await fetchUtil('GET', '/bm/billing/'+ pageId + '/grid-item', params);
+
+		try{
+			if(rData.status===200){
+				const itemGrid = bmb06ItemGridObject.getGrid();
+				const items = await rData.json();
+				bmb06ItemGridObject.getGrid().option( 'dataModel', { data : items });
+				bmb06ItemGridObject.getGrid().refreshDataAndView();
+			}
+		}catch(err){
+			console.log(err);
+		}finally{
+			bmb06ItemGridObject.getGrid().hideLoading();
+		}
+	}
+
+	async function verifyingLogisCost(){
+		const headGrid = bmb06HeadGridObject.getGrid();
+		const tabModel = headGrid.option('tabModel');
+		const hgTabs = headGrid.Tab().tabs();
+		//활성화된 탭
+		const hgActiveTab = headGrid.Tab().activeTab();
+		//활성화된 탭의 데이터
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		if(hgTabs.length === 0 || !dataTarget || dataTarget?.length === 0){
+			alert('[[#{ms.noDataForVerifying}]]');
+			return;
+		}
+
+		if(confirm('[[#{ms.confirm.verifying}]]')){
+			//기타비용을 담을 배열
+			const etcList = new Array;
+			const updateBtrremkList = new Array;
+
+			try{
+				for(const hgTab of hgTabs){
+		  			hgTab._inst.iUCData.adata.forEach(data => {
+		  				if(data.hasOwnProperty('rowData')){
+		  					etcList.push(data['rowData']);
+		  				}
+		  			});
+		  			hgTab._inst.iUCData.options.dataModel.data.forEach(e=> {
+		  				if(e.hasOwnProperty('btrremk') && e.hasOwnProperty('bthdcit')){
+		  					updateBtrremkList.push(e);
+		  				}
+		  			});
+		  		}
+				//검증할 데이터
+		 		const data = {
+		 			compkey : '[[${userattr.compkey}]]',
+		 			warekey : dataTarget[0].warekey,
+					bthdcky : dataTarget[0].bthdcky,
+		 			etcList : etcList,
+		 			updateBtrremkList: updateBtrremkList
+		 		}
+				
+		 		//탭에 대한 showLoading
+		 		tabModel.tabs.length>0 ? hgActiveTab._inst.showLoading() : headGrid.showLoading();
+
+		 		const url = '/bm/billing/' + pageId + '/verify';
+				const verifyingLogisCostResponse = await fetchUtil('POST', url, data);
+				if(verifyingLogisCostResponse.status === 200){
+					//alert('[[#{ms.verifyingComplete}]]');
+					resetTabContainer(bmb06HeadGridObject.getGrid());
+					makeEmptyGrid(bmb06ItemGridObject);
+				}
+			}catch(err){
+				console.log(err);
+			}finally{
+				//탭에 대한 hideLoading
+				tabModel.tabs.length>0 ? hgActiveTab._inst.hideLoading() : headGrid.hideLoading();
+			}
+		}
+
+	}
+
+	async function cancelLogisCostDeadLine(){
+		const headGrid = bmb06HeadGridObject.getGrid();
+		const tabModel = headGrid.option('tabModel');
+		const hgTabs = headGrid.Tab().tabs();
+		//활성화된 탭
+		const hgActiveTab = headGrid.Tab().activeTab();
+		//활성화된 탭의 데이터
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		if(hgTabs.length === 0 || !dataTarget || dataTarget.length === 0){
+			alert('[[#{ms.noDataForCancelDeadline}]]');
+			return;
+		}
+
+		if(confirm('[[#{ms.confirm.cancelDeadLine}]]')){
+			const data = {
+		 			compkey : '[[${userattr.compkey}]]',
+		 			warekey : dataTarget[0].warekey,
+		 			bthdcky : dataTarget[0].bthdcky
+		 		}
+
+			//탭에 대한 showLoading
+			tabModel.tabs.length>0 ? hgActiveTab._inst.showLoading() : headGrid.showLoading();
+
+			try{
+				const url = '/bm/billing/' + pageId + '/cancel-deadline';
+				const cancelLogisCostDeadLineResponse = await fetchUtil('POST', url, data);
+				if(cancelLogisCostDeadLineResponse.status === 200){
+					//alert('[[#{ms.cancelComplete}]]');
+					resetTabContainer(bmb06HeadGridObject.getGrid());
+					makeEmptyGrid(bmb06ItemGridObject);
+				}
+			}catch(err){
+				console.log(err);
+			}finally{
+				//탭에 대한 hideLoading
+				tabModel.tabs.length>0 ? hgActiveTab._inst.hideLoading() : headGrid.hideLoading();
+			}
+		}
+
+	}
+
+	//============================================================
+	// Init 이벤트
+	//============================================================
+	async function bmb06Init(){
+		let param = {
+			warekey : $('#'+pageId+'Warekey').val()
+		}
+		let iData = await fetchUtil('GET', '/bm/billing/' + pageId + '/init', param);
+		let jData = await iData.json();
+		initData = jData.item;
+
+		let gridHead = pq.grid('#bmb06HeadPqgrid');
+		let gridItem = pq.grid('#bmb06ItemPqgrid');
+
+		comboCreateData('bmb06HeadPqgrid', 'warekey', initData.warekeyList);
+		comboCreateData('bmb06HeadPqgrid', 'mdestky', initData.mdestkyList);
+		comboCreateData('bmb06HeadPqgrid', 'btrcsnm', initData.btrcsgbList);
+		initData.btrunitList.push({combovl:'-', combonm:'-'});
+		initData.doccateList.push({combovl:'-', combonm:'-'});
+		initData.doctypeList.push({combovl:'-', combonm:'-'});
+		comboCreateData('bmb06HeadPqgrid', 'doctype', initData.doctypeList);
+
+
+		comboCreateData('bmb06ItemPqgrid', 'warekey', initData.warekeyList);
+		comboCreateData('bmb06ItemPqgrid', 'mdestky', initData.mdestkyList);
+ 		comboCreateData('bmb06ItemPqgrid', 'ptnrkey', initData.ptnrkeyList);
+		comboCreateData('bmb06ItemPqgrid', 'btrpmgb', initData.btrpmgbList);
+ 		comboCreateData('bmb06ItemPqgrid', 'btrcsgb', initData.btrcsgbList);
+ 		comboCreateData('bmb06ItemPqgrid', 'btrunit', initData.btrunitList);
+ 		comboCreateData('bmb06ItemPqgrid', 'btrtkgb', initData.btrtkgbList);
+		comboCreateData('bmb06ItemPqgrid', 'doccate', initData.doccateList);
+		comboCreateData('bmb06ItemPqgrid', 'doctype', initData.doctypeList);
+
+		if(initData.tmList){
+			let column = gridHead.getColumn({ dataIndx: "vehicky" });
+        	let options = initData.tmList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.vehicky] = obj.vhcsnam;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+
+		if(initData.tmList){
+			let column = gridItem.getColumn({ dataIndx: "vehicky" });
+        	let options = initData.tmList.map(function(obj){
+            	let rObj = {};
+            	rObj[obj.vehicky] = obj.vhcsnam;
+            	return rObj;
+    		});
+        	column.editor.options = options;
+		}
+
+		if(initData.tmList){
+			//차량코드
+			$("#bmb06Vehicky option").not("[value='']").remove();
+			$.each(initData.tmList, function(key, value) {
+				$('#bmb06Vehicky').append($("<option></option>").attr("value",value.vehicky).text(value.vhcsnam));
+			});
+		}
+	}
+
+	//검색영역 창고값
+	async function bmb06WarekeySelectBox(){
+		let rData = await fetchUtil('GET', '/md/common/organization/warehouse-user');
+		let warekeyList = await rData.json();
+
+		$("#bmb06Warekey option").not("[value='']").remove();
+		$.each(warekeyList, function(key, value) {
+			$('#bmb06Warekey').append($("<option></option>").attr("value",value.combovl).text(value.combonm));
+		});
+	}
+
+	//모달 입력값 초기화
+	function closeAndResetModal(){
+		$('#' + pageId +'Modal').modal('hide');
+		const $inputs = $('#' + pageId +'Modal' + ' .modal-body .setting-grid').find('input');
+		for(let inputDom of $inputs){
+			inputDom.value = '';
+		}
+		$('#bmb06Vehicky')[0].selectedIndex = 0;
+		$('#bmb06Vehicky').pqSelect('refreshData');
+	}
+
+	//============================================================
+	// modal close 버튼들 클릭 이벤트
+	//============================================================
+	$('#modalHeadClose, #' + pageId + 'CloseModal').click(function(){
+		closeAndResetModal();
+	});
+
+	//============================================================
+	// modal save 버튼 클릭 이벤트
+	//============================================================
+	$('#' + pageId + 'SaveModal').click(async function(){
+		if(!bmb06Warekey){
+			alert('[[#{ms.noSearchError}]]');
+			return;
+		}
+		if(!$('#' + pageId + 'OtherCost').val() || !$('#' + pageId + 'Vehicky').val()){
+			alert('[[#{ms.requiredValue}]]');
+			return;
+		}
+		
+		const headGrid = bmb06HeadGridObject.getGrid();
+		const hgActiveTab = headGrid.Tab().activeTab();
+		const dataTarget = hgActiveTab.gridOptions.dataModel?.data;
+
+		let btrCost = 0;
+		let refcqty = 0;
+		let btrunit;
+
+		btrCost = $('#' + pageId + 'OtherCost').val().replace(',', '');
+
+		//그리드의 데이터가 없을경우
+		if(hgActiveTab._inst.pdata.length === 0){
+			alert('[[#{bm.bmb06.noLogisticCostData}]]');
+			return;
+		}
+		
+		const rowData = {
+				compkey : '[[${userattr.compkey}]]',
+				warekey : dataTarget[0].warekey,
+				bthdcky : dataTarget[0].bthdcky,
+				ptnrkey : dataTarget[0].ptnrkey,
+				btrpmgb : dataTarget[0].btrpmgb,
+				btrcsgb : $('#' + pageId + 'Btrcsgb').val(),
+				btrcsnm : $('#' + pageId + 'Btrcsgb').val(),
+				btrcost : btrCost || 0,
+				doctype : '-',
+				btrunit : $('#' + pageId + 'Cdcate2').val(),
+				btrremk : $('#' + pageId + 'Btrtknm').val(),
+				vehicky : $('#' + pageId + 'Vehicky').val(),
+				useract : $('#' + pageId + 'Ownernm').val(),
+				mdestky : $('#' + pageId + 'Destkey').val(),
+				tcvrfyn : 'N',
+				refcqty : $('#' + pageId + 'Refcqty').val().replace(',', '') || 1 //운행횟수를 입력하지 않을 경우 1로 들어감
+		}
+ 		hgActiveTab._inst.addRow({ rowData: rowData, checkEditable: false });
+		closeAndResetModal();
+	});
+});
+</script>
+</div>
+</html>

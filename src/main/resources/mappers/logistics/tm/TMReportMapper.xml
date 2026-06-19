@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.tm.mapper.TMReportMapper">
+	
+	<!-- 상차지시서(PLT별) -->
+	<select id="getLoadingOrderPLT" resultType="com.logistics.tm.domain.TMReportDTO">
+		/* getLoadingOrderPLT */
+		select ROW_NUMBER() OVER(partition by TI.SAATC06 order by TI.COMPKEY, TI.VHPLNKY, TI.SAATC06, TI.SAATC10, TH.POSTDAT, TI.WAREKEY) as ROWNUM
+			 , concat('PLT#', LPAD(DENSE_RANK() OVER(ORDER BY TI.COMPKEY, TI.VHPLNKY, TI.SAATC06), 2, '0')) AS PLTNUM
+			 , TI.COMPKEY
+			 , SUBT.ITEMCNT
+			 , SUBT2.PLTCNT
+			 , TI.VHPLNKY
+			 , Fn_com_todate(TH.POSTDAT) as POSTDAT
+			 , date_format(NOW(), '%Y-%m-%d %H:%i:%s') as PRINTDAY
+			 , MW.WHNAMLC as WAREKEY
+			 , TV.VHCFNAM
+			 , TI.SAATC06
+			 , TI.SAATC08
+			 , TI.SAATC07
+			 , TI.SAATC10
+			 , TI.SAATC01
+			 , TI.SAATC05
+			 , TI.SAATC03
+			 , TI.TRITQTY
+			 , TI.SUOMKEY
+			 , TI.SKUMKEY
+			 , MS.SKUDESC
+		  from TPLNIT TI
+		inner join (
+			select count(T.SAATC06) as ITEMCNT, T.SAATC06, T.COMPKEY, T.VHPLNKY from TPLNIT T where T.COMPKEY = #{compkey} and T.VHPLNKY = #{vhplnky} group by T.SAATC06
+			) SUBT
+			on SUBT.SAATC06 = TI.SAATC06
+		   and SUBT.COMPKEY = TI.COMPKEY
+		   and SUBT.VHPLNKY = TI.VHPLNKY
+		inner join (
+			select count(DISTINCT T.SAATC06) as PLTCNT, T.COMPKEY, T.VHPLNKY from TPLNIT T where T.COMPKEY = #{compkey} and T.VHPLNKY = #{vhplnky} group by T.COMPKEY, T.VHPLNKY
+			) SUBT2
+			on SUBT2.COMPKEY = TI.COMPKEY
+		   and SUBT2.VHPLNKY = TI.VHPLNKY
+		inner join TPLNHD TH
+			on TH.COMPKEY = TI.COMPKEY
+		   and TH.VHPLNKY = TI.VHPLNKY
+		left outer join MWARMA MW
+			on MW.COMPKEY = TI.COMPKEY
+		   and MW.WAREKEY = TI.WAREKEY
+		left outer join TVHCMA TV
+			on TV.COMPKEY = TI.COMPKEY
+		   and TV.WAREKEY = TI.WAREKEY
+		   and TV.VEHICKY = TH.VEHICKY
+		left outer join MSKUWC MS
+			on MS.COMPKEY = TI.COMPKEY
+		   and MS.WAREKEY = TI.WAREKEY
+		   and MS.OWNERKY = TI.OWNERKY
+		   and MS.SKUMKEY = TI.SKUMKEY
+		where TI.COMPKEY = #{compkey}
+		  and TI.VHPLNKY = #{vhplnky}
+		order by TI.COMPKEY, TI.VHPLNKY, TI.SAATC06, TI.SAATC10, TH.POSTDAT, TI.WAREKEY
+	</select>
+	
+	<!-- 상차지시서(ITEM별) -->
+	<select id="getLoadingOrderITEM" resultType="com.logistics.tm.domain.TMReportDTO">
+		/* getLoadingOrderITEM */
+		select ROW_NUMBER() OVER(order by TI.COMPKEY, TI.VHPLNKY, TI.SAATC10, TI.SAATC06, TI.SKUMKEY) as ROWNUM
+			 , TI.COMPKEY
+			 , TI.VHPLNKY
+			 , date_format(NOW(), '%Y-%m-%d %H:%i:%s') as PRINTDAY
+			 , Fn_com_todate(TH.POSTDAT) as POSTDAT
+			 , TI.SAATC10
+			 , TI.SAATC01
+			 , TI.SAATC05
+			 , TI.SAATC03
+			 , TI.SKUMKEY
+			 , MS.SKUDESC
+			 , TI.TRITQTY
+			 , TI.SUOMKEY
+			 , TI.SAATC06
+			 , MW.WHNAMLC as WAREKEY
+			 , TV.VHCFNAM
+			 , SUBT2.PLTCNT
+			 , SUBT.ITEMCNT
+		  from TPLNIT TI
+		left outer join MSKUWC MS
+			on MS.COMPKEY = TI.COMPKEY
+		   and MS.WAREKEY = TI.WAREKEY
+		   and MS.OWNERKY = TI.OWNERKY
+		   and MS.SKUMKEY = TI.SKUMKEY
+		inner join (
+				select count(T.VHPLNIT) as ITEMCNT, T.COMPKEY, T.VHPLNKY from TPLNIT T WHERE T.COMPKEY = #{compkey} and T.VHPLNKY = #{vhplnky}
+			) SUBT
+			on SUBT.COMPKEY = TI.COMPKEY
+		   and SUBT.VHPLNKY = TI.VHPLNKY
+		inner join (
+				select count(DISTINCT T.SAATC06) as PLTCNT, T.COMPKEY, T.VHPLNKY from TPLNIT T where T.COMPKEY = #{compkey} and T.VHPLNKY = #{vhplnky} group by T.COMPKEY, T.VHPLNKY
+			) SUBT2
+			on SUBT2.COMPKEY = TI.COMPKEY
+		   and SUBT2.VHPLNKY = TI.VHPLNKY
+		inner join TPLNHD TH
+			on TH.COMPKEY = TI.COMPKEY
+		   and TH.VHPLNKY = TI.VHPLNKY
+		left outer join MWARMA MW
+			on MW.COMPKEY = TI.COMPKEY
+		   and MW.WAREKEY = TI.WAREKEY
+		left outer join TVHCMA TV
+			on TV.COMPKEY = TI.COMPKEY
+		   and TV.WAREKEY = TI.WAREKEY
+		   and TV.VEHICKY = TH.VEHICKY
+		where TI.COMPKEY = #{compkey} 
+		  and TI.VHPLNKY = #{vhplnky}
+		order by TI.COMPKEY, TI.VHPLNKY, TI.SAATC10, TI.SAATC06, TI.SKUMKEY
+	</select>
+	
+	<!-- 프린트 로그 카운트 -->
+	<select id="getTmPrintLogCount" resultType="integer">
+		/* getTmPrintLogCount */
+		select count(PRINTSQ) as PRINTCOUNT
+		  from SPRTHI
+		where COMPKEY = #{compkey}
+		  and VHPLNKY = #{vhplnky}
+	</select> 
+	
+	<!-- 프린트 로그 프로시저 -->
+	<select id="tmAddPrintList" statementType="CALLABLE" parameterType="com.logistics.tm.domain.TMReportDTO">
+		{
+			/* tmAddPrintList */
+			CALL SP_SY_SPRTHI (#{compkey}, #{warekey}, #{doccate},
+			#{doctype},
+			#{progrid}, #{dochkey}, #{docitem}, #{loguser},
+			#{omsgkey, mode=OUT, jdbcType=VARCHAR}, #{oresult, mode=OUT, jdbcType=VARCHAR})	
+		}
+	</select>
+</mapper>

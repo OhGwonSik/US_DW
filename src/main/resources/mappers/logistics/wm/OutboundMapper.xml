@@ -1,0 +1,1900 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.wm.mapper.OutboundMapper">
+	<!-- *********************************************** -->
+    <!--  WMO10 출고지시등록 -->
+    <!-- *********************************************** -->
+    <select id="selectWshpitHeadList" resultType="com.logistics.wm.domain.ShipAllocDTO">
+    	select
+    		  CONCAT(SO.COMPKEY , SO.WAREKEY, SO.COOUTKY) as ROWKEY
+			, SO.COMPKEY , SO.WAREKEY as WAREKEY , SO.OWNERKY
+			, (select OWNAMLC from MOWRMA where COMPKEY = SO.COMPKEY and OWNERKY = SO.OWNERKY ) as OWNAMLC 
+			, SO.DOCCATE as DOCCATE , SO.DOCTYPE as DOCTYPE , SO.DOCTYNM as DOCTYNM
+			, SO.COOUTKY as COOUTKY , SO.SHPDCKY as SHPDCKY , SO.DCTCTYP as DCTCTYP
+			, COUNT(SO.COOUTIT) as REFSCNT
+		 	, MIN(SO.STOCKYN) as STOCKYN
+			, SUM(SO.SHCUQTY) as SHCUQTY , SUM(SO.RGITQTY) as RGITQTY , SUM(SO.SHALQTY) as SHALQTY
+			, date_format(SO.SALRQDT, '%Y-%m-%d') as SALRQDT
+			, date_format(SO.SALRQTM, '%H:%i:%s') as SALRQTM
+			, SO.UPDTCHK
+		from 
+		(
+			select
+			 	SH.COMPKEY , SH.DOCCATE , SH.DOCTYPE ,
+				( select DOCTYNM 
+					from MDOCMA 
+				   where COMPKEY = SH.COMPKEY 
+					 and DOCCATE = SH.DOCCATE  
+					 and DOCTYPE = SH.DOCTYPE 
+					 and WAREKEY = SH.WAREKEY	
+				) as DOCTYNM, 		
+			 	SH.WAREKEY as WAREKEY , SH.OWNERKY as OWNERKY , SH.CUSTKEY as CUSTKEY ,
+				SH.COOUTKY as COOUTKY , SH.COOUTIT as COOUTIT , SH.SHPDCKY as SHPDCKY ,
+				SH.DCTCTYP as DCTCTYP ,
+				SH.SKUMKEY as SKUMKEY , 
+				<![CDATA[ (case when IFNULL(ST.TOTQTY,0) - SH.RGITQTY - SH.SHALQTY < 0 then 'N' else 'Y' end) as STOCKYN, ]]>
+				SH.SHCUQTY as SHCUQTY , SH.RGITQTY as RGITQTY , SH.SHALQTY as SHALQTY,	
+				SH.SALRQDT as SALRQDT , SH.SALRQTM as SALRQTM , SH.UPDTCHK
+			from WSHPIT SH
+		   FORCE INDEX(IX_WSHPIT02) <!-- 2923.11.09 추가 -->
+		   inner join MSKUWC MS 
+			  on MS.COMPKEY = SH.COMPKEY
+			 and MS.WAREKEY = SH.WAREKEY
+			 and MS.OWNERKY = SH.OWNERKY
+			 and MS.SKUMKEY = SH.SKUMKEY
+		    left join (
+				select
+					COMPKEY , OWNERKY , WAREKEY ,
+					SKUMKEY , SKUDESC ,
+					LOTAT17 , LOTAT18, LOTAT19, LOTAT20,
+					(sum(STOTQTY)- sum(SBLOQTY)) as TOTQTY
+				from WSTKKY
+			   FORCE INDEX(IX_WSTKKY02) <!-- 2923.11.09 추가 -->
+			   where COMPKEY = #{userData.compkey}
+			     and WAREKEY = #{warekey}
+				 and AREAKEY = 'STG'
+				 and SALLQTY = 0
+				 and SINBQTY = 0
+				 and SOUBQTY = 0
+			   group by COMPKEY , WAREKEY , OWNERKY , SKUMKEY ,
+						LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+			) ST on SH.COMPKEY = ST.COMPKEY
+				and SH.WAREKEY = ST.WAREKEY
+				and SH.OWNERKY = ST.OWNERKY
+				and SH.SKUMKEY = ST.SKUMKEY
+				and (case when SH.DCTCTYP = 'TC' then SH.COOUTKY else ' ' end) = ST.LOTAT19
+				and (case when SH.DCTCTYP = 'TC' then SH.COOUTIT else ' ' end) = ST.LOTAT20
+		    <where> SH.COMPKEY = #{userData.compkey}
+				and SH.WAREKEY = #{warekey}
+				and SH.DOCCATE = '700'
+				and SH.DOCTYPE not in('780' , '781') 
+			   <if test='ownerky != null and ownerky != ""'>
+				and SH.OWNERKY = #{ownerky}
+			   </if>
+				and SH.COOUTKY in 
+			  (
+				select distinct COOUTKY 
+				  from WSHPIT w 
+				 FORCE INDEX(IX_WSHPIT01) <!-- 2923.11.09 추가 -->
+				<where> w.COMPKEY = #{userData.compkey}
+				    and w.WAREKEY = #{warekey}
+				  <if test='ownerky != null and ownerky != ""'>
+				    and w.OWNERKY = #{ownerky}
+				  </if>
+				  <if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+				   <![CDATA[
+				    and w.SHPPDAY between #{shppdayfrom} and #{shppdayto} ]]> 
+				  </if>
+				  <if test='shpdcstList != null and shpdcstList.length > 0'>
+				    and w.SHPDCST in
+				    <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+				      	#{shpdcstItem}
+				    </foreach>
+				    and w.SHPITST in
+				    <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+				      	#{shpdcstItem}
+		     		 <if test="shpdcstItem.equals('P_ALOC')">
+			  			, 'F_ALOC'
+			  		</if>
+				    </foreach>
+				  </if>
+				  <if test='cooutky != null and cooutky != ""'>
+				    and w.COOUTKY = #{cooutky}
+				  </if>
+				  <if test='shpdcky != null and shpdcky != ""'>
+				    and w.SHPDCKY = #{shpdcky}
+				  </if>
+				</where>
+			  )	
+		  	  <if test='shpdcstList != null and shpdcstList.length > 0'>
+			     and SH.SHPDCST in
+			   <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+			     	#{shpdcstItem}
+			   </foreach>
+			     and SH.SHPITST in
+			   <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+			  		#{shpdcstItem}
+			  	<if test="shpdcstItem.equals('P_ALOC')">
+		  			, 'F_ALOC'
+		  		</if>
+			   </foreach>
+		  	 </if>
+		  	 <if test='skudesc != null and skudesc != ""'>
+				and SH.SKUDESC LIKE CONCAT('%' , #{skudesc} , '%') 
+			 </if>
+		  	</where> 
+		 ) SO
+		group by SO.COOUTKY 
+		order by SO.COOUTKY
+    </select>
+    
+    <select id="selectWshpitItemList" resultType="com.logistics.wm.domain.ShipAllocDTO">
+    	select
+	    	  CONCAT(SH.COMPKEY , SH.COOUTKY, SH.COOUTIT) as ROWKEY
+			, SH.COMPKEY , SH.DOCCATE , SH.DOCTYPE
+			, SH.SHPDCKY , SH.SHPDCIT 
+			, SH.SHPDCST	
+			, (select COMCDTX from MCODEM MC where MC.COMPKEY = SH.COMPKEY and MC.COMCDVL = SH.SHPDCST and MC.COMCDKY = 'SHPDCST') as SHPDCNM
+			, SH.SHPITST
+			, (select COMCDTX from MCODEM MC where MC.COMPKEY = SH.COMPKEY and MC.COMCDVL = SH.SHPDCST and MC.COMCDKY = 'SHPITST') as SHPITNM
+			, (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE and WAREKEY = SH.WAREKEY ) as DOCTYNM		
+			, SH.WAREKEY , SH.OWNERKY
+			, (select OWNAMLC from MOWRMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY ) as OWNAMLC
+			, SH.COOUTKY as COOUTKY , SH.COOUTIT as COOUTIT
+			, SH.DCTCTYP as DCTCTYP 
+			, SH.SKUMKEY as SKUMKEY , CONCAT("(", IFNULL(ST.TOTQTY,0),") ", SH.SKUDESC) as SKUDESC
+			, MS.SUOMKEY as SUOMKEY
+			<![CDATA[ , (case when IFNULL(ST.TOTQTY,0) - SH.RGITQTY - SH.SHALQTY < 0 then 'N' else 'Y' end) as STOCKYN ]]>
+			, IFNULL(ST.TOTQTY,0) as STOCKCT
+			, SH.SHCUQTY as SHCUQTY , SH.RGITQTY as RGITQTY , SH.SHALQTY as SHALQTY
+			, SH.SHPKQTY as SHPKQTY 
+    	    , SH.SHCFQTY as SHCFQTY
+			, fn_com_todate(SH.SALRQDT) as SALRQDT
+			, fn_com_totime(SH.SALRQTM) as SALRQTM
+			, SH.ALLGRKY
+			, fn_com_todate(SH.SHPPDAY) as SHPPDAY		
+			, fn_com_totime(SH.SHPPTIM) as SHPPTIM
+			, fn_com_todate(SH.SHPSDAY) as SHPSDAY
+			, fn_com_totime(SH.SHPSTIM) as SHPSTIM
+			, SH.SPEHTIM					
+			, SH.SPEITIM
+			, ' ' as ALSTRKY
+		 from WSHPIT SH
+		FORCE INDEX(IX_WSHPIT01) 
+	    inner join MSKUWC MS 
+		   	    on MS.COMPKEY = SH.COMPKEY
+			   and MS.WAREKEY = SH.WAREKEY
+			   and MS.OWNERKY = SH.OWNERKY
+			   and MS.SKUMKEY = SH.SKUMKEY
+		left join (
+			select
+				t.COMPKEY,
+				t.WAREKEY,
+				t.OWNERKY,
+				t.SKUMKEY,
+				t.SHPDCKY,
+				t.SHPDCIT,
+				t.ALLGRKY,
+				t.COOUTKY,
+				t.COOUTIT,
+				SUM(t.FORDQTY) AS FORDQTY,
+				SUM(t.TCMPQTY) AS TCMPQTY
+			from WTAKIT t
+		   <where> t.COMPKEY = #{userData.compkey}
+		       and t.WAREKEY = #{warekey}
+		       and t.DOCCATE = '500'
+			   and t.DOCTYPE = '530'
+			   and t.TASKSTS IN ('NEW','TASK','TSCOMP') <!-- , 'SHPOUT' 주석 2023.09.07 박소희 -->
+			 <if test='ownerky != null and ownerky != ""'>
+			   and t.OWNERKY = #{ownerky}
+			 </if>
+			</where>
+			group by t.COMPKEY, t.WAREKEY, t.OWNERKY, t.SKUMKEY, t.SHPDCKY, t.SHPDCIT, t.COOUTKY , t.COOUTIT, t.ALLGRKY
+		) TK ON
+		SH.COMPKEY = TK.COMPKEY
+		and SH.WAREKEY = TK.WAREKEY
+		and SH.OWNERKY = TK.OWNERKY
+		and SH.SKUMKEY = TK.SKUMKEY
+		and SH.SHPDCKY = TK.SHPDCKY
+		and SH.SHPDCIT = TK.SHPDCIT
+		and SH.COOUTKY = TK.COOUTKY
+		and SH.COOUTIT = TK.COOUTIT
+		and SH.ALLGRKY = TK.ALLGRKY
+		left join (
+			select
+				 COMPKEY , OWNERKY , WAREKEY ,
+				 SKUMKEY , SKUDESC ,
+				 LOTAT17 , LOTAT18 , LOTAT19 ,
+				 LOTAT20 , (sum(STOTQTY)- sum(SBLOQTY)) as TOTQTY
+			 from WSTKKY
+			FORCE INDEX(IX_WSTKKY02)
+		  <where> COMPKEY = #{userData.compkey}
+			  and WAREKEY = #{warekey}
+			  and AREAKEY = 'STG'
+			  and SALLQTY = 0
+			  and SINBQTY = 0
+			  and SOUBQTY = 0
+		  </where> 
+			group by COMPKEY , WAREKEY , OWNERKY , SKUMKEY ,
+					 LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+		 ) ST on SH.COMPKEY = ST.COMPKEY
+			 and SH.WAREKEY = ST.WAREKEY
+			 and SH.OWNERKY = ST.OWNERKY
+			 and SH.SKUMKEY = ST.SKUMKEY
+			 and (case when SH.DCTCTYP = 'TC' then SH.COOUTKY else ' ' end) = ST.LOTAT19
+			 and (case when SH.DCTCTYP = 'TC' then SH.COOUTIT else ' ' end) = ST.LOTAT20
+		  <where> SH.COMPKEY = #{userData.compkey}
+			 and SH.WAREKEY = #{warekey}
+			 and SH.DOCCATE = '700'
+			 and SH.DOCTYPE not in ('780' , '781') 
+			<if test='ownerky != null and ownerky != ""'>
+			 and SH.OWNERKY = #{ownerky}
+			</if>
+			<if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+			<![CDATA[
+			 and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto} ]]> 
+			</if>
+			<if test='shpdcstList != null and shpdcstList.length > 0'>
+			 and SH.SHPDCST in
+			  <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+			    #{shpdcstItem}
+			  </foreach>
+			 and SH.SHPITST in
+			  <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+			  	#{shpdcstItem}
+			  	<if test="shpdcstItem.equals('P_ALOC')">
+			  		, 'F_ALOC'
+			  	</if>
+			  </foreach>
+			</if>
+			<if test='shpdcky != null and shpdcky != ""'>
+			 and SH.SHPDCKY = #{shpdcky}
+			</if>
+			<if test='cooutky != null and cooutky != ""'>
+			 and SH.COOUTKY = #{cooutky}
+			</if>
+			<if test='skudesc != null and skudesc != ""'>
+			 and SH.SKUDESC LIKE CONCAT('%' , #{skudesc} , '%') 
+			</if>
+		</where> 
+		order by SH.COOUTKY, SH.COOUTIT
+    </select>
+	
+	<select id="getAllgrky" resultType="string">
+		SELECT FN_WM_ALLGRKY() FROM DUAL
+	</select>
+	
+	<update id="updateWshpit" parameterType="com.logistics.common.dto.RequestDTO">
+    	<foreach collection="updateList" item="item" separator=";">
+    	update WSHPIT
+		   set LMODATE = to_char(now(),'YYYYMMDD')
+			 , LMOTIME = to_char(now(),'hh24miss')
+			 , LMOUSER = #{item.userData.useract}
+			 , RGITQTY = #{item.rgitqty}
+			 , ALLGRKY = #{item.allgrky}
+			 , PICKTYP = #{item.picktyp}
+			 , MOVTEAM = #{item.movteam}
+    	 where COMPKEY = #{item.compkey}
+    	   and OWNERKY = #{item.ownerky}
+    	   and WAREKEY = #{item.warekey}
+    	   and SHPDCKY = #{item.shpdcky}
+    	   and SHPDCIT = #{item.shpdcit}
+    	   and UPDTCHK = #{item.updtchk}
+    	</foreach>
+    </update>
+	
+	<update id="updateWshpitHead" parameterType="com.logistics.wm.domain.ShipAllocDTO">
+    	<foreach collection="updateList" item="item" separator=";">
+    	update WSHPIT
+   		   set LMODATE = to_char(now(),'YYYYMMDD')
+    		 , LMOTIME = to_char(now(),'hh24miss')
+    		 , LMOUSER = #{item.userData.useract}
+    		 , SHPDCST = (
+    						select  
+                              	 case when sum(SHALQTY) > 0 then 
+                                 case when sum(RGITQTY) = sum(SHALQTY) then 'F_ALOC'
+                                 else 'P_ALOC' end 
+                              else 'NEW' end 
+                              from  WSHPIT
+                              where COMPKEY = #{item.compkey} 
+                                and SHPDCKY = #{item.shpdcky}
+                              group by SHPDCKY 
+                        )
+    	where COMPKEY = #{item.compkey}
+    	  and OWNERKY = #{item.ownerky}
+    	  and WAREKEY = #{item.warekey}
+    	  and SHPDCKY = #{item.shpdcky}
+    	  and UPDTCHK = #{item.updtchk}
+    	</foreach>
+    </update>
+	
+	
+	<!-- Procedure :: WMO10 Allocate -->
+    <select id="callSpWmAllocateGrp" statementType="CALLABLE" parameterType="com.logistics.wm.domain.ShipAllocDTO"> 
+		CALL sp_wm_allocate_grp
+		( 
+			  #{compkey}
+			, #{warekey}
+			, #{allgrky}
+			, #{lmouser}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="callSpWmCtrstokkyAllocCancelAtWmo10" statementType="CALLABLE" parameterType="com.logistics.wm.domain.ShipAllocDTO"> 
+		CALL sp_wm_ctrstokky_cancel
+		( 
+			  #{userData.compkey}
+			, #{warekey}
+			, #{doccate}
+			, #{doctype}
+			<choose>
+				<when test="doccate == '500' and doctype == '522'">
+				, #{cooutky}
+				, 0
+				</when>
+				<when test="doccate == '500' and doctype == '523'">
+				, #{cooutky}
+				, #{cooutit}
+				</when>
+				<when test="doccate == '500' and doctype == '524'">
+				, #{allgrky}
+				, '1'
+				</when>
+				<when test="doccate == '500' and doctype == '535'">
+				, #{shpdcky}
+				, #{shpdcit}
+				</when>
+				<when test="doccate == '500' and doctype == '526'">
+				, #{taskoky}
+				, #{taskoit}
+				</when>
+			</choose>
+			, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="getWmo10AllgrkyByPrint" resultType="int">
+		select count(allgrky) 
+		  from WTAKIT 
+		 where COMPKEY = #{compkey}
+		   and WAREKEY = #{warekey}
+		   and ALLGRKY = #{allgrky}
+		   and TASKSTS = 'TASK'
+	</select>
+	
+	<select id="selectWmo11HeadList" resultType="com.logistics.wm.domain.AllocChangeDTO">
+    	select 
+    		   concat(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TS.PICKTYP) as ROWKEY
+			 , SH.COMPKEY , SH.WAREKEY , SH.OWNERKY
+			 , (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE and WAREKEY = SH.WAREKEY) as DOCTYNM
+			 , TS.TASKOKY , TS.TASKOIT , TS.ALLGRKY , TS.PICKTYP
+			 , (select COMCDTX from MCODEM MC where MC.COMPKEY = SH.COMPKEY and MC.COMCDVL = TS.PICKTYP and MC.COMCDKY = 'PICKTYP') as PICKNAM
+			 , SH.SHPDCKY , SH.SHPDCIT 
+			 , SH.COOUTKY , SH.COOUTIT , SH.OERETKY , SH.OERETIT
+			 , SH.SHCUQTY , SH.RGITQTY , SH.SHALQTY , TS.STKOTKY 
+			 , TS.FRAREKY , TS.FRZONKY , TS.FRLOCKY 
+			 , TS.FRARENM , TS.FRZONNM , TS.FRLOCNM
+			 , TS.TOAREKY , TS.TOZONKY , TS.TOLOCKY 
+			 , TS.SKUMKEY , TS.SKUDESC
+			 , TS.FORDQTY , SH.SHPKQTY
+			 , SH.SHCFQTY , SH.SHPSDAY , SH.SHPSTIM 
+			 , fn_com_todate(SH.CREDATE) as CREDATE , fn_com_totime(SH.CRETIME) as CRETIME
+			 , fn_sy_usernam(SH.COMPKEY, SH.LMOUSER) as CRENAME
+		 from WSHPIT SH
+		FORCE INDEX(IX_WSHPIT01)
+	    inner join 
+		(
+		   select 
+			      COMPKEY , WAREKEY , OWNERKY
+			    , ALLGRKY , PICKTYP 
+			    , COOUTKY , COOUTIT
+			    , TASKOKY , TASKOIT , STKOTKY
+			    , FORDQTY , TCMPQTY , OERETKY , OERETIT
+			    , FRAREKY , FRZONKY , FRLOCKY
+			    , (select AREANAM from MAREMA m where t.COMPKEY = m.COMPKEY and t.WAREKEY = m.WAREKEY and t.FRAREKY = m.AREAKEY) as FRARENM 
+			    , (select ZONENAM from MZONMA m where t.COMPKEY = m.COMPKEY and t.WAREKEY = m.WAREKEY and t.FRAREKY = m.AREAKEY and t.FRZONKY = m.ZONEKEY) as FRZONNM 
+			    , (select LOCANAM from MLOCMA m where t.COMPKEY = m.COMPKEY and t.WAREKEY = m.WAREKEY and t.FRAREKY = m.AREAKEY and t.FRZONKY = m.ZONEKEY and t.FRLOCKY = m.LOCAKEY) as FRLOCNM
+			    , TOAREKY , TOZONKY , TOLOCKY  
+			    , SKUMKEY , SKUDESC 
+		    from WTAKIT t
+		   where t.COMPKEY = #{userData.compkey}
+		     and t.WAREKEY = #{warekey}
+		     and t.DOCCATE = '500'
+		     and t.DOCTYPE = '530'
+		     and t.TASKSTS in ('TASK')
+		) TS
+		  on SH.COMPKEY = TS.COMPKEY
+		 and SH.WAREKEY = TS.WAREKEY
+		 and SH.OWNERKY = TS.OWNERKY
+		 and SH.COOUTKY = TS.COOUTKY
+		 and SH.COOUTIT = TS.COOUTIT
+		 and SH.OERETKY = TS.OERETKY
+		 and SH.OERETIT = TS.OERETIT
+	 <where> SH.COMPKEY = #{userData.compkey}
+	 	 and SH.WAREKEY = #{warekey}
+		 and SH.DOCCATE = '700'
+		 and SH.DOCTYPE in ('710', '720', '730', '750','760','790', '780')
+		 and trim(TS.ALLGRKY) != ''
+		 and SH.SHPDCST not in ('SHPOUT') 
+		 and SH.SHPITST not in ('SHPOUT') 
+	   <if test='ownerky != null and ownerky != ""'>
+		 and SH.OWNERKY = #{ownerky}
+	   </if>	
+	   <if test='allgrky != null and allgrky != ""'>
+		 and TS.ALLGRKY = #{allgrky}
+	   </if>
+	   <if test='picktyp != null and picktyp != ""'>
+		 and TS.PICKTYP = #{picktyp}
+	   </if>
+	   <if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+		 <![CDATA[ 
+		 and SH.SHPPDAY between #{shsdatefrom} and #{shsdateto} ]]>
+	   </if>
+	  </where> 
+	   group by TS.COMPKEY , TS.TASKOKY , TS.TASKOIT , TS.COOUTKY , TS.COOUTIT , TS.SKUMKEY , TS.SKUDESC , TS.STKOTKY
+	   order by SH.SHPDCKY , SHPDCIT , TASKOKY , TASKOIT ASC
+    </select>
+    
+    <select id="selectWmo11ItemList" resultType="com.logistics.wm.domain.AllocChangeDTO">
+    	select 
+    		concat(ST.COMPKEY , ST.STOCKKY) as ROWKEY ,
+    		ST.COMPKEY , ST.STOCKKY , #{taskoky} as TASKOKY , #{taskoit} as TASKOIT , 
+    		ST.WAREKEY , ST.TRUNTYP , ST.TRUNPID ,
+    		ST.LOTNMKY , ST.OWNERKY ,
+    		(select OWNAMLC from MOWRMA where COMPKEY = ST.COMPKEY and OWNERKY = ST.OWNERKY ) as OWNAMLC ,
+    		ST.SKUMKEY , ST.SKUDESC ,
+    		ST.AREAKEY , ST.ZONEKEY , ST.LOCAKEY , 
+    		(select AREANAM from MAREMA MA where ST.COMPKEY = MA.COMPKEY and ST.WAREKEY = MA.WAREKEY and ST.AREAKEY = MA.AREAKEY ) as AREANAM ,
+    		(select ZONENAM from MZONMA MZ where ST.COMPKEY = MZ.COMPKEY and ST.WAREKEY = MZ.WAREKEY and ST.AREAKEY = MZ.AREAKEY and ST.ZONEKEY = MZ.ZONEKEY ) as ZONENAM ,
+    		(select LOCANAM from MLOCMA ML where ST.COMPKEY = ML.COMPKEY and ST.WAREKEY = ML.WAREKEY and ST.AREAKEY = ML.AREAKEY and ST.ZONEKEY = ML.ZONEKEY and ST.LOCAKEY = ML.LOCAKEY ) as LOCANAM ,
+    		ST.SUOMKEY , ST.SIRBCOD , ST.PRODDAT ,
+    		ST.SHELIFE , fn_com_todate(ST.EXPIDAT) as EXPIDAT , ST.LOTFRKY ,
+    		ST.LOTAT01 , ST.LOTAT02 , ST.LOTAT03 ,
+    		ST.LOTAT04 , ST.LOTAT05 , ST.LOTAT06 , 
+    		ST.LOTAT07 , ST.LOTAT08 , ST.LOTAT09 ,
+    		ST.LOTAT10 , ST.LOTAT11 , ST.LOTAT12 ,
+    		ST.LOTAT13 , ST.LOTAT14 , ST.LOTAT15 ,
+    		ST.LOTAT16 , ST.LOTAT17 , ST.LOTAT18 ,
+    		ST.LOTAT19 , ST.LOTAT20 , 
+    		ST.RCVDCKY , ST.RCVDCIT ,
+    		ST.STKSTAT ,
+			ST.STOTQTY , 0 as TCHNQTY
+		  from WSTKKY ST
+	   <where> ST.COMPKEY = #{compkey}
+		   and ST.WAREKEY = #{warekey}
+		   and ST.OWNERKY = #{ownerky}
+		   and ST.SKUMKEY = #{skumkey}
+		   and ST.AREAKEY = 'STG'
+		   and ST.STOTQTY > 0
+		   and ST.SINBQTY = 0
+		   and ST.SOUBQTY = 0
+		   and ST.SBLOQTY = 0
+	   </where>
+		 group by ST.STOCKKY  
+    </select>
+	
+	<select id="callSpWmAllocateCancel" statementType="CALLABLE" parameterType="com.logistics.wm.domain.AllocChangeDTO"> 
+		CALL sp_wm_ctrstokky_cancel
+		(    #{userData.compkey}
+		   , #{warekey}
+		   , #{doccate}
+		   , #{doctype}
+		   , #{taskoky}
+		   , #{taskoit}
+		   , #{userData.useract}
+		   , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+		   , #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="getTaskoky" resultType="String">
+    	SELECT FN_WM_TASKOKY() FROM DUAL
+    </select>
+	
+	<insert id="insertWmo11Wtakit" parameterType="com.logistics.wm.domain.AllocChangeDTO">
+		insert into WTAKIT
+		 (
+		 	COMPKEY , STORFKY , 
+		 	TASKOKY , TASKOIT , POSTDAT , 
+			TASKSTS , WAREKEY , DOCCATE , DOCTYPE ,
+			TRUNTYP , TRUNPID , PICKTYP ,
+			LOTNMKY , OWNERKY , 
+			SKUMKEY , SKUDESC ,
+			FRAREKY , FRZONKY , FRLOCKY ,
+			TOAREKY , TOZONKY , TOLOCKY , FORDQTY , FUOMEKY ,
+			TCMPQTY , TUOMEKY , SIRBCOD ,
+			PRODDAT , SHELIFE , EXPIDAT , RCVDCDT , RCVFRDT ,
+			LOTFRKY , 
+			LOTAT01 , LOTAT02 , LOTAT03 , LOTAT04 ,
+			LOTAT05 , LOTAT06 , LOTAT07 , LOTAT08 ,
+			LOTAT09 , LOTAT10 , LOTAT11 , LOTAT12 ,
+			LOTAT13 , LOTAT14 , LOTAT15 , LOTAT16 ,
+			LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 ,
+			RCVDCKY , RCVDCIT , SHPDCKY , SHPDCIT ,
+			ALLGRKY , COOUTKY , COOUTIT , OERETKY , OERETIT , STKSTAT ,
+			CREDATE , CRETIME , CREUSER ,
+			LMODATE , LMOTIME , LMOUSER 
+		 )
+		 values
+		 (
+		 	#{userData.compkey} , #{stockky} , 
+		 	#{newTaskoky} 		, 1 		 , FN_WM_POSDATE(#{userData.compkey} , #{warekey}) ,
+			"NEW"      , #{warekey} , #{doccate} , #{doctype} ,
+			#{truntyp} , #{trunpid} , #{picktyp} ,
+			#{lotnmky} , #{ownerky} , 
+			#{skumkey} , #{skudesc} ,
+			#{areakey} , #{zonekey} , #{locakey} ,
+			#{toareky} , #{tozonky} , #{tolocky} , #{tchnqty} , #{suomkey} ,
+			0 		   , #{suomkey} , #{sirbcod} ,
+			replace(#{proddat}, '-', '') , #{shelife} , replace(#{expidat}, '-', '') , replace(#{rcvdcdt}, '-', '') , replace(#{rcvfrdt}, '-', '') ,
+			#{lotfrky} , 
+			#{lotat01} , #{lotat02} , #{lotat03} , #{lotat04} ,
+			#{lotat05} , #{lotat06} , #{lotat07} , #{lotat08} ,
+			#{lotat09} , #{lotat10} , #{lotat11} , #{lotat12} ,
+			#{lotat13} , #{lotat14} , #{lotat15} , #{lotat16} ,
+			#{lotat17} , #{lotat18} , #{lotat19} , #{lotat20} ,
+			#{rcvdcky} , #{rcvdcit} , #{shpdcky} , #{shpdcit} ,
+			#{allgrky} , #{cooutky} , #{cooutit} , #{oeretky} , #{oeretit} , #{stkstat} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract} ,
+			to_char(now() , 'YYYYMMDD') , to_char(now(), 'hh24miss') , #{userData.useract}   
+		 )
+	</insert>
+	
+	<select id="callSpWmAllocateChange" statementType="CALLABLE" parameterType="com.logistics.wm.domain.AllocChangeDTO"> 
+		CALL sp_wm_allocate_change
+		(    #{compkey}
+		   , #{warekey}
+		   , #{doccate}
+		   , #{doctype}
+		   , #{taskoky}
+		   , #{taskoit}
+		   , #{lmouser}
+		   , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+		   , #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<!-- *********************************************** -->
+    <!--  WMOP2 피킹 조회 WSHPIT || MSKUWC || MCUSMA-->
+    <!-- *********************************************** -->
+    <select id="selectWmo20HeadPickingList" resultType="com.logistics.wm.domain.PickingDTO">
+    	select
+    		  CONCAT(TS.COMPKEY, TS.TASKOKY, TS.TASKOIT) AS ROWKEY					
+			, TS.COMPKEY	
+			, TS.WAREKEY
+			, TS.OWNERKY
+			, SH.DCTCTYP
+			, SH.DOCCATE 
+			, SH.DOCTYPE				
+			, TS.ALLGRKY	
+			, TS.PICKTYP
+			, TS.TASKSTS
+			, SH.SHPDCKY		
+			, IF(TRIM(TS.COOUTKY) = ' ' , TS.OERETKY , TS.COOUTKY) AS COOUTKY							
+			, (select CUNAMLC from MCUSMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY and CUSTKEY = SH.CUSTKEY) as CUSTKEY		
+			, (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and WAREKEY = SH.WAREKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE) as DOCTYNM		
+			, SUM(TS.FORDQTY) as FORDQTY
+			, SUM(TS.TCMPQTY) as TCMPQTY
+			, SUM(TS.DIFFQTY) as DIFFQTY
+		 from WTAKIT TS
+		inner join MLOCMA m 
+		   on TS.COMPKEY = m.COMPKEY 
+          and TS.WAREKEY = m.WAREKEY 
+          and TS.FRLOCKY = m.LOCAKEY 
+          and m.LOCTYPE != 'AUTOSTORE' 			
+		inner join WSHPIT SH 
+		   on SH.COMPKEY = TS.COMPKEY 
+		  and SH.WAREKEY = TS.WAREKEY 
+		  and SH.OWNERKY = TS.OWNERKY 
+		  and SH.SHPDCKY = TS.SHPDCKY 
+		  and SH.SHPDCIT = TS.SHPDCIT
+	  <where> SH.COMPKEY = #{userData.compkey}						
+		  and SH.WAREKEY = #{warekey}
+		  and SH.SHPDCST != 'CMP'
+		  and TS.DOCCATE = '500'
+		  and TS.DOCTYPE = '530'
+		 <if test='ownerky != null and ownerky != ""'>
+		  and SH.OWNERKY = #{ownerky}
+		 </if>
+		 <if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+		 <![CDATA[
+		  and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto} ]]>
+		 </if>
+		 <if test='taskstsList != null and taskstsList.length > 0'>
+		  and TS.TASKSTS in
+		 <foreach collection="taskstsList" item="taskstsItem" index="index" separator="," open="(" close=")">
+		  #{taskstsItem}
+		 </foreach>
+		 </if>
+		 <if test='shpdcky != null and shpdcky != ""'>
+		  and SH.SHPDCKY = #{shpdcky}
+		 </if>
+		 <if test='picktyp != null and picktyp != ""'>
+		  and TS.PICKTYP = #{picktyp}
+		 </if>
+		 <if test='allgrky != null and allgrky != ""'>
+		  and TS.ALLGRKY = #{allgrky}
+		 </if>
+		 <if test='skudesc != null and skudesc != ""'>
+		  and TS.SKUDESC LIKE CONCAT('%' , #{skudesc} , '%') 
+		</if>
+	  </where>
+		 group by TS.COMPKEY, SH.DCTCTYP, TS.DOCCATE, TS.DOCTYPE, TS.ALLGRKY, SH.COOUTKY , TS.OERETKY
+		 order by TS.COMPKEY, SH.ALLGRKY, SH.COOUTKY
+    </select>
+    
+    <select id="selectWmo20ItemPickingList" resultType="com.logistics.wm.domain.PickingDTO">
+    	select
+			  CONCAT(TS.COMPKEY, TS.TASKOKY, TS.TASKOIT) AS ROWKEY					
+			, TS.COMPKEY , TS.WAREKEY , TS.OWNERKY , TS.PICKTYP 
+			, (select OWNAMLC from MOWRMA where COMPKEY = TS.COMPKEY and OWNERKY = TS.OWNERKY) as OWNAMLC 
+			, SH.DCTCTYP
+			, SH.DOCCATE , SH.DOCTYPE 			
+			, TS.ALLGRKY	
+			, TS.TASKSTS
+			, SH.SHPDCKY , SH.SHPDCIT 			
+			, IF(TRIM(TS.COOUTKY) = ' ' , TS.OERETKY , TS.COOUTKY) AS COOUTKY 
+			, IF(TRIM(TS.COOUTIT) = 0 , TS.OERETIT , TS.COOUTIT) AS COOUTIT , SH.CUSTKEY
+			, (select CUNAMLC from MCUSMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY and CUSTKEY = SH.CUSTKEY) as CUSTNAM
+			, (SELECT DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY AND WAREKEY = SH.WAREKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE) as DOCTYNM		
+			, TS.TASKSTS , TS.SKUMKEY , TS.SKUDESC , TS.LOTNMKY
+			, (select LOCANAM from MLOCMA where COMPKEY = TS.COMPKEY AND WAREKEY = TS.WAREKEY and AREAKEY = TS.FRAREKY and ZONEKEY = TS.FRZONKY and LOCAKEY = TS.FRLOCKY) as FRLONAM		
+			, TS.FRAREKY , TS.FRZONKY , TS.FRLOCKY
+			, TS.TOAREKY , TS.TOZONKY , TS.TOLOCKY
+			, (select LOCANAM from MLOCMA where COMPKEY = TS.COMPKEY AND WAREKEY = TS.WAREKEY and AREAKEY = TS.TOAREKY and ZONEKEY = TS.TOZONKY and LOCAKEY = TS.TOLOCKY) as TOLONAM
+			, TS.FORDQTY , TS.FUOMEKY , TS.FORDQTY as TCMPQTY , TS.DIFFQTY
+			, TS.TUOMEKY , TS.SHPDCKY , TS.SHPDCIT , TS.TASKOKY , TS.TASKOIT
+			, TS.TRUNTYP , TS.TRUNPID , TS.OWNERKY
+			, TS.VENDKEY , TS.SIRBCOD
+			, TS.PRODDAT , TS.SHELIFE , fn_com_todate(TS.EXPIDAT) as EXPIDAT
+			, TS.RCVDCDT , TS.RCVFRDT , TS.LOTFRKY
+			, TS.LOTAT01 , TS.LOTAT02 , TS.LOTAT03 , TS.LOTAT04
+			, TS.LOTAT05 , TS.LOTAT06 , TS.LOTAT07 , TS.LOTAT08
+			, TS.LOTAT09 , TS.LOTAT10 , TS.LOTAT11 , TS.LOTAT12
+			, TS.LOTAT13 , TS.LOTAT14 , TS.LOTAT15 , TS.LOTAT16
+			, TS.LOTAT17 , TS.LOTAT18 , TS.LOTAT19 , TS.LOTAT20
+			, TS.STKSTAT , TS.TASKG01 , TS.TASKG02 , TS.TASKG03 , TS.TASKG04 , TS.TASKG05
+			, TS.PARSNCD , TS.PARSNNM , TS.PKRSNCD , TS.PKRSNNM
+			, TS.MOVTEAM , TS.MOVUSID , TS.MVSTDAT , TS.MVSTTIM , TS.MVEDDAT , TS.MVEDTIM
+			, TS.EOASNKY , TS.EOASNIT
+			, TS.RCVDCKY , TS.RCVDCIT 
+			, TS.REFPODC , TS.REFPOIT , TS.REFSODC , TS.REFSOIT
+			, TS.REFDNDC , TS.REFDNIT , TS.REFSDDC , TS.REFSDIT
+			, TS.STORFKY , TS.STKOTKY , TS.STKINKY , TS.UPDTCHK	
+		 from WTAKIT TS
+		inner join MLOCMA m 
+		   on TS.COMPKEY = m.COMPKEY 
+          and TS.WAREKEY = m.WAREKEY 
+          and TS.FRLOCKY = m.LOCAKEY 
+          and m.LOCTYPE != 'AUTOSTORE' 			
+		inner join WSHPIT SH 
+		   on SH.COMPKEY = TS.COMPKEY 
+		  and SH.WAREKEY = TS.WAREKEY 
+		  and SH.OWNERKY = TS.OWNERKY 
+		  and SH.SHPDCKY = TS.SHPDCKY 
+		  and SH.SHPDCIT = TS.SHPDCIT
+	  <where> SH.COMPKEY = #{userData.compkey}						
+		  and SH.WAREKEY = #{warekey}
+		  and TS.DOCCATE = '500'
+		  and TS.DOCTYPE = '530'
+		  and SH.SHPDCST != 'CMP'
+		 <if test='ownerky != null and ownerky != ""'>
+		  and SH.OWNERKY = #{ownerky}
+		 </if>
+		 <if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+		 <![CDATA[
+		  and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto} ]]>
+		 </if>
+		 <if test='taskstsList == null' >
+		  and TS.TASKSTS in ('TASK', 'TSCOMP')
+		 </if>
+		 <if test='taskstsList != null and taskstsList.length > 0'>
+		  and TS.TASKSTS in
+		 <foreach collection="taskstsList" item="taskstsItem" index="index" separator="," open="(" close=")">
+		  #{taskstsItem}
+		 </foreach>
+		 </if>
+		 <if test='shpdcky != null and shpdcky != ""'>
+		  and SH.SHPDCKY = #{shpdcky}
+		 </if>
+		 <if test='picktyp != null and picktyp != ""'>
+		  and TS.PICKTYP = #{picktyp}
+		 </if>
+		 <if test='allgrky != null and allgrky != ""'>
+		  and TS.ALLGRKY = #{allgrky}
+		 </if>
+		 <if test='skudesc != null and skudesc != ""'>
+		  and TS.SKUDESC LIKE CONCAT('%' , #{skudesc} , '%') 
+		 </if>
+		 order by TS.COMPKEY, TS.TASKOKY , TS.TASKOIT
+		</where>
+    </select>
+    
+    <update id="updateWtakit" parameterType="hashmap">
+    	<foreach collection="updateList" item="item" separator=";">
+    	update WTAKIT
+    	   set LMODATE = to_char(now(),'YYYYMMDD')
+    		 , LMOTIME = to_char(now(),'hh24miss')
+    		 , LMOUSER = #{item.userData.useract}
+    		 , TCMPQTY = #{item.tcmpqty}
+    		 , DIFFQTY = #{item.diffqty}
+    	 where COMPKEY = #{item.compkey}
+    	   and TASKOKY = #{item.taskoky}
+    	   and TASKOIT = #{item.taskoit}
+    	   and UPDTCHK = #{item.updtchk}
+    	</foreach>
+    </update>
+	
+	<!-- Procedure :: WMO20 Picking -->
+    <select id="callSpWmPicking" statementType="CALLABLE" parameterType="com.logistics.wm.domain.PickingDTO">
+		CALL sp_wm_ctrstokky
+		 ( 
+			   #{compkey}
+			 , #{warekey}
+			 , #{doccate}
+			 , #{doctype}
+			 , #{taskoky}
+			 , #{taskoit}
+			 , #{userData.useract}
+			 , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			 , #{oresult, mode=OUT, jdbcType=INTEGER}
+		  )
+	</select>
+	
+	<select id="callSpWmDiffPicking" statementType="CALLABLE" parameterType="com.logistics.wm.domain.PickingDTO">
+		CALL sp_wm_makediffstock
+		 ( 
+			   #{compkey}
+			 , #{warekey}
+			 , #{doccate}
+			 , #{doctype}
+			 , #{taskoky}
+			 , #{taskoit}
+			 , #{userData.useract}
+			 , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			 , #{oresult, mode=OUT, jdbcType=INTEGER}
+		 )
+	</select>
+	
+	<select id="callSpWmCtrstokkyPickCancel" statementType="CALLABLE" parameterType="java.util.HashMap">
+		CALL sp_wm_ctrstokky_cancel
+		 ( 
+		 	   #{compkey}
+			 , #{warekey}
+			 , #{doccate}
+			 , #{doctype}
+			 , #{taskoky}
+			 , #{taskoit}
+			 , #{userData.useract}
+			 , #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			 , #{oresult, mode=OUT, jdbcType=INTEGER}
+		 )
+	</select>
+	
+	
+	<!-- *********************************************** -->
+    <!--  WMO30 출고확정 										 -->
+    <!-- *********************************************** -->
+    <select id="getWmo30HeadList" resultType="com.logistics.wm.domain.ShipOutDTO">
+		/* getWmo30HeadList */
+		/* 기존 쿼리는 wtakit 테이블의 모든 row를 group by 하여 wshpit로 조인하므로 속도저하 발생 wshpit기준으로 wtakit를 찾도록 쿼리 수정 */
+		SELECT
+			CONCAT(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TK.PICKTYP) AS ROWKEY
+			, SH.COMPKEY, SH.WAREKEY
+			, SH.DOCCATE, SH.DOCTYPE
+			, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TK.TASKSTS) AS SHPDCST
+		    , (select COMCDTX from V_MCODEM MC where MC.COMPKEY = SH.COMPKEY and MC.COMCDVL = TK.PICKTYP and MC.COMCDKY = 'PICKTYP') as PICKNAM
+			, SH.SHPDCKY
+			, SUM(TK.DIFFQTY) AS DIFFQTY
+			, COUNT(DISTINCT TK.SKUMKEY) AS SKKYCNT
+			, SUM(SH.SHCUQTY) AS SHCUQTY
+			, SUM(SH.RGITQTY) AS RGITQTY
+			, SUM(SH.SHALQTY) AS SHALQTY
+			, SUM(SH.SHPKQTY) AS SHPKQTY
+			, SUM(SH.SHDVSQT) AS SHDVSQT
+			, SUM(SH.SHDVEQT) AS SHDVEQT
+			, SUM(SH.SHCFQTY) AS SHCFQTY
+			, TK.ALLGRKY
+		    , TK.PICKTYP
+			, SUM(TK.FORDQTY) AS FORDQTY
+			, SUM(TK.TCMPQTY) AS TCMPQTY
+			, SUM(CASE WHEN TK.TASKSTS = 'SHPOUT' THEN TK.TCMPQTY ELSE 0 END) AS SOUTQTY
+			, fn_com_todate(MIN(TK.CREDATE)) AS SHSDATE
+			, fn_com_totime(MIN(TK.CRETIME)) AS SHSTIME
+			, fn_com_todate(MAX(TK.LMODATE)) AS SHEDATE
+			, fn_com_totime(MAX(TK.LMOTIME)) AS SHETIME
+			, fn_sy_usernam(SH.COMPKEY, MAX(TK.LMOUSER)) AS SHENAME
+			FROM WSHPIT SH
+			INNER JOIN	/* TASK가 분할될 경우  Wshpit 기준으로 Group by 해줌 */
+			(
+				SELECT
+				  TS.COMPKEY, TS.WAREKEY
+				, TS.DOCCATE, TS.DOCTYPE
+				, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TS.TASKSTS) AS SHPDCST
+				, TS.SHPDCKY, TS.SHPDCIT
+				, SUM(TS.DIFFQTY) AS DIFFQTY
+				, COUNT(DISTINCT TS.SKUMKEY) AS SKKYCNT
+				, TS.ALLGRKY
+				, TS.PICKTYP
+				, TS.TASKSTS
+				, TS.SKUMKEY
+				, TS.COOUTKY
+				, TS.COOUTIT
+				, SUM(TS.FORDQTY) AS FORDQTY
+				, SUM(TS.TCMPQTY) AS TCMPQTY
+				, SUM(CASE WHEN TS.TASKSTS = 'SHPOUT' THEN TS.TCMPQTY ELSE 0 END) AS SOUTQTY
+				, MIN(TS.CREDATE) AS CREDATE
+				, MIN(TS.CRETIME) AS CRETIME
+				, MAX(TS.LMODATE) AS LMODATE
+				, MAX(TS.LMOTIME) AS LMOTIME
+				, MAX(TS.LMOUSER) AS LMOUSER
+				FROM WSHPIT SH FORCE INDEX(IX_WSHPIT01)
+				INNER JOIN WTAKIT TS
+				ON SH.COMPKEY = TS.COMPKEY
+				AND SH.WAREKEY = TS.WAREKEY
+				AND SH.COOUTKY = TS.COOUTKY
+				AND SH.COOUTIT = TS.COOUTIT
+				AND SH.SHPDCKY = TS.SHPDCKY
+				AND SH.SHPDCIT = TS.SHPDCIT
+				<choose>
+					<when test="shpdcst != null and 'ING'.equals(shpdcst)">
+						AND TS.TASKSTS NOT in ('CANCEL', 'SHPOUT')
+					</when>
+					<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+						AND TS.TASKSTS NOT in ('CANCEL', 'TASK')
+					</when>
+				</choose>
+				AND TS.DOCCATE = '500'
+				AND TS.DOCTYPE = '530'
+				AND TS.PICKTYP = 'SINGLE'
+				<if test="allgrky != null and allgrky != '' ">
+					and TS.ALLGRKY = #{allgrky}
+				</if>
+				<if test="ownerky != null and ownerky != ''">
+					AND TS.ALLGRKY IN
+					(
+					SELECT DISTINCT(TS.ALLGRKY) FROM WSHPIT SH
+					INNER JOIN WTAKIT TS
+					ON SH.COMPKEY = TS.COMPKEY
+					AND SH.WAREKEY = TS.WAREKEY
+					AND SH.SHPDCKY = TS.SHPDCKY
+					AND SH.SHPDCIT = TS.SHPDCIT
+					<choose>
+					<when test="shpdcst != null and 'ING'.equals(shpdcst)">
+						AND TS.TASKSTS NOT in ('CANCEL', 'SHPOUT')
+					</when>
+					<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+						AND TS.TASKSTS NOT in ('CANCEL', 'TASK')
+					</when>
+					</choose>
+					AND TS.DOCCATE = '500'
+					AND TS.DOCTYPE = '530'
+					WHERE SH.COMPKEY = #{userData.compkey}
+					AND SH.WAREKEY = #{warekey}
+					AND SH.DOCCATE = '700'
+					AND SH.DOCTYPE in ('710','720', '730', '750', '760','790')
+					<if test="allgrky != null and allgrky != '' ">
+						and TS.ALLGRKY = #{allgrky}
+					</if>
+					<if test="picktyp != null and picktyp != '' ">
+						and TS.PICKTYP = #{picktyp}
+					</if>
+					<if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+						and SH.SHPPDAY between #{shsdatefrom} and #{shsdateto}
+					</if>
+					<if test="cooutky != null and cooutky != '' ">
+						and SH.COOUTKY = #{cooutky}
+					</if>
+					AND TS.OWNERKY = #{ownerky}
+					)
+				</if>
+				WHERE SH.COMPKEY = #{userData.compkey}
+				AND SH.WAREKEY = #{warekey}
+				AND SH.DOCCATE = '700'
+				AND SH.DOCTYPE IN ('710','720', '730', '750', '760' ,'790')
+				<if test="cooutky != null and cooutky != '' ">
+					and SH.COOUTKY = #{cooutky}
+				</if>
+				<if test="picktyp != null and picktyp != '' ">
+					and TS.PICKTYP = #{picktyp}
+				</if>
+				<if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+					and SH.SHPPDAY between #{shsdatefrom} and #{shsdateto}
+				</if>
+				GROUP BY TS.COMPKEY, TS.WAREKEY, TS.DOCCATE, TS.DOCTYPE, TS.ALLGRKY, TS.PICKTYP, TS.SHPDCKY, TS.SHPDCIT, TS.COOUTKY, TS.COOUTIT
+			) TK
+			 ON SH.COMPKEY = TK.COMPKEY
+			AND SH.WAREKEY = TK.WAREKEY
+			AND SH.COOUTKY = TK.COOUTKY
+			AND SH.COOUTIT = TK.COOUTIT
+			AND SH.SHPDCKY = TK.SHPDCKY
+			AND SH.SHPDCIT = TK.SHPDCIT
+		GROUP BY SH.COMPKEY, SH.WAREKEY, TK.ALLGRKY, TK.PICKTYP
+    </select>
+    
+    <select id="getWmo30ItemList" resultType="com.logistics.wm.domain.ShipOutDTO">
+		/* getWmo30ItemList */
+		select
+			concat(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TS.PICKTYP) as ROWKEY
+			, TS.COMPKEY, TS.WAREKEY
+			, TS.DOCCATE, TS.DOCTYPE
+			, (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE and WAREKEY = SH.WAREKEY) as DOCTYNM
+			, (select OWNAMLC from MOWRMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY ) as OWNAMLC
+			, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TS.TASKSTS) AS SHPDCST
+			, TS.SHPDCKY, TS.SHPDCIT
+			, SUM(TS.DIFFQTY) AS DIFFQTY
+			, COUNT(DISTINCT TS.SKUMKEY) AS SKKYCNT
+			, TS.ALLGRKY
+			, TS.PICKTYP
+			, TS.TASKSTS
+			, TS.SKUMKEY
+		    , TS.SKUDESC
+			, TS.COOUTKY
+			, TS.COOUTIT
+			, SH.DESTKEY
+			, (select denamlc from MDESMA WHERE COMPKEY = SH.COMPKEY and PTNRKEY = SH.CUSTKEY and DESTKEY = SH.DESTKEY) as DENAMLC
+			, SH.SHCUQTY
+			, SH.RGITQTY
+			, SH.SHALQTY
+			, SUM(TS.FORDQTY) AS FORDQTY
+			, SUM(TS.TCMPQTY) AS TCMPQTY
+			, SUM(CASE WHEN TS.TASKSTS = 'SHPOUT' THEN TS.TCMPQTY ELSE 0 END) AS SOUTQTY
+			, fn_com_todate(min(TS.CREDATE)) as SHSDATE
+			, fn_com_totime(min(TS.CRETIME)) as SHSTIME
+			, fn_com_todate(max(TS.LMODATE)) as SHEDATE
+			, fn_com_totime(max(TS.LMOTIME)) as SHETIME
+			, max(TS.LMOUSER) as SHEUSER
+			, fn_sy_usernam(SH.COMPKEY, max(TS.LMOUSER)) as SHENAME
+		FROM WSHPIT SH
+		INNER JOIN WTAKIT TS
+		ON SH.COMPKEY = TS.COMPKEY
+		AND SH.WAREKEY = TS.WAREKEY
+		AND SH.COOUTKY = TS.COOUTKY
+		AND SH.COOUTIT = TS.COOUTIT
+		AND SH.SHPDCKY = TS.SHPDCKY
+		AND SH.SHPDCIT = TS.SHPDCIT
+		<choose>
+			<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+				AND TS.TASKSTS not in ('CANCEL', 'TASK')
+			</when>
+			<otherwise>
+				AND TS.TASKSTS not in ('CANCEL' , 'SHPOUT')
+			</otherwise>
+		</choose>
+		AND TS.DOCCATE = '500'
+		AND TS.DOCTYPE = '530'
+		<if test="picktyp != null and picktyp != '' ">
+			and TS.PICKTYP = #{picktyp}
+		</if>
+		<if test="allgrky != null and allgrky != '' ">
+			AND trim(TS.ALLGRKY) like concat('%',#{allgrky},'%')
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+			AND TS.ALLGRKY IN
+			(
+			SELECT DISTINCT(TS.ALLGRKY) FROM WSHPIT SH
+			INNER JOIN WTAKIT TS
+			ON SH.COMPKEY = TS.COMPKEY
+			AND SH.WAREKEY = TS.WAREKEY
+			AND SH.SHPDCKY = TS.SHPDCKY
+			AND SH.SHPDCIT = TS.SHPDCIT
+			<choose>
+				<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+					AND TS.TASKSTS not in ('CANCEL', 'TASK')
+				</when>
+				<otherwise>
+					AND TS.TASKSTS not in ('CANCEL' , 'SHPOUT')
+				</otherwise>
+			</choose>
+			AND TS.DOCCATE = '500'
+			AND TS.DOCTYPE = '530'
+			WHERE SH.COMPKEY = #{userData.compkey}
+			AND SH.WAREKEY = #{warekey}
+			AND SH.DOCCATE = '700'
+			AND SH.DOCTYPE in ('710','720','730','750','760','790')
+			<if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+				AND SH.SHPPDAY between #{shsdatefrom} and #{shsdateto}
+			</if>
+			<if test="allgrky != null and allgrky != '' ">
+				and TS.ALLGRKY = #{allgrky}
+			</if>
+			<if test="picktyp != null and picktyp != '' ">
+				and TS.PICKTYP = #{picktyp}
+			</if>
+			AND TS.OWNERKY = #{ownerky}
+			)
+		</if>
+		WHERE SH.COMPKEY = #{userData.compkey}
+		AND SH.WAREKEY = #{warekey}
+		AND SH.DOCCATE = '700'
+		AND SH.DOCTYPE in ('710','720','730','750','760','790')
+		<if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+			AND SH.SHPPDAY BETWEEN #{shsdatefrom} AND #{shsdateto}
+		</if>
+		GROUP BY TS.COMPKEY, TS.WAREKEY, TS.DOCCATE, TS.DOCTYPE, TS.ALLGRKY, TS.PICKTYP, TS.SHPDCKY, TS.SHPDCIT, TS.COOUTKY, TS.COOUTIT
+		ORDER BY TS.ALLGRKY ASC, SH.COOUTKY ASC , (CASE WHEN TS.OWNERKY = #{ownerky} THEN 1 ELSE 9	END), SH.COOUTIT ASC
+    </select>
+	
+	<!-- Procedure :: WMO30 출고확정 -->
+    <select id="callSpWmShiping" statementType="CALLABLE" parameterType="com.logistics.wm.domain.ShipOutDTO">
+		CALL sp_wm_shipout
+		( 
+			  #{compkey}
+			, #{warekey}
+			, #{doccate}
+			, #{doctype}
+			, #{allgrky}
+			, #{cooutky}
+			, #{cooutit}
+			, #{lmouser}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<!-- *********************************************** -->
+    <!--  WMO31 부분출고 									 -->
+    <!-- *********************************************** -->
+    <select id="getWmo31List" resultType="com.logistics.wm.domain.PartShipOutDTO">
+		select
+			  concat(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TS.PICKTYP) as ROWKEY
+			, TS.COMPKEY, TS.WAREKEY
+			, TS.DOCCATE, TS.DOCTYPE
+			, (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE and WAREKEY = SH.WAREKEY) as DOCTYNM
+			, (select OWNAMLC from MOWRMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY ) as OWNAMLC
+			, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TS.TASKSTS) AS SHPDCST
+			, TS.SHPDCKY, TS.SHPDCIT
+			, SUM(TS.DIFFQTY) AS DIFFQTY
+			, COUNT(DISTINCT TS.SKUMKEY) AS SKKYCNT
+			, TS.ALLGRKY
+			, TS.PICKTYP
+			, TS.TASKSTS
+			, TS.SKUMKEY
+			, TS.COOUTKY
+			, TS.COOUTIT
+			, SH.DESTKEY
+			, (select denamlc from MDESMA WHERE COMPKEY = SH.COMPKEY and PTNRKEY = SH.CUSTKEY and DESTKEY = SH.DESTKEY) as DENAMLC
+		    , SH.SHCUQTY
+		    , SH.RGITQTY
+		    , SH.SHALQTY
+			, SUM(TS.FORDQTY) AS FORDQTY
+			, SUM(TS.TCMPQTY) AS TCMPQTY
+			, SUM(CASE WHEN TS.TASKSTS = 'SHPOUT' THEN TS.TCMPQTY ELSE 0 END) AS SOUTQTY
+			, fn_com_todate(min(TS.CREDATE)) as SHSDATE
+			, fn_com_totime(min(TS.CRETIME)) as SHSTIME
+			, fn_com_todate(max(TS.LMODATE)) as SHEDATE
+			, fn_com_totime(max(TS.LMOTIME)) as SHETIME
+			, max(TS.LMOUSER) as SHEUSER
+			, fn_sy_usernam(SH.COMPKEY, max(TS.LMOUSER)) as SHENAME
+		FROM WSHPIT SH
+		INNER JOIN WTAKIT TS
+		 ON SH.COMPKEY = TS.COMPKEY
+		AND SH.WAREKEY = TS.WAREKEY
+		AND SH.COOUTKY = TS.COOUTKY
+		AND SH.COOUTIT = TS.COOUTIT
+		AND SH.SHPDCKY = TS.SHPDCKY
+		AND SH.SHPDCIT = TS.SHPDCIT
+		<choose>
+		<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+		AND TS.TASKSTS not in ('CANCEL', 'TASK')
+		</when>
+		<otherwise>
+		AND TS.TASKSTS not in ('CANCEL' , 'SHPOUT')
+		</otherwise>
+		</choose>
+		AND TS.DOCCATE = '500'
+		AND TS.DOCTYPE = '530'
+		<if test="picktyp != null and picktyp != '' ">
+			and TS.PICKTYP = #{picktyp}
+		</if>
+		<if test="allgrky != null and allgrky != '' ">
+		AND trim(TS.ALLGRKY) like concat('%',#{allgrky},'%')
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+		AND TS.ALLGRKY IN
+		(
+		SELECT DISTINCT(TS.ALLGRKY) FROM WSHPIT SH
+		INNER JOIN WTAKIT TS
+		ON SH.COMPKEY = TS.COMPKEY
+		AND SH.WAREKEY = TS.WAREKEY
+		AND SH.SHPDCKY = TS.SHPDCKY
+		AND SH.SHPDCIT = TS.SHPDCIT
+		<choose>
+		<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+			AND TS.TASKSTS not in ('CANCEL', 'TASK')
+		</when>
+		<otherwise>
+			AND TS.TASKSTS not in ('CANCEL' , 'SHPOUT')
+		</otherwise>
+		</choose>
+		AND TS.DOCCATE = '500'
+		AND TS.DOCTYPE = '530'
+		WHERE SH.COMPKEY = #{userData.compkey}
+		AND SH.WAREKEY = #{warekey}
+		AND SH.DOCCATE = '700'
+		AND SH.DOCTYPE not in ('780', '781')
+		<if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+			AND SH.SHPPDAY between #{shsdatefrom} and #{shsdateto}
+		</if>
+		<if test="allgrky != null and allgrky != '' ">
+			and TS.ALLGRKY = #{allgrky}
+		</if>
+		<if test="picktyp != null and picktyp != '' ">
+			and TS.PICKTYP = #{picktyp}
+		</if>
+		AND TS.OWNERKY = #{ownerky}
+		)
+		</if>
+		WHERE SH.COMPKEY = #{userData.compkey}
+		AND SH.WAREKEY = #{warekey}
+		AND SH.DOCCATE = '700'
+		AND SH.DOCTYPE not in ('780', '781')
+		<if test='shsdatefrom != null and shsdatefrom != "" and shsdateto != null and shsdateto != ""'>
+		AND SH.SHPPDAY BETWEEN #{shsdatefrom} AND #{shsdateto}
+		</if>
+		GROUP BY TS.COMPKEY, TS.WAREKEY, TS.DOCCATE, TS.DOCTYPE, TS.ALLGRKY, TS.PICKTYP, TS.SHPDCKY, TS.SHPDCIT, TS.COOUTKY, TS.COOUTIT
+		ORDER BY TS.ALLGRKY ASC, SH.COOUTKY ASC , (CASE WHEN TS.OWNERKY = #{ownerky} THEN 1 ELSE 9	END), SH.COOUTIT ASC
+    </select>
+	
+	<!-- Procedure :: WMO31 부분출고처리 -->
+    <select id="callSpWmShipingAtWmo31" statementType="CALLABLE" parameterType="com.logistics.wm.domain.PartShipOutDTO">
+		CALL sp_wm_shipout
+		( 
+			  #{userData.compkey}
+			, #{warekey}
+			, #{doccate}
+			, #{doctype}
+			, #{allgrky}
+			, #{cooutky}
+			, #{cooutit}
+			, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="getCooutkyByWshipt" resultType="string">
+		SELECT FN_OM_COOUTKY() FROM DUAL
+	</select>
+	
+	<insert id="saveSalesOrder" parameterType="com.logistics.wm.domain.ShipEtcDTO">
+		INSERT INTO OCOSAL
+			(
+				COMPKEY , COOUTKY , COOUTIT , DOCCATE , DOCTYPE ,
+				POSTDAT , SALDATE , SALTIME ,
+				TOWARKY , CUSTKEY , SKUSKEY , SKUMKEY , SKUDESC ,
+				DESTKEY , OWNERKY , SALSTAT , SAATC06 , SALMEMO ,
+				SALRQDT , SALRQTM ,
+				SOITQTY , RGITQTY , SUOMKEY , 
+				CREDATE , CRETIME , CREUSER 
+			)
+			VALUES
+			(
+				#{userData.compkey} , #{cooutky} , FN_OM_COOUTIT(#{userData.compkey} , #{cooutky}) , #{doccate} , #{doctype} ,
+				FN_WM_POSDATE(#{userData.compkey} , #{warekey}) , DATE_FORMAT(NOW() , '%Y%m%d') , DATE_FORMAT(NOW() , '%H%i%s') ,
+				#{warekey} , #{custkey} , #{skuskey} , #{skumkey} , #{skudesc} , 
+			    #{destkey} , #{ownerky} , #{salstat} , #{saatc06} , #{salmemo},
+			    DATE_FORMAT(NOW() , '%Y%m%d') , DATE_FORMAT(NOW() , '%H%i%s'),
+				#{rgitqty} , #{rgitqty} , #{suomkey} ,
+				DATE_FORMAT(NOW() , '%Y%m%d') , DATE_FORMAT(NOW() , '%H%i%s') , #{userData.useract}
+			 )
+	</insert>
+	
+	<select id="callOcosalOrder" statementType="CALLABLE" parameterType="com.logistics.wm.domain.ShipEtcDTO">
+		CALL sp_om_ocosal
+		( 
+			  #{compkey}
+			, #{cooutky}
+			, #{doccate}
+			, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="getWmo50HeadList" resultType="com.logistics.wm.domain.ReturnShipOutDTO">
+		select
+    		  CONCAT(SO.COMPKEY, SO.OERETKY , SO.OERETIT) as ROWKEY
+			, SO.COMPKEY , SO.WAREKEY 
+			, SO.OWNERKY 
+			, SO.DOCCATE , SO.DOCTYPE , SO.DOCTYNM
+			, SO.OERETKY , SO.OERETIT
+			, SO.SHPDCKY 
+			, SO.DCTCTYP , SO.PICKTYP 
+			, COUNT(SO.OERETKY) as REFSCNT
+		 	, MIN(SO.STOCKYN) as STOCKYN
+			, SUM(SO.SHCUQTY) as SHCUQTY , SUM(SO.RGITQTY) as RGITQTY , SUM(SO.SHALQTY) as SHALQTY
+			, fn_com_todate(SO.SALRQDT) as SALRQDT
+			, fn_com_totime(SO.SALRQTM) as SALRQTM
+			, SO.UPDTCHK
+		from 
+		(
+			select
+			 	SH.COMPKEY , SH.DOCCATE , SH.DOCTYPE ,
+				( select DOCTYNM 
+					from MDOCMA 
+				   where COMPKEY = SH.COMPKEY 
+					 and WAREKEY = SH.WAREKEY	
+					 and DOCCATE = SH.DOCCATE  
+					 and DOCTYPE = SH.DOCTYPE 
+				) as DOCTYNM, 		
+			 	SH.WAREKEY , SH.OWNERKY , SH.CUSTKEY ,
+				SH.COOUTKY , SH.COOUTIT , 
+				SH.OERETKY , SH.OERETIT ,
+				SH.SHPDCKY , SH.SHPDCIT , SH.PICKTYP ,
+				SH.DCTCTYP , 
+				SH.SKUMKEY , 
+				<![CDATA[ (case when IFNULL(ST.TOTQTY,0) - SH.RGITQTY - SH.SHALQTY < 0 then 'N' else 'Y' end) as STOCKYN, ]]>
+				IFNULL(ST.TOTQTY,0) , 
+				SH.SHCUQTY , SH.RGITQTY , SH.SHALQTY ,	
+				SH.SALRQDT , SH.SALRQTM ,
+				SH.UPDTCHK 
+			from WSHPIT SH
+		   FORCE INDEX(IX_WSHPIT01) 	
+		   inner join MSKUWC MS 
+			  	   on MS.COMPKEY = SH.COMPKEY
+			 	  and MS.WAREKEY = SH.WAREKEY
+			 	  and MS.OWNERKY = SH.OWNERKY
+			 	  and MS.SKUMKEY = SH.SKUMKEY
+		    left join (
+				select
+					COMPKEY , OWNERKY , WAREKEY ,
+					SKUMKEY , SKUDESC ,
+					LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20 ,
+					(sum(STOTQTY)- sum(SBLOQTY)) as TOTQTY
+				 from WSTKKY
+			    FORCE INDEX(IX_WSTKKY02)	 
+			    where COMPKEY = #{userData.compkey}
+			      and WAREKEY = #{warekey}
+				  and AREAKEY = 'STG'
+				  and SALLQTY = 0
+				  and SINBQTY = 0
+				  and SOUBQTY = 0
+			    group by COMPKEY , WAREKEY , OWNERKY , SKUMKEY ,
+						LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+			) ST on SH.COMPKEY = ST.COMPKEY
+				and SH.WAREKEY = ST.WAREKEY
+				and SH.OWNERKY = ST.OWNERKY
+				and SH.SKUMKEY = ST.SKUMKEY
+				and (case when SH.DCTCTYP = 'TC' then SH.COOUTKY else ' ' end) = ST.LOTAT19
+				and (case when SH.DCTCTYP = 'TC' then SH.COOUTIT else ' ' end) = ST.LOTAT20
+		  	<where> SH.COMPKEY = #{userData.compkey}
+				and SH.WAREKEY = #{warekey}
+				and SH.DOCCATE = '700'
+			    and SH.DOCTYPE in ('780', '781') 
+			 <if test='shpdcky != null and shpdcky != ""'>
+				and SH.SHPDCKY = #{shpdcky} 
+			 </if> 
+			 <if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+			  <![CDATA[
+			    and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto} ]]> 
+			 </if>
+			 <if test='picktyp != null and picktyp != ""'>
+			    and SH.PICKTYP = #{picktyp}
+			 </if>   
+		  	 <if test='shpdcstList != null and shpdcstList.length > 0'>
+			    and SH.SHPDCST in
+			    <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+			      #{shpdcstItem}
+			    </foreach>
+			    and SH.SHPITST in
+			    <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+			      #{shpdcstItem}
+	     		  <if test="shpdcstItem.equals('P_ALOC')">
+		  			, 'F_ALOC'
+		  		  </if>
+			    </foreach>
+			 </if>
+			</where>
+		 ) SO
+		group by SO.SHPDCKY , SO.SHPDCIT
+		order by SO.SHPDCKY , SO.SHPDCIT
+	</select>	
+	
+	<select id="getWmo50ItemList" resultType="com.logistics.wm.domain.ReturnShipOutDTO">
+		select
+	    	  CONCAT(SH.COMPKEY, SH.OERETKY, SH.OERETIT) as ROWKEY
+			, SH.COMPKEY , SH.COMPKEY , SH.DOCCATE , SH.DOCTYPE
+			, SH.SHPDCKY , SH.SHPDCIT , SH.SHPDCST , SH.SHPITST
+			, (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE and WAREKEY = SH.WAREKEY) as DOCTYNM		
+			, SH.WAREKEY , SH.OWNERKY 
+			, (select OWNAMLC from MOWRMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY) as OWNAMLC
+			, SH.OERETKY , SH.OERETIT
+			, SH.DCTCTYP , SH.PICKTYP
+			, SH.SKUMKEY , SH.SKUDESC
+			, (select SUOMKEY from MSKUWC where COMPKEY = SH.COMPKEY and WAREKEY = SH.WAREKEY and OWNERKY = SH.OWNERKY and SKUMKEY = SH.SKUMKEY ) as SUOMKEY
+			<![CDATA[ , (case when IFNULL(ST.TOTQTY,0) - SH.RGITQTY - SH.SHALQTY < 0 then 'N' else 'Y' end) as STOCKYN ]]>
+			, IFNULL(ST.TOTQTY,0) as STOCKCT
+			, SH.SHCUQTY , SH.RGITQTY , SH.SHALQTY , SH.SHPKQTY 
+			, SH.ALLGRKY
+			, fn_com_todate(SH.SALRQDT) as SALRQDT
+			, fn_com_totime(SH.SALRQTM) as SALRQTM
+			, fn_com_todate(SH.SHPPDAY) as SHPPDAY
+			, fn_com_totime(SH.SHPPTIM) as SHPPTIM
+			, fn_com_todate(SH.SHPSDAY) as SHPSDAY
+			, fn_com_totime(SH.SHPSTIM) as SHPSTIM
+			, SH.SPEHTIM , SH.SPEITIM
+			, ' ' as ALSTRKY
+			, SH.UPDTCHK 
+		 from WSHPIT SH
+		FORCE INDEX(IX_WSHPIT01) 	
+		left join (
+			select
+				t.COMPKEY ,
+				t.WAREKEY ,
+				t.OWNERKY ,
+				t.SKUMKEY ,
+				t.SHPDCKY ,
+				t.SHPDCIT ,
+				t.ALLGRKY ,
+				t.OERETKY ,
+				t.OERETIT ,
+				SUM(t.FORDQTY) AS FORDQTY,
+				SUM(t.TCMPQTY) AS TCMPQTY
+			from WTAKIT t
+		   where t.COMPKEY = #{userData.compkey}
+		     and t.WAREKEY = #{warekey}
+		     and t.DOCCATE = '500'
+			 and t.DOCTYPE = '530'
+			 and t.TASKSTS IN ('NEW' , 'TASK' , 'TSCOMP') 
+			group by t.COMPKEY, t.WAREKEY, t.OWNERKY, t.SKUMKEY, 
+					 t.SHPDCKY, t.SHPDCIT, t.OERETKY, t.OERETIT, t.ALLGRKY
+		) TK on SH.COMPKEY = TK.COMPKEY
+			and SH.WAREKEY = TK.WAREKEY
+		 	and SH.OWNERKY = TK.OWNERKY
+		 	and SH.SKUMKEY = TK.SKUMKEY
+		 	and SH.SHPDCKY = TK.SHPDCKY
+		 	and SH.SHPDCIT = TK.SHPDCIT
+		 	and SH.OERETKY = TK.OERETKY
+		 	and SH.OERETIT = TK.OERETIT
+		 	and SH.ALLGRKY = TK.ALLGRKY
+		left join (
+			select
+				 COMPKEY , OWNERKY , WAREKEY ,
+				 SKUMKEY , SKUDESC ,
+				 LOTAT17 , LOTAT18 , LOTAT19 ,
+				 LOTAT20 , (sum(STOTQTY)- sum(SBLOQTY)) as TOTQTY
+			  from WSTKKY
+			 FORCE INDEX(IX_WSTKKY02)
+		 	 where COMPKEY = #{userData.compkey}
+			   and WAREKEY = #{warekey}
+			   and AREAKEY = 'STG'
+			   and SALLQTY = 0
+			   and SINBQTY = 0
+			   and SOUBQTY = 0
+			 group by COMPKEY , WAREKEY , OWNERKY , SKUMKEY,
+					 LOTAT17 , LOTAT18 , LOTAT19 , LOTAT20
+		 ) ST on SH.COMPKEY = ST.COMPKEY
+			 and SH.WAREKEY = ST.WAREKEY
+			 and SH.SKUMKEY = ST.SKUMKEY
+			 and (case when SH.DCTCTYP = 'TC' then SH.OERETKY else ' ' end) = ST.LOTAT19
+			 and (case when SH.DCTCTYP = 'TC' then SH.OERETIT else ' ' end) = ST.LOTAT20
+		<where> SH.COMPKEY = #{userData.compkey}
+		   and  SH.WAREKEY = #{warekey}
+		   and  SH.DOCCATE = '700'
+		   and  SH.DOCTYPE in ('780', '781')
+		 <if test='shpdcky != null and shpdcky != ""'>
+		   and SH.SHPDCKY like concat('%' , #{shpdcky} , '%')
+		 </if>
+		 <if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+		  <![CDATA[
+		   and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto} ]]> 
+		 </if>
+		 <if test='picktyp != null and picktyp != ""'>
+		   and SH.PICKTYP = #{picktyp}
+		 </if> 
+		 <if test='shpdcstList != null and shpdcstList.length > 0'>
+		   and SH.SHPDCST in
+		    <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+		      #{shpdcstItem}
+		    </foreach>
+		   and SH.SHPITST in
+		    <foreach collection="shpdcstList" item="shpdcstItem" index="index" separator="," open="(" close=")">
+		      #{shpdcstItem}
+     		 <if test="shpdcstItem.equals('P_ALOC')">
+	  		 , 'F_ALOC'
+	  	  	  </if>
+		    </foreach>
+		</if>
+		</where> 
+		order by SH.OERETKY , SH.OERETIT 
+    </select>
+	
+	<update id="updateWshpitByReturnShipOut" parameterType="com.logistics.wm.domain.ReturnShipOutDTO">
+      <foreach collection="updateList" item="item" separator=";">
+    	update WSHPIT
+		   set LMODATE = to_char(now(),'YYYYMMDD')
+			 , LMOTIME = to_char(now(),'hh24miss')
+			 , LMOUSER = #{item.userData.useract}
+			 , RGITQTY = #{item.rgitqty}
+			 , ALLGRKY = #{item.allgrky}
+			 , PICKTYP = #{item.picktyp}
+    	 where COMPKEY = #{item.compkey}
+    	   and OWNERKY = #{item.ownerky}
+    	   and WAREKEY = #{item.warekey}
+    	   and SHPDCKY = #{item.shpdcky}
+    	   and SHPDCIT = #{item.shpdcit}
+    	   and UPDTCHK = #{item.updtchk}
+      </foreach>
+    </update>
+    
+    <update id="updateWshpitHeadByReturnShipOut" parameterType="com.logistics.wm.domain.ReturnShipOutDTO">
+    	<foreach collection="updateList" item="item" separator=";">
+	    	update WSHPIT
+	   		   set LMODATE = to_char(now(),'YYYYMMDD')
+	    		 , LMOTIME = to_char(now(),'hh24miss')
+	    		 , LMOUSER = #{item.userData.useract}
+	    		 , SHPDCST = (
+	    						select  
+	                              case when sum(SHALQTY) > 0 then 
+	                                 case when sum(RGITQTY) = sum(SHALQTY) then 'F_ALOC'
+	                                 else 'P_ALOC' end 
+	                              else 'NEW' end 
+	                              from  WSHPIT
+	                              where SHPDCKY = #{item.shpdcky}
+	                              group by SHPDCKY 
+	                        )
+	    	where COMPKEY = #{item.compkey}
+	    	and OWNERKY = #{item.ownerky}
+	    	and WAREKEY = #{item.warekey}
+	    	and SHPDCKY = #{item.shpdcky}
+	   	    and UPDTCHK = #{item.updtchk}
+   	    </foreach>
+    </update>
+    
+    <!-- Procedure :: WMO50 반출출고 Allocate -->
+    <select id="callSpWmAllocateGrpByReturnShipOut" statementType="CALLABLE" parameterType="java.util.HashMap"> 
+		CALL sp_wm_allocate_grp
+		( 
+			  #{compkey}
+			, #{warekey}
+			, #{allgrky}
+			, #{lmouser}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="callSpWmCtrstokkyAllocCancelByReturnShipOut" statementType="CALLABLE" parameterType="com.logistics.wm.domain.ReturnShipOutDTO"> 
+		CALL sp_wm_ctrstokky_cancel
+		( 
+			  #{compkey}
+			, #{warekey}
+			, #{doccate}
+			, #{doctype}
+			<choose>
+				<when test="doccate == '500' and doctype == '522'">
+				, #{cooutky}
+				, 0
+				</when>
+				<when test="doccate == '500' and doctype == '523'">
+				, #{cooutky}
+				, #{cooutit}
+				</when>
+				<when test="doccate == '500' and doctype == '524'">
+				, #{allgrky}
+				, '1'
+				</when>
+				<when test="doccate == '500' and doctype == '535'">
+				, #{shpdcky}
+				, #{shpdcit}
+				</when>
+				<when test="doccate == '500' and doctype == '526'">
+				, #{taskoky}
+				, #{taskoit}
+				</when>
+			</choose>
+			, #{userData.useract}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+	
+	<select id="getWmo50AllgrkyByPrint" resultType="int">
+		select count(allgrky) 
+		  from WTAKIT 
+		 where COMPKEY = #{compkey}
+		   and WAREKEY = #{warekey}
+		   and ALLGRKY = #{allgrky}
+		   and TASKSTS = 'TASK'
+	</select>
+
+	<select id="getWmo51HeadList" resultType="com.logistics.wm.domain.ReturnShipOutDTO">
+		/* getWmo51HeadList */
+		/* 기존 쿼리는 wtakit 테이블의 모든 row를 group by 하여 wshpit로 조인하므로 속도저하 발생 wshpit기준으로 wtakit를 찾도록 쿼리 수정 */
+		SELECT
+			CONCAT(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TK.PICKTYP) AS ROWKEY
+			, SH.COMPKEY, SH.WAREKEY
+			, SH.DOCCATE, SH.DOCTYPE
+			, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TK.TASKSTS) AS SHPDCST
+			, (select COMCDTX from V_MCODEM MC where MC.COMPKEY = SH.COMPKEY and MC.COMCDVL = TK.PICKTYP and MC.COMCDKY = 'PICKTYP') as PICKNAM
+			, SH.SHPDCKY
+			, SUM(TK.DIFFQTY) AS DIFFQTY
+			, COUNT(DISTINCT TK.SKUMKEY) AS SKKYCNT
+			, SUM(SH.SHCUQTY) AS SHCUQTY
+			, SUM(SH.RGITQTY) AS RGITQTY
+			, SUM(SH.SHALQTY) AS SHALQTY
+			, SUM(SH.SHPKQTY) AS SHPKQTY
+			, SUM(SH.SHDVSQT) AS SHDVSQT
+			, SUM(SH.SHDVEQT) AS SHDVEQT
+			, SUM(SH.SHCFQTY) AS SHCFQTY
+			, TK.ALLGRKY
+			, TK.PICKTYP
+			, SUM(TK.FORDQTY) AS FORDQTY
+			, SUM(TK.TCMPQTY) AS TCMPQTY
+			, SUM(CASE WHEN TK.TASKSTS = 'SHPOUT' THEN TK.TCMPQTY ELSE 0 END) AS SOUTQTY
+			, fn_com_todate(MIN(TK.CREDATE)) AS SHSDATE
+			, fn_com_totime(MIN(TK.CRETIME)) AS SHSTIME
+			, fn_com_todate(MAX(TK.LMODATE)) AS SHEDATE
+			, fn_com_totime(MAX(TK.LMOTIME)) AS SHETIME
+			, fn_sy_usernam(SH.COMPKEY, MAX(TK.LMOUSER)) AS SHENAME
+			FROM WSHPIT SH
+			INNER JOIN
+			(
+			SELECT
+			TS.COMPKEY, TS.WAREKEY
+			, TS.DOCCATE, TS.DOCTYPE
+			, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TS.TASKSTS) AS SHPDCST
+			, TS.SHPDCKY, TS.SHPDCIT
+			, SUM(TS.DIFFQTY) AS DIFFQTY
+			, COUNT(DISTINCT TS.SKUMKEY) AS SKKYCNT
+			, TS.ALLGRKY
+			, TS.PICKTYP
+			, TS.TASKSTS
+			, TS.SKUMKEY
+			, TS.OERETKY
+			, TS.OERETIT
+			, SUM(TS.FORDQTY) AS FORDQTY
+			, SUM(TS.TCMPQTY) AS TCMPQTY
+			, SUM(CASE WHEN TS.TASKSTS = 'SHPOUT' THEN TS.TCMPQTY ELSE 0 END) AS SOUTQTY
+			, MIN(TS.CREDATE) AS CREDATE
+			, MIN(TS.CRETIME) AS CRETIME
+			, MAX(TS.LMODATE) AS LMODATE
+			, MAX(TS.LMOTIME) AS LMOTIME
+			, MAX(TS.LMOUSER) AS LMOUSER
+			FROM WSHPIT SH FORCE INDEX(IX_WSHPIT01)
+			INNER JOIN WTAKIT TS
+			ON SH.COMPKEY = TS.COMPKEY
+			AND SH.WAREKEY = TS.WAREKEY
+			AND SH.OERETKY = TS.OERETKY
+			AND SH.OERETIT = TS.OERETIT
+			AND SH.SHPDCKY = TS.SHPDCKY
+			AND SH.SHPDCIT = TS.SHPDCIT
+			<choose>
+				<when test="shpdcst != null and 'ING'.equals(shpdcst)">
+					AND TS.TASKSTS NOT in ('CANCEL', 'SHPOUT')
+				</when>
+				<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+					AND TS.TASKSTS NOT in ('CANCEL', 'TASK')
+				</when>
+			</choose>
+			AND TS.DOCCATE = '500'
+			AND TS.DOCTYPE = '530'
+			AND TS.PICKTYP = 'SINGLE'
+			<if test="allgrky != null and allgrky != '' ">
+				and TS.ALLGRKY = #{allgrky}
+			</if>
+			<if test="ownerky != null and ownerky != ''">
+				AND TS.ALLGRKY IN
+				(
+				SELECT DISTINCT(TS.ALLGRKY) FROM WSHPIT SH
+				INNER JOIN WTAKIT TS
+				ON SH.COMPKEY = TS.COMPKEY
+				AND SH.WAREKEY = TS.WAREKEY
+				AND SH.SHPDCKY = TS.SHPDCKY
+				AND SH.SHPDCIT = TS.SHPDCIT
+				<choose>
+				<when test="shpdcst != null and 'ING'.equals(shpdcst)">
+					AND TS.TASKSTS NOT in ('CANCEL', 'SHPOUT')
+				</when>
+				<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+					AND TS.TASKSTS NOT in ('CANCEL', 'TASK')
+				</when>
+				</choose>
+				AND TS.DOCCATE = '500'
+				AND TS.DOCTYPE = '530'
+				WHERE SH.COMPKEY = #{userData.compkey}
+				AND SH.WAREKEY = #{warekey}
+				AND SH.DOCCATE = '700'
+				AND SH.DOCTYPE in ('780', '781')
+				<if test="allgrky != null and allgrky != '' ">
+					and TS.ALLGRKY = #{allgrky}
+				</if>
+				<if test="picktyp != null and picktyp != '' ">
+					and TS.PICKTYP = #{picktyp}
+				</if>
+				<if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+					and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto}
+				</if>
+				<if test="oeretky != null and oeretky != '' ">
+					and SH.OERETKY = #{oeretky}
+				</if>
+				AND TS.OWNERKY = #{ownerky}
+				)
+			</if>
+			WHERE SH.COMPKEY = #{userData.compkey}
+			AND SH.WAREKEY = #{warekey}
+			AND SH.DOCCATE = '700'
+			AND SH.DOCTYPE IN ('780', '781')
+			<if test="oeretky != null and oeretky != '' ">
+				and SH.OERETKY = #{oeretky}
+			</if>
+			<if test="picktyp != null and picktyp != '' ">
+				and TS.PICKTYP = #{picktyp}
+			</if>
+			<if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+				and SH.SHPPDAY between #{shppdayfrom} and #{shppdayto}
+			</if>
+			GROUP BY TS.COMPKEY, TS.WAREKEY, TS.DOCCATE, TS.DOCTYPE, TS.ALLGRKY, TS.PICKTYP, TS.SHPDCKY, TS.SHPDCIT, TS.OERETKY, TS.OERETIT
+			) TK
+			ON SH.COMPKEY = TK.COMPKEY
+			AND SH.WAREKEY = TK.WAREKEY
+			AND SH.OERETKY = TK.OERETKY
+			AND SH.OERETIT = TK.OERETIT
+			AND SH.SHPDCKY = TK.SHPDCKY
+			AND SH.SHPDCIT = TK.SHPDCIT
+		GROUP BY SH.COMPKEY, SH.WAREKEY, TK.ALLGRKY, TK.PICKTYP
+	</select>
+    
+    <select id="getWmo51ItemList" resultType="com.logistics.wm.domain.ReturnShipOutDTO">
+		/* getWmo51ItemList */
+		select
+			concat(SH.COMPKEY, SH.WAREKEY, SH.ALLGRKY, TS.PICKTYP) as ROWKEY
+			, TS.COMPKEY, TS.WAREKEY
+			, TS.DOCCATE, TS.DOCTYPE
+			, (select DOCTYNM from MDOCMA where COMPKEY = SH.COMPKEY and DOCCATE = SH.DOCCATE and DOCTYPE = SH.DOCTYPE and WAREKEY = SH.WAREKEY) as DOCTYNM
+			, (select OWNAMLC from MOWRMA where COMPKEY = SH.COMPKEY and OWNERKY = SH.OWNERKY ) as OWNAMLC
+			, (SELECT CDCATE1 FROM V_MCODEM WHERE COMPKEY = SH.COMPKEY AND COMCDKY = 'TASKSTS' AND COMCDVL = TS.TASKSTS) AS SHPDCST
+			, TS.SHPDCKY, TS.SHPDCIT
+			, SUM(TS.DIFFQTY) AS DIFFQTY
+			, COUNT(DISTINCT TS.SKUMKEY) AS SKKYCNT
+			, TS.ALLGRKY
+			, TS.PICKTYP
+			, TS.TASKSTS
+			, TS.SKUMKEY
+			, TS.SKUDESC
+			, (select LOCANAM from MLOCMA ML where ML.COMPKEY = TS.COMPKEY and ML.WAREKEY = TS.WAREKEY and ML.AREAKEY = TS.TOAREKY and ML.ZONEKEY = TS.TOZONKY and ML.LOCAKEY = TS.TOLOCKY) as LOCANAM
+			, TS.OERETKY
+			, TS.OERETIT
+			, SH.DESTKEY
+			, (select denamlc from MDESMA WHERE COMPKEY = SH.COMPKEY and PTNRKEY = SH.CUSTKEY and DESTKEY = SH.DESTKEY) as DENAMLC
+			, SH.SHCUQTY
+			, SH.RGITQTY
+			, SH.SHALQTY
+			, SUM(TS.FORDQTY) AS FORDQTY
+			, SUM(TS.TCMPQTY) AS TCMPQTY
+			, SUM(CASE WHEN TS.TASKSTS = 'SHPOUT' THEN TS.TCMPQTY ELSE 0 END) AS SOUTQTY
+			, fn_com_todate(min(TS.CREDATE)) as SHSDATE
+			, fn_com_totime(min(TS.CRETIME)) as SHSTIME
+			, fn_com_todate(max(TS.LMODATE)) as SHEDATE
+			, fn_com_totime(max(TS.LMOTIME)) as SHETIME
+			, max(TS.LMOUSER) as SHEUSER
+			, fn_sy_usernam(SH.COMPKEY, max(TS.LMOUSER)) as SHENAME
+		FROM WSHPIT SH
+		INNER JOIN WTAKIT TS
+		ON SH.COMPKEY = TS.COMPKEY
+		AND SH.WAREKEY = TS.WAREKEY
+		AND SH.OERETKY = TS.OERETKY
+		AND SH.OERETIT = TS.OERETIT
+		AND SH.SHPDCKY = TS.SHPDCKY
+		AND SH.SHPDCIT = TS.SHPDCIT
+		<choose>
+			<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+				AND TS.TASKSTS not in ('CANCEL', 'TASK')
+			</when>
+			<otherwise>
+				AND TS.TASKSTS not in ('CANCEL' , 'SHPOUT')
+			</otherwise>
+		</choose>
+		AND TS.DOCCATE = '500'
+		AND TS.DOCTYPE = '530'
+		<if test="picktyp != null and picktyp != '' ">
+			and TS.PICKTYP = #{picktyp}
+		</if>
+		<if test="allgrky != null and allgrky != '' ">
+			AND trim(TS.ALLGRKY) like concat('%',#{allgrky},'%')
+		</if>
+		<if test="ownerky != null and ownerky != ''">
+			AND TS.ALLGRKY IN
+			(
+			SELECT DISTINCT(TS.ALLGRKY) FROM WSHPIT SH
+			INNER JOIN WTAKIT TS
+			ON SH.COMPKEY = TS.COMPKEY
+			AND SH.WAREKEY = TS.WAREKEY
+			AND SH.SHPDCKY = TS.SHPDCKY
+			AND SH.SHPDCIT = TS.SHPDCIT
+			<choose>
+				<when test="shpdcst != null and 'CMP'.equals(shpdcst)">
+					AND TS.TASKSTS not in ('CANCEL', 'TASK')
+				</when>
+				<otherwise>
+					AND TS.TASKSTS not in ('CANCEL' , 'SHPOUT')
+				</otherwise>
+			</choose>
+			AND TS.DOCCATE = '500'
+			AND TS.DOCTYPE = '530'
+			WHERE SH.COMPKEY = #{userData.compkey}
+			AND SH.WAREKEY = #{warekey}
+			AND SH.DOCCATE = '700'
+			AND SH.DOCTYPE in ('780', '781')
+			<if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+				AND SH.SHPPDAY between #{shppdayfrom} and #{shppdayto}
+			</if>
+			<if test="allgrky != null and allgrky != '' ">
+				and TS.ALLGRKY = #{allgrky}
+			</if>
+			<if test="picktyp != null and picktyp != '' ">
+				and TS.PICKTYP = #{picktyp}
+			</if>
+			AND TS.OWNERKY = #{ownerky}
+			)
+		</if>
+		WHERE SH.COMPKEY = #{userData.compkey}
+		AND SH.WAREKEY = #{warekey}
+		AND SH.DOCCATE = '700'
+		AND SH.DOCTYPE in ('780', '781')
+		<if test='shppdayfrom != null and shppdayfrom != "" and shppdayto != null and shppdayto != ""'>
+			AND SH.SHPPDAY BETWEEN #{shppdayfrom} AND #{shppdayto}
+		</if>
+		GROUP BY TS.COMPKEY, TS.WAREKEY, TS.DOCCATE, TS.DOCTYPE, TS.ALLGRKY, TS.PICKTYP, TS.SHPDCKY, TS.SHPDCIT, TS.OERETKY, TS.OERETIT
+		ORDER BY OERETKY ASC , (CASE WHEN TS.OWNERKY = #{ownerky} THEN 1 ELSE 9	END), OERETIT ASC
+    </select>
+    
+    <!-- Procedure :: WMO51 반출출고확정 -->
+    <select id="callSpWmShipingByReturn" statementType="CALLABLE" parameterType="com.logistics.wm.domain.ReturnShipOutDTO">
+		CALL sp_wm_shipout
+		( 
+			  #{compkey}
+			, #{warekey}
+			, #{doccate}
+			, #{doctype}
+			, #{allgrky}
+			, #{oeretky}
+			, #{oeretit}
+			, #{lmouser}
+			, #{omsgkey, mode=OUT, jdbcType=VARCHAR}
+			, #{oresult, mode=OUT, jdbcType=INTEGER}
+		)
+	</select>
+
+	<select id="getWmo60WshpitList" resultType="com.logistics.wm.domain.ShipOutDTO">
+		/* getWmo60WshpitList */
+		SELECT
+		   OC.COMPKEY
+		 , OC.DOCCATE, OC.DOCTYPE
+		 , OC.SHPDCKY, OC.SHPDCIT
+		 , (select WHNAMLC from MWARMA W where W.COMPKEY = OC.COMPKEY and W.WAREKEY = OC.WAREKEY) as WAREKEY
+		 , (select COMCDTX from V_MCODEM where COMPKEY = OC.COMPKEY and COMCDKY = 'SHPITST' and COMCDVL = OC.SHPITST) as SHPITST
+		 , (select DOCCTNM from MDOCMA where COMPKEY = OC.COMPKEY and WAREKEY = OC.WAREKEY and DOCCATE = OC.DOCCATE and DOCTYPE = OC.DOCTYPE) AS DOCCTNM
+		 , (select DOCTYNM from MDOCMA where COMPKEY = OC.COMPKEY and WAREKEY = OC.WAREKEY and DOCCATE = OC.DOCCATE and DOCTYPE = OC.DOCTYPE) AS DOCTYNM
+		 , (select OWNAMLC from MOWRMA where COMPKEY = OC.COMPKEY and OWNERKY = OC.OWNERKY) as OWNERKY
+		 , fn_com_todate(OC.SPEIDAT) as SPEIDAT
+		 , OC.SKUMKEY
+		 , OC.SKUDESC
+		 , OC.COOUTKY, OC.COOUTIT
+		 , OC.OERETKY, OC.OERETIT
+		 , OC.SKUAT01
+		 , OC.SKUAT03
+		 , OC.SAATC06
+		 , OC.SAATC10
+		 , OC.FORDQTY
+		 , OC.TCMPQTY
+		 , fn_com_todate(OC.CREDATE) as CREDATE
+		 , fn_com_totime(OC.CRETIME) as CRETIME
+		 , fn_sy_usernam(OC.COMPKEY , OC.CREUSER) as CREUSER
+		 , fn_com_todate(OC.LMODATE) as LMODATE
+		 , fn_com_totime(OC.LMOTIME) as LMOTIME
+		 , fn_sy_usernam(OC.COMPKEY , OC.LMOUSER) as LMOUSER
+		FROM
+		(
+			SELECT
+				SH.COMPKEY, SH.WAREKEY, SH.OWNERKY
+				 , SH.DOCCATE, SH.DOCTYPE, SH.SHPITST
+				 , SH.SHPDCKY, SH.SHPDCIT
+				 , SUM(WT.FORDQTY) AS FORDQTY
+				 , SUM(WT.TCMPQTY) AS TCMPQTY
+				 , SH.SKUMKEY
+				 , MK.SKUDESC
+				 , MK.SKUAT01
+				 , MK.SKUAT03
+				 , OS.SAATC06, OS.SAATC10
+				 , SH.SPEIDAT
+				 , SH.COOUTKY, SH.COOUTIT
+				 , SH.OERETKY, SH.OERETIT
+				 , MIN(SH.CREDATE) AS CREDATE
+				 , MIN(SH.CRETIME) AS CRETIME
+				 , MIN(SH.CREUSER) AS CREUSER
+				 , MAX(SH.LMODATE) AS LMODATE
+				 , MAX(SH.LMOTIME) AS LMOTIME
+				 , MAX(SH.LMOUSER) AS LMOUSER
+			FROM WSHPIT SH FORCE INDEX(IX_WSHPIT06)
+			INNER JOIN WTAKIT WT FORCE INDEX (IX_WTAKIT06)
+			 ON SH.COMPKEY = WT.COMPKEY
+			AND SH.WAREKEY = WT.WAREKEY
+			AND SH.COOUTKY = WT.COOUTKY
+			AND SH.COOUTIT = WT.COOUTIT
+			AND SH.OERETKY = WT.OERETKY
+			AND SH.OERETIT = WT.OERETIT
+			INNER JOIN OCOSAL OS FORCE INDEX (IX_OCOSAL10)
+			 ON SH.COMPKEY = OS.COMPKEY
+			AND SH.WAREKEY = OS.TOWARKY
+			AND SH.COOUTKY = OS.COOUTKY
+			AND SH.COOUTIT = OS.COOUTIT
+			LEFT JOIN OERETI OT
+			 ON SH.COMPKEY = OT.COMPKEY
+			AND SH.WAREKEY = OT.WAREKEY
+			AND SH.OERETKY = OT.OERETKY
+			AND SH.OERETIT = OT.OERETIT
+			INNER join MSKUWC MK
+			 ON SH.COMPKEY = MK.COMPKEY
+			AND SH.WAREKEY = MK.WAREKEY
+			AND SH.OWNERKY = MK.OWNERKY
+			AND SH.SKUMKEY = MK.SKUMKEY
+		<where>
+			SH.COMPKEY = #{userData.compkey}
+			<if test="ownerky != null and ownerky !='' ">
+				and SH.OWNERKY = #{ownerky}
+			</if>
+			<if test="warekey != null and warekey !='' ">
+				and SH.WAREKEY = #{warekey}
+			</if>
+			<if  test="doctypes != null and doctypes.size > 0">
+				and SH.DOCTYPE in
+				<foreach collection="doctypes" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if  test="shpitsts != null and shpitsts.size > 0">
+				and SH.SHPITST in
+				<foreach collection="shpitsts" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="skumkey != null and skumkey !='' ">
+				and MK.SKUMKEY like concat( '%' , #{skumkey} , '%')
+			</if>
+			<if test="skudesc != null and skudesc !='' ">
+				and MK.SKUDESC like concat( '%' , #{skudesc} , '%')
+			</if>
+			<if test="skuat01 != null and skuat01 !='' ">
+				and MK.SKUAT01 like concat( '%' , #{skuat01} , '%')
+			</if>
+			<if test="skuat03 != null and skuat03 !='' ">
+				and (MK.SKUAT03 like concat( '%' , #{skuat03} , '%') OR OT.RETAT01 like concat( '%' , #{skuat03} , '%'))
+			</if>
+			<if test="saatc10 != null and saatc10 !='' ">
+				and OS.SAATC10 like concat( '%' , #{saatc10} , '%')
+			</if>
+			<if test="saatc06 != null and saatc06 !='' ">
+				and OS.SAATC06 like concat( '%' , #{saatc06} , '%')
+			</if>
+			<if test="dateto != null and dateto != ''">
+				and SH.SPEIDAT between replace(#{datefrom}, '-' , '') and replace(#{dateto}, '-' , '')
+			</if>
+		</where>
+			GROUP BY
+				SH.COMPKEY, SH.WAREKEY, SH.OWNERKY
+					, SH.DOCCATE, SH.DOCTYPE, SH.SHPITST
+					, SH.SHPDCKY, SH.SHPDCIT
+					, SH.SKUMKEY
+					, MK.SKUDESC
+					, MK.SKUAT01
+					, MK.SKUAT03
+					, SH.SPEIDAT
+					, SH.COOUTKY, SH.COOUTIT
+					, SH.OERETKY, SH.OERETIT
+					, OS.SAATC06, OS.SAATC10
+		) AS OC
+	</select>
+
+	<!-- Procedure :: WMO60 callSpWmShipoutCancel -->
+	<select id="callSpWmShipoutCancel" resultType="com.logistics.wm.domain.ShipOutDTO" parameterType="com.logistics.wm.domain.ShipOutDTO">
+		/* 출고취소 임시 */
+		/* callSpWmShipoutCancel */
+		SELECT 'TMP' as COMPKEY FROM DUAL
+	</select>
+</mapper>

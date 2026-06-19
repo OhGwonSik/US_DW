@@ -1,0 +1,499 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col toggle">
+					<button id="wmp40_toggle" value="skumkey" class="toggle-skumkey">[[#{wm.wlotma.skumkey}]]</button>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp40_input" name="wmp40_input">
+				</div>			
+			</div>
+			<div class="row">
+				<div class="condition-title col justify-center">
+					<label for="inputGroupSelect01">[[#{wm.wmp40.trunpid}]]</label>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp40_trunpid" disabled>
+				</div>
+			</div>
+			<div class="row">
+				<button type="button" class="btn-clear btn-white col" id="wmp40_btnReset">[[#{bt.reset}]]</button>
+				<button type="button" class="btn-save btn-main col" id="wmp40_btnSave">[[#{bt.save}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+			</div>
+			<div class="table-wrapper con-box row2">
+				<table class="mobile-table wmp40-table">
+					<thead id="thtb">
+						<tr>
+							<th><input type="checkbox" id="wmp40_totalBox"></th>
+							<th id="row" style="display: none"></th> 			
+							<th id="ownerky" style="display: none">[[#{wm.wmp.ownerky}]]</th>
+							<th id="ownamlc" style="display: none">[[#{wm.wmp.ownerky}]]</th>			
+							<th id="skumkey" style="display: none">[[#{md.mskuma.skumkey}]]</th>
+							<th id="skudesc" >[[#{md.mskuma.skudesc}]]</th>
+							<th id="stotqty">[[#{wm.wmp50.stotqty}]]</th>
+							<th id="fordqty">[[#{wm.wmp40.fordqty}]]</th>
+							<th id="truntyp">[[#{wm.wmp40.truntyp}]]</th>
+							<th id="trunpid">[[#{wm.wmp40.trunpid}]]</th>
+							<th id="stockky" style="display: none">[[#{wm.wmp40.stockky}]]</th>	
+							<th id="upccode" style="display: none"></th>
+						</tr>
+					</thead>
+					<tbody class="table-body" id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+		<div class="spinner" id="wmp40Spinner"></div> 
+		<div class="bg"></div>
+	</main>
+	<script>
+		/*  wmp40 - 팔레타이징
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: PDA로 창고에 입하된 부품(SKU)을 팔레트에 적재하는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/
+		let wmp40List;
+		let tmpTruntyp = '';
+		let tmpTrunpid = '';
+		$(function() {
+			const pageId = 'wmp40';
+			
+			const toggleArray = ['truntyp','skumkey'];
+			let toggleIdx = 0;
+			const initToggle = document.querySelector('.condition-title').innerHTML;
+			let confirmSelectFlag = true;
+			let confirmed = false;
+			let confirmSelect = false;
+			let checkValue = true;
+			getWstkkyAndWrcvitList();
+			
+			//PDA니까 화면 처음 포커스 가게
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});	
+			
+			//상품코드 입력시 체크되게 구현하고, 로케이션은 한번만 찍으면 리스트에 다 담기게 구현
+			//상품코드 보다 로케이션을 미리 입력했을 경우 변수에 저장후 상품코드를 입력했을때 같이 들어가게 구현
+			//============================================================				
+			//ASN, LOCATION, 상품코드 바코드 입력시 검색
+			//============================================================	
+ 			document.querySelector('#'+pageId+'_input').addEventListener('keyup', async function(event){
+ 				if(event.keyCode === 13){
+ 					const toggleValue = document.querySelector('#'+pageId+'_toggle').value;
+ 					const codeData = document.querySelector('#'+pageId+'_input').value;
+ 					const boxCheckedList = document.querySelectorAll('input[class="checkbox"]:checked');
+ 					const trObjs = document.querySelectorAll('#tBody tr');
+ 					let matchCnt = 0;
+ 					
+ 					if(!codeData){ //빈 문자열 일때 동작 X
+ 						return;
+ 					}
+ 					
+ 					//confirm 한번만 뜨게 , 취소 누를시 이상함
+ 					if(toggleValue === 'skumkey') { //부품코드 입력시(똑같은 부품코드가 있을때 trunpid, truntyp 없는것만 체크 잇는건 수동체크 하면 기입되게)
+ 						if(!trObjs.length){
+ 							alertOpen('[[#{wm.wmp40.noData}]]');
+ 						}else{
+ 							for(let i=0; i<trObjs.length; i++){
+ 								if(codeData === trObjs[i].querySelector('.upccode').innerHTML){
+ 									if(tmpTrunpid && tmpTruntyp){
+ 										if((trObjs[i].querySelector('.trunpid').innerHTML || trObjs[i].querySelector('.truntyp').innerHTML)){
+ 											confirmOpen('[[#{wm.wmp40.trunpidFilp}]]', function(result){
+ 												if(result){
+ 	 												trObjs[i].querySelector('.checkbox').checked = true;
+ 	 												trObjs[i].querySelector('.trunpid').innerHTML = tmpTrunpid;
+ 	 												trObjs[i].querySelector('.truntyp').innerHTML = tmpTruntyp;
+ 												}
+ 							 					document.querySelector('#'+pageId+'_input').value = '';
+ 							 					document.querySelector('#'+pageId+'_input').focus();
+ 											});
+ 										}else{
+ 											trObjs[i].querySelector('.checkbox').checked = true;
+ 											trObjs[i].querySelector('.trunpid').innerHTML = tmpTrunpid;
+ 											trObjs[i].querySelector('.truntyp').innerHTML = tmpTruntyp;
+ 										}
+ 									}else{
+ 										trObjs[i].querySelector('.checkbox').checked = true;
+ 									}
+ 									selectRow(trObjs[i].querySelector('.checkbox'));
+ 									matchCnt++;
+ 								}
+ 							}
+ 							if(!matchCnt) {
+ 								alertOpen('[[#{wm.wmp30.missMatchSkumkey}]]', function(){
+ 				 					document.querySelector('#'+pageId+'_input').value = '';
+ 				 					document.querySelector('#'+pageId+'_input').focus();
+ 								});
+ 							}
+ 						}
+ 					}else if(toggleValue === 'truntyp'){ // truntyp=>trunpid 변경예정
+ 						if(!trObjs.length){ //팔레타이징 정보가 없다.
+ 							alertOpen('[[#{wm.wmp40.noData}]]', function(){
+ 	 							toggleIdx = toggleArray.length - 1;
+ 	 							document.querySelector('.toggle').innerHTML = initToggle;
+ 	 		 					document.querySelector('#'+pageId+'_input').value = '';
+ 	 		 					document.querySelector('#'+pageId+'_input').focus();
+ 							});
+ 						}else{ //trunpid 는 KIT005|L000013290 식으로 들어가서 갈라쳐줘야한다.
+ 							if(document.querySelector('#'+pageId+'_input').value.indexOf('|') > 0){
+ 								tmpTrunpid = document.querySelector('#'+pageId+'_input').value.trim().slice(document.querySelector('#'+pageId+'_input').value.indexOf('|') +1);
+ 								document.querySelector('#'+pageId+'_trunpid').value = tmpTrunpid;
+ 								tmpTruntyp = document.querySelector('#'+pageId+'_input').value.trim().slice(0 , document.querySelector('#'+pageId+'_input').value.indexOf('|'));
+
+ 								if(boxCheckedList.length){
+ 									boxCheckedList.forEach(function(element){
+ 										if(element.closest('tr').querySelector('.trunpid').innerHTML.trim() || element.closest('tr').querySelector('.truntyp').innerHTML.trim()){
+ 											if(checkValue && confirmSelectFlag){
+ 												checkValue = false;
+ 												confirmOpen('[[#{wm.wmp40.trunpidFilp}]]', function(result){
+ 													if(result){
+ 	 	 												element.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+ 	 	 												element.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+ 	 	 							 					document.querySelector('#'+pageId+'_input').value = '';
+ 	 	 							 					document.querySelector('#'+pageId+'_input').focus();
+ 													}else{
+ 	 	 												element.closest('tr').querySelector('.checkbox').checked = false;
+ 	 	 												element.closest('tr').style.backgroundColor = 'white';
+ 	 	 												element.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(element.closest('tr').querySelector('.row'));
+ 	 	 												element.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(element.closest('tr').querySelector('.row'));
+ 	 	 												confirmSelectFlag = false;
+ 	 	 							 					document.querySelector('#'+pageId+'_input').value = '';
+ 	 	 							 					document.querySelector('#'+pageId+'_input').focus();
+ 													}
+ 												});
+ 											}else if(!checkValue && confirmSelectFlag){ //confirm이 한번 떳고, yes를 눌렀을떄
+ 												element.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+ 												element.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+ 											}else if(!checkValue && !confirmSelectFlag){ //confirm이 한번 떳고, no를 눌렀을떄
+												element.closest('tr').querySelector('.checkbox').checked = false;
+ 												element.closest('tr').style.backgroundColor = 'white';
+ 												element.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(element.closest('tr').querySelector('.row'));
+ 												element.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(element.closest('tr').querySelector('.row'));
+ 											}
+ 										}else{
+ 											element.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+ 											element.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+ 										}
+ 									});
+ 									if(document.querySelectorAll('input[class*="checkbox"]').length === document.querySelectorAll('input[class*="checkbox"]:checked').length){
+ 										document.querySelector('#wmp40_totalBox').checked = true;
+ 									}else{
+ 										document.querySelector('#wmp40_totalBox').checked = false;
+ 									}
+ 								}
+ 							}
+ 						}
+ 					}
+ 					document.querySelector('#'+pageId+'_input').value = '';
+ 					document.querySelector('#'+pageId+'_input').focus();
+ 				}
+			});
+			//============================================================	 
+			//토글 버튼 클릭시 ASN코드(입고예정번호), tolocky(이동할 로케이션), 부품코드 바코드
+			//============================================================
+			document.querySelector('.toggle').addEventListener('click', function(){
+				if(toggleIdx === toggleArray.length){
+					toggleIdx = 0;
+				}
+				
+				if(toggleArray[toggleIdx] === 'skumkey'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+				}else if(toggleArray[toggleIdx] === 'truntyp'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wmp40.trunpid}]]';
+				}
+				document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+				document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+				document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+				document.querySelector('#'+pageId+'_input').focus();
+				toggleIdx++;
+			});
+			
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function() {
+				confirmOpen('[[#{ms.listViewRollback}]]', function(result){
+					if(result){
+						location.reload();
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			})
+			//============================================================
+			//입하등록 저장 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnSave').click(async function(){
+				const thObjs = document.querySelector('#thtb').querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});	
+				
+				if(!boxCheckedList.length){
+					alertOpen('[[#{ms.wmp.noCheckList}]]',function(){
+						document.querySelector('#'+pageId+'_input').value = '';
+						document.querySelector('#'+pageId+'_input').focus();
+					});
+					return;
+				}
+				
+				let keyArray = [];
+				
+				//체크박스떄문에 1부터 시작
+				for(let i=1;i<thObjs.length;i++){
+					keyArray.push(thObjs[i].getAttribute('id'));
+				}
+				
+				let param;
+				let wmp40SaveList = [];
+				
+				for(let i=0;i<trTagList.length;i++){
+					param = {};
+					for(let j=1; j<trTagList[i].querySelectorAll('td').length;j++){
+						if(j === 7){
+							if(!trTagList[i].querySelectorAll('td')[j].querySelector('input').value || Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value) === 0){
+								alertOpen('[[#{wm.wmp50.insertFordqty}]]', function(){
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();
+								});
+								return;
+							}
+							if(Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value) < 0){
+								alertOpen('[[#{wm.wmp50.insertFordqty}]]', function(){
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').value = '';
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();
+								});
+								return;
+							}							
+							if(Number(trTagList[i].querySelectorAll('td')[j-1].innerHTML) < Number(trTagList[i].querySelectorAll('td')[j].querySelector('input').value)){ //총 재고 수량 < 지시수량
+								alertOpen('[[#{wm.wmp50.overFordqty}]]', function(){
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').focus();
+									trTagList[i].querySelectorAll('td')[j].querySelector('input').value = '';
+								});
+								return;
+							}
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].querySelector('input').value;
+						}else if(j === 8 || j === 9){
+							if(!trTagList[i].querySelectorAll('td')[j].innerHTML){
+								alertOpen('[[#{wm.wmp40.scanTrunpid}]]');
+								return;
+							}
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].innerHTML;
+						}else{
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].innerHTML;
+						}
+					}
+					param['warekey'] = '[[${userattr.warekey}]]';
+					wmp40SaveList.push(param);
+				}
+				confirmOpen('[[#{ms.checksave}]]', async function(result){
+					if(result){
+						try{
+							document.querySelector('#wmp40Spinner').style.display = 'block';
+							const rData =  await fetchUtil('POST','/wm/pda/wmp40/save',{ addList : wmp40SaveList });
+							if(rData.status === 200){
+								document.querySelector('#'+pageId+'_trunpid').value = '';
+								tmpTruntyp = null;
+								tmpTrunpid = null;
+								confirmSelectFlag = true;
+								confirmed = false;
+								checkValue = true;
+								await getWstkkyAndWrcvitList();
+							}
+						}catch(err){
+							alertOpen('[[#{ms.saveErr}]]');
+							return;
+						}finally{
+							document.querySelector('#'+pageId+'_input').value = '';
+							document.querySelector('#'+pageId+'_input').focus();
+							document.querySelector('#wmp40Spinner').style.display = 'none';
+						}
+					}
+				});
+			});			
+
+			//================================
+			//PDA 팔레타이징 조회 값 불러오기
+			//================================
+			async function getWstkkyAndWrcvitList(){
+				
+				document.querySelector('#wmp40Spinner').style.display = 'block';
+				
+				const response = await fetchUtil('GET', '/wm/pda/wmp40/grid' , {warekey : '[[${userattr.warekey}]]'});
+				wmp40List = await response.json();
+				
+				if(!wmp40List.length) {
+					document.querySelector('#tBody').innerHTML = '';
+					document.querySelector('#'+pageId+'_input').value = '';
+					document.querySelector('#' + pageId + '_trunpid').value = '';
+					toggleIdx = 0;
+					document.querySelector('.toggle').innerHTML = initToggle;
+					document.querySelector('#'+pageId+'_input').focus();
+					document.querySelector('#wmp40Spinner').style.display = 'none';
+					return;
+				}
+				document.querySelector('#tBody').innerHTML = '';
+				
+				let html = '';
+				for(let i=0;i<wmp40List.length;i++){
+					html += '<tr>';
+					html += '<td><input type="checkbox" class="checkbox" onclick="isChecked(this)"></td>';
+					html += '<td class="row" style="display : none">'+ i +'</td>'
+					html += '<td class="ownerky" style="display:none">' + wmp40List[i].ownerky + '</td>';
+					html += '<td class="ownamlc" style="display: none">' + wmp40List[i].ownamlc + '</td>';
+					html += '<td class="skumkey" style="display: none">' + wmp40List[i].skumkey + '</td>';
+					html += '<td class="skudesc">' + wmp40List[i].skudesc + '</td>';
+					html += '<td class="stotqty">' + wmp40List[i].stotqty + '</td>';
+					html += '<td><input class="fordqty" type="number" value="'+ wmp40List[i].fordqty +'"></td>';
+					if(!(wmp40List[i].truntyp || wmp40List[i].truntid)){
+						html += '<td class="truntyp"></td>';
+						html += '<td class="trunpid"></td>';
+					}else{
+						html += '<td class="truntyp">' + wmp40List[i].truntyp + '</td>';
+						html += '<td class="trunpid">' + wmp40List[i].trunpid + '</td>';
+					}
+					html += '<td class="stockky" style="display:none">'+ wmp40List[i].stockky +'</td>'
+					html += '<td class="upccode" style="display:none">' + wmp40List[i].upccode + '</td>';
+					html += '</tr>';
+				}
+				document.querySelector('#tBody').insertAdjacentHTML('afterbegin', html);
+				document.querySelector('#wmp40Spinner').style.display = 'none';
+			}
+			//전체 체크박스 컨트롤
+			document.querySelector('#'+pageId+'_totalBox').addEventListener('click', function(){
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(tagObj){
+					tagObj.checked = document.querySelector('#'+pageId+'_totalBox').checked;
+					if(tagObj.checked){
+						if(tmpTrunpid && tmpTruntyp){
+							if(tagObj.closest('tr').querySelector('.trunpid').innerHTML.trim() && tagObj.closest('tr').querySelector('.truntyp').innerHTML.trim()){
+								if(!confirmed && !confirmSelect){
+									confirmOpen('[[#{wm.wmp40.trunpidFilp}]]', function(result){
+										if(result){
+											confirmed = true;
+											tagObj.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+											tagObj.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+											tagObj.closest('tr').style.backgroundColor = '#5372d97d';
+										}else{
+											confirmSelect = true;
+											tagObj.closest('tr').style.backgroundColor = 'white';
+											tagObj.checked = false;
+											tagObj.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(tagObj.closest('tr').querySelector('.row'));
+											tagObj.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(tagObj.closest('tr').querySelector('.row'));
+										}
+										checkedTotalBox();
+										document.querySelector('#'+pageId+'_input').value = '';
+										document.querySelector('#'+pageId+'_input').focus();
+									});
+								}else if(confirmed && !confirmSelect){ //confirm 한번 보고 확인 누름
+									tagObj.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+									tagObj.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+									tagObj.closest('tr').style.backgroundColor = '#5372d97d';
+								}else if(confirmed && confirmSelect){ //confirm 한번 보고 취소
+									tagObj.closest('tr').querySelector('.checkbox').checked = false;
+									tagObj.closest('tr').style.backgroundColor = 'white';
+									tagObj.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(tagObj.closest('tr').querySelector('.row'));
+									tagObj.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(tagObj.closest('tr').querySelector('.row'));
+								}
+							}else{
+								tagObj.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+								tagObj.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+								tagObj.closest('tr').style.backgroundColor = '#5372d97d';
+							}
+						}else{
+							tagObj.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(tagObj.closest('tr').querySelector('.row'));
+							tagObj.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(tagObj.closest('tr').querySelector('.row'));
+							tagObj.closest('tr').style.backgroundColor = '#5372d97d';
+						}
+					}else{
+						tagObj.closest('tr').style.backgroundColor = 'white';
+						tagObj.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(tagObj.closest('tr').querySelector('.row'));
+						tagObj.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(tagObj.closest('tr').querySelector('.row'));
+					}
+				});
+				checkedTotalBox();
+			});
+			
+			//물건 스캔시 일치할 경우 위로 올리면서 tr 색 입혀주는 함수
+			function selectRow(row){
+				if(row.closest('tr').querySelector('.checkbox').checked){
+					const tableRow = row.parentElement.parentElement;
+					const table = tableRow.parentElement;
+					tableRow.style.backgroundColor = '#5372d97d';
+					table.insertBefore(tableRow, table.firstElementChild);
+				}
+			}			
+		});
+		
+		//개별 체크박스가 다 체크되었을 경우 전체체크박스 체크
+		function checkedTotalBox(){
+			if(document.querySelectorAll('input[class*="checkbox"]').length === document.querySelectorAll('input[class*="checkbox"]:checked').length){
+				document.querySelector('#wmp40_totalBox').checked = true;
+			}else{
+				document.querySelector('#wmp40_totalBox').checked = false;
+			}
+		}
+		//로우 체크박스 컨트롤(스캔후 이미 팔레타이징 되어있는 애를 클릭하면 체크된애 전체 처리)
+		function isChecked(obj){
+			let checkedCnt = 0;
+			if(obj.checked){
+				obj.closest('tr').style.backgroundColor = '#5372d97d';
+				if(tmpTrunpid && tmpTruntyp){
+					if(obj.closest('tr').querySelector('.trunpid').innerHTML.trim() && obj.closest('tr').querySelector('.truntyp').innerHTML.trim()){
+						confirmOpen('[[#{wm.wmp40.trunpidFilp}]]', function(result){
+							if(result){
+								checkedCnt++;
+								obj.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+								obj.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+							}else{
+								obj.checked = false;
+								obj.closest('tr').style.backgroundColor = 'white';
+							}
+							checkedTotalBox();
+							document.querySelector('#wmp40_input').value = '';
+							document.querySelector('#wmp40_input').focus();
+						});
+					}else{
+						checkedCnt++;
+						obj.closest('tr').querySelector('.trunpid').innerHTML = tmpTrunpid;
+						obj.closest('tr').querySelector('.truntyp').innerHTML = tmpTruntyp;
+					}
+				}
+			}else{
+				obj.closest('tr').style.backgroundColor = 'white';
+				obj.closest('tr').querySelector('.trunpid').innerHTML = resetTrunpid(obj.closest('tr').querySelector('.row'));
+				obj.closest('tr').querySelector('.truntyp').innerHTML = resetTruntyp(obj.closest('tr').querySelector('.row'));
+			}
+		}
+		//체크 풀었을 때 용기id, 용기ty 되돌려주는 함수
+		function resetTrunpid(objRow){
+			const originData = wmp40List[objRow.innerHTML];
+			return originData.trunpid;
+		}
+		//체크 풀었을 때 용기id, 용기ty 되돌려주는 함수
+		function resetTruntyp(objRow){
+			const originData = wmp40List[objRow.innerHTML];
+			return originData.truntyp;
+		}
+	</script>
+</div>	
+</html>

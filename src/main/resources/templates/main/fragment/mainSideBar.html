@@ -1,0 +1,27 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainSideBar">
+	<!-- sidebar menu -->
+	<button class="btn-sidebar show"><img></button>
+	<div class="sidebar-container show">
+		<div class="sidebar-menu-wrapper" id="sideMenuBar">
+
+		</div>
+		<div class="siderbar-help">도움말</div>
+	</div>
+	<!-- //sidebar menu -->
+
+	<!--  mainSideBar 종료 -->
+	<script type="text/javascript">
+		// 메뉴트리 구성
+		getUserMenuList();
+
+		// search 입력
+		function searchcmdKeyevent(o){
+			if(event.keyCode===13){
+				var tprogcmd = o.value.toLowerCase();
+				mainSearchKeyevent(tprogcmd);
+			}
+		}
+	</script>
+</div>
+</html>

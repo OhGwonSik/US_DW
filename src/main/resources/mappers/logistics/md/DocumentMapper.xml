@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.logistics.md.mapper.DocumentMapper">
+	<select id="selectMdocmaDoccateGroupList" resultType="com.logistics.md.domain.MdocmaDTO">
+		/* selectMdocmaDoccateGroupList */
+		select
+		DOCCATE, DOCCTNM
+		from MDOCMA
+		where COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		group by DOCCATE, DOCCTNM
+	</select>
+
+	<select id="selectMdocmaDoccateList" resultType="com.logistics.md.domain.MdocmaDTO">
+		/* selectMdocmaDoccateList */
+		SELECT DOCCATE as COMBOVL
+			 , DOCCTNM as COMBONM
+		  FROM MDOCMA
+		 WHERE COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='doccate != null and doccate != ""'>
+			and DOCCATE = #{doccate}
+		</if>
+		<if test='doctat5 != null and doctat5 != ""'> <!-- 고은별 : 정산 위해서 추가 -->
+			and DOCTAT5 = #{doctat5}
+		</if>
+		<if test='doccates != null and doccates.size != 0'>
+			and DOCCATE in
+			<foreach collection="doccates" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='doctat5s != null and doctat5s.size != 0'>
+		   and DOCTAT5 in
+		   	<foreach collection="doctat5s" item="item" index="index" open="(" close=")" separator=",">
+		   	 #{item}
+		   	</foreach>
+		</if>
+		<choose>
+			<when test='douseyn != null and douseyn != ""'>
+				and DOUSEYN = #{douseyn}
+			</when>
+			<otherwise>
+				and DOUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by DOCCATE, DOCCTNM
+		order by DOCCATE, DOCCTNM
+	</select>
+
+	<select id="selectMdocmaDoctypeList" resultType="com.logistics.md.domain.MdocmaDTO">
+		/* selectMdocmaDoctypeList */
+		select DOCTYPE as COMBOVL
+		, DOCTYNM as COMBONM
+		, DOCCATE as DOCCATE
+		, DOCCTNM as DOCCTNM
+		, DOCTAT5 as DOCTAT5 <!-- 정산용  -->
+		, WAREKEY as WAREKEY <!-- 정산용  -->
+		from MDOCMA
+		where COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='doccate != null and doccate != ""'>
+			and DOCCATE = #{doccate}
+		</if>
+		<if test='doctat5 != null and doctat5 != ""'> <!-- 고은별 : 정산 위해서 추가 -->
+			and DOCTAT5 = #{doctat5}
+		</if>
+		<if test='doctype != null and doctype != ""'>
+			and DOCTYPE = #{doctype}
+		</if>
+		<if test='doccates != null and doccates.size != 0'>
+			and DOCCATE in
+			<foreach collection="doccates" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<if test='doctat5s != null and doctat5s.size != 0'>
+		   and DOCTAT5 in
+		   	<foreach collection="doctat5s" item="item" index="index" open="(" close=")" separator=",">
+		   	 #{item}
+		   	</foreach>
+		</if>
+		<if test='doctypes != null and doctypes.size != 0'>
+			and DOCTYPE in
+			<foreach collection="doctypes" item="item" index="index" open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<choose>
+			<when test='douseyn != null and douseyn != ""'>
+				and DOUSEYN = #{douseyn}
+			</when>
+			<otherwise>
+				and DOUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		group by WAREKEY, DOCTYPE, DOCTYNM, DOCCATE, DOCCTNM, DOCTAT5
+		order by DOCTYPE, DOCTYNM
+	</select>
+
+	<select id="selectMrscmaSelectBox" resultType="com.logistics.md.domain.MrscmaDTO">
+		/* selectMrscmaSelectBox */
+		select RSNCODE as COMBOVL
+		, RSNCDNM as COMBONM
+		from MRSCMA
+		where COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='doccate != null and doccate != ""'>
+			and DOCCATE = #{doccate}
+		</if>
+		<if test='doctype != null and doctype != ""'>
+			and DOCTYPE = #{doctype}
+		</if>
+		<choose>
+			<when test='rsuseyn != null and rsuseyn != ""'>
+				and RSUSEYN = #{rsuseyn}
+			</when>
+			<otherwise>
+				and RSUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		<if test='rscate1 != null and rscate1 != ""'>
+			and RSCATE1 = #{rscate1}
+		</if>
+		group by RSNCODE, RSNCDNM
+	</select>
+	
+	<!-- 사유코드 셀렉트박스 customize 2023.09.15 최강호  -->
+	<select id="selectWmr21MrscmaSelectBox" resultType="com.logistics.md.domain.MrscmaDTO">
+		/* selectWmr21MrscmaSelectBox */
+		select RSNCODE as COMBOVL
+		, RSNCDNM as COMBONM
+		, DOCCATE
+		, DOCTYPE
+		, WAREKEY
+		, RSNCODE as RCARSCD
+		, RSNCODE as PKRSNCD
+		from MRSCMA
+		where COMPKEY = #{userData.compkey}
+		<if test='warekey != null and warekey != ""'>
+			and WAREKEY = #{warekey}
+		</if>
+		<if test='doccate != null and doccate != ""'>
+			and DOCCATE = #{doccate}
+		</if>
+		<if test='doctype != null and doctype != ""'>
+			and DOCTYPE = #{doctype}
+		</if>
+		<choose>
+			<when test='rsuseyn != null and rsuseyn != ""'>
+				and RSUSEYN = #{rsuseyn}
+			</when>
+			<otherwise>
+				and RSUSEYN = 'Y'
+			</otherwise>
+		</choose>
+		<if test='rscate1 != null and rscate1 != ""'>
+			and RSCATE1 = #{rscate1}
+		</if>
+		group by RSNCODE, RSNCDNM, DOCCATE, DOCTYPE
+	</select>
+	
+	<!-- mdocma doccate 조회-->
+	<select id="selectMdocmaAllDoccateList" resultType="com.logistics.md.domain.MdocmaDTO">
+		/* selectMdocmaAllDoccateList */
+		SELECT COMPKEY, WAREKEY, DOCCATE, DOCCTNM
+		FROM MDOCMA
+		WHERE COMPKEY = #{userData.compkey}
+		and DOUSEYN = 'Y'
+		group by COMPKEY, WAREKEY, DOCCATE, DOCCTNM
+		order by COMPKEY, WAREKEY, DOCCATE, DOCCTNM
+		</select>
+		
+	<!-- mdocma relation 조회-->
+	<select id="selectMdocmaDoccateDoctypeRelations" resultType="com.logistics.md.domain.MdocmaDTO">
+		/* selectMdocmaDoccateDoctypeRelations */
+		SELECT COMPKEY, WAREKEY, DOCCATE, DOCTYPE, 
+		DOCCTNM, DOCTYNM
+		FROM MDOCMA
+		WHERE COMPKEY = #{userData.compkey}
+		and DOUSEYN = 'Y'
+		group by COMPKEY, WAREKEY, DOCCATE, DOCTYPE
+		order by COMPKEY, WAREKEY, DOCCATE, DOCTYPE
+	</select>
+</mapper>

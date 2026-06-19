@@ -1,0 +1,1067 @@
+<html lang='ko' xmlns:th='http://www.thymeleaf.org'>
+<div th:fragment='fragments-mainContent'>
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="mdu10Warekey" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdu10Warekey"></select>
+					</div>
+				</div>
+				<label for="mdu10Ownerky" class="setting-grid-title">[[#{search.ownamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="mdu10Ownerky">
+ 							<option value="">[[#{ms.chooseAll}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="mdu10Skumkey" class="setting-grid-title">[[#{md.mskust.skumkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mskust.skumkey')}" id="mdu10Skumkey">
+					</div>
+				</div>
+				<label for="mdu10Skudesc" class="setting-grid-title">[[#{md.mskust.skudesc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mskust.skudesc')}" id="mdu10Skudesc">
+					</div>
+				</div>
+				<label for="mdu10Sbskuky" class="setting-grid-title">[[#{md.mdu10.sbskuky}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdu10.sbskuky')}" id="mdu10Sbskuky">
+					</div>
+				</div>
+				<label for="mdu10Sbskuds" class="setting-grid-title">[[#{md.mdu10.sbskuds}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('md.mdu10.sbskuds')}" id="mdu10Sbskuds">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdu10Search" >
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdu10Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdu10Save" >
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdu10HeadGrid"></div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span>[[#{md.mdu10.itemTitle}]]</span>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdu10ItemGrid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdu10
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.08.11
+	  - 설명 : 세트구성등록
+	  ------------------------------------------
+	*/
+	$(function() {
+		//----------- 전역변수 ------------//
+		const mdu10ComboData = {}; // combo data
+		let mdu10InitData; // initData
+		let mdu10WarekeyCondition; // 현재 검색한 조건 저장
+		let mdu10OwnerkyCondition; // 현재 검색한 조건 저장
+		let mdu10HeadGridTargetRow;
+		//----------- 전역변수 end ------------//
+
+		// init data
+		async function initMdu10(){
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.init}]]';
+			const responseInitData = await fetchUtil('GET', url);
+
+			return responseInitData.json();
+		}
+
+		// Head grid Column Model
+		const mdu10HeadGridCM = [
+			{
+				title: '',
+				dataType: 'bool',
+				dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+				align: 'center',
+	            type: 'checkbox',
+	            sortable: false,
+	            editor: false,
+	            cb: {
+	            	all: false,
+	            	header: true
+	            }
+	     	},
+	     	{
+				title: '[[#{common.grid.recIndx}]]',
+				dataType: 'string',
+				dataIndx: '[[#{common.grid.recIndx}]]',
+				editable: false,
+				hidden: true,
+			},
+			{
+				title: '[[#{md.mskuwc.compkey}]]',
+				dataType: 'string',
+				dataIndx: 'compkey',
+				editable: false,
+				hidden: true
+			},
+			{
+				title: '[[#{grid.whnamlc}]]',
+				dataType: 'string',
+				dataIndx: 'warekey',
+				render: ui => {
+					const option = mdu10ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+		           	return {text: option ? option[ui.cellData] : ui.cellData};
+				},
+				editable: false
+			},
+			{
+				title: '[[#{grid.ownamlc}]]',
+				dataType: 'select',
+				dataIndx: 'ownerky',
+				render: ui => {
+					const option = mdu10ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+		           	return {text: option ? option[ui.cellData] : ui.cellData};
+				},
+				editable: false,
+			},
+			{
+				title: '[[#{md.mskust.skumkey}]]',
+				dataType: 'string',
+				dataIndx: 'skumkey',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(1)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 50,
+						msg: '[[#{ms.validations.maxLenLength(50)}]]'
+					}
+				],
+	           	editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mskust.skudesc}]]',
+				dataType: 'string',
+				dataIndx: 'skudesc',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				validations: [
+					{
+						type: 'minLen',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(1)}]]'
+					},
+					{
+						type: 'maxLen',
+						value: 100,
+						msg: '[[#{ms.validations.maxLenLength(100)}]]'
+					}
+				],
+			},
+			{
+				title: '[[#{md.mskuwc.credate}]]',
+				dataType: 'string',
+				dataIndx: 'credate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskuwc.cretime}]]',
+				dataType: 'string',
+				dataIndx: 'cretime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskuwc.creuser}]]',
+				dataType: 'string',
+				dataIndx: 'creuser',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskuwc.lmodate}]]',
+				dataType: 'string',
+				dataIndx: 'lmodate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskuwc.lmotime}]]',
+				dataType: 'string',
+				dataIndx: 'lmotime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskuwc.lmouser}]]',
+				dataType: 'string',
+				dataIndx: 'lmouser',
+				editable: false
+			}
+		];
+
+		// Head Grid Object 및 기초 세팅
+		const mdu10HeadGrid = new GridUtil(mdu10HeadGridCM, '[[${gprogrid}]]', '[[${gprogrid}]]' + 'HeadGrid');
+
+		// Head Grid 데이터 추가 이벤트
+		mdu10HeadGrid.setAdd(function(evt, ui) {
+			if(!mdu10WarekeyCondition && !mdu10OwnerkyCondition){
+				alert('[[#{ms.noSearchError}]]');
+
+				return;
+			}
+
+			if(!mdu10OwnerkyCondition){
+				alert('[[#{md.mowrma.ownerky}]] ' + '[[#{ms.noSearchError}]]');
+
+				return;
+			}
+
+			const rowData = {
+				state: true,
+				compkey: '[[${userattr.compkey}]]',
+				warekey: mdu10WarekeyCondition,
+				ownerky: mdu10OwnerkyCondition
+			};
+			const rowIndx = this.addRow({
+				rowData: rowData,
+				checkEditable: false
+			});
+
+	        this.goToPage({ rowIndx: rowIndx });
+			this.focus({
+				rowIndxPage: rowIndx,
+				colIndx: $('#' + '[[${gprogrid}]]' + 'HeadGrid').pqGrid( 'getColIndx', { dataIndx: rowIndx } )
+			});
+		});
+
+		// Head Grid 검색 세팅
+		mdu10HeadGrid.setFind();
+
+		// Head Grid 초기화 세팅
+		mdu10HeadGrid.setReset();
+
+		// Head Grid History 이벤트
+		mdu10HeadGrid.setHistory(async function(evt, ui){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+
+			if('reset' === ui.type){ // reset시
+				itemGrid.option( 'dataModel', {
+					data: [],
+					recIndx: '[[#{common.grid.recIndx}]]'
+				});
+				itemGrid.refreshDataAndView();
+				mdu10HeadGridTargetRow = null;
+				await headGrid.getData().forEach(idx => headGrid.removeClass({
+					rowIndx : idx,
+					cls: 'color-blue font-weight-bold'
+				}));
+			}
+		});
+
+		// Head Grid 생성시 이벤트
+		mdu10HeadGrid.setCreate(async function(evt, ui){
+			const response = await initMdu10();
+
+			mdu10InitData = response.item;
+
+			for(let key of Object.keys(mdu10InitData)){
+				const gData = mdu10InitData[key];
+				let target = '';
+
+				if('warekey' === key){
+					target = '[[${gprogrid}]]' + 'Warekey';
+				} else if('ownerky' === key){
+					target = '[[${gprogrid}]]' + 'Ownerky';
+				}
+
+				if('' !== target){
+					$('#' + target + ' option').not('[value=""]').remove();
+					gData.forEach(e => $('#' + target).append('<option value="' + e['combovl'] + '">' + e['combonm'] +'</option>'));
+				}
+
+				const options = gData.map(obj => {
+		        	let rObj = {};
+
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+
+				mdu10ComboData[key] = options;
+			}
+
+			$('#' + '[[${gprogrid}]]' + 'Ownerky').pqSelect({
+				deselect: false
+			});
+		});
+
+		// Head Grid Row 더블클릭 이벤트
+		mdu10HeadGrid.setRowDblClick(async function(evt, ui){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+
+			if(!mdu10OwnerkyCondition){
+				alert('[[#{md.mowrma.ownerky}]] ' + '[[#{ms.noSearchError}]]');
+
+				return;
+			}
+
+			if(headGrid.isEditableCell( {
+				rowIndx: ui.rowIndx,
+				dataIndx: ui.dataIndx
+			})){
+				return;
+			}
+
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const headChanges = headGrid.getChanges({all: true});
+			const itemChanges = itemGrid.getChanges({all: true});
+
+			mdu10HeadGridTargetRow = ui.rowIndx;
+
+			if(itemChanges.addList.length>0 || itemChanges.updateList.length>0){
+				if(await !confirm('[[#{ms.mdu10.confirmBeforeSearch}]]')){
+					return;
+				}
+			}
+
+			const targetSkumkeyIdx = headChanges.updateList.findIndex(e=> e.pq_ri === ui.rowIndx);
+			const targetSkumkey = targetSkumkeyIdx !== -1 ? headChanges.oldList[targetSkumkeyIdx]['skumkey'] : '';
+
+			itemGrid.option( 'dataModel', { data: [] } );
+			itemGrid.refreshDataAndView();
+
+			if(ui.rowData['[[#{common.grid.recIndx}]]']){
+				const data = {
+					warekey: ui.rowData['warekey'] || '',
+					ownerky: ui.rowData['ownerky'] || '',
+					skumkey: targetSkumkey || ui.rowData['skumkey']
+				}
+				getMdu10ItemGrid(data);
+			}
+
+			for(let rowIdx=0; rowIdx<headGrid.pdata.length; rowIdx++){ // 선택한 row 강조
+				rowIdx === ui.rowIndx ? headGrid.addClass( {
+														rowIndx : ui.rowIndx,
+														cls: 'color-blue font-weight-bold'
+													})
+												 : headGrid.removeClass({
+														 rowIndx : rowIdx,
+														 cls: 'color-blue font-weight-bold'
+													});
+			}
+		});
+
+		// Head Grid 데이터 변경 이벤트
+		mdu10HeadGrid.setChange(async function(evt, ui){
+    		const updateRowList = [];
+
+	    	if('edit' === ui.source || 'paste' === ui.source){
+				let newRow = {state : true};
+
+				await ui.updateList.forEach( updateData => {
+	    			if(updateData.newRow.hasOwnProperty('skumkey') && updateData.oldRow.hasOwnProperty('skumkey')){
+	    				newRow['skumkey'] = updateData.newRow['skumkey']?.toUpperCase();
+	    			}
+
+	    			updateRowList.push({
+	    				rowIndx: updateData.rowIndx,
+	    				newRow: newRow
+	    			});
+	    		});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+	    	}
+
+	    	if('paste' === ui.source){
+	    		await ui.addList.forEach( addData =>
+	    			addData.newRow = {
+	    				state: true,
+	    				compkey: '[[${userattr.compkey}]]',
+	    				warekey: mdu10WarekeyCondition,
+		    			ownerky: mdu10OwnerkyCondition
+	    		});
+				await this.updateRow({
+					rowList: ui.addList,
+					checkEditable: false
+				});
+	    	}
+		});
+
+		// Head Grid 객체 생성
+		mdu10HeadGrid.open();
+
+		// Item grid Column Model
+		const mdu10ItemGridCM = [
+	    	{
+	    		title: '',
+	    		dataType: 'bool',
+	    		dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+	    		align: 'center',
+	            type: 'checkbox',
+	            sortable: false,
+	            editor: false,
+	            cb: {
+	            	all: false,
+	            	header: true
+	            }
+	     	},
+			{
+	     		title: '[[#{common.grid.recIndx}]]',
+	     		dataType: 'string',
+	     		dataIndx: '[[#{common.grid.recIndx}]]',
+	     		editable: false,
+	     		hidden: true
+	     	},
+			{
+	     		title: '[[#{md.mskust.compkey}]]',
+	     		dataType: 'string',
+	     		dataIndx: 'compkey',
+	     		editable: false,
+	     		hidden: true
+	     	},
+			{
+	     		title: '[[#{grid.whnamlc}]]',
+	     		dataType: 'string',
+	     		dataIndx: 'warekey',
+	     		editable: false,
+	     		hidden: true
+	     	},
+			{
+				title: '[[#{grid.ownamlc}]]',
+				dataType: 'select',
+				dataIndx: 'ownerky',
+				editable: false,
+				hidden: true
+			},
+			{
+				title: '[[#{md.mskust.skumkey}]]',
+				dataType: 'string',
+				dataIndx: 'skumkey',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.skudesc}]]',
+				dataType: 'string',
+				dataIndx: 'skudesc',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.sbskuky}]]',
+				dataType: 'string',
+				dataIndx: 'sbskuky',
+				styleHead: {
+					'background' : '[[#{grid.styleHead01}]]'
+				},
+				editor: {
+		               type: 'select',
+		               init: ui => {
+						ui.$cell.find('select').pqSelect({
+							search: true,
+							singlePlaceholder: '',
+							width: getSelectBoxWidthCondition(ui)
+						});
+						ui.$cell.find('select').pqSelect('open');
+					},
+		            options: ui => {
+		            	const sbskukyList = mdu10InitData['skudesc'].map(obj => {
+		            		if(obj['ownerky'] === ui.rowData['ownerky'] && obj['warekey'] === ui.rowData['warekey']){
+		        				let rObj = {};
+
+		        				rObj[obj['combovl']] = obj['combovl'];
+
+		        				return rObj;
+		            		}
+	        			}).filter(e => e);
+
+		         		return sbskukyList;
+					},
+					prepend: { '' : ' ' }
+				},
+				render: ui => {
+					const option = mdu10InitData['skudesc'].find(obj => obj['combovl'] === ui.cellData
+																					&& obj['ownerky'] === ui.rowData['ownerky']
+																					&& obj['warekey'] === ui.rowData['warekey']);
+
+		           	return {text: option ? option['combovl'] : ''};
+				},
+	            editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+			},
+			{
+				title: '[[#{md.mskust.sbskuds}]]',
+				dataType: 'string',
+				dataIndx: 'sbskuds',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.sbstqty}]]',
+				dataType: 'integer',
+				dataIndx: 'sbstqty',
+				styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+				summary : {
+					type: 'sum'
+				},
+				validations: [
+					{
+						type: 'gte',
+						value: 0,
+						msg: '[[#{ms.validations.minLenLength(0)}]]'
+					},
+					{
+						type: 'lte',
+						value: 1000000000,
+						msg: '[[#{ms.validations.maxLenLength(9)}]]'
+					},
+					{
+						type: 'regexp',
+						value: regNum9Digit,
+						msg: '[[#{ms.validations.onlyNumber(9)}]]'
+					}
+				]
+			},
+			{
+				title: '[[#{md.mskust.stuseyn}]]',
+				dataType: 'string',
+				dataIndx: 'stuseyn',
+				align: 'center',
+				styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+				type: 'checkbox',
+				editor: false,
+				cb: {
+					all: false,
+					header: true,
+					check: 'Y',
+					uncheck: 'N'
+				}
+			},
+			{
+				title: '[[#{md.mskust.uomekey}]]',
+				dataType: 'string',
+				dataIndx: 'uomekey', //Default unit of measure
+				render: ui => {
+					const option = mdu10ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+		           	return {text: option ? option[ui.cellData] : ui.cellData};
+				},
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.svendky}]]',
+				dataType: 'select',
+				dataIndx: 'svendky',
+				hidden: true,
+				render: ui => {
+					const option = mdu10ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+		           	return {text: option ? option[ui.cellData] : ui.cellData};
+				},
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.credate}]]',
+				dataType: 'string',
+				dataIndx: 'credate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.cretime}]]',
+				dataType: 'string',
+				dataIndx: 'cretime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.creuser}]]',
+				dataType: 'string',
+				dataIndx: 'creuser',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.lmodate}]]',
+				dataType: 'string',
+				dataIndx: 'lmodate',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.lmotime}]]',
+				dataType: 'string',
+				dataIndx: 'lmotime',
+				editable: false
+			},
+			{
+				title: '[[#{md.mskust.lmouser}]]',
+				dataType: 'string',
+				dataIndx: 'lmouser',
+				editable: false
+			}
+		];
+
+		// Item Grid Object 및 기초 세팅
+		const mdu10ItemGrid = new GridUtil(mdu10ItemGridCM,	'[[${gprogrid}]]', '[[${gprogrid}]]' + 'ItemGrid');
+
+		// Item Grid 데이터 추가 이벤트
+		mdu10ItemGrid.setAdd(async function(evt, ui) {
+			if((!mdu10WarekeyCondition && !mdu10OwnerkyCondition) || 'number' !== typeof mdu10HeadGridTargetRow){
+				alert('[[#{md.mdu10.itemTitle}]]' +' [[#{ms.mdu10.selectOr}]] '+ '[[#{ms.noSearchError}]]');
+
+				return;
+			}
+
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const headChanges = headGrid.getChanges();
+			const targetSkumkeyIdx = headChanges.updateList.findIndex(e => e.pq_ri === mdu10HeadGridTargetRow);
+ 			const mdu10HeadGridTargetRowData = headGrid.getRowData({rowIndx: mdu10HeadGridTargetRow});
+
+ 			if(!mdu10HeadGridTargetRowData['skumkey'] || !mdu10HeadGridTargetRowData['skudesc']){
+ 				alert('no essential cols');
+
+ 				return;
+ 			}
+
+ 			if(targetSkumkeyIdx !== -1){
+ 				if(!validateHeadGridChangeData() || await !confirm('[[#{ms.mdu10.confirmSetkeySaveBeforeSearch}]]')){
+ 					return;
+ 				}
+
+ 	 			saveMdu10List({headGrid: makeHeadGridChangeData()});
+			}
+
+			const rowData = {
+				state: true,
+				compkey: '[[${userattr.compkey}]]',
+				warekey: mdu10HeadGridTargetRowData.warekey || mdu10WarekeyCondition,
+				ownerky: mdu10HeadGridTargetRowData.ownerky || mdu10OwnerkyCondition,
+				skumkey: targetSkumkeyIdx !== -1 ? headChanges.oldList[targetSkumkeyIdx]['skumkey'] : mdu10HeadGridTargetRowData['skumkey'],
+				skudesc: targetSkumkeyIdx !== -1 ? headChanges.oldList[targetSkumkeyIdx]['skudesc'] : mdu10HeadGridTargetRowData['skudesc'],
+				stuseyn: 'Y'
+			};
+			const rowIndx = this.addRow({
+				rowData: rowData,
+				checkEditable: false
+			});
+
+	        this.goToPage({ rowIndx: rowIndx });
+			this.focus({
+				rowIndxPage: rowIndx,
+				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: rowIndx} )
+			});
+		});
+
+		// Item Grid Cell 클릭 이벤트
+		mdu10ItemGrid.setCellClick(async function(evt, ui){
+			if('sbskuky'=== ui.dataIndx && ui.rowData['sbskuky']){
+				const targetInfo = await getSkuUomAndSvend(ui.rowData);
+				const newRow = {
+					state: true,
+					uomekey: targetInfo && targetInfo.length>0 ? targetInfo[0]['suomkey'] : null,
+					svendky: targetInfo && targetInfo.length>0 ? targetInfo[0]['vendkey'] : null
+				}
+
+    			await this.updateRow( {
+        			rowIndx: ui.rowIndx,
+        		    newRow: newRow,
+        		    checkEditable: false
+        		});
+			}
+		});
+
+		// Item Grid 데이터 변경 이벤트
+		mdu10ItemGrid.setChange(async function(evt, ui){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+ 			const mdu10HeadGridTargetRowData = headGrid.getRowData({rowIndx: mdu10HeadGridTargetRow});
+
+	    	if('edit' === ui.source || 'paste' === ui.source){
+	    		const updateRowList = [];
+
+	    		for(let updateData of ui.updateList) {
+					const newRow = {state : true};
+
+	    			if(updateData.newRow.hasOwnProperty('sbskuky') && updateData.oldRow.hasOwnProperty('sbskuky')){
+						const targetInfo = await getSkuUomAndSvend(updateData.rowData);
+
+						newRow['uomekey'] = targetInfo && targetInfo.length>0 ? targetInfo[0]['suomkey'] : null;
+						newRow['svendky'] = targetInfo && targetInfo.length>0 ? targetInfo[0]['vendkey'] : null;
+
+	    				const option = mdu10InitData['skudesc'].find(obj => obj['combovl'] === updateData.rowData['sbskuky']
+																						&& obj['ownerky'] === updateData.rowData['ownerky']
+																						&& obj['warekey'] === updateData.rowData['warekey']);
+
+	    				newRow['sbskuky'] = option ? option['combovl'] : null;
+	    				newRow['sbskuds'] = option ? option['combonm'] : null;
+	    			}
+        			await updateRowList.push({
+        				rowIndx: updateData.rowIndx,
+        				newRow: newRow
+        			});
+	    		}
+
+				this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+	    	} else if('checkbox' === ui.source){
+	    		const updateRowList = [];
+
+	    		await ui.updateList.forEach(updateData => {
+					const newRow = {state : true};
+
+	    			if(updateData.newRow.hasOwnProperty('stuseyn')){
+	        			updateRowList.push({
+	        				rowIndx: updateData.rowIndx,
+	        				newRow: newRow
+	        			});
+	    			}
+	    		});
+				await this.updateRow({
+					rowList: updateRowList,
+					checkEditable: false
+				});
+	    	}
+
+	    	if('paste' === ui.source){
+				await ui.addList.forEach(addData =>
+	    			addData.newRow = {
+	    					state: true,
+	    					compkey: '[[${userattr.compkey}]]',
+	    	    			warekey: mdu10WarekeyCondition,
+	    	    			ownerky: mdu10OwnerkyCondition,
+	    	    			skumkey: mdu10HeadGridTargetRowData?.skumkey,
+	    	    			skudesc: mdu10HeadGridTargetRowData?.skudesc
+    			});
+				await this.updateRow({
+					rowList: ui.addList,
+					checkEditable: false
+				});
+	    	}
+		});
+
+		// Item Grid 검색 세팅
+		mdu10ItemGrid.setFind();
+
+		// Item Grid 초기화 세팅
+		mdu10ItemGrid.setReset();
+
+		// Item Grid 객체 생성
+		mdu10ItemGrid.open();
+
+		//----------- 검색영역 Event ------------//
+		$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+			resetSearchConditions();
+			mdu10HeadGridTargetRow = null;
+			mdu10WarekeyCondition = null;
+			mdu10OwnerkyCondition = null;
+
+			makeEmptyGrid(mdu10HeadGrid);
+			makeEmptyGrid(mdu10ItemGrid);
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Search').click(async function(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const headChanges = headGrid.getChanges();
+			const itemChanges = itemGrid.getChanges();
+
+			mdu10WarekeyCondition = $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val();
+			mdu10OwnerkyCondition = $('#' + '[[${gprogrid}]]' + 'Ownerky option:selected').val();
+			mdu10HeadGridTargetRow = null;
+
+			if(headChanges.addList.length>0 || headChanges.updateList.length>0 || itemChanges.addList.length>0 || itemChanges.updateList.length>0){
+				if(await !confirm('[[#{ms.mdu10.confirmBeforeSearch}]]')){
+					return;
+				}
+			}
+
+			itemGrid.option( 'dataModel', { data: [] });
+			itemGrid.refreshDataAndView();
+			await getMdu10HeadGrid();
+		});
+
+		$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+
+			if(!checkGridChangeDataLength(headGrid) && !checkGridChangeDataLength(itemGrid)){
+				alert('[[#{ms.choiceRowZero}]]');
+
+				return;
+			}
+
+			if(!validateHeadGridChangeData() || !validateItemGridChangeData()){
+				return;
+			}
+
+			const headGridChange = makeHeadGridChangeData();
+			const itemGridChange = makeItemGridChangeData();
+			const addtionalMsg = !headGridChange && headGridChange.updateList.find(e => e['skumkey']) ? ('[[#{ms.mdu10.confirmSetkeySave}]]' + '\n') : '';
+
+			if(await !confirm(addtionalMsg + '[[#{ms.checksave}]]')){ // 저장 여부 선택
+				return;
+			}
+
+			saveMdu10List({
+				headGrid : headGridChange,
+				itemGrid : itemGridChange
+			});
+		});
+		//----------- 검색영역 Event end ------------//
+
+		// Head Grid 변경 데이터 정제
+		function makeHeadGridChangeData(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const headGridChange = headGrid.getChanges({all:true});
+
+			//addList 체크 데이터 정제
+			headGridChange.addList = headGridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+			//updateList 체크 데이터 정제
+			for(let data=0; data<headGridChange.updateList.length; data++){
+				if(headGridChange.updateList[data]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+					headGridChange.updateList.splice(data, 1);
+					headGridChange.oldList.splice(data, 1);
+				}
+			}
+
+			return headGridChange;
+		}
+
+		// Grid 체크된 데이터 갯수
+		function checkGridChangeDataLength(gridObj){
+			return gridObj.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes().length>0;
+		}
+
+		// Head Grid 변경된 데이터 validation
+		function validateHeadGridChangeData(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const headGridCheck = headGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+	        for(let hgCheck of headGridCheck){
+	    		const essentialCols = ['skumkey', 'skudesc'];
+
+	    		for(let checkCol of essentialCols){
+	    			if(null === hgCheck[checkCol] || undefined === hgCheck[checkCol] || '' === hgCheck[checkCol]){
+		    	  		alert((hgCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + headGrid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요
+		    	  		headGrid.focus({
+		    	  			rowIndxPage: hgCheck.pq_ri,
+		    	  			colIndx: $('#' + '[[${gprogrid}]]' + 'HeadGrid').pqGrid( 'getColIndx', { dataIndx: checkCol } )
+		    	  		});
+
+		    	  		return false;
+	    			}
+	    		}
+
+				for(let hgData of headGrid.getData()){
+	   				const keyCols = ['skumkey'];
+	   				const keyDuplication = isKeyDuplication(keyCols, hgCheck, hgData);
+
+	   				if(hgCheck.pq_ri !== hgData.pq_ri && keyDuplication){
+	   					const alertTxt = (keyDuplication ? makeDuplicateRowText(keyCols, headGrid, hgCheck, hgData) : '')
+	   										+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (hgData.pq_ri+1) + '[[#{ms.row}]] & ' + (hgCheck.pq_ri+1) + '[[#{ms.row}]] )';
+	   					alert(alertTxt);
+		      			headGrid.focus({
+		      				rowIndxPage: (hgCheck.pq_ri),
+		      				colIndx: $('#' + '[[${gprogrid}]]' + 'HeadGrid').pqGrid( 'getColIndx', { dataIndx: 'skumkey' } )
+		      			});
+
+						return false;
+					}
+				}
+	    	}
+
+			return true;
+		}// validation end
+
+		// Item Grid 변경된 데이터 validation
+		function validateItemGridChangeData(){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const itemGridCheck = itemGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+			const targetData = headGrid.getRowData({rowIndx: mdu10HeadGridTargetRow});
+
+	        for(let igCheck of itemGridCheck){
+	    		const essentialCols = ['skumkey', 'sbskuky', 'sbstqty'];
+
+	    		for(let checkCol of essentialCols){
+	    			if(null === igCheck[checkCol] || undefined === igCheck[checkCol] || '' === igCheck[checkCol]){
+		    	  		alert((igCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + itemGrid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+		      			itemGrid.focus({
+		      				rowIndxPage: igCheck.pq_ri,
+		      				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: checkCol} )
+		      			});
+
+		    	  		return false;
+	    			}
+	    		}
+
+				for(let igData of itemGrid.getData()){
+	   				const keyCols = ['skumkey', 'sbskuky'];
+
+					if(igCheck.pq_ri !== igData.pq_ri && isKeyDuplication(keyCols, igCheck, igData)){
+	   					const alertTxt = makeDuplicateRowText(keyCols, itemGrid, igCheck, igData) + ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (igData.pq_ri+1) + '[[#{ms.row}]] & ' + (igCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+						alert(alertTxt);
+		      			itemGrid.focus({
+		      				rowIndxPage: (igCheck.pq_ri),
+		      				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: 'skumkey' } )
+		      			});
+
+						return false;
+					}
+
+					if(!targetData['skumkey'] && targetData?.skumkey !== igCheck['skumkey']){
+						alert('[[#{ms.mdu10.noMatchedSetkey}]]' + ' item ' + (igCheck.pq_ri+1) + 'row')
+		      			itemGrid.focus({
+		      				rowIndxPage: (igCheck.pq_ri),
+		      				colIndx: $('#' + '[[${gprogrid}]]' + 'ItemGrid').pqGrid( 'getColIndx', { dataIndx: 'skumkey' } )
+		      			});
+
+						return false;
+					}
+				}
+	    	}
+
+			return true;
+		} // validation end
+
+		// Item Grid 저장 데이터 정제
+		function makeItemGridChangeData(){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+			const itemGridChange = itemGrid.getChanges({all:true});
+
+			for(let data=0; data<itemGridChange.updateList.length; data++){
+				if(itemGridChange.updateList[data]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+					itemGridChange.updateList.splice(data, 1);
+					itemGridChange.oldList.splice(data, 1);
+				}
+			}
+			itemGridChange.addList = itemGridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+			return itemGridChange;
+		}
+
+		// Head Grid 조회 함수
+		async function getMdu10HeadGrid(data){
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const selectData = {
+				warekey: $('#' + '[[${gprogrid}]]' + 'Warekey option:selected').val(),
+				ownerky: $('#' + '[[${gprogrid}]]' + 'Ownerky option:selected').val(),
+				skumkey: $('#' + '[[${gprogrid}]]' + 'Skumkey').val(),
+				skudesc: $('#' + '[[${gprogrid}]]' + 'Skudesc').val(),
+				sbskuky: $('#' + '[[${gprogrid}]]' + 'Sbskuky').val(),
+				sbskuds: $('#' + '[[${gprogrid}]]' + 'Sbskuds').val()
+			};
+
+			headGrid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+			const fetchObj = new EnhancedFetchUtil(url, data || selectData);
+
+			headGrid.option( 'dataModel', {
+				data: await fetchObj.get(),
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			headGrid.refreshDataAndView();
+			headGrid.hideLoading();
+		}
+
+		// Item Grid 조희 함수
+		async function getMdu10ItemGrid(data){
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+
+			itemGrid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/2';
+			const fetchObj = new EnhancedFetchUtil(url, data);
+
+			itemGrid.option( 'dataModel', {
+				data: await fetchObj.get(),
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			itemGrid.refreshDataAndView();
+			itemGrid.hideLoading();
+		}
+
+		// SKU의 단위와 vender를 조회하는 함수
+		async function getSkuUomAndSvend(obj){
+			const data = {
+				warekey: obj.warekey,
+				ownerky: obj.ownerky,
+				skumkey: !obj?.sbskuky ? null : obj.sbskuky
+			}
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + 'item-info';
+			const fetchObj = await fetchUtil('GET', url, data);
+
+			return fetchObj.json();
+		}
+
+		// 그리드 저장 함수
+		async function saveMdu10List(saveData){
+			if(!saveData){
+				return false;
+			}
+
+			const headGrid = pq.grid('#' + '[[${gprogrid}]]' + 'HeadGrid');
+			const itemGrid = pq.grid('#' + '[[${gprogrid}]]' + 'ItemGrid');
+
+			headGrid.showLoading();
+			itemGrid.showLoading();
+
+			const url = '[[#{common.url.master}]]' + '[[#{common.url.units}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/all';
+			const fetchObj = new EnhancedFetchUtil(url, saveData);
+			const response = await fetchObj.post();
+			const isExistTargetRow = 'number' === typeof mdu10HeadGridTargetRow;
+
+			if(response){
+	 			const mdu10HeadGridTargetRowData = headGrid.getRowData({rowIndx: mdu10HeadGridTargetRow});
+				const data = {
+					warekey: isExistTargetRow ? mdu10HeadGridTargetRowData['warekey'] : mdu10WarekeyCondition,
+					ownerky: isExistTargetRow ? mdu10HeadGridTargetRowData['ownerky'] : mdu10OwnerkyCondition,
+					skumkey: isExistTargetRow ? mdu10HeadGridTargetRowData['skumkey'] : $('#' + '[[${gprogrid}]]' + 'Skumkey').val()
+				}
+
+				await getMdu10HeadGrid(data);
+
+				if(isExistTargetRow){
+					await getMdu10ItemGrid(data);
+				}
+			}
+
+			headGrid.hideLoading();
+			itemGrid.hideLoading();
+		}
+	});
+	</script>
+</div>

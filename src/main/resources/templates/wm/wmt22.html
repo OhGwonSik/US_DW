@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang='ko' xmlns:th='http://www.thymeleaf.org'>
+	<div th:fragment='fragments-mainContent' class='tab-content'>
+		<div class="tab-contents">
+            <div class="search-conditions con-box">
+                <div class="setting-grid" id="wmt22Dom">
+					<label for="wmt22warekey" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id='wmt22Warekey'></select>
+                        </div>
+                    </div>
+					<label for="wmt22ownerky" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmt22Ownerky">
+							<option value="">[[#{wm.wmt22.all}]]</option>
+							</select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{wm.wmt22.skumkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt22Skumkey' name='wmt22Skumkey' th:placeholder="${#messages.msg('wm.wmt22.skumkey')}">
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{wm.wmt22.skudesc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" id='wmt22Skudesc' name='wmt22Skudesc' th:placeholder="${#messages.msg('wm.wmt22.skudesc')}">
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" id='wmt22Search'><img>[[#{bt.search}]]</button>
+                    <button type="button" class="btn-clear btn-white" id="wmt22Reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button class="btn-navy btn-green" id='wmt22Save'><img class="ic-bt-save">[[#{bt.save}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="wmt22Grid"></div>
+                </div>
+            </div>
+        </div>
+		<script>
+		$(function(){
+			const pageId = '[[${gprogrid}]]';
+			const wmt22GridId = '#' + pageId + 'Grid';
+			let wmt22Grid;
+			
+			// 검색영역 selectBox change 이벤트
+			$('#' + pageId + 'Dom .input-group select').on('change', async function(){
+				await getWmt22List();
+			});
+			
+			// 저장 , 취소 이벤트
+			$('#' + pageId + 'Save').on('click', async function(e){
+				let targetId = this.id.substring(pageId.length);
+				await saveFunc(targetId.toLowerCase());
+			});
+			
+			// 조회 이벤트
+			$('#' + pageId + 'Search').click(async function(){
+				await getWmt22List();
+			});
+			
+			// 초기화 이벤트
+			$('#' + pageId + 'Reset').click(async function(){
+				resetSearchConditions();
+				$('#' + pageId + 'Ownerky').pqSelect("refreshData");
+				wmt22Grid.searchList([]);
+			});
+			
+			const wmt22GridCM = [
+				{ title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+		            type: 'checkbox', sortable: false, editor: false,
+		            cb: { all: false, header: true }
+		     	},
+		     	{ title: '[[#{wm.wtakit.rowkey}]]', dataType: 'string',  dataIndx: 'rowkey', hidden : true , editable: false ,},	
+				{ title: '[[#{wm.wtakit.compkey}]]', dataType: 'string',  dataIndx: 'compkey', hidden : true , editable: false ,},
+				{ title: '[[#{wm.wtakit.warekey}]]', dataType: 'string',  dataIndx: 'warekey', editable: false },	
+				{ title: '[[#{wm.wtakit.ownerky}]]', dataType: 'string',  dataIndx: 'ownerky', hidden : true , editable: false },	
+				{ title: '[[#{md.mowrma.ownamlc}]]', dataType: 'string',  dataIndx: 'ownamlc', editable: false },	
+				{ title: '[[#{grid.skuCode}]]', dataType: 'string',  dataIndx: 'skumkey' , editable : false },	
+				{ title: '[[#{grid.skunm}]]', dataType: 'string',  dataIndx: 'skudesc' , editable : false },
+				{ title: '[[#{wm.wmt22.ltotqty}]]', dataType: 'integer',  dataIndx: 'ltotqty' ,  editable: false },
+				{ title: '[[#{wm.wmt22.tordqty}]]', dataType: 'integer',  dataIndx: 'tordqty' , editable : false },
+				{ title: '[[#{wm.wmt22.fordqty}]]', dataType: 'integer',  dataIndx: 'fordqty' ,
+					styleHead: { 'background-color':'[[#{grid.styleHead01}]]' }
+				},
+			];
+			
+			wmt22Grid = new GridUtil(wmt22GridCM, pageId , pageId + 'Grid');
+			
+			wmt22Grid.setFind();
+			wmt22Grid.setReset();
+	        
+			wmt22Grid.setCreate(function(evt , ui){
+				wmt22Init();	
+			});
+			
+			wmt22Grid.setChange(function(evt , ui){
+				if(ui.source === 'edit' || ui.source === 'update'){
+					const updateList = ui.updateList;
+					updateList.forEach((obj) => {
+						let newRow  = obj.newRow;
+						let rowData = obj.rowData;
+						let ltotqty = rowData.ltotqty; // 세트Zone수량
+						let tordqty = rowData.tordqty; // 해체지시수량
+						if(newRow.hasOwnProperty('fordqty')){
+							if(ltotqty-tordqty < newRow.fordqty) {
+								// 지시수량은 세트Zone수량보다 클 수 없습니다.
+								alert('[[#{wm.wmt22.compqty}]]');
+								newRow.fordqty = 0;	
+							}
+							
+							this.updateRow({
+								rowIndx : obj.rowIndx,
+								newRow : { state : 'Y' , fordqty : newRow.fordqty }, 
+								checkEditable : false
+							});
+						}
+					});
+				}	
+			});
+			
+			wmt22Grid.open();
+			
+			async function wmt22Init(){
+				let initRes = await getWmt22Init();
+				$('#' + pageId + 'Ownerky').pqSelect({
+					deselect : false
+				});
+			}
+			
+			async function getWmt22Init(){
+				let res = await fetchUtil('GET', '/wm/task/' + pageId + '/init');
+				try{
+					if(res.status !==200){
+						throw new Error('[[#{ms.fetchError}]]');
+					}
+					const rData = await res.json();
+					setWmt22Combo(rData.item);
+				}catch(err){
+					alert('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+				}
+			}
+			
+			function setWmt22Combo(res){
+				let comboDom = $('#' + pageId + 'Dom .input-group').find('select');
+				let comboKeys = Object.keys(res);
+				let ownerkyValue = "[[#{wm.wmt22.ownerkyValue}]]";
+				comboDom.each((index , element) => {
+					let comboId = element.id.substring(pageId.length).toLowerCase();
+					let comboKey = comboKeys[index];
+					if(comboKey && comboKey.toLowerCase().indexOf(comboId) != -1){
+						res[comboKey].forEach((obj) => {
+							$(element).append('<option value="' + obj.combovl + '">' + obj.combonm + '</option>');
+						});
+						
+						if(comboId === ownerkyValue){
+							$(element).pqSelect({
+								deselect : false
+							});
+						}
+					}
+				});
+			}
+			
+			async function getWmt22List(){
+				const grid = pq.grid(wmt22GridId);
+				let param = {
+					warekey : $('#' + pageId + 'Warekey').val(),
+					ownerky : $('#' + pageId + 'Ownerky').val(),
+					skumkey : $('#' + pageId + 'Skumkey').val(),
+					skudesc : $('#' + pageId + 'Skudesc').val(),
+					taskoky : $('#' + pageId + 'Taskoky').val(),
+					tasksts : $('#' + pageId + 'Tasksts').val()
+				};
+				
+				grid.showLoading();
+				let res = await fetchUtil('GET', '/wm/task/' + pageId + '/grids/1', param);
+				try{
+					if(res.status !==200){
+						throw new Error('[[#{ms.fetchError}]]');
+					}
+					const rData = await res.json();
+					wmt22Grid.searchList(rData);
+					
+					grid.hideLoading();
+				}catch(err){
+					alert('code : ' + res.status + '\n' + err + '\n' + res.statusText);
+					grid.hideLoading();
+				}
+			}
+			
+			// 저장시 post
+			async function saveFunc(func){
+				const wmt22Grid = pq.grid(wmt22GridId);
+				const wmt22CheckedList = wmt22Grid.getData().filter((obj) => obj.state === true);
+				if(wmt22CheckedList.length) {
+					const wmt22GridList = wmt22Grid.getChanges({all:true});
+					for(wmt22CheckedRow of wmt22CheckedList){
+						if(!wmt22CheckedRow.fordqty){
+							alert(Number(wmt22CheckedRow.pq_ri + 1) + "[[#{wm.wmt22.rownum}]]" + " " + "[[#{wm.wmt22.fordqty}]]"  + "[[#{ms.choiceValue}]]");
+
+		                    this.editCell({rowIndx : wmt22CheckedRow.pq_ri , dataIndx : 'tcmpqty'});
+		                    return;
+						}else if(wmt22CheckedRow.ltotqty + wmt22CheckedRow.tordqty < wmt22CheckedRow.fordqty){
+							alert("[[#{wm.wmt21.checkQty}]]");
+
+		                    this.editCell({rowIndx : wmt22CheckedRow.pq_ri , dataIndx : 'tcmpqty'});
+		                    return;
+						}
+					}
+					
+					wmt22GridList.updateList = wmt22CheckedList;
+					if(confirm("[[#{ms.checksave}]]")){
+						wmt22Grid.showLoading();
+						let wmt22ResData = await fetchUtil('POST' , '/wm/task/' + pageId + '/' + func, wmt22GridList);
+						try{
+							if(wmt22ResData.status != 200){
+								throw new Error("[[#{ms.saveErr}]]");
+							}
+// 							alert("[[#{ms.saveSuccess}]]");
+							await getWmt22List();
+							
+							wmt22Grid.hideLoading();
+						}catch(err){
+							alert('code : ' + wmt22ResData.status + '\n' + err + '\n' + wmt22ResData.statusText); // get method 통신의 경우 
+							
+							wmt22Grid.hideLoading();
+						}
+					}
+				}else{
+					alert('[[#{ms.choiceRowZero}]]');
+					return;
+				}
+			}
+		});
+		</script>
+	</div>
+</html>

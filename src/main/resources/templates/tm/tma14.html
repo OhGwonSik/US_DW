@@ -1,0 +1,143 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="fragments-mainContent">
+    <div class="tab-contents">
+      <button id="tma14_refresh">[[#{tm.common.refresh}]]</button>
+
+      <!-- TODO : 1. wareList length에 따라 2개 이상일 경우 selection 설치 -->
+      <!-- TODO : 2. loading 추가하기 -->
+      <div id="tma14_loading">loading...</div>
+
+      <!-- TODO : 3.  -->
+      <div id="tma14_tables" style="display: flex"></div>
+    </div>
+  </div>
+  <script>
+    /* *******************************************************
+     * 최초 생성일시 : 2024-01-09
+     * 최초 생성자 : 이재형
+     * 설명 : 배차 현황 모니터링
+     *********************************************************/
+
+    const StatusName = {
+      PLAN: "배차",
+      // LOADING: "상차완료",
+      LOADING: "상차",
+      START: "출발",
+      ARRIVAL: "도착",
+      // UNLOADING: "하차완료",
+      UNLOADING: "하차",
+      FINISH: "완료",
+    };
+
+    let WareList = [];
+    let ShuttleList = [];
+
+    const getWareList = async () => {
+      const resALL = await fetchUtil("GET", "/tm/code/warehouse", {});
+      const res = await resALL.json();
+      if (res?.length) WareList = res;
+      else WareList = [];
+    };
+    const getShuttleList = async () => {
+      if (!WareList?.length) await getWareList();
+      const warekey = WareList?.[0]?.warekey || "";
+      const resALL = await fetchUtil("GET", "/tm/shuttle", { warekey });
+      const res = await resALL.json();
+      if (res?.length) ShuttleList = res;
+      else ShuttleList = [];
+    };
+    // getShuttleList();
+
+    const getVehicleStatusByOneShuttle = async (req = {}) => {
+      const { warekey, shtrtky } = req;
+      if (!warekey || !shtrtky) return;
+      const res = await fetchUtil("POST", "/delivery/shuttle/status", {
+        warekey,
+        shtrtky,
+        // postdat: order.value.postdat,
+        vhpdate: moment().format("YYYYMMDD"),
+      });
+      const vehicleStatusByShuttle = await res.json();
+      return vehicleStatusByShuttle;
+    };
+
+    const getVehicleStatusAll = async () => {
+      if (!ShuttleList?.length) await getShuttleList();
+      const resAll = await Promise.allSettled(
+        ShuttleList.filter((s) => s.tsuseyn == "Y").map(async (s) =>
+          getVehicleStatusByOneShuttle(s)
+        )
+      );
+
+      console.log("status ... : ", resAll);
+      // console.log('shuttles... : ', ShuttleList.filter(s=>s.tsuseyn == 'Y'));
+      $("#tma14_tables").html(" ");
+
+      resAll.forEach((r, ridx) => {
+        if (r?.status != "fulfilled") return;
+        // const theShuttle = ShuttleList.filter(s=>s.tsuseyn == 'Y')?.[ridx] || {};
+        const thelist = r?.value || [];
+        if (!thelist?.length) return;
+
+        // let newTable = document.createElement("table");
+        // newTable.appendChild(document.createElement("th").appendChild(document.createElement("")))
+        const getStatusTexts = (l = [], status = "PLAN") => {
+          return l
+            ?.filter((el) => el.shtrsts == status)
+            ?.map(
+              (el) =>
+                `${el?.vhcsnam || "[[#{tm.tvhcma.vhcsnam}]]"} (${el?.lasttim?.splice(-8) || "-"})`
+            );
+        };
+        let newTable = `<table class="tma14_table">
+					<tr> <th colspan="6">${thelist?.[0]?.shtrtnm}</th> </tr>
+					<tr class="tma14-table-header"> 
+						<th> [[#{tm.common.plan}]] </th>
+						<th> [[#{tm.common.loading}]] </th>
+						<th> [[#{tm.common.start}]] </th>
+						<th> [[#{tm.common.arrival}]] </th>
+						<th> [[#{tm.common.unloading}]] </th>
+						<th> [[#{tm.common.finish}]] </th>
+				  </tr>
+					<tr class="tma14-table-content"> 
+						<td>${getStatusTexts(thelist, "PLAN").join("</br>")}</td>
+						<td>${getStatusTexts(thelist, "LOADING").join("</br>")}</td>
+						<td>${getStatusTexts(thelist, "START").join("</br>")}</td>
+						<td>${getStatusTexts(thelist, "ARRIVAL").join("</br>")}</td>
+						<td>${getStatusTexts(thelist, "UNLOADING").join("</br>")}</td>
+						<td>${getStatusTexts(thelist, "FINISH").join("</br>")}</td>
+					</tr>
+					<tr> <td></td><td></td><td></td><td></td><td></td><td></td> </tr>
+				</table>`;
+
+        // vhcsnam , lasttim
+
+        $("#tma14_tables").html($("tma14_tables").text() + newTable);
+      });
+
+      debugger;
+    };
+    getVehicleStatusAll();
+
+    $("#tma14_refresh").click(function () {
+      getVehicleStatusAll();
+    });
+  </script>
+  <style>
+    .tma14_table {
+      min-width: 40%;
+      border: 2px solid;
+      box-sizing: border-box;
+    }
+    .tma14_table tr.tma14-table-header th {
+      min-width: 80px;
+      text-align: center;
+      font-weight: bolder;
+      border: 1px solid;
+    }
+    .tma14_table .tma14-table-content td {
+      width: 16%;
+      border: 1px solid;
+    }
+  </style>
+</html>

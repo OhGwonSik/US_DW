@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Language" content="ko" >
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
+	<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+	<META HTTP-EQUIV="Expires" CONTENT="-1">
+	<link id="rPath" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+	<!-- 파비콘 -->
+	<link rel="manifest" th:href="@{/manifest.json}" />
+	<link rel="apple-touch-icon" sizes="57x57" th:href="@{/v2/assets/favicon/apple-icon-57x57.png}">
+	<link rel="apple-touch-icon" sizes="60x60" th:href="@{/v2/assets/favicon/apple-icon-60x60.png}">
+	<link rel="apple-touch-icon" sizes="72x72" th:href="@{/v2/assets/favicon/apple-icon-72x72.png}">
+	<link rel="apple-touch-icon" sizes="76x76" th:href="@{/v2/assets/favicon/apple-icon-76x76.png}">
+	<link rel="apple-touch-icon" sizes="114x114" th:href="@{/v2/assets/favicon/apple-icon-114x114.png}">
+	<link rel="apple-touch-icon" sizes="120x120" th:href="@{/v2/assets/favicon/apple-icon-120x120.png}">
+	<link rel="apple-touch-icon" sizes="144x144" th:href="@{/v2/assets/favicon/apple-icon-144x144.png}">
+	<link rel="apple-touch-icon" sizes="152x152" th:href="@{/v2/assets/favicon/apple-icon-152x152.png}">
+	<link rel="apple-touch-icon" sizes="180x180" th:href="@{/v2/assets/favicon/apple-icon-180x180.png}">
+	<link rel="icon" type="image/png" sizes="192x192"  th:href="@{/v2/assets/favicon/android-icon-192x192.png}">
+	<link rel="icon" type="image/png" sizes="32x32" th:href="@{/v2/assets/favicon/favicon-32x32.png}">
+	<link rel="icon" type="image/png" sizes="96x96" th:href="@{/v2/assets/favicon/favicon-96x96.png}">
+	<link rel="icon" type="image/png" sizes="16x16" th:href="@{/v2/assets/favicon/favicon-16x16.png}">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="/v2/assets/favicon/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+
+	<!-- CSS  -->
+	<link rel="stylesheet" th:href="@{/vender/bootstrap/bootstrap-4.1.3/css/bootstrap.css}">
+	<link rel="stylesheet" th:href="@{/v2/css/mobile.css}">
+	<link rel="stylesheet" th:href="@{/v2/css/mobile11.css}">
+
+	<script type="text/javascript" th:src="@{/vender/jquery/jquery-3.6.0.js}"></script>
+	<script type="text/javascript" th:src="@{/vender/jqueryui/jquery-ui-1.13.1/jquery-ui.js}"></script>
+	<script th:src="@{/v2/scripts/mscript.js}"></script>
+</head>
+<body>
+<div class="mobile-wrap bg-white">
+	<header class="mobile-head">
+		<button class="btn-prev"></button>
+		<div class="title">로그인</div>
+		<button class="btn-menu"></button>
+	</header>
+	<main class="mobile-content">
+		<div class="login-wrap">
+			<div class="login-title-wrap">
+				<img src="" alt="" class="img-logo">
+				<div class="login-title">스마트물류플랫폼</div>
+			</div>
+			<div class="region">광주</div>
+			<div id="errmsg" class="idpw-check" role="alert"></div>
+			<form method="post" id="frmLogin" onsubmit="return false;">
+				<div class="input-login-wrapper">
+					<input type="hidden" name="compkey" id="compkey"  th:value="100" >
+					<input type="text" name="useract" id="useract" class="ic-id" th:placeholder="${#messages.msg('sy.main.login.userValidation')}" th:value="${#httpServletRequest.getParameter('useract')}"  autofocus >
+					<input type="password" class="ic-pw" name="passwrd" id="passwrd" autoComplete="off" th:placeholder="${#messages.msg('sy.main.login.passValidation')}" th:value="1" >
+					<input type="hidden" name="langkey" id="langkey"  th:value="gj" >
+					<div>
+						<input type="hidden" id="token" data-token-name="${_csrf.headerName}" placeholder="Password" value="${_csrf.token}">
+					</div>
+					<select  name="warekey" id="warekey" class="form-control">
+						<option th:each="val : ${warekeyList}" th:value="${val.WAREKEY}"  th:text="${val.WAREKEY}"></option>
+					</select>
+					<!-- <div class="sign-line">[[#{sy.main.login.memberyet}]]  아직 회원이아니신가요? <button type="button" class="btn sign-link" onclick="location.href='/signUp'" th:text="${#messages.msg('sy.main.login.btnsignup')}"></button></div> -->
+					<button type="button" id="login-button" class="btn-login" th:text="${#messages.msg('sy.main.login.btnlogin')}"></button>
+				</div>
+			</form>
+			<div class="webview">웹뷰 테스트</div>
+			<div class="inquiry-number">문의사항 : 055-1234-5678</div>
+			<div class="copyright">Copyright © 스마트물류플랫폼 All right reserved.</div>
+		</div>
+	</main>
+</div>
+</body>
+
+<script>
+	const rPath = $('#rPath').attr('data-contextPath')?$('#rPath').attr('data-contextPath'):'';
+	$(function(){
+		$("#login-button").click(function(){
+			login();
+		});
+
+		$("#langkey").change(function(){
+			changeLocale();
+		});
+
+		$("#frmLogin").keypress(function (e) {
+			if (e.keyCode === 13) {
+				login();
+			}
+		});
+	});
+
+	function login(){
+		if($("#useract").val()=='') $("#useract").val('1');
+		$.ajax({
+			url:rPath+"/login_proc",
+			type :  "POST",
+			dataType : "json",
+			data : {
+				compkey : $("#compkey").val(),
+				langkey : $("#langkey").val(),
+				useract : $("#useract").val(),
+				passwrd : $("#passwrd").val(),
+				warekey : $('#warekey').val()
+
+			},
+			beforeSend : function(xhr)
+			{
+				var token = $("#token").val();
+				var header = "X-CSRF-TOKEN";
+				xhr.setRequestHeader(header, token);
+			},
+			success : function(response){
+				if(response.code == "200"){
+					window.location = response.item.url;
+				} else {
+					$("#errmsg").text(response.message);
+					$("#passwrd").val("");
+				}
+			},
+			error : function(err){
+				let errObj = err.responseJSON;
+
+				if(!errObj){
+					errObj = JSON.parse(err.responseText);
+				}
+				document.querySelector('#errmsg').innerHTML = errObj.message;
+			}
+		})
+	}
+
+	function changeLocale(){
+		var compkey = $("#compkey").val();
+		//let warekey = $("#warekey").val();
+		var useract = $("#useract").val();
+		var langkey = $("#langkey").val();
+		window.location = "/login?langkey="+ langkey + '&compkey='+compkey + '&useract='+useract;
+	}
+</script>
+</html>

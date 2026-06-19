@@ -1,0 +1,618 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent" class="tab-content">
+	<div class="tab-contents">
+		<div class="location"></div>
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="tma08_towarky" class="setting-grid-title ic-title-nece">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tma08_towarky" name="tma08_towarky"
+							data-cb-val="combovl" data-cb-name="combonm"
+							data-cb-url="/md/common/organization/warehouse-user"
+							data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<label for="tma08_vhcsnam" class="setting-grid-title">[[#{tm.tvhcma.vhcsnam}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="tma08_vhcsnam"
+							th:placeholder="${#messages.msg('tm.tvhcma.vhcsnam')}">
+					</div>
+				</div>
+				<label for="tma08_saatc10" class="setting-grid-title">[[#{tm.tma08.saatc10}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="tma08_saatc10"
+							th:placeholder="${#messages.msg('tm.tma08.saatc10')}">
+					</div>
+				</div>
+				<label for="tma08_destkey" class="setting-grid-title">[[#{tm.tplnit.destkey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+                            <select id="tma08_destkey" name="tma08_destkey"
+							data-cb-val="destkey" data-cb-name="denamlc" data-cb-url="/tm/area/common/destlist"
+							data-cb-variable="destkeyList">
+							<option value="">[[#{tm.common.all}]]</option>
+							</select>
+                        </div>
+				</div>
+				<label for="tma08_saatc08" class="setting-grid-title">[[#{tm.tma08.saatc08}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" id="tma08_saatc08"
+							th:placeholder="${#messages.msg('tm.tma08.saatc08')}">
+					</div>
+				</div>
+				<label for="tma08_postdat" class="setting-grid-title">[[#{tm.tma08.postdat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-date-group">
+						<input type="date" id="tma08_postdatFrom"
+							onkeyup="setInputDateDel(this)"> <span>~</span> <input
+							type="date" id="tma08_postdatTo" onkeyup="setInputDateDel(this)">
+					</div>
+				</div>
+				<label for="tma08_doctype" class="setting-grid-title">[[#{tm.tma08.doctype}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tma08_doctype" name="tma08_doctype"></select>
+					</div>
+				</div>
+				<label for="tma08_retodyn" class="setting-grid-title">[[#{tm.tma08.retodyn}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="tma08_retodyn" name="tma08_retodyn">
+							<option value="">[[#{tm.common.all}]]</option>
+							<option value="Y">[[#{tm.tma08.Y}]]</option>
+							<option value="N">[[#{tm.tma08.N}]]</option>
+						</select>
+					</div>
+				</div>
+				<label for="tma08_plnstat" class="setting-grid-title">[[#{tm.tma08.plnstat}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-check-group" id="tma08_plnstatCheckBox">
+						<label class="check-box"> <input type="checkbox"
+							autocomplete="off" id="tma08_plnstatAll" name="tma08_plnstatAll">
+							<span>[[#{tm.common.all}]]</span>
+						</label>
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green"
+					id="tma08_search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="tma08_reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-search btn-navy btn-green" id="tma08_cancle">
+						<img class="ic-bt-cancel-g">[[#{tm.tma08.planCancle}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="tma08_pqgrid"></div>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${#messages.msg('tm.tma08.subGrid')}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-search btn-navy btn-green" id="tma08_itemCancle">
+						<img class="ic-bt-cancel-g">[[#{tm.tma08.planCancle}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="tma08_subGrid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	
+	/* *******************************************************
+	 * 최초 생성일시 : 2023-08-01
+	 * 최초 생성자 : 최재환
+	 * 설명 : 현재 등록된 배차들을 취소할 수 있는 화면입니다.
+	 *********************************************************/
+	const pageId = 'tma08';
+	let grid;
+	let subGrid;
+	let responseData;
+	$(function(){
+
+		const yesterday = moment().subtract(1, "days").format("YYYY-MM-DD");
+		const today = moment().format('YYYY-MM-DD');
+
+		$('#' + pageId + '_postdatFrom').val(yesterday);
+		$('#' + pageId + '_postdatTo').val(today);
+
+
+	//============================================================
+	//그리드 CM
+	//============================================================
+		const tma08GridCM = [
+			{title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: {all: false, header: true}
+			},
+			{ title: '[[#{tm.tma08.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnhd.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnhd.updtchk}]]', dataType: 'integer', dataIndx: 'updtchk', editable: false, hidden: true},
+			{ title: '[[#{tm.tma08.tclosyn}]]', dataType: 'string', dataIndx: 'tclosyn', editable: false, hidden: true},
+			{ title: '[[#{tm.tma08.vhplnky}]]', dataType: 'string', dataIndx: 'vhplnky', editable: false},
+			{ title: '[[#{tm.tma08.vhpdate}]]', dataType: 'string', dataIndx: 'vhpdate', editable: false},
+			{ title: '[[#{tm.tma08.vhptime}]]', dataType: 'string', dataIndx: 'vhptime', editable: false},
+			{ title: '[[#{grid.vhcsnam}]]', dataType: 'string', dataIndx: 'vhcsnam', editable: false},
+			{ title: '[[#{tm.tvhcma.vhcfnam}]]', dataType: 'string', dataIndx: 'vhcfnam', editable: false},
+			{ title: '[[#{tm.tma08.usernam}]]', dataType: 'string', dataIndx: 'usernam', editable: false},
+			{ title: '[[#{tm.tma08.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false},
+			{ title: '[[#{tm.tma08.denamlc}]]', dataType: 'string', dataIndx: 'denamlc', editable: false},
+			{ title: '[[#{tm.tma08.saatc05}]]', dataType: 'string', dataIndx: 'saatc05', editable: false},
+			{ title: '[[#{tm.tma08.saatc10min}]]', dataType: 'string', dataIndx: 'saatc10min', editable: false},
+			{ title: '[[#{tm.tma08.saatc10max}]]', dataType: 'string', dataIndx: 'saatc10max', editable: false},
+			{ title: '[[#{tm.tma08.pltcnts}]]', dataType: 'integer', dataIndx: 'pltcnts', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma08.retodyn}]]', dataType: 'string', dataIndx: 'retodyn', editable: false},
+			{ title: '[[#{tm.tma08.trnmemo}]]', dataType: 'string', dataIndx: 'trnmemo', editable: false},
+			{ title: '[[#{tm.tma08.shtrtnm}]]', dataType: 'string', dataIndx: 'shtrtnm', editable: false},
+			{ title: '[[#{tm.tma08.oubstat}]]', dataType: 'string', dataIndx: 'oubstat', editable: false},
+			{ title: '[[#{tm.tma08.plnstat}]]', dataType: 'string', dataIndx: 'plnstat', editable: false},
+			{ title: '[[#{tm.tma08.repittm}]]', dataType: 'string', dataIndx: 'repittm', editable: false},
+			{ title: '[[#{tm.tma08.doctype}]]', dataType: 'string', dataIndx: 'doctynm', editable: false}
+		]
+	
+		const tma08SubGridCM = [
+			{title: '', dataType: 'bool', dataIndx: 'state', align: 'center',
+				type: 'checkbox', cls: 'ui-state-default', sortable: false, editor: false,
+				cb: {all: false, header: true}
+			},
+			{ title: '[[#{tm.tma08.rowkey}]]', dataType: 'string', dataIndx: 'rowkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.vhplnit}]]', dataType: 'string', dataIndx: 'vhplnit', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.copodky}]]', dataType: 'string', dataIndx: 'cooutky', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.copodit}]]', dataType: 'integer', dataIndx: 'cooutit', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnhd.vehicky}]]', dataType: 'string', dataIndx: 'vehicky', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.destkey}]]', dataType: 'string', dataIndx: 'destkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.custkey}]]', dataType: 'string', dataIndx: 'custkey', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnhd.postdat}]]', dataType: 'string', dataIndx: 'postdat', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.credate}]]', dataType: 'string', dataIndx: 'credate', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.cretime}]]', dataType: 'string', dataIndx: 'cretime', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.lmodate}]]', dataType: 'string', dataIndx: 'lmodate', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.lmotime}]]', dataType: 'string', dataIndx: 'lmotime', editable: false, hidden: true},
+			{ title: '[[#{tm.tplnit.lmouser}]]', dataType: 'string', dataIndx: 'lmouser', editable: false, hidden: true},
+			{ title: '[[#{tm.tma08.ptnamlc}]]', dataType: 'string', dataIndx: 'ptnamlc', editable: false},
+			{ title: '[[#{tm.tma08.whnamlc}]]', dataType: 'string', dataIndx: 'whnamlc', editable: false},
+			{ title: '[[#{tm.tma08.denamlc}]]', dataType: 'string', dataIndx: 'denamlc', editable: false},
+			{ title: '[[#{tm.tma08.saatc06}]]', dataType: 'string', dataIndx: 'saatc06', editable: false},
+			{ title: '[[#{tm.common.saatc01}]]', dataType: 'string', dataIndx: 'saatc01min', editable: false},
+			{ title: '[[#{tm.common.saatc03}]]', dataType: 'string', dataIndx: 'saatc03min', editable: false},
+			{ title: '[[#{tm.common.saatc05}]]', dataType: 'string', dataIndx: 'saatc05min', editable: false},
+			{ title: '[[#{tm.tma1.saatc08}]]', dataType: 'string', dataIndx: 'saatc08min', editable: false,
+				render: function(ui) {
+					const option = responseData.ocatmaList.find(function(obj) {
+						return (obj.mcatecd === ui.cellData);
+					});
+					
+					return option ? option.mcatenm : ui.cellData;
+				}	
+			},
+			{ title: '[[#{tm.tma1.saatc10min}]]', dataType: 'string', dataIndx: 'saatc10min', editable: false},
+			{ title: '[[#{tm.tma1.saatc10max}]]', dataType: 'string', dataIndx: 'saatc10max', editable: false},
+			{ title: '[[#{tm.tplnit.skudesc}]]', dataType: 'string', dataIndx: 'skudesc', editable: false},
+			{ title: '[[#{tm.tplnit.soitqty}]]', dataType: 'integer', dataIndx: 'soitqty', format: '#,###', editable: false,
+				summary: { type: "sum" }},
+			{ title: '[[#{tm.tma08.ownamlc}]]', dataType: 'string', dataIndx: 'ownamlc', editable: false},
+			{ title: '[[#{tm.tma08.creuser}]]', dataType: 'string', dataIndx: 'creuser', editable: false},
+			{ title: '[[#{tm.tma08.shtrsts}]]', dataType: 'string', dataIndx: 'shtrsts', editable: false}
+		]
+		const tma08Grid = new GridUtil(tma08GridCM, '[[${gprogrid}]]', pageId + '_pqgrid');
+		const tma08SubGrid = new GridUtil(tma08SubGridCM, '[[${gprogrid}]]', pageId + '_subGrid');
+		
+		tma08Grid.setCreate(async function(evt, ui) {
+			await _commonInit();
+			await tma08_initData();
+		});
+
+		//============================================================
+		//check 이벤트(하나만 체크되게끔)
+		//============================================================
+		tma08Grid.setCheck(async function(evt, ui){
+			if(ui.check){
+				this.Checkbox('state').unCheckAll();
+				ui.rowData.state = true;
+				this.refreshRow({ rowIndx: ui.rowData.pq_ri});
+				await tma08_planItemInitData(ui);
+			}
+		});
+		
+		//============================================================
+		//그리드 RowDblClick이벤트
+		//============================================================
+		tma08Grid.setRowDblClick(async function(event, ui) {
+			await tma08_planItemInitData(ui);
+		});
+
+		tma08Grid.setFind();
+		tma08Grid.setReset();
+
+		tma08SubGrid.setFind();
+		tma08SubGrid.setReset();
+
+		tma08Grid.open();
+		tma08SubGrid.open();
+
+		$('#' + pageId + '_search').click(async function () {
+			// 검색버튼 클릭 시 데이터 조회
+			await tma08_transportInitData();
+		});
+		
+		//초기화 이벤트
+		$('#' + pageId + '_reset').click(async function() {
+
+			$('#' + pageId + '_postdatFrom').val(yesterday);
+			$('#' + pageId + '_postdatTo').val(today);
+
+			$('#' + pageId + '_towarky').val($('#' + pageId + '_towarky option:first').val());
+			$('#' + pageId + '_retodyn').val($('#' + pageId + '_retodyn option:first').val());
+			$('#' + pageId + '_destkey').val($('#' + pageId + '_destkey option:first').val());
+			
+			await doctypeSetting();
+
+			$('#' + pageId + '_vhcsnam').val('');
+			$('#' + pageId + '_usernam').val('');
+			$('#' + pageId + '_saatc10').val('');
+			$('#' + pageId + '_saatc08').val('');
+
+			$('input:checkbox[name*="' + pageId + '_plnstat"]').prop('checked', false);
+			$('#' + pageId + '_plnstatPLAN').prop('checked', true);
+
+			grid = pq.grid('#' + pageId + '_pqgrid');
+			subGrid = pq.grid('#' + pageId + '_subGrid');
+
+			grid.showLoading();
+			subGrid.showLoading();
+
+			grid.option('dataModel', {data: []}); // 해당 그리드 초기화
+			subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+			subGrid.refreshDataAndView();
+			subGrid.hideLoading();
+
+			grid.refreshDataAndView();
+			grid.hideLoading();
+
+		});
+
+	});
+
+	//============================================================
+	//데이터 조회
+	//============================================================
+	async function tma08_transportInitData() {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+
+		let plnstatCheckedList = [];
+
+		let plnstatList = document.querySelectorAll('input[type=checkbox][name=' + pageId + '_plnstat]');
+
+		for(let i=0; i<plnstatList.length; i++) {
+			if(plnstatList[i].checked === true && plnstatList[i].id != pageId + '_plnstatAll') {
+				plnstatCheckedList.push(plnstatList[i].value);
+			}
+		}
+
+		const data = {
+				// 검색할 조건을 가지고 있는 변수
+				warekey: $('#' + pageId + '_towarky').val(),
+				vhcsnam: $('#' + pageId + '_vhcsnam').val().replace(/(\s*)/g, ''),
+				saatc10: $('#' + pageId + '_saatc10').val().replace(/(\s*)/g, ''),
+				destkey: $('#' + pageId + '_destkey').val(),
+				saatc08: $('#' + pageId + '_saatc08').val().replace(/(\s*)/g, ''),
+				postdatFrom: $('#' + pageId + '_postdatFrom').val().replaceAll('-', ''),
+				postdatTo: $('#' + pageId + '_postdatTo').val().replaceAll('-', ''),
+				doctype: $('#' + pageId + '_doctype').val(),
+				retodyn: $('#' + pageId + '_retodyn').val(),
+				plnstatList: plnstatCheckedList,
+				tclosyn: 'N',
+				progrid: '[[${gprogrid}]]'
+		}
+		grid.showLoading();
+		try{
+			const response = await fetchUtil('GET', "/tm/dispatch/common/grids/1", data);
+
+			//============================================================
+			//그리드 Option
+			//============================================================
+			if(response.status === 200) {
+				const resContent = await response.json();
+
+				grid.option('dataModel', {
+					data: resContent,
+					recIndx: 'rowkey'
+				});
+
+				subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+				subGrid.refreshDataAndView();
+
+				grid.refreshDataAndView();
+				grid.hideLoading();
+			}
+		} catch(err){
+			alert('[[#{ms.fetchError}]]');
+		} finally{
+			grid.hideLoading();
+		}
+	}
+
+	async function tma08_planItemInitData(ui){
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		if(ui.rowData.rowkey){
+			const data = { vhplnky : ui.rowData.vhplnky };
+
+			subGrid.showLoading();
+			try{
+				const response = await fetchUtil('GET', "/tm/dispatch/common/grids/2", data);
+
+				//============================================================
+				//그리드 Option
+				//============================================================
+				if(response.status === 200) {
+					const resContent = await response.json();
+
+					subGrid.option('dataModel', {
+						data: resContent,
+						recIndx: 'rowkey'
+					});
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+				}
+			} catch(err){
+				alert('[[#{ms.fetchError}]]');
+			} finally{
+				subGrid.hideLoading();
+			}
+		}
+	}
+
+	//============================================================
+	//배차헤더 삭제
+	//============================================================
+
+	$('#' + pageId + '_cancle').click(async function() {
+		grid = pq.grid('#' + pageId + '_pqgrid');
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+		const gridCheck = grid.Checkbox('state').getCheckedNodes();
+		const gridChange = grid.getChanges({all: true});
+		const subGridChange = subGrid.getChanges({all: true});
+		const subGridData = subGrid.getData();
+
+		for(let i = 0;i<subGridData.length;i++){
+			if(subGridData[i]['shtrstsOrigin']!=='PLAN'){
+				alert('[[#{tm.tma08.planChk}]]');
+				return;
+			}
+		}
+
+		gridChange.deleteList = gridCheck;
+		subGridChange.deleteList = subGrid.getData();
+		if(gridCheck.length == 0){
+			alert('[[#{tm.tma08.choicePlan}]]');
+			return;
+		}
+
+		if(gridCheck[0]['plnstatOrigin']==='CANCEL'){
+			alert('[[#{tm.tma08.aleadyCancle}]]');
+			return;
+		}
+
+		const result = confirm('[[#{tm.tma08.headCancle}]]');
+		if(result) {
+
+			const data = {
+				headGrid: gridChange,
+				itemGrid: subGridChange
+			}
+			grid.showLoading();
+			subGrid.showLoading();
+			try {
+				const response = await fetchUtil('POST', '/tm/dispatch/tma08/delete', data);
+
+				if(response.status === 200) {
+					// 삭제 성공 후 데이터 조회
+					subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+
+					grid.refreshDataAndView();
+					grid.hideLoading();
+
+					await tma08_transportInitData();
+				}
+			}catch(err) {
+				alert('[[#{ms.deleteErr}]]');
+			}finally {
+				grid.hideLoading();
+				subGrid.hideLoading();
+			}
+		}
+	});
+
+	//============================================================
+	//배차아이템 삭제
+	//============================================================
+
+	$('#' + pageId + '_itemCancle').click(async function() {
+		grid = pq.grid('#' + pageId + '_pqgrid')
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+
+		const subGridCheck = subGrid.Checkbox('state').getCheckedNodes();
+		let deleteList = subGridCheck;
+
+		if(subGridCheck.length == 0){
+			alert('[[#{tm.tma08.choicePlan}]]');
+			return;
+		}
+		for(let i = 0;i<subGridCheck.length;i++){
+			if(subGridCheck[i]['shtrstsOrigin']!=='PLAN'){
+				alert('[[#{tm.tma08.planPLT}]]');
+				return;
+			}
+		}
+		const result = confirm('[[#{tm.tma08.itemCancle}]]');
+		if(result) {
+
+			const data = {
+				deleteList: deleteList
+			}
+			grid.showLoading();
+			subGrid.hideLoading();
+			try {
+				const response = await fetchUtil('POST', '/tm/dispatch/tma08/delete', data);
+
+				if(response.status === 200) {
+					// 삭제 성공 후 데이터 조회
+					grid.option('dataModel', {data: []});
+					subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+					await tma08_transportInitData(); // 헤드그리드 재조회
+
+					subGrid.refreshDataAndView();
+					subGrid.hideLoading();
+				}
+			}catch(err) {
+				alert('[[#{ms.deleteErr}]]');
+			}finally {
+				grid.hideLoading();
+				subGrid.hideLoading();
+			}
+		}
+	});
+
+	//============================================================
+	//전체 클릭하면 나머지 체크 다 풀림
+	//============================================================
+	$('#' + pageId + '_plnstatAll').click(function () {
+		if($('input:checkbox[name="' + pageId + '_plnstat"]:checked').length === 0) {
+			return false;
+		}else {
+			$('input:checkbox[name="' + pageId + '_plnstat"]').prop('checked', false);
+		}
+	});
+	//============================================================
+	//다 클릭하면 전체만 체크되고 전체가 클릭된 상황에서 다른거 누르면 전체 체크 풀림
+	//============================================================
+	function plnstatClickEvt() {
+		if(!$('input:checkbox[name="' + pageId + '_plnstat"]:checked').length || ($('input:checkbox[name="' + pageId + '_plnstat"]').length === $('input:checkbox[name="' + pageId + '_plnstat"]:checked').length)) {
+			$('#' + pageId + '_plnstatAll').prop('checked', true);
+			$('input:checkbox[name="' + pageId + '_plnstat"]').prop('checked', false);
+		}else {
+			$('#' + pageId + '_plnstatAll').prop('checked', false);
+		}
+	}
+	//============================================================
+	//체크박스 db에서 가져오기
+	//============================================================
+	async function plnstatCheckbox() {
+		let html = '';
+		const tma08PlnstatList = responseData.plnstatCheckBoxes.filter(function(e){
+			return e.combovl !== 'CANCEL';
+		});
+		for(const plnstat of tma08PlnstatList) {
+			html += '<label class="check-box" onclick="plnstatClickEvt()">';
+			html += '<input type="checkbox" autocomplete="off" id="' + pageId + '_plnstat' + plnstat.combovl + '" name="' + pageId + '_plnstat" value="' + plnstat.combovl;
+			if(plnstat.combovl=='PLAN'){
+				html += '" checked>';
+			}
+			else{
+				html += '">';
+			}
+
+			html += '<span>' + plnstat.combonm + '</span>';
+			html += '</label>';
+		}
+
+		$('#' + pageId + '_plnstatCheckBox').append(html);
+
+	}
+	
+	//============================================================
+	//init 데이터
+	//============================================================
+	async function tma08_initData() {
+
+		responseData = await fetchUtil('GET', '/tm/dispatch/common/init', {warekey: $('#' + pageId + '_towarky').val()});
+		responseData = await responseData.json();
+
+		await doctypeSetting();
+		await plnstatCheckbox();
+
+		return responseData;
+	}
+	
+	//============================================================
+	//doctype Setting
+	//============================================================
+	async function doctypeSetting() {
+		let mdocmaList = await fetchUtil('GET', '/tm/dispatch/tma08/doctypelist', {warekey: $('#' + pageId + '_towarky').val()});
+		mdocmaList = await mdocmaList.json();
+		
+		$('#' + pageId + '_doctype option').remove();
+		
+		$('#' + pageId + '_doctype').append($('<option></option>').attr('value', '').text('[[#{tm.common.all}]]'));
+  		
+  		for(mdocma of mdocmaList) {
+  			$('#' + pageId + '_doctype').append($('<option></option>').attr('value', mdocma.combovl).text(mdocma.combonm));
+  		}
+	}
+	
+	//============================================================
+	//doctype Setting
+	//============================================================
+	$('#' + pageId + '_towarky').change(async function() {
+		await doctypeSetting();
+	});
+
+	//============================================================
+	//검색 엔터키 이벤트
+	//============================================================
+
+    async function enterKeySearch(event) {
+		subGrid = pq.grid('#' + pageId + '_subGrid');
+
+        if (event.key === 'Enter') {
+
+			subGrid.option('dataModel', {data: []}); // 해당 서브그리드 초기화
+
+			subGrid.refreshDataAndView();
+			subGrid.hideLoading();
+
+			await tma08_transportInitData(); // 헤드그리드 재조회
+        }
+    }
+
+    // 모든 input 요소 가져오기
+    const inputElements = document.querySelectorAll('.input-wrapper');
+
+    // 각 input 요소에 이벤트 리스너 추가
+    inputElements.forEach(input => {
+        input.addEventListener('keyup', enterKeySearch);
+    });
+
+	</script>
+</div>
+</html>

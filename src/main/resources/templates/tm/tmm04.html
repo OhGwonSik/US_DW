@@ -1,0 +1,1422 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="fragments-mainContent">
+    <div class="tab-contents">
+      <div class="search-conditions con-box">
+        <div class="setting-grid">
+          <label class="setting-grid-title">*[[#{tm.tshrit.warekey}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-group">
+              <select
+                name="tmm04_warekey"
+                data-cb-val="combovl"
+                data-cb-name="combonm"
+                data-cb-url="/tm/code/warehouse"
+                id="tmm04_warekey"
+              >
+                <!-- -- 전체 -- -->
+                <!-- <option value="">[[#{tm.common.all}]]</option> -->
+              </select>
+            </div>
+          </div>
+          <label class="setting-grid-title">[[#{tm.tshrhd.shtgrnm}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tshrhd.shtgrnm')}"
+                id="tmm04_shtgrnm"
+              />
+              <!-- <div class="input-group">
+              <select
+                name="tmm04_shtgrnm"
+                data-cb-val="combovl"
+                data-cb-name="combonm"
+                data-cb-url="/md/common/code/common-code?comcdky=SHTGRNM"
+                data-cb-select="#{tm.common.all}"
+                id="tmm04_shtgrnm"
+              >
+                <option value="">[[#{tm.common.all}]]</option>
+              </select> -->
+            </div>
+          </div>
+          <label for="tmm04_shtrtnm" class="setting-grid-title"> [[#{tm.tshrhd.shtrtnm}]] </label>
+          <div class="setting-grid-content">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tshrhd.shtrtnm')}"
+                id="tmm04_shtrtnm"
+              />
+            </div>
+          </div>
+          <!-- 도착지명 트럭명칭 사용여부 -->
+          <label for="tmm04_destkey" class="setting-grid-title">[[#{tm.tshrit.destkey}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-group">
+              <!-- <div class="input-wrapper"> -->
+              <!-- <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tshrit.destkey')}"
+                id="tmm04_destkey"
+              /> -->
+              <select
+                name="tmm04_destkey"
+                data-cb-val="destkey"
+                data-cb-name="denamlc"
+                data-cb-url="/tm/code/destkey"
+                id="tmm04_destkey"
+              >
+                <option value="">[[#{tm.common.all}]]</option>
+              </select>
+            </div>
+          </div>
+          <!-- 트럭명칭 -->
+          <label for="tmm04_vhcsnam" class="setting-grid-title">[[#{tm.tvhcma.vhcsnam}]]</label>
+          <div class="setting-grid-content">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tvhcma.vhcsnam')}"
+                id="tmm04_vhcsnam"
+              />
+            </div>
+          </div>
+          <!-- 사용여부 -->
+          <label for="tmm04_tsuseyn" class="setting-grid-title">[[#{tm.tshrhd.tsuseyn}]]</label>
+          <!-- <div class="setting-grid-content">
+            <div class="input-wrapper">
+              <input
+                type="text"
+                th:placeholder="${#messages.msg('tm.tshrhd.vhuseyn')}"
+                id="tmm04_vhuseyn"
+              />
+            </div>
+          </div> -->
+
+          <div class="setting-grid-content">
+            <div class="input-group">
+              <select name="tmm04_tsuseyn" id="tmm04_tsuseyn">
+                <option value="Y">Y</option>
+                <!-- <option value="">[[#{tm.common.all}]]</option> -->
+                <option value="N">N</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="search-btn-group">
+          <button type="button" class="btn-search btn-navy btn-green" id="tmm04_btnSearch">
+            <img />[[#{bt.search}]]
+          </button>
+          <button type="button" class="btn-clear btn-white" id="tmm04_btnReset">
+            <img /> [[#{bt.reset}]]
+          </button>
+        </div>
+      </div>
+      <div class="tab-contents-two">
+        <div class="search-list tab-content-left">
+          <div class="list-top">
+            <div class="list-title ic-title-mark">
+              <span th:text="${gnatitle}"></span>
+            </div>
+            <!-- <div class="edit-btn-wrapper">
+              <button class="btn-navy btn-green" id="tmm04_btnSave">
+                <img class="ic-bt-save" />[[#{bt.save}]]
+              </button>
+            </div> -->
+          </div>
+          <div class="list-grid-wrapper con-box">
+            <div id="tmm04_pqgrid"></div>
+          </div>
+        </div>
+        <div class="search-list tab-content-right">
+          <div class="search-list tab-contents-top">
+            <div class="list-top">
+              <!-- <div class="list-title ic-title-mark">
+                <span th:text="${gnatitle}"></span>
+              </div> -->
+              <div></div>
+              <div class="edit-btn-wrapper">
+                <button class="btn-navy btn-green" id="tmm04_btnSave1">
+                  <img class="ic-bt-save" />[[#{bt.save}]]
+                </button>
+              </div>
+            </div>
+            <div class="list-grid-wrapper con-box">
+              <div id="tmm04_subgrid"></div>
+            </div>
+          </div>
+          <div class="search-list tab-contents-bottom">
+            <!-- <div class="list-top">
+              <div class="list-title ic-title-mark">
+                <span th:text="${gnatitle}"></span>
+              </div>
+            </div> -->
+            <div class="list-grid-wrapper con-box">
+              <div id="tmm04_sub2grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      $(function () {
+        initor();
+      });
+      async function initor() {
+        const pageId = "tmm04";
+        const gridId = pageId + "_pqgrid";
+        const subGridId = pageId + "_subgrid";
+        const subGrid2Id = pageId + "_sub2grid";
+        const gridIdShop = "#" + pageId + "_pqgrid";
+        const subGridIdShop = "#" + pageId + "_subgrid";
+        const subGrid2IdShop = "#" + pageId + "_sub2grid";
+        const LastRowclickData = {};
+        let vehickyOptionsList = [];
+        let nowSearchedWarekey = "";
+
+        const getvehickylist = () =>
+          tmm04Sub2GridObject.getGrid()?.pdata?.map((r) => r.vehicky) || [];
+        const getnowOptionsForVehicky = (columnDatum) => {
+          if (columnDatum.dataIndx !== "vehicky") return;
+          const nowVehickyList = getvehickylist();
+          // columnDatum.editor.options = vehickyOptionsList
+          //   .filter(
+          //     (v) => !nowVehickyList.includes(v.vehicky) //v.warekey == $("#tmm04_warekey").val() &&
+          //   )
+          //   .map((v) => {
+          //     return { [v.value]: v.label };
+          //   });
+          // debugger;
+          if (columnDatum.editor.optionData)
+            columnDatum.editor.options = columnDatum.editor.optionData
+              .filter((v) => v.warekey == nowSearchedWarekey && !nowVehickyList.includes(v.value))
+              .map((opt) => {
+                return { [opt.value]: opt.label };
+              });
+          columnDatum.render = (datum) =>
+            vehickyOptionsList?.find((d) => d.value == datum.cellData)?.label || "";
+          // debugger;
+        };
+
+        const comboCreateData = (gridnm, colnm, obj = [], mapob, type) => {
+          const grid = pq.grid("#" + gridnm);
+          const column = grid.getColumn({ dataIndx: colnm });
+
+          const options = obj.map((obj) => {
+            const rObj = {};
+            if (mapob?.combovl && mapob?.combonm) {
+              rObj[obj[mapob.combovl]] = obj[mapob.combonm];
+            } else {
+              rObj[obj.combovl] = obj.combonm;
+            }
+            return rObj;
+          });
+          const render = (v) => {
+            const cellData = v?.cellData;
+            // const rowdata = v?.rowdata || {};
+            const options = v?.column?.editor?.options || [];
+            const labelTextObj = options.find((o) => o[cellData]);
+
+            return labelTextObj ? labelTextObj[cellData] : cellData;
+          };
+
+          column.editor.options = options;
+          column.editor.optionData = obj;
+          column.render = render;
+        };
+        await _commonInit();
+
+        //검색버튼 이벤트
+        $("#" + pageId + "_btnSearch").click(function () {
+          searchtmm042List();
+          LastRowclickData.shtrtky = "";
+          LastRowclickData.warekey = "";
+
+          nowSearchedWarekey = $("#tmm04_warekey").val();
+
+          comboCreateData(
+            subGrid2Id,
+            "vehicky",
+            vehickyOptionsList, //.filter((v) => v.warekey == $("#tmm04_warekey").val()),
+            {
+              combovl: "value",
+              combonm: "label",
+            }
+          );
+        });
+        $("input").keyup(function (e) {
+          // enter
+          if (e.keyCode === 13) {
+            searchtmm042List();
+          }
+        });
+
+        // 리셋버튼 이벤트
+        $("#" + pageId + "_btnReset").click(function () {
+          if (tmm04GridObject.getGrid()?.pdata?.length) {
+            const ok = confirm("[[#{ms.listViewRollback}]]");
+            if (!ok) return;
+          }
+
+          const selects = $("select");
+          const inputs = $("input");
+          for (let index = 0; index < inputs.length; index++) {
+            const element = inputs[index];
+            if (!element?.id?.startsWith(pageId)) continue;
+            element.value = "";
+          }
+          for (let index = 0; index < selects.length; index++) {
+            const element = selects[index];
+            if (!element?.id?.startsWith(pageId)) continue;
+            $("#" + element.id + " option:eq(0)").prop("selected", true);
+          }
+          // searchtmm042List();
+
+          tmm04GridObject.searchList([]);
+          tmm04SubGridObject.searchList([]);
+          tmm04Sub2GridObject.searchList([]);
+        });
+
+        //저장버튼 이벤트
+        $("#" + pageId + "_btnSave").click(function () {
+          saveTmm04SubGridsChange();
+        });
+        $("#" + pageId + "_btnSave1").click(function () {
+          saveTmm04SubGridsChange();
+        });
+        $("#" + pageId + "_btnSave2").click(function () {
+          saveTmm04SubGridsChange();
+        });
+
+        const Tmm04GridColModel = [
+          // {
+          //   title: "",
+          //   dataType: "String",
+          //   dataIndx: "state",
+          //   type: "checkBoxSelection",
+          //   align: "center",
+          //   maxWidth: "30",
+          //   maxHeight: "30",
+          //   menuIcon: false,
+          //   cls: "ui-state-default",
+          //   sortable: false,
+          //   editor: false,
+          //   hidden: true,
+          //   cb: { all: false, header: true, check: "Y", uncheck: "N", select: "Y" },
+          // },
+          {
+            title: "",
+            dataType: "bool",
+            dataIndx: "state",
+            align: "center",
+            type: "checkbox",
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true },
+          },
+          {
+            title: "[[#{tm.tshrit.rowkey}]]",
+            dataType: "string",
+            dataIndx: "rowkey",
+            hidden: true,
+            editable: false,
+          }, // rowkey
+          {
+            title: "[[#{tm.tshrit.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            hidden: true,
+            editable: false,
+          }, // Company Key
+          {
+            title: "[[#{tm.tshrit.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            // styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            validations: [
+              // { type: "required", msg: "[[#{ms.requiredValue}]]" },
+              { type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" },
+            ],
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 150, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+          }, // 창고키 => 창고
+          {
+            title: "[[#{tm.tshrit.shtrtky}]]",
+            dataType: "string",
+            dataIndx: "shtrtky",
+            editable: false,
+            hidden: true,
+          }, // 셔틀 코드 : 10자리
+          {
+            title: "[[#{tm.tshrhd.shtgrnm}]]",
+            dataType: "string",
+            dataIndx: "shtgrnm",
+            // styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            // validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+            // editor: {
+            //   type: "select",
+            //   init: (ui) => {
+            //     ui.$cell.find("select").pqSelect({ width: 150, check: true });
+            //     setTimeout(() => {
+            //       ui.$cell.find("select").pqSelect("open");
+            //     }, 250);
+            //   },
+            // },
+          }, // 셔틀 그룹
+          {
+            title: "[[#{tm.tshrhd.destkey}]]",
+            dataType: "string",
+            dataIndx: "destkey",
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+          }, // destkey 거점키
+          { title: "[[#{tm.tshrhd.shtrtnm}]]", dataType: "string", dataIndx: "shtrtnm" }, // 셔틀명
+          { title: "[[#{tm.tshrhd.shtcytm}]]", dataType: "integer", dataIndx: "shtcytm" }, // 셔틀 운행주기
+          { title: "[[#{tm.tshrhd.shtmemo}]]", dataType: "string", dataIndx: "shtmemo" }, // 셔틀 메모
+          {
+            title: "[[#{tm.tshrhd.itemnumb}]]",
+            dataType: "integer",
+            dataIndx: "itemnumb",
+            editable: false,
+          }, // 등록거점수
+          {
+            title: "[[#{tm.tshrhd.vehiclenumb}]]",
+            dataType: "integer",
+            dataIndx: "vehiclenumb",
+            editable: false,
+          }, // 등록차량수
+          {
+            title: "[[#{tm.tshrhd.inbshyn}]]",
+            dataType: "string",
+            dataIndx: "inbshyn",
+            align: "center",
+            type: "checkbox",
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          }, // 납입노선 여부
+          {
+            title: "[[#{tm.tshrhd.oubshyn}]]",
+            dataType: "string",
+            dataIndx: "oubshyn",
+            align: "center",
+            type: "checkbox",
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          }, // 납품노선 여부
+          {
+            title: "[[#{tm.tshrhd.tsuseyn}]]",
+            dataType: "string",
+            dataIndx: "tsuseyn",
+            // styleHead: { "background-color": "[[#{grid.styleHead02}]]" },
+            align: "center",
+            type: "checkbox",
+            editor: false,
+            cb: { all: false, header: true, check: "Y", uncheck: "N" },
+          }, // 사용여부"
+          {
+            title: "[[#{tm.tshrhd.credate}]]",
+            dataType: "string",
+            dataIndx: "credate",
+            editable: false,
+          }, // 생성일자
+          {
+            title: "[[#{tm.tshrhd.cretime}]]",
+            dataType: "string",
+            dataIndx: "cretime",
+            editable: false,
+          }, // 생성일시
+          {
+            title: "[[#{tm.tshrhd.creuser}]]",
+            dataType: "string",
+            dataIndx: "creuser",
+            editable: false,
+          }, // 생성사용자
+          {
+            title: "[[#{tm.tshrhd.lmodate}]]",
+            dataType: "string",
+            dataIndx: "lmodate",
+            editable: false,
+          }, // 수정일자
+          {
+            title: "[[#{tm.tshrhd.lmotime}]]",
+            dataType: "string",
+            dataIndx: "lmotime",
+            editable: false,
+          }, // 수정일시
+          {
+            title: "[[#{tm.tshrhd.lmouser}]]",
+            dataType: "string",
+            dataIndx: "lmouser",
+            editable: false,
+          }, // 수정사용자
+        ];
+
+        Tmm04GridColModel.filter((c, idx) => idx != 0).forEach((c) => (c.editable = false));
+
+        // 아랫쪽 서브그리드용 : item
+        const Tmm04SubGridColModel = [
+          {
+            title: "",
+            dataType: "bool",
+            dataIndx: "state",
+            align: "center",
+            type: "checkbox",
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true },
+          },
+          // {
+          //   title: "",
+          //   dataType: "String",
+          //   dataIndx: "state",
+          //   type: "checkBoxSelection",
+          //   align: "center",
+          //   maxWidth: "30",
+          //   maxHeight: "30",
+          //   menuIcon: false,
+          //   cls: "ui-state-default",
+          //   sortable: false,
+          //   editor: false,
+          //   cb: { all: false, header: true, check: "Y", uncheck: "N", select: "Y" },
+          // },
+          {
+            title: "[[#{tm.tshrit.rowkey}]]",
+            dataType: "string",
+            dataIndx: "rowkey",
+            hidden: true,
+            editable: false,
+          }, // rowkey
+          {
+            title: "[[#{tm.tshrit.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            hidden: true,
+            phidden: false,
+            editable: false,
+          }, // ware Key
+          {
+            title: "[[#{tm.tshrhd.shtrtnm}]]",
+            dataType: "string",
+            dataIndx: "shtrtnm",
+            // hidden: true,
+            editable: false,
+            render: (datum) => {
+              const shtrtky = datum?.rowData?.shtrtky;
+              const griddata = tmm04GridObject.getGrid().getData();
+              return griddata.find((d) => d.shtrtky == shtrtky).shtrtnm;
+            },
+            // styleHead: { "background-color": "[[#{grid.styleHead03}]]" },
+          }, // shtrtky
+          {
+            title: "[[#{tm.tshrit.shtrtky}]]",
+            dataType: "string",
+            dataIndx: "shtrtky",
+            hidden: true,
+            phidden: false,
+            editable: false,
+          }, // shtrtky
+          {
+            title: "[[#{tm.tshrit.shtrtit}]]",
+            dataType: "string",
+            dataIndx: "shtrtit",
+            hidden: true,
+            editable: false,
+          }, // shtrtit
+          {
+            title: "[[#{tm.tshrit.custkey}]]",
+            dataType: "string",
+            dataIndx: "custkey",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // custkey 고객
+          {
+            title: "[[#{tm.tshrit.destkey}]]",
+            dataType: "string",
+            dataIndx: "destkey",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // destkey 거점키
+          {
+            title: "[[#{tm.tshrit.shtrpty}]]",
+            dataType: "string",
+            dataIndx: "shtrpty",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // shtrpty 보고유형
+        ];
+
+        // 아랫쪽 서브그리드용 : vehicle
+        const Tmm04Sub2GridColModel = [
+          {
+            title: "",
+            dataType: "bool",
+            dataIndx: "state",
+            align: "center",
+            type: "checkbox",
+            sortable: false,
+            editor: false,
+            cb: { all: false, header: true },
+          },
+          // {
+          //   title: "",
+          //   dataType: "String",
+          //   dataIndx: "state",
+          //   type: "checkBoxSelection",
+          //   align: "center",
+          //   maxWidth: "30",
+          //   maxHeight: "30",
+          //   menuIcon: false,
+          //   cls: "ui-state-default",
+          //   sortable: false,
+          //   editor: false,
+          //   cb: { all: false, header: true, check: "Y", uncheck: "N", select: "Y" },
+          // },
+          {
+            title: "[[#{tm.tshrit.rowkey}]]",
+            dataType: "string",
+            dataIndx: "rowkey",
+            hidden: true,
+            editable: false,
+          }, // rowkey
+          {
+            title: "[[#{tm.tshrit.compkey}]]",
+            dataType: "string",
+            dataIndx: "compkey",
+            hidden: true,
+            editable: false,
+          }, // compKey
+          {
+            title: "[[#{tm.tshrit.warekey}]]",
+            dataType: "string",
+            dataIndx: "warekey",
+            hidden: true,
+            editable: false,
+          }, // ware Key
+          {
+            title: "[[#{tm.tshrhd.shtrtnm}]]",
+            dataType: "string",
+            dataIndx: "shtrtnm",
+            // hidden: true,
+            editable: false,
+            // styleHead: { "background-color": "[[#{grid.styleHead03}]]" },
+            render: (datum) => {
+              const shtrtky = datum?.rowData?.shtrtky;
+              const griddata = tmm04GridObject.getGrid().getData();
+              return griddata.find((d) => d.shtrtky == shtrtky).shtrtnm;
+            },
+          }, // shtrtky
+          {
+            title: "[[#{tm.tshrit.shtrtky}]]",
+            dataType: "string",
+            dataIndx: "shtrtky",
+            hidden: true,
+            editable: false,
+            // styleHead: { "background-color": "[[#{grid.styleHead03}]]" },
+          }, // shtrtky
+          {
+            title: "[[#{tm.tvhcma.vhcsnam}]] ([[#{tm.tvhcma.vhcfnam}]])",
+            // "[ [[#{tm.tshrvh.vehicky}]] ] [[#{tm.tvhcma.vhcsnam}]] ([[#{tm.tvhcma.vhcfnam}]])",
+            dataType: "string",
+            dataIndx: "vehicky",
+            render: (datum) => {
+              return vehickyOptionsList?.find((d) => d.vehicky == datum.vehicky)?.label;
+            },
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            editor: {
+              type: "select",
+              init: (ui) => {
+                ui.$cell.find("select").pqSelect({ width: 250, check: true });
+                setTimeout(() => {
+                  ui.$cell.find("select").pqSelect("open");
+                }, 250);
+              },
+            },
+            validations: [{ type: "nonEmpty", msg: "[[#{ms.requiredValue}]]" }],
+          }, // vehicky 차량코드 with 차량이름 차량번호
+
+          {
+            title: "[[#{tm.tshrvh.srvehod}]]",
+            dataType: "integer",
+            dataIndx: "srvehod",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            validations: [
+              { type: "gte", value: 0, msg: "[[#{ms.validations.minNumberValue(0)}]]" },
+            ],
+          }, // 셔틀 차량순서
+          {
+            title: "[[#{tm.tshrvh.shtvcap}]]",
+            dataType: "integer",
+            dataIndx: "shtvcap",
+            styleHead: { "background-color": "[[#{grid.styleHead01}]]" },
+            validations: [
+              { type: "gte", value: 0, msg: "[[#{ms.validations.minNumberValue(0)}]]" },
+            ],
+          }, // 상차가능 Pallet 수량
+        ];
+
+        const tmm04GridObject = new GridUtil(Tmm04GridColModel, "[[${gprogrid}]]", gridId);
+
+        const tmm04SubGridObject = new GridUtil(Tmm04SubGridColModel, "[[${gprogrid}]]", subGridId);
+
+        const tmm04Sub2GridObject = new GridUtil(
+          Tmm04Sub2GridColModel,
+          "[[${gprogrid}]]",
+          subGrid2Id
+        );
+
+        const whenFailFetch = () => {
+          tmm04GridObject.getGrid().hideLoading();
+          tmm04SubGridObject.getGrid().hideLoading();
+          tmm04Sub2GridObject.getGrid().hideLoading();
+          // alert("sy.common.errmesg}]]");
+        };
+
+        //pqGrid 이벤트발생시 validate 함수
+        function setBeforeValidate(event, ui) {
+          if (!ui.updateList.find((u) => JSON.stringify(u?.newRow) != JSON.stringify(u.oldRow)))
+            return;
+          if (
+            ui.source != "undo" &&
+            (ui.source == "edit" || ui.source == "paste" || ui.source == "checkbox")
+          ) {
+            const rownum = ui.updateList[0].rowIndx;
+            this.updateRow({
+              rowIndx: rownum,
+              newRow: {
+                state: true,
+              },
+              checkEditable: false,
+            });
+          }
+        }
+
+        // tmm04GridObject.setBeforeValidate(setBeforeValidate);
+        tmm04SubGridObject.setBeforeValidate(setBeforeValidate);
+        tmm04Sub2GridObject.setBeforeValidate(setBeforeValidate);
+
+        // tmm04GridObject.setFind();
+        // tmm04GridObject.setReset();
+
+        tmm04GridObject.setCreate(async (evt, ui) => {
+          // 코드=>밸류 및 검색에 셀렉트 같은거 있으면 디비에서 꺼내와서 넣어주기
+
+          // warekey 창고코드 => 창고
+          (async () => {
+            const warekeyRes = await fetchUtil("GET", "/tm/code/warehouse", {}, whenFailFetch);
+            const warekeyList = await warekeyRes.json();
+            comboCreateData(gridId, "warekey", warekeyList, {
+              combovl: "combovl",
+              combonm: "combonm",
+            });
+          })();
+
+          // common code list
+          // SHTGRNM 셔틀그룹
+          // (async () => {
+          //   const codeListRes = await fetchUtil(
+          //     "GET",
+          //     "/md/common/code/common-code",
+          //     {
+          //       comcdky: "SHTGRNM",
+          //     },
+          //     whenFailFetch
+          //   );
+          //   const codeList = await codeListRes.json();
+
+          //   comboCreateData(
+          //     gridId,
+          //     "shtgrnm",
+          //     codeList.filter((c) => c.comcdky == "shtgrnm".toUpperCase())
+          //   ); //, { combovl: 'comcdvl', combonm: 'comcdtx' });
+          // })();
+        });
+
+        const searchSub1 = async (data) => {
+          const subgrid = tmm04SubGridObject.getGrid();
+          subgrid.showLoading();
+          const res = await fetchUtil("GET", "/tm/shuttle/detail", data, whenFailFetch);
+          const sub1List = await res.json();
+
+          //
+
+          subgrid.option("dataModel", { data: sub1List, recIndx: "rowkey" });
+          subgrid.refreshDataAndView();
+          subgrid.hideLoading();
+        };
+        const searchSub2 = async (data) => {
+          const subgrid2 = tmm04Sub2GridObject.getGrid();
+          subgrid2.showLoading();
+          const res2 = await fetchUtil("GET", "/tm/shuttle/vehicle", data, whenFailFetch);
+          const sub2List = await res2.json();
+
+          //
+
+          subgrid2.option("dataModel", { data: sub2List, recIndx: "rowkey" });
+          subgrid2.refreshDataAndView();
+          subgrid2.hideLoading();
+        };
+
+        const whenRowClickOrKey = async (event, ui) => {
+          const subgrid = tmm04SubGridObject.getGrid();
+          const subgrid2 = tmm04Sub2GridObject.getGrid();
+
+          if (!ui) {
+            subgrid.option("dataModel", { data: [], recIndx: "rowkey" });
+            subgrid.refreshDataAndView();
+            subgrid2.option("dataModel", { data: [], recIndx: "rowkey" });
+            subgrid2.refreshDataAndView();
+            return;
+          }
+          const data = { shtrtky: ui.rowData.shtrtky, warekey: ui.rowData.warekey };
+          // 같은 row인지 확인함
+          let isSameRow = true;
+          Object.entries(data).forEach(([k, v]) => {
+            if (LastRowclickData[k] != v) isSameRow = false;
+            LastRowclickData[k] = v;
+          });
+          if (isSameRow) {
+            return;
+          }
+
+          searchSub1(data);
+          searchSub2(data);
+        };
+
+        const uncheckAll = (gridObject = tmm04GridObject) => {
+          const allRowData = gridObject.getGrid().getData();
+          allRowData.forEach((r) => (r.state = "N"));
+        };
+
+        tmm04GridObject.setRowDblClick((evt, ui) => {
+          uncheckAll(tmm04GridObject);
+          ui.rowData.state = true;
+
+          tmm04GridObject.getGrid().refresh();
+          whenRowClickOrKey(evt, ui);
+
+          //
+          const grid = tmm04GridObject.getGrid();
+          grid.pdata.forEach((p, pidx) => {
+            grid.removeClass({
+              rowIndx: pidx,
+              //               cls: "bg-success font-weight-bold",
+              refresh: true,
+            });
+          });
+          grid.addClass({
+            rowIndx: ui.rowIndx,
+            //             cls: "bg-success font-weight-bold",
+            refresh: true,
+          });
+        });
+
+        tmm04GridObject.open();
+
+        // 자동검색 off (또다시!)
+        // setTimeout(() => {
+        //   searchtmm042List();
+        // }, 500);
+
+        const setAddRow = (evt, ui, grid, extraRow = {}) => {
+          const shtrtky = LastRowclickData.shtrtky;
+          const warekey = LastRowclickData.warekey;
+          if (!shtrtky || !warekey) {
+            alert("[[#{tm.vehicle.notRowCheck}]]");
+            return;
+          }
+
+          const rowData = {
+            ...extraRow,
+            state: true,
+            compkey: "[[${userattr.compkey}]]",
+            shtrtky: shtrtky,
+            warekey: warekey,
+          };
+
+          const rowIndx = grid.addRow({
+            rowData,
+            checkEditable: false, //colModel의 editable 옵션 무시
+          });
+          grid.goToPage({ rowIndx: rowIndx });
+          grid.editFirstCellInRow({ rowIndx: rowIndx });
+        };
+
+        const setDeleteRow = (evt, ui, grid) => {
+          // const grid = this;
+          const checkList = grid.Checkbox("state").getCheckedNodes();
+          const rows = [];
+
+          if (checkList.length < 1) {
+            return;
+          }
+          // const rowdelete = window.confirm("[[#{ms.choiceRowDelete}]]");
+
+          // if (rowdelete) {
+          debugger;
+          for (let i = 0; i < checkList.length; i++) {
+            if (!checkList[i].bvlcode) {
+              //bvlcode값이 없다면
+              rows.push({ rowIndx: checkList[i].pq_ri });
+            }
+          }
+
+          // db에서 삭제
+          const deleteListDetail = checkList.filter((i) => i.rowkey && !i.vehicky);
+          const deleteListVehicle = checkList.filter((i) => i.rowkey && i.vehicky);
+
+          (async () => {
+            if (!deleteListDetail?.length) return;
+            if (!confirm("[[#{ms.checkdele}]]")) return;
+            const resALL = await fetchUtil(
+              "DELETE",
+              "/tm/shuttle/detail",
+              deleteListDetail,
+              whenFailFetch
+            );
+            const res = await resALL.json();
+
+            if (res < 1 || res !== deleteListDetail.length) {
+              alert("[[#{ms.deleteErr}]]");
+            } else {
+              alert("[[#{ms.deleteSuccess}]]");
+            }
+          })();
+          (async () => {
+            if (!deleteListVehicle?.length) return;
+            if (!confirm("[[#{ms.checkdele}]]")) return;
+            const resALL = await fetchUtil(
+              "DELETE",
+              "/tm/shuttle/vehicle",
+              deleteListVehicle,
+              whenFailFetch
+            );
+            const res = await resALL.json();
+
+            if (res < 1 || res !== deleteListVehicle.length) {
+              alert("[[#{ms.deleteErr}]]");
+            } else {
+              alert("[[#{ms.deleteSuccess}]]");
+            }
+          })();
+
+          grid.deleteRow({ rowList: rows }); //삭제
+          // }
+          // }
+        };
+
+        // subgrid1
+
+        // tmm04SubGridObject.setAdd((evt, ui) => {
+        //   const shtrtitlist = tmm04SubGridObject
+        //     .getGrid()
+        //     .pdata.map((d) => (isNaN(d.shtrtit) ? undefined : Number(d.shtrtit)))
+        //     .filter((d) => d)
+        //     .sort((a, b) => a - b);
+        //   let lastit = shtrtitlist.length > 0 ? shtrtitlist[shtrtitlist.length - 1] : 0;
+        //   lastit = isNaN(lastit) ? 0 : Number(lastit);
+
+        //   // shtrtit;
+        //   setAddRow(evt, ui, tmm04SubGridObject.getGrid(), { shtrtit: Number(lastit + 1) });
+        // });
+        // tmm04SubGridObject.setFind();
+        // tmm04SubGridObject.setChange((evt, ui) => {
+        //   const shtrtitlist = tmm04SubGridObject
+        //     .getGrid()
+        //     .pdata.map((d) => (isNaN(d.shtrtit) ? undefined : Number(d.shtrtit)));
+        //   if (shtrtitlist.some((it) => shtrtitlist.indexOf(it) !== shtrtitlist.lastIndexOf(it))) {
+        //     alert("[[#{tm.tmm04.shtrtitduplicate}]]");
+        //     if (!isNaN(ui?.updateList[0]?.oldRow?.shtrtit))
+        //       ui.updateList[0].rowData.shtrtit = ui.updateList[0].oldRow.shtrtit;
+        //   }
+        // });
+        tmm04SubGridObject.setAdd((evt, ui) => {
+          const columnDatum = pq.grid(subGridIdShop).getColumn({ dataIndx: "rowkey" });
+
+          // if (columnDatum?.editor?.optionsOrigin)
+          // columnDatum.editor.options = columnDatum.editor.optionsOrigin.map((opt) => opt);
+          // getnowOptionsForVehicky(columnDatum);
+
+          setAddRow(evt, ui, tmm04SubGridObject.getGrid(), { srvehod: 0, shtvcap: 0 });
+        });
+        tmm04SubGridObject.setDelete((evt, ui) =>
+          setDeleteRow(evt, ui, tmm04SubGridObject.getGrid())
+        );
+        tmm04SubGridObject.setReset();
+
+        tmm04Sub2GridObject.setRowClick((evt, ui) => {
+          const columnDatum = pq.grid(subGrid2IdShop).getColumn({ dataIndx: "vehicky" });
+          // if (columnDatum.editor.options && !columnDatum.editor.optionsOrigin)
+          // columnDatum.editor.optionsOrigin = columnDatum.editor.options.map((opt) => opt);
+          getnowOptionsForVehicky(columnDatum);
+
+          const vehickylist = tmm04Sub2GridObject.getGrid()?.pdata?.map((r) => r.vehicky) || [];
+
+          if (ui.rowData?.vehicky && ui.column.dataIndx == "vehicky") {
+            ui.column.editor.type = "";
+          } else {
+            // columnDatum.editor.options = columnDatum.editor.optionsOrigin.filter(
+            //   // columnDatum.editor.options = vehickyOptionsList.filter(
+            //   (opt) => !vehickylist.includes(Object.keys(opt)[0])
+            // );
+            ui.column.editor.type = "select";
+          }
+        });
+
+        tmm04Sub2GridObject.setAdd((evt, ui) => {
+          const columnDatum = pq.grid(subGrid2IdShop).getColumn({ dataIndx: "vehicky" });
+          // if (columnDatum.editor.optionsOrigin)
+          // columnDatum.editor.options = columnDatum.editor.optionsOrigin.map((opt) => opt);
+          // getnowOptionsForVehicky(columnDatum);
+
+          setAddRow(evt, ui, tmm04Sub2GridObject.getGrid(), { srvehod: 0, shtvcap: 0 });
+        });
+        tmm04Sub2GridObject.setDelete((evt, ui) => {
+          setDeleteRow(evt, ui, tmm04Sub2GridObject.getGrid());
+        });
+        tmm04Sub2GridObject.setReset();
+        tmm04Sub2GridObject.setCheck(() => {
+          const columnDatum = pq.grid(subGrid2IdShop).getColumn({ dataIndx: "vehicky" });
+          // if (columnDatum.editor.optionsOrigin)
+          // columnDatum.editor.options = columnDatum.editor.optionsOrigin.map((opt) => opt);
+          // getnowOptionsForVehicky(columnDatum);
+        });
+
+        tmm04SubGridObject.setCreate(async (evt, ui) => {
+          // 고객
+          // (async () => {
+          //   // const partnerRes = await fetchUtil("GET", "/md/partner/mdp21/partnerkey");
+          //   // const partnerRes = await fetchUtil("GET", "/md/partner/mdp10/grids/1");
+          //   // const partnerRes = await fetchUtil("GET", "/om/selectOmp2Init.do", { cuuseyn: "Y" });
+          //   const partnerRes = await fetchUtil("GET", "/om/oml1SelectBoxList.do");
+          //   const partnerList = await partnerRes.json();
+          //
+          // })();
+
+          // 도착지
+          (async () => {
+            const destmaRes = await fetchUtil("GET", "/tm/code/destkey", {}, whenFailFetch);
+            const destmaList = await destmaRes.json();
+
+            console.log("/tm/code/destkey", destmaList);
+
+            comboCreateData(subGridId, "destkey", destmaList, {
+              combovl: "destkey",
+              combonm: "denamlc",
+            });
+
+            comboCreateData(gridId, "destkey", destmaList, {
+              combovl: "destkey",
+              combonm: "denamlc",
+            });
+          })();
+
+          // 보고유형 SHTRPTY
+          (async () => {
+            const codeListRes = await fetchUtil(
+              "GET",
+              "/md/common/code/common-code",
+              {
+                comcdky: "SHTRPTY",
+              },
+              whenFailFetch
+            );
+            const codeList = await codeListRes.json();
+
+            comboCreateData(
+              subGridId,
+              "shtrpty",
+              codeList.filter((c) => c.comcdky == "shtrpty".toUpperCase())
+            ); //, { combovl: 'comcdvl', combonm: 'comcdtx' });
+          })();
+
+          // custkey 고객코드
+          (async () => {
+            const custkeyRes = await fetchUtil("GET", "/tm/code/custkey", {}, whenFailFetch);
+            const custkeyList = await custkeyRes.json();
+
+            console.log("/tm/code/custkey", custkeyList);
+
+            comboCreateData(subGridId, "custkey", custkeyList, {
+              combovl: "ptnrkey",
+              combonm: "ptnamlc",
+            }); // 1234
+          })();
+        });
+
+        tmm04Sub2GridObject.setCreate(async (evt, ui) => {
+          // vehicky
+          (async () => {
+            const vehicleRes = await fetchUtil(
+              "GET",
+              "/tm/tmm02List",
+              { vhuseyn: "Y" },
+              whenFailFetch
+            );
+            const vehicleList = await vehicleRes.json();
+
+            vehickyOptionsList = vehicleList
+              // .filter(v=>v.warekey ==$('#tmm04_warekey').val())
+              .sort((a, b) => a.vehicky - b.vehicky)
+              .map((v) => {
+                return {
+                  // label: `[${v.vehicky}] ${v.vhcsnam} (${v.vhcfnam})`,
+                  label: `${v.vhcsnam} (${v.vhcfnam})`,
+                  warekey: v.warekey,
+                  value: v.vehicky,
+                };
+              });
+
+            comboCreateData(
+              subGrid2Id,
+              "vehicky",
+              vehickyOptionsList, //.filter((v) => v.warekey == $("#tmm04_warekey").val()),
+              {
+                combovl: "value",
+                combonm: "label",
+              }
+            );
+          })();
+        });
+
+        tmm04SubGridObject.open();
+
+        //
+        tmm04Sub2GridObject.open();
+
+        //============================================================
+        //영역 검색 버튼 이벤트
+        //============================================================
+        async function searchtmm042List() {
+          let param = {
+            warekey: $("#" + pageId + "_warekey").val() || "",
+            shtgrnm: $("#" + pageId + "_shtgrnm").val() || "",
+            shtrtnm: $("#" + pageId + "_shtrtnm").val() || "",
+            tsuseyn: $("#" + pageId + "_tsuseyn").val() || "",
+
+            destkey: $("#" + pageId + "_destkey").val() || "",
+            vhcsnam: $("#" + pageId + "_vhcsnam").val() || "",
+            vhuseyn: $("#" + pageId + "_vhuseyn").val() || "",
+          };
+
+          const resALL = await fetchUtil("GET", "/tm/shuttle", param, whenFailFetch);
+          const res = await resALL.json();
+
+          if (!res?.length) {
+            tmm04GridObject.searchList([]);
+            // alert("[[#{ms.getDataZero}]]");
+          }
+          tmm04GridObject.getGrid().option("dataModel", { data: res, recIndx: "rowkey" });
+          tmm04GridObject.getGrid().refreshDataAndView();
+          tmm04GridObject.getGrid().hideLoading();
+
+          tmm04SubGridObject.getGrid().option("dataModel", { data: [], recIndx: "rowkey" });
+          tmm04SubGridObject.getGrid().refreshDataAndView();
+          tmm04Sub2GridObject.getGrid().option("dataModel", { data: [], recIndx: "rowkey" });
+          tmm04Sub2GridObject.getGrid().refreshDataAndView();
+
+          const columnDatum = pq.grid(subGrid2IdShop).getColumn({ dataIndx: "vehicky" });
+          // if (columnDatum.editor.optionsOrigin)
+          // columnDatum.editor.options = columnDatum.editor.optionsOrigin.map((opt) => opt);
+          // getnowOptionsForVehicky(columnDatum);
+          // LastRowclickData.shtrtky = "";
+          // LastRowclickData.warekey = "";
+        }
+
+        //============================================================
+        // column validations에 의한 자동 validate
+        //============================================================
+        const getPQvalidateFn = (typeName) => pq.validations[typeName];
+
+        // const ValidateNeedCols = Tmm04SubGridColModel.concat(Tmm04Sub2GridColModel).filter(
+        //   (c) => c.validations
+        // ); // sub니까
+
+        // const EmptyVObject = {};
+        // ValidateNeedCols.forEach((vc) => (EmptyVObject[vc.dataIndx] = null));
+
+        const DefaultFn = (t) => t;
+
+        // row를 체크하여 잘못된  key (즉 column) 를 내보냄
+        const validationCheckRow = (rowData, GridObject = tmm04SubGridObject) => {
+          const ValidateNeedCols = GridObject.colModel.filter((c) => c.validations); // sub니까
+          const EmptyVObject = {};
+          ValidateNeedCols.forEach((vc) => (EmptyVObject[vc.dataIndx] = null));
+
+          if (!ValidateNeedCols?.length) return;
+          let msg = "";
+          Object.entries({
+            // ...ValidateNeedCols.map(vc => { return { [vc.dataIndx]: null } }),
+            ...EmptyVObject,
+            ...rowData,
+          }).find(([cName, rowValue]) => {
+            const col = ValidateNeedCols.find((cc) => cc.dataIndx == cName);
+            if (!col) return;
+            const validations = col.validations;
+            return (
+              validations?.length &&
+              validations.find((v) => {
+                const vtype = v.type;
+                const validateFn = typeof vtype == "string" ? getPQvalidateFn(vtype) : vtype;
+                const isInvalid = !validateFn(rowValue, v?.value || "0", v?.fn || DefaultFn);
+                if (isInvalid) {
+                  msg += (rowData?.pq_ri || 0) + 1;
+                  msg += " Row ";
+                  msg += col.title + " " + (v?.msg || "[[#{ms.checkValue}]]");
+                  GridObject.getGrid().editCell({
+                    rowIndx: rowData?.pq_ri,
+                    dataIndx: col.dataIndx,
+                  }); // sub니까
+                }
+                return isInvalid;
+              })
+            );
+          });
+          return msg;
+        };
+
+        const validationCheck = (data, GridObject = tmm04SubGridObject) => {
+          let result = true;
+          let msg = "";
+
+          // ValidateNeedCols.forEach(c=>{	});
+          const invalidAdd = data.addList.find((l) => validationCheckRow(l, GridObject));
+          if (invalidAdd) {
+            msg = validationCheckRow(invalidAdd, GridObject);
+            return { result: false, msg };
+          }
+          const invalidUpdate = data.updateList.find((l) => validationCheckRow(l, GridObject));
+          if (invalidUpdate) {
+            msg = validationCheckRow(invalidUpdate, GridObject);
+            return { result: false, msg };
+          }
+
+          return { result, msg };
+        };
+
+        //============================================================
+        //그리드 세이브 버튼 이벤트
+        //============================================================
+        // async function* saveSub(grid, postURL) {
+        //   const gridAllData = grid.getChanges({ all: true });
+        //   const gridData = grid.getData().filter((row) => row?.state === "Y");
+
+        //   if (!gridData.length) {
+        //     return { res: false, msg: "[[#{ms.syncNo}]]" };
+        //   } else {
+        //     yield { res: true };
+        //   }
+        //   // if (!confirm("[[#{ms.checksave}]]")) {
+        //   //   return;
+        //   // }
+        //   const data = {};
+        //   const addList = gridData.filter((row) => !row?.rowkey) || [];
+        //   const updateList = gridData.filter((row) => row?.rowkey) || [];
+
+        //   data.addList = addList;
+        //   data.updateList = updateList;
+
+        //   const validationCheckRes = validationCheck(data, grid);
+        //   if (!validationCheckRes.result) {
+        //     return { res: false, msg: validationCheckRes.msg };
+        //   }
+
+        //
+
+        //   grid.showLoading();
+        //   const res = await fetchUtil("POST", postURL, data);
+        //   const rData = await res.json();
+        //   grid.hideLoading();
+
+        //   console.log("post res ", rData);
+
+        //   if (rData != 0 && rData != undefined) {
+        //     return { res: true, msg: "[[#{ms.saveSuccess}]]" };
+        //   } else {
+        //     return { res: false, msg: "[[#{ms.saveErr}]]" };
+        //   }
+        // }
+
+        // async function saveTmm04SubGridsChange() {
+        //   // const mainGrid = tmm04GridObject.getGrid();
+        //   const grid1 = tmm04SubGridObject.getGrid();
+        //   const grid2 = tmm04Sub2GridObject.getGrid();
+        //   const postURL1 = "/tm/shuttle/detail";
+        //   const postURL2 = "/tm/shuttle/vehicle";
+
+        //   const res1 = saveSub(grid1, postURL1);
+        //   const res2 = saveSub(grid2, postURL2);
+
+        //   const yield1_1 = await res1.next();
+        //   const yield1_2 = await res2.next();
+
+        //   if (!yield1_1.value.res && !yield1_2.value.res) {
+        //     return alert(yield1_1.value.res ? yield1_2.value.msg : yield1_1.value.msg);
+        //   }
+
+        //   // const yield2_1 = yield1_1.done ? { done: true } : await res1.next();
+        //   // const yield2_2 = yield1_2.done ? { done: true } : await res2.next();
+        //   const yield2_1 = await res1.next();
+        //   const yield2_2 = await res2.next();
+
+        //   if (yield2_1?.value?.res === false) {
+        //     return alert(yield2_1.value.msg);
+        //   }
+        //   if (yield2_2?.value?.res === false) {
+        //     return alert(yield2_2.value.msg);
+        //   }
+
+        //   // const yield3_1 = yield2_1.done ? { done: true } : await res1.next();
+        //   // const yield3_2 = yield2_2.done ? { done: true } : await res2.next();
+        //   const yield3_1 = await res1.next();
+        //   const yield3_2 = await res2.next();
+
+        //
+
+        //   // if (yield3_1.done && yield3_2.done) return;
+
+        //   // if ((yield3_1.done || yield3_1.value.res) &&(yield3_2.done || yield3_2.value.res)) {
+        //   if (yield3_1.value?.res && yield3_2.value?.res) {
+        //     alert(yield3_1.value.msg);
+        //   }
+        //   if (yield3_1.done) {
+        //     //
+        //   } else if (yield3_1.value?.res) {
+        //     searchSub1(LastRowclickData);
+        //   } else {
+        //     alert(yield3_1.value.msg);
+        //   }
+
+        //   if (yield3_2.done) {
+        //     //
+        //   } else if (yield3_2.value?.res) {
+        //     searchSub2(LastRowclickData);
+        //   } else {
+        //     alert(yield3_2.value.msg);
+        //   }
+        //
+        // }
+
+        async function saveTmm04SubGridsChange() {
+          const grid1 = tmm04SubGridObject.getGrid();
+          const grid1AllData = grid1.getChanges({ all: true });
+          const grid1Data = grid1.getData().filter((row) => row?.state === true);
+          let grid1NotGoing = false;
+
+          const grid2 = tmm04Sub2GridObject.getGrid();
+          const grid2AllData = grid2.getChanges({ all: true });
+          const grid2Data = grid2.getData().filter((row) => row?.state === true);
+          let grid2NotGoing = false;
+
+          if (!grid1Data.length) grid1NotGoing = true;
+          if (!grid2Data.length) grid2NotGoing = true;
+
+          // if (!grid1Data.length && !grid2Data.length) {
+          if (grid1NotGoing && grid2NotGoing) {
+            alert("[[#{ms.syncNo}]]");
+            return;
+          }
+          if (!confirm("[[#{ms.checksave}]]")) {
+            return;
+          }
+          const data1 = {
+            addList: grid1Data.filter((row) => !row.rowkey) || [],
+            updateList: grid1Data.filter((row) => row?.rowkey) || [],
+          };
+          const data2 = {
+            addList: grid2Data.filter((row) => !row.rowkey) || [],
+            updateList: grid2Data.filter((row) => row?.rowkey) || [],
+          };
+
+          if (!grid1NotGoing) {
+            const validationCheckRes1 = validationCheck(data1, tmm04SubGridObject);
+            if (!validationCheckRes1.result) {
+              alert("grid1 : " + validationCheckRes1.msg);
+              return;
+            }
+            grid1.showLoading();
+            const res1 = await fetchUtil("POST", "/tm/shuttle/detail", data1, whenFailFetch);
+            grid1.hideLoading();
+            const rData1 = await res1.json();
+
+            console.log("post res ", rData1);
+
+            if (!rData1 && res.status != 200) {
+              alert("[[#{ms.saveErr}]]");
+            } else {
+              searchtmm042List();
+              searchSub1(LastRowclickData);
+            }
+          }
+
+          if (!grid2NotGoing) {
+            const validationCheckRes2 = validationCheck(data2, tmm04Sub2GridObject);
+            if (!validationCheckRes2.result) {
+              alert("grid2 : " + validationCheckRes2.msg);
+              return;
+            }
+            grid2.showLoading();
+            data2.updateList.forEach((u) => {
+              if (!u.oldvehicky) u.oldvehicky = u.vehicky;
+            });
+            const res2 = await fetchUtil("POST", "/tm/shuttle/vehicle", data2, whenFailFetch);
+            grid2.hideLoading();
+            const rData2 = await res2.json();
+
+            console.log("post res ", rData2);
+
+            if (!rData2) {
+              alert("[[#{ms.saveErr}]]");
+            } else {
+              searchtmm042List();
+              searchSub(LastRowclickData);
+              searchSub2(LastRowclickData);
+            }
+          }
+
+          // alert("[[#{ms.saveSuccess}]]");
+        }
+      }
+    </script>
+  </div>
+</html>

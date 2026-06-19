@@ -1,0 +1,396 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 창고 -->
+				<label for="bmb03Warekey" class="setting-grid-title ic-title-nece">[[#{bm.blgthd.warekey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="bmb03Warekey" name="bmb03Warekey"
+								data-cb-val="combovl" data-cb-name="combonm"
+								data-cb-url="/md/common/organization/warehouse-user"
+								data-cb-select="" data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<!-- 정산년월 -->
+				<label class="setting-grid-title ic-title-nece">[[#{bm.blgthd.blhyymm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" max="2999-12" id="bmb03BlhyymmFrom" onkeyup="setInputDateDel(this)"/>
+						<span>~</span>
+						<input type="month" max="2999-12" id="bmb03BlhyymmTo" onkeyup="setInputDateDel(this)"/>
+					</div>
+				</div>
+	  		</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="bmb03Search"><img>[[#{bt.search}]]</button>
+				<button type="button" class="btn-clear btn-white" id="bmb03Reset"><img>[[#{bt.reset}]]</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark"><span th:text="${gnatitle}"></span></div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-white" id="bmb03Receipt"><img class="ic-bt-print">[[#{bt.bm.receipt}]]</button>
+					<button class="btn-navy btn-green" id="bmb03Confirm"><img class="ic-bt-save">[[#{bt.bm.confirm}]]</button>
+				</div>
+			</div>
+			<!-- Head Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb03HeadPqgrid"></div>
+				</div>
+			</div>
+			<!-- Item Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb03ItemPqgrid"></div>
+				</div>
+			</div>
+			<!-- 로딩 이미지 부분 -->
+			<div class="spinner" id="spinner">
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : bmb03
+	  - 최초생성자  : BM
+	  - 최초생성일시 : 2023.10
+	  - 설명 : 물류비정산확정
+	  ------------------------------------------
+	*/
+	$(function() {
+		//----------- 전역변수 ------------//
+		const pageId = "[[${gprogrid}]]";
+		let bmb03InitData;
+		let bmb03Warekey;
+		let bmb03HeadGridObject;
+		let bmb03ItemGridObject;
+		//----------- 전역변수 end ------------//
+
+		//----------- 검색영역 Event ------------//
+		$('#'+pageId+'BlhyymmFrom').val(moment().subtract(6, 'month').format('YYYY-MM')); //당월-6개월
+		$('#'+pageId+'BlhyymmTo').val(moment().format('YYYY-MM')); //당월
+
+		$('#'+pageId+'Search').click(function() {
+			searchBmb03List();
+		});
+
+		// 초기화
+		$('#'+pageId+'Reset').click(function(){
+			resetSearchConditions(0, 6, 0); // 6달
+			makeEmptyGrid(bmb03HeadGridObject);
+			makeEmptyGrid(bmb03ItemGridObject);
+		});
+		//----------- 검색영역 Event end ------------//
+
+
+		//----------- 기능버튼 Event ------------//
+		// 정산확정
+		$('#'+pageId+'Confirm').click(function() {
+			confirmBmb03List();
+		});
+
+		// 출력물
+		$('#'+pageId+'Receipt').click(async function() {
+			const headGrid = bmb03HeadGridObject.getGrid();
+			const headGridCheck = headGrid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+			if(headGridCheck?.length){
+				alert('[[#{ms.nodataForPrintOut}]]');
+				return;
+			}
+
+			if(await confirm('[[#{ms.printout}]]')) {
+				$('#spinner').css('display', '');
+
+				const report = [];
+
+				bmb03HeadGridObject.getGrid().showLoading();
+				bmb03ItemGridObject.getGrid().showLoading();
+
+				for(const checkData of headGridCheck) {
+					const param = {
+						compkey : '[[${userattr.compkey}]]',
+						warekey : checkData.warekey,
+						blhdcky : checkData.blhdcky
+					}
+					const response = await fetchUtil("GET", "/bm/billing/"+ pageId + "/grid-item", param);
+
+					if(response.status === 200){
+						let resContent = await response.json();
+						if(resContent.length!==0){
+							resContent.forEach((current) => {
+								if(report.findIndex(e => e['compkey'] === current['compkey'] && e['warekey'] === current['warekey']
+															 && e['blhdcky'] === current['blhdcky'] && e['ownerky'] === current['ownerky']
+															 && e['ptnrkey'] === current['ptnrkey'] && e['blrpmgb'] === current['blrpmgb']) === -1){
+									report.push({
+										compkey : current['compkey'],
+										warekey : current['warekey'],
+										ownerky : current['ownerky'],
+										ptnrkey : current['ptnrkey'],
+										blhdcky : current['blhdcky'],
+										blrpmgb : current['blrpmgb'],
+			 							type: 'bmb10'
+									});
+								}
+							});
+						}
+					}
+				}
+
+				const sendReportObj = {
+						reportList : report,
+						progrid : '[[${gprogrid}]]',
+						warekey : bmb03Warekey,
+						type: 'bmb10'
+				}
+
+ 				await reportPrint(sendReportObj, 'bm');
+				bmb03HeadGridObject.getGrid().hideLoading();
+				bmb03ItemGridObject.getGrid().hideLoading();
+			}
+		});
+
+		// Head Grid Column Model
+		const bmb03HeadGridColModel = [
+			{ title: "", dataType: "String",  dataIndx: "state", type: "checkBoxSelection"
+				, align: "center"
+				, maxWidth:"30", maxHeight:"30"
+				, menuIcon: false
+				, sortable: false, editor: false,
+				cb: {all: false, header: true, check:"Y", uncheck:"N"}
+			},
+			{ title: "[[#{bm.blgthd.compkey}]]", dataType: "string", dataIndx: "compkey", editable: false, hidden:true },
+			{ title: "[[#{bm.blgthd.warekey}]]", dataType: "string", dataIndx: "warekey", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRenderAndValue
+			},
+			{ title: "[[#{bm.blgthd.blhdcky}]]", dataType: "string", dataIndx: "blhdcky", editable: false },
+			{ title: "[[#{bm.blgthd.blhyymm}]]", dataType: "string", dataIndx: "blhyymm", editable: false },
+			{ title: "[[#{bm.blgthd.blsdate}]]", dataType: "string", dataIndx: "blsdate", editable: false },
+			{ title: "[[#{bm.blgthd.bledate}]]", dataType: "string", dataIndx: "bledate", editable: false },
+			{ title: "[[#{bm.blgthd.lcddate}]]", dataType: "string", dataIndx: "lcddate", editable: false },
+			{ title: "[[#{bm.blgthd.lcduser}]]", dataType: "string", dataIndx: "lcduser", editable: false },
+			{ title: "[[#{bm.blgthd.lcvrfyn}]]", dataType: "string",  dataIndx:"lcvrfyn", editable: false,
+				type: 'checkbox', editor: false, align: 'center',
+				cb: { check: 'Y', uncheck: 'N' },
+				render: function (ui) {
+					ui.column.cb.check === ui.cellData ? 'checked' : '';
+				}
+			},
+			{ title: "[[#{bm.blgthd.lcvdate}]]", dataType: "string", dataIndx: "lcvdate", editable: false },
+			{ title: "[[#{bm.blgthd.lcvuser}]]", dataType: "string", dataIndx: "lcvuser", editable: false }
+		]
+
+		// Head Grid Object 및 기본 세팅
+		bmb03HeadGridObject = new GridUtil(bmb03HeadGridColModel, "[[${gprogrid}]]", pageId+"HeadPqgrid");
+
+		// Head Grid 검색 세팅
+		bmb03HeadGridObject.setFind();
+
+		// Head Grid 생성시 이벤트
+		bmb03HeadGridObject.setCreate(async function (evt, ui) {
+			await _commonInit();
+		});
+
+		// Head Grid 더블클릭 이벤트
+		bmb03HeadGridObject.setRowDblClick(async function(event, ui) {
+			let param = {
+				compkey : ui.rowData.compkey,
+				warekey : ui.rowData.warekey,
+				blhdcky : ui.rowData.blhdcky
+			}
+
+			bmb03ItemGridObject.getGrid().showLoading();
+
+			for(let rowIdx=0; rowIdx<this.pdata.length; rowIdx++){ // 선택한 row 강조
+				rowIdx === ui.rowIndx ? this.addClass({rowIndx : ui.rowIndx, cls: 'color-blue font-weight-bold'})
+					 							 : this.removeClass({rowIndx : rowIdx, cls: 'color-blue font-weight-bold'});
+			}
+
+			let response = await fetchUtil("GET", "/bm/billing/"+ pageId + "/grid-item", param);
+
+			if(response.status === 200){
+				let resContent = await response.json();
+				bmb03ItemGridObject.getGrid().option( "dataModel", { data: resContent } );
+				turnOnGridGruopSummary(bmb03ItemGridObject.getGrid());
+				bmb03ItemGridObject.getGrid().refreshDataAndView();
+			}
+
+			bmb03ItemGridObject.getGrid().hideLoading();
+		});
+
+		// Head Grid 객체 생성
+		bmb03HeadGridObject.open();
+
+		// Item Grid Column Model
+		const bmb03ItemGridColModel = [
+			{ title: "[[#{bm.blgtit.compkey}]]", dataType: "string", dataIndx: "compkey", editable: false, hidden:true },
+			{ title: "[[#{bm.blgtit.warekey}]]", dataType: "string", dataIndx: "warekey", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.blhdcky}]]", dataType: "string", dataIndx: "blhdcky", editable: false },
+			{ title: "[[#{bm.blgtit.ownerky}]]", dataType: "string", dataIndx: "ownerky", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.ptnrkey}]]", dataType: "string", dataIndx: "ptnrkey", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.blrpmgb}]]", dataType: "string", dataIndx: "blrpmgb", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.blrcsgb}]]", dataType: "string", dataIndx: "blrcsgb", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.blrtkgb}]]", dataType: "string", dataIndx: "blrtkgb", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.blrunit}]]", dataType: "string", dataIndx: "blrunit", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.doccate}]]", dataType: "string", dataIndx: "doccate", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.doctype}]]", dataType: "string", dataIndx: "doctype", editable: false,
+				editor: { type: "select", options: [] },
+				render: gridRender
+			},
+			{ title: "[[#{bm.blgtit.refcqty}]]", dataType: "integer", dataIndx: "refcqty", editable: false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{bm.blgtit.blrcost}]]", dataType: "integer", dataIndx: "blrcost", editable: false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{bm.blgtit.blramot}]]", dataType: "integer", dataIndx: "blramot", editable: false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{bm.bmb03.blramtx}]]", dataType: "integer", dataIndx: "blramtx", editable: false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{bm.bmb03.blrsumy}]]", dataType: "integer", dataIndx: "blrsumy", editable: false,
+				summary: { type: "sum" }, format: "#,###"
+			},
+			{ title: "[[#{bm.blgtit.blrremk}]]", dataType: "string", dataIndx: "blrremk", editable: false }
+		]
+
+		// Item Grid Object 및 기본 세팅
+		bmb03ItemGridObject = new GridUtil(bmb03ItemGridColModel, "[[${gprogrid}]]", pageId+"ItemPqgrid");
+
+		// Item Grid 검색 세팅
+		bmb03ItemGridObject.setFind();
+
+		// Item Grid 객체 생성
+		bmb03ItemGridObject.open();
+
+		//============================================================
+		// 검색 버튼 이벤트
+		//============================================================
+		async function searchBmb03List(){
+			const param = {
+				warekey : $("#"+pageId+"Warekey").val(),
+				blhyymmfrom : $("#"+pageId+"BlhyymmFrom").val(),
+				blhyymmto : $("#"+pageId+"BlhyymmTo").val()
+			}
+
+			if(bmb03Warekey !== $("#"+pageId+"Warekey").val()){
+				await bmb03Init();
+			}
+
+			bmb03HeadGridObject.getGrid().showLoading();
+			bmb03ItemGridObject.getGrid().showLoading();
+
+			let rData = callAjax("data", "GET", "/bm/billing/"+ pageId + "/grid-head", param);
+
+			bmb03HeadGridObject.getGrid().hideLoading();
+			bmb03ItemGridObject.getGrid().hideLoading();
+
+			rData ? bmb03HeadGridObject.searchList(rData) : alert(rData.code + ":" + rData.message);
+
+			bmb03ItemGridObject.getGrid().option( "dataModel", { data: [] } );
+			bmb03ItemGridObject.getGrid().refreshDataAndView();
+			bmb03Warekey = $("#"+pageId+"Warekey").val();
+		}
+
+		//============================================================
+		// 정산확정 버튼 이벤트
+		//============================================================
+		async function confirmBmb03List(){
+			let headGrid = bmb03HeadGridObject.getGrid();
+			let headGridData = headGrid.getData();
+			let headCheckList = headGridData.filter(e => 'Y' === e.state);
+
+			if(!headCheckList.length){
+				alert("[[#{ms.choiceRowZero}]]");
+
+				return;
+			}
+
+			if(await confirm('[[#{ms.checksave}]]')) {
+				let param = { updateList : headCheckList };
+
+				bmb03HeadGridObject.getGrid().showLoading();
+				bmb03ItemGridObject.getGrid().showLoading();
+
+				let rData = await fetchUtil('POST', "/bm/billing/" + pageId + "/confirm", param);
+
+				if(rData.status === 200) {
+					searchBmb03List();
+				}
+
+				bmb03HeadGridObject.getGrid().hideLoading();
+				bmb03ItemGridObject.getGrid().hideLoading();
+			}
+		}
+
+		//============================================================
+		// Init 이벤트
+		//============================================================
+		async function bmb03Init(){
+			let param = {
+				warekey : $("#"+pageId+"Warekey").val()
+			}
+			let iData = await fetchUtil('GET', '/bm/billing/' + pageId + '/init', param);
+			let jData = await iData.json();
+
+			bmb03InitData = jData.item;
+
+			comboCreateData('bmb03HeadPqgrid', 'warekey', bmb03InitData.warekeyList);
+			comboCreateData('bmb03ItemPqgrid', 'warekey', bmb03InitData.warekeyList);
+			comboCreateData('bmb03ItemPqgrid', 'ownerky', bmb03InitData.ownerkyList);
+			comboCreateData('bmb03ItemPqgrid', 'ptnrkey', bmb03InitData.ptnrkeyList);
+			comboCreateData('bmb03ItemPqgrid', 'blrpmgb', bmb03InitData.blrpmgbList);
+			comboCreateData('bmb03ItemPqgrid', 'blrcsgb', bmb03InitData.blrcsgbList);
+			comboCreateData('bmb03ItemPqgrid', 'blrtkgb', bmb03InitData.blrtkgbList);
+			bmb03InitData.blrunitList.push({
+				combovl: '-',
+				combonm: '-'
+			});
+			comboCreateData('bmb03ItemPqgrid', 'blrunit', bmb03InitData.blrunitList);
+			bmb03InitData.doccateList.push({
+				combovl: '-',
+				combonm: '-'
+			});
+			comboCreateData('bmb03ItemPqgrid', 'doccate', bmb03InitData.doccateList);
+			bmb03InitData.doctypeList.push({
+				combovl: '-',
+				combonm: '-'
+			});
+			comboCreateData('bmb03ItemPqgrid', 'doctype', bmb03InitData.doctypeList);
+		}
+	});
+	</script>
+</div>
+</html>

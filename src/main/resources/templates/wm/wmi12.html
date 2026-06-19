@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent" class="tab-content">
+		<div class="tab-contents">
+            <div class="location"></div>
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<label class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmi12_warekey"></select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmi12_ownerky">
+                            	<option value='' selected>[[#{ms.chooseAll}]]</option>
+                            </select>
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{md.mlocma.locanam}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('md.mlocma.locanam')}" id="wmi12_locakey">
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wstkky.skumkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('wm.wstkky.skumkey')}" id="wmi12_skumkey">
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{wm.wstkky.skudesc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('wm.wstkky.skudesc')}" id="wmi12_skudesc">
+                        </div>
+                    </div>
+					<label class="setting-grid-title">[[#{wm.wstkky.stkstat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmi12_stkstat"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" id="wmi12_search" onclick="searchList()"><img>[[#{bt.search}]]</button>
+                	<button type="button" class="btn-clear btn-white" id="wmi12_reset" onclick="wmi12Refresh()"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                    <div class="edit-btn-wrapper">
+                        <button class="btn-navy btn-green" id="wmi12_save"><img class="ic-bt-save">[[#{bt.save}]]</button>
+                    </div>
+                </div>
+                <div class="list-grid-wrapper con-box">
+                    <div id="wmi12_grid"></div>
+                </div>
+            </div>
+        </div>
+		<script>
+		$(function(){
+			/*  wmi12 - 재고상태변경처리
+			*   최초 생성일시	: 2023-12-12 11:30
+			*   최초 생성자	: 최강호 
+			*   설명			: 재고의 상태를 변경하는 페이지
+			*   수정 내역		:
+			*   수정일시		:
+			*	수정자		: 
+			*	변경 사항		: 
+			*/
+			wmi12Init();
+			let rsnData;
+		//============================================================
+		// 저장 처리
+		//============================================================
+			$('#wmi12_save').click(async function(){
+				let grid = pq.grid("#wmi12_grid");
+				let gridData = grid.getChanges({all:true});
+				gridData.updateList = gridData.updateList.filter(function(item){
+					return item.state !== false;
+				});//state가 true인 값만 가져오기
+				gridData.oldList = gridData.oldList.filter(function(item){
+					return item.state !== false;
+				});//state가 true인 값만 가져오기
+				
+				//저장전 확인
+				for(let i=0; i < gridData.updateList.length; i++){
+						if(gridData.updateList[i].schnqty > gridData.updateList[i].stotqty){
+							alert('[[#{wm.wmi12.schnqtyOverStotqty}]]');//변경수량이 총 재고수량보다 많을 수 없습니다.
+							grid.editCell( { rowIndx: gridData.updateList[i].pq_ri, dataIndx: "schnqty" } );
+							return false;
+						}
+						if(!gridData.updateList[i].schnqty){
+							alert('[[#{wm.wmi12.cmpSchnqty}]]')//변경수량을 확인해주세요.
+							grid.editCell( { rowIndx: gridData.updateList[i].pq_ri, dataIndx: "schnqty" } );
+							return false;
+						}
+						if(!gridData.oldList[i].hasOwnProperty('stkstat') || gridData.updateList[i].stkstat === ''){
+							alert('[[#{wm.wmi22.notStkstat}]]')//재고상태를 입력해주세요
+							grid.editCell( { rowIndx: gridData.updateList[i].pq_ri, dataIndx: "stkstat" } );
+							return false;
+						}
+						if(!gridData.updateList[i].rsncode){
+							alert('[[#{wm.wmi22.cmpRsncode}]]')//사유코드를 입력해주세요.
+							grid.setSelection( { rowIndx: gridData.updateList[i].pq_ri, dataIndx: "rsncode" } );
+							return false;
+						}
+					}		
+					
+					if(gridData.updateList.length > 0 ){
+						let result = confirm("[[#{ms.checksave}]]");
+						if(result == true){
+							grid.showLoading(); 
+							try{
+								let response = await fetchUtil('POST', '/wm/inventory/wmi12/grids/1', gridData);
+								if(response.status === 200){
+									//alert("[[#{ms.saveSuccess}]]"); //저장 성공하였습니다.
+									grid.hideLoading();
+									searchList();
+								}
+							}catch(err){
+								console.log(err);
+							} finally{
+								grid.hideLoading();
+							}
+						}
+					}else{
+						alert("[[#{ms.choiceRowZero}]]");
+						return false;
+					}
+			});
+			
+			
+			let wmi12ColModel = [
+						{ title: "", maxWidth: 30, minWidth: 30, dataIndx: "state", resizable: false,
+			                menuIcon: false,
+			                type: 'checkBoxSelection', sortable: false, editor: false,
+			                dataType: 'bool',
+		                	cb: { all: false, header: true },
+		                	editable: function (ui) {
+		                        return editable = (ui.rowData.sbloqty > 0) ? false : true;
+		                    },
+		            	},
+						{ title: "rowkey", dataType: "string", dataIndx: "rowkey", hidden: true , editable: false },
+						{ title: "[[#{wm.wstkky.compkey}]]", dataType: "string", dataIndx: "compkey" , hidden: true , editable: false },//회사
+						{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey" , editable: false ,
+							editor: {
+			   	                type: "text",
+			   	            },
+						 	render :gridRenderAndValue
+						},//창고
+						{ title: "[[#{grid.ownamlc}]]", dataType: "string", dataIndx: "ownerky" , editable: false,
+							editor: {
+			   	                type: "text",
+			   	            },
+							  render : gridRenderAndValue	
+						},//화주
+						{ title: "[[#{wm.wstkky.doccate}]]", dataType: "string", dataIndx: "doccate" , editable: false,
+							editor: {
+			   	                type: "text",
+			   	            },
+							  render :gridRenderAndValue
+						}, //문서유형 
+						{ title: "[[#{wm.wstkky.doctype}]]", dataType: "string", dataIndx: "doctype" , editable: false,
+							editor: {
+			   	                type: "text",
+			   	            },
+							 render : gridRenderAndValue
+						}, //문서타입
+						{ title: "[[#{wm.wstkky.stockky}]]", dataType: "string", dataIndx: "stockky" , editable: false },//재고키
+						{ title: "[[#{md.marema.areakey}]]", dataType: "string", dataIndx: "areakey" , editable: false,
+							editor: {
+			   	                type: "text",
+			   	            },
+							  render : gridRenderAndValue
+						},//에어리어
+						{ title: "[[#{md.mzonma.zonekey}]]", dataType: "string", dataIndx: "zonekey" , editable: false,
+							editor: {
+			   	                type: "text",
+			   	            },
+							 render : gridRenderAndValue
+						},//존
+						{ title: "[[#{md.mlocma.locakey}]]", dataType: "string", dataIndx: "locakey" , editable: false, hidden: true },//로케이션 키
+						{ title: "[[#{md.mlocma.locakey}]]", dataType: "string", dataIndx: "locanam" , editable: false },//로케이션 명
+						{ title: "[[#{grid.skuCode}]]", dataType: "string", dataIndx: "skumkey" , editable: false },//부품코드
+						{ title: "[[#{grid.skunm}]]", dataType: "string", dataIndx: "skudesc" , editable: false },//부품명
+						{ title: "[[#{wm.wstkky.stotqty}]]", dataType: "integer", dataIndx: "stotqty" , format: '###,###,###' , editable: false ,
+							summary: { type: "sum" },
+						},//총 재고수량
+						{ title: "[[#{wm.wstkky.sallqty}]]", dataType: "integer", dataIndx: "sallqty" , format: '###,###,###' , editable: false , 
+							summary: { type: "sum" },
+						},//할당수량
+						{ title: "[[#{wm.wstkky.sinbqty}]]", dataType: "integer", dataIndx: "sinbqty" , format: '###,###,###' , editable: false , 
+							summary: { type: "sum" },
+						},//입고중 수량
+						{ title: "[[#{wm.wstkky.soubqty}]]", dataType: "integer", dataIndx: "soubqty" , format: '###,###,###' , editable: false , 
+							summary: { type: "sum" },
+						},//출고중 수량
+						{ title: "[[#{wm.wadjit.sbloqty}]]", dataType: "integer", dataIndx: "sbloqty" , format: '###,###,###' , editable: false , 
+							summary: { type: "sum" },
+						},//블락 수량
+						{ title: "[[#{wm.wmi12.schnqty}]]", dataType: "integer", dataIndx: "schnqty" , format: '###,###,###' , 
+							summary: { type: "sum" },
+				         	styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+				         	editable: function (ui) {
+		                        return editable = (ui.rowData.sbloqty > 0) ? false : true;
+		                    },
+							validations : [{ type: 'gte', value: 0 }, { type: 'lte', value: 1000000000, msg: "[[#{ms.validations.maxLenLength(9)}]]" }]
+						},//변경수량
+						{ title: "[[#{wm.wstkky.stkstat}]]", dataType: "string", dataIndx: "stkstat" , 
+							styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+							editable: function (ui) {
+		                        return editable = (ui.rowData.sbloqty > 0) ? false : true;
+		                    },
+							editor: {
+			   	                type: "select",
+			   	                init: function (ui) {
+			   	                	ui.$cell.find("select").pqSelect({ search: false,
+			   		                	singlePlaceholder: '',
+			   		                });
+			   	                	setTimeout(function () {
+			   		                	ui.$cell.find("select").pqSelect('open'); 
+			   		                } , 250);
+			   	                },
+			                    options: [],
+			                    prepend : { "" : '[[#{ms.selectOption}]]' }
+			   	            },
+			   	         	editable: function (ui) {
+					                 return editable = (ui.rowData.sbloqty > 0) ? false : true;
+					        },
+			   	            render: gridRenderAndValue
+						},//재고상태
+						{ title: "[[#{wm.wmi12.rsncode}]]", dataType: "string", dataIndx: "rsncode" ,
+							styleHead: { 'background-color':'[[#{grid.styleHead01}]]' },
+							editable: function (ui) {
+		                        return editable = (ui.rowData.sbloqty > 0) ? false : true;
+		                    },
+							editor: {
+			   	                type: "select",
+			   	                init: function (ui) {
+			   	                	ui.$cell.find("select").pqSelect({ search: false,
+			   		                	singlePlaceholder: ''
+			   		                });
+			   	                	setTimeout(function () {
+			   		                	ui.$cell.find("select").pqSelect('open'); 
+			   		                } , 250);
+			   	                },
+			                    options: [],
+			                    prepend : { "" : '[[#{ms.selectOption}]]' }
+			   	            },
+			   	         	editable: function (ui) {
+					                 return editable = (ui.rowData.sbloqty > 0) ? false : true;
+					        },
+			   	            render: gridRenderAndValue
+						},//변경사유코드
+						{ title: "[[#{wm.wmi12.adjsrmk}]]", dataType: "string", dataIndx: "adjsrmk" ,
+							styleHead: { 'background-color':'[[#{grid.styleHead02}]]' },
+							editable: function (ui) {
+				                   return editable = (ui.rowData.sbloqty > 0) ? false : true;
+					          },
+					         validations : [
+					        	 { type: 'minLen', value: 0, warn: true }, { type: 'maxLen', value: 100, msg: "[[#{ms.validations.maxLenLength(100)}]]" }
+					         ] 
+						},//비고
+						{ title: "[[#{wm.wstkky.expidat}]]", dataType: "string", dataIndx: "expidat" , hidden: true , editable: false },//유통기간
+						{ title: "[[#{wm.wstkky.lotnmky}]]", dataType: "string", dataIndx: "lotnmky" , hidden: true , editable: false },//LOTNumber
+						{ title: "[[#{wm.wstkky.credate}]]", dataType: "string", dataIndx: "credate" , editable: false },//생성일
+						{ title: "[[#{wm.wstkky.cretime}]]", dataType: "string", dataIndx: "cretime" , editable: false },//생성시간
+						{ title: "[[#{wm.wstkky.creuser}]]", dataType: "string", dataIndx: "creuser" , editable: false },//생성자
+						{ title: "[[#{wm.wstkky.lmodate}]]", dataType: "string", dataIndx: "lmodate" , editable: false },//수정일
+						{ title: "[[#{wm.wstkky.lmotime}]]", dataType: "string", dataIndx: "lmotime" , editable: false },//수정시간
+						{ title: "[[#{wm.wstkky.lmouser}]]", dataType: "string", dataIndx: "lmouser" , editable: false },//수정자
+						{ title: "[[#{wm.wstkky.indibzl}]]", dataType: "string", dataIndx: "indibzl" , hidden: true , editable: false },
+						{ title: "[[#{wm.wstkky.indiarc}]]", dataType: "string", dataIndx: "indiarc" , hidden: true , editable: false },
+						{ title: "[[#{wm.wstkky.updtchk}]]", dataType: "integer", dataIndx: "updtchk" , hidden: true , editable: false },
+					];
+					
+					let wmi12Gul = new GridUtil(wmi12ColModel , '[[${gprogrid}]]' , 'wmi12_grid');
+			        
+			        wmi12Gul.setFind();
+			        wmi12Gul.setReset();
+			        
+					wmi12Gul.setCellDblClick(function(evt, ui){
+						if(ui.rowData.sbloqty > 0){
+			     	  		alert('[[#{wm.wmi12.notcmpQty}]]');//블락된 재고는 변경할 수 없습니다.
+			     	  		return false;
+			     	  	}
+					});
+					
+					 wmi12Gul.setCreate(function(evt, ui){
+						this.widget().pqTooltip();
+						if(wmi12InitData.item1){ //화주
+				    		let column = this.getColumn({ dataIndx: "ownerky" });
+				        	let options = wmi12InitData.item1.map(function(obj){
+				            	let rObj = {};
+				            	rObj[obj.combovl] = obj.combonm;
+				            	return rObj;
+				    		});
+				        	column.editor.options = options;
+				    	} 
+						 
+						if(wmi12InitData.item2){ //창고
+				    		let column = this.getColumn({ dataIndx: "warekey" });
+				        	let options = wmi12InitData.item2.map(function(obj){
+				            	let rObj = {};
+				            	rObj[obj.combovl] = obj.combonm;
+				            	return rObj;
+				    		});
+				        	column.editor.options = options;
+				    	}
+						
+						if(wmi12InitData.item3){ //재고상태
+				    		let column = this.getColumn({ dataIndx: "stkstat" });
+				        	let options = wmi12InitData.item3.map(function(obj){
+				            	let rObj = {};
+				            	rObj[obj.combovl] = obj.combonm;
+				            	return rObj;
+				    		});
+				        	column.editor.options = options;
+				    	}
+						$('#wmi12_ownerky').pqSelect({
+							deselect: false
+						});
+						
+					});
+					
+					 wmi12Gul.setCellClick(function(evt, ui){
+				        	if(ui.dataIndx == 'rsncode'){
+				        		rsnData = callAjax('data', 'GET', "/md/common/code/reason-code", { doccate : ui.rowData.doccate , doctype : ui.rowData.doctype , warekey : ui.rowData.warekey, rscate1: "NORMAL" });
+				        		let column = this.getColumn({ dataIndx: "rsncode" });
+					        	let options = rsnData.map(function(obj){
+					            	let rObj = {};
+					            	rObj[obj.combovl] = obj.combonm;
+					            	return rObj;
+					    		});
+					        	column.editor.options = options;
+				        	}
+				        	
+				        });
+				        
+				        wmi12Gul.setCellKeyDown(function(evt, ui){
+				        	if(evt.key === 'Enter'){
+				        		if(ui.dataIndx == 'rsncode'){
+					        		rsnData = callAjax('data', 'GET', "/md/common/code/reason-code", { doccate : ui.rowData.doccate , doctype : ui.rowData.doctype , warekey : ui.rowData.warekey, rscate1: "NORMAL" });
+					        		let column = this.getColumn({ dataIndx: "rsncode" });
+						        	let options = rsnData.map(function(obj){
+						            	let rObj = {};
+						            	rObj[obj.combovl] = obj.combonm;
+						            	return rObj;
+						    		});
+						        	column.editor.options = options;
+					        	}
+				        	}
+				        });
+					 
+					 wmi12Gul.setBeforeValidate(function(evt, ui){
+						if (ui.source == 'edit' || ui.source == 'paste'){
+							for(let i=0 ; i < ui.updateList.length ; i++){
+								let updateRow 	= ui.updateList[i].newRow;
+								let rowData 	= ui.updateList[i].rowData
+								if(updateRow.schnqty == 0){	
+									$('#wmi12_grid').pqGrid('addClass', { rowIndx: ui.updateList[i].rowIndx, dataIndx: 'schnqty', cls: 'pq-cell-dirty' } );
+								}
+								let grid = pq.grid("#wmi12_grid");
+								if(updateRow.schnqty > rowData.stotqty + rowData.sinbqty + rowData.sallqty + rowData.soubqty){
+				    				alert('[[#{wm.wmi12.schnqtyOverStotqty}]]');//변경수량이 총 수량보다 많을 수 없습니다.
+				    				grid.goToPage({ rowIndx: updateRow.rowIndx });
+				    				grid.editCell({ rowIndx: updateRow.rowIndx, dataIndx: "schnqty"});
+				    			} 
+							}
+						 }
+					});
+					 
+					wmi12Gul.setChange(function(evt, ui){
+				    	if(ui.source === 'edit' || ui.source === 'paste'){
+				    		for(let i=0; i<ui.updateList.length; i++){
+				    			let newRow = ui.updateList[i].newRow;
+				    			if(newRow.schnqty || newRow.stkstat || newRow.rsncode || newRow.adjsrmk){
+				    				this.updateRow( {
+				            			rowIndx : ui.updateList[i].rowIndx,
+				            		    newRow : { state : true },
+				            		    checkEditable: false
+				            		});
+				    			}
+				    			
+				    		}
+				    	}
+				    });
+					
+					wmi12Gul.setRowInit(function(ui){
+			        	 if(ui.rowData.sbloqty > 0){
+			        		 return { 
+			                     style: { 'background': '#e4e4eb'},
+			                 };
+			        	 }
+			        });
+					
+			wmi12Gul.open();
+		});
+		
+		
+		//============================================================
+		//검색 조건 이벤트
+		//============================================================
+		function wmi12Init() {
+			let list = callAjax('data', 'GET' , '/wm/inventory/wmi12/init/1', {});
+			
+			wmi12InitData = list;
+			
+			let item1 = $('#wmi12_ownerky') //화주
+			let item2 = $('#wmi12_warekey') //창고
+			let item3 = $('#wmi12_stkstat') //재고상태
+			
+			//화주 ( item1 )
+			$(list.item1).each(function(i) {
+				item1.append('<option value="' + list.item1[i].combovl + '">' + list.item1[i].combonm + '</option>');
+			});
+			
+			//창고 ( item2 )
+			$(list.item2).each(function(i) {
+				item2.append('<option value="' + list.item2[i].combovl + '">' + list.item2[i].combonm + '</option>');
+			});
+			
+			//재고상태 ( item3 )
+			$(list.item3).each(function(i) {
+				item3.append('<option value="' + list.item3[i].combovl + '">' + list.item3[i].combonm + '</option>');
+			});
+			
+		}
+		//============================================================
+		//input 키보드 엔터 이벤트
+		//============================================================
+		function wmi12Keyup(){
+			let key = this.event.key || this.event.keyCode;
+			if (key === 'Enter' || key === 13) {
+				searchList();
+			}
+		}
+		
+		//============================================================
+		// 재고 search
+		//============================================================	
+		async function searchList(){
+			const grid = pq.grid('#wmi12_grid');
+			grid.showLoading();
+			let data = { ownerky : $('#wmi12_ownerky option:selected').val() , warekey : $('#wmi12_warekey option:selected').val() , 
+						 locanam : $('#wmi12_locakey').val().toUpperCase() , skumkey : $('#wmi12_skumkey').val().toUpperCase() , 
+						 skudesc : $('#wmi12_skudesc').val().toUpperCase() , stkstat : $('#wmi12_stkstat option:selected').val() };
+			let searchInit = await fetchUtil('GET', '/wm/inventory/wmi12/init/1', {warekey: data.warekey});
+			
+			let response = await fetchUtil("GET", "/wm/inventory/wmi12/grids/1", data);
+			
+			try{
+				let wmi12SearchInit = await searchInit.json();
+				if(response.status === 200){
+					if(wmi12SearchInit.item4){ //존
+			    		let column = grid.getColumn({ dataIndx: "zonekey" });
+			        	let options = wmi12SearchInit.item4.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmi12SearchInit.item5){ //에어리어
+			    		let column = grid.getColumn({ dataIndx: "areakey" });
+			        	let options = wmi12SearchInit.item5.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmi12SearchInit.item7){ //문서타입
+			    		let column = grid.getColumn({ dataIndx: "doctype" });
+			        	let options = wmi12SearchInit.item7.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.combovl] = obj.combonm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					if(wmi12SearchInit.item8){ //문서유형
+			    		let column = grid.getColumn({ dataIndx: "doccate" });
+			        	let options = wmi12SearchInit.item8.map(function(obj){
+			            	let rObj = {};
+			            	rObj[obj.doccate] = obj.docctnm;
+			            	return rObj;
+			    		});
+			        	column.editor.options = options;
+			    	}
+					resContent = await response.json();
+					grid.option("dataModel", { data: resContent, recIndx: "rowkey" });
+					grid.refreshDataAndView();
+				}
+			}catch(err){
+				console.log(err);
+			}finally{
+				grid.hideLoading();
+			}
+		}
+		
+		//============================================================
+		//검색조건 초기화
+		//============================================================
+		function wmi12Refresh(){
+			let grid = pq.grid("#wmi12_grid");
+			
+			document.getElementById("wmi12_warekey").value = $('#wmi12_warekey option:first').val();
+			
+			$('#wmi12_ownerky').pqSelect();
+			let pqSelectElement = $('#wmi12_ownerky')[0];
+			pqSelectElement.selectedIndex = 0;
+			$('#wmi12_ownerky').pqSelect('refreshData');
+			
+			document.getElementById("wmi12_skumkey").value = '';
+			document.getElementById("wmi12_skudesc").value = '';
+			document.getElementById("wmi12_stkstat").value = $('#wmi12_stkstat option:first').val();
+			document.getElementById("wmi12_locakey").value = '';
+			
+			grid.option('dataModel', { data : [] });
+			grid.refreshDataAndView();
+		}
+		</script>
+	</div>
+</html>

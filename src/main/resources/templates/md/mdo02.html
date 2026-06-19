@@ -1,0 +1,1032 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{search.wareCode}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.wareCode')}" id="mdo02Warekey" name="mdo02Warekey">
+					</div>
+				</div>
+				<label for="inputGroupSelect01" class="setting-grid-title">[[#{search.whnamlc}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="text" th:placeholder="${#messages.msg('search.whnamlc')}" id="mdo02Whnamlc" name="mdo02Whnamlc">
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="mdo02Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="mdo02Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-navy btn-green" id="mdo02Save">
+						<img class="ic-bt-save">[[#{bt.save}]]
+					</button>
+				</div>
+			</div>
+			<div class="list-grid-wrapper con-box">
+				<div id="mdo02Grid"></div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : mdo02
+	  - 최초생성자 : Park T. S.
+	  - 최초생성일시 : 2023.07.07
+	  - 설명 : 창고등록
+	  ------------------------------------------
+	*/
+$(function(){
+	//===============================================================
+	// 검색 이벤트
+	//===============================================================
+	$('#' + '[[${gprogrid}]]' + 'Search').click(async function() {
+		 await getMdo02List();
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Reset').click(async function(){
+		resetSearchConditions();
+		makeEmptyGrid(mdo02Grid);
+	});
+
+	$('#' + '[[${gprogrid}]]' + 'Save').click(async function(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid')
+		const gridCheck = grid.Checkbox('[[#{common.grid.checkBoxName.state}]]').getCheckedNodes();
+
+		if(gridCheck.length===0){
+			alert('[[#{ms.choiceRowZero}]]');
+
+			return;
+		}
+
+		const gridChange = grid.getChanges({ all: true });
+
+		//===============================================================
+		//체크된 데이터 필수 값 & 중복 체크
+		//===============================================================
+		for(let gCheck of gridCheck){
+    		const essentialCols = ['warekey', 'whnamlc', 'poststm', 'stkdytm'];
+
+    		for(let checkCol of essentialCols){
+    			if(null === gCheck[checkCol] || undefined === gCheck[checkCol] || '' === gCheck[checkCol]){
+	    	  		alert((gCheck.pq_ri+1)+' Row '+'[[#{ms.requiredValue}]]' + '(' + grid.getColModel().find(e => e.dataIndx === checkCol).title + ')');	//필수입력 값을 입력해주세요.
+	      			grid.focus({
+						rowIndxPage: gCheck.pq_ri,
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid('getColIndx', { dataIndx: checkCol } )
+					});
+
+	    	  		return false;
+    			}
+    		}
+
+			for(let gData of grid.getData()){
+				const keyCols = ['warekey'];
+
+				if(gCheck.pq_ri !== gData.pq_ri && isKeyDuplication(keyCols, gCheck, gData)){
+					const alertTxt = makeDuplicateRowText(keyCols, grid, gCheck, gData)
+										+ ' [[#{ms.DuplicateKeyErr}]]' + '( ' + (gData.pq_ri+1) + '[[#{ms.row}]] & ' + (gCheck.pq_ri+1) + '[[#{ms.row}]] )';
+
+					alert(alertTxt);
+	      			grid.focus({
+						rowIndxPage: gCheck.pq_ri,
+						colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid('getColIndx', { dataIndx: 'warekey' } )
+					});
+
+					return false;
+				}
+			}
+		}
+
+		//updateList 체크 데이터 정제
+		for(let z=0; z<gridChange.updateList.length; z++){
+			if(gridChange.updateList[z]['[[#{common.grid.checkBoxName.state}]]'] !== true){
+				gridChange.updateList.splice(z, 1);
+				gridChange.oldList.splice(z, 1);
+			}
+		}
+		//addList 체크 데이터 정제
+		gridChange.addList = gridChange.addList.filter(e => e['[[#{common.grid.checkBoxName.state}]]'] === true);
+
+		if(await !confirm('[[#{ms.checksave}]]')){
+			return;
+		}
+
+		saveMdo02List(gridChange);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	// Grid Column Model
+	const mdo02GridCM = [
+		{
+			title: '',
+			dataType: 'bool',
+			dataIndx: '[[#{common.grid.checkBoxName.state}]]',
+			align: 'center',
+            type: 'checkbox',
+            sortable: false,
+            editor: false,
+            cb: {
+          		all: true,
+          		header: true
+            }
+     	},
+        {
+     		title: '[[#{common.grid.recIndx}]]',
+     		dataType: 'string',
+     		dataIndx: '[[#{common.grid.recIndx}]]',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{md.mwarma.compkey}]]',
+     		dataType: 'string',
+     		dataIndx: 'compkey',
+     		hidden: true,
+     		editable: false
+     	},
+		{
+     		title: '[[#{grid.wareCode}]]',
+     		dataType: 'string',
+     		dataIndx: 'warekey',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+            validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+			 	{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]'
+				}
+            ],
+			editable: ui => !ui.rowData['[[#{common.grid.recIndx}]]']
+		},
+		{
+			title: '[[#{grid.whnamlc}]]',
+			dataType: 'string',
+			dataIndx: 'whnamlc',
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(1)}]]'
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.poststm}]]',
+			dataType: 'date',
+			dataIndx: 'poststm',
+ 			format: val => val?.replace(regDivideTime, divideTimeFormat),
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+ 			editor: {
+ 				type: 'textbox',
+ 				init: timeEditor2,
+ 				getData: ui => ui.$cell.find('input').val()
+ 			}
+		},
+		{
+			title: '[[#{md.mwarma.stkdytm}]]',
+			dataType: 'date',
+			dataIndx: 'stkdytm',
+ 			format: val => val?.replace(regDivideTime, divideTimeFormat),
+			styleHead: { 'background-color': '[[#{grid.styleHead01}]]' },
+ 			editor: {
+ 				type: 'textbox',
+ 				init: timeEditor2,
+ 				getData: ui => ui.$cell.find('input').val()
+ 			}
+		},
+		{
+			title: '[[#{md.mwarma.whuseyn}]]',
+			dataType: 'string',
+			dataIndx: 'whuseyn',
+			align: 'center',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox', editor: false,
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mwarma.whnamko}]]',
+			dataType: 'string',
+			dataIndx: 'whnamko',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regKorOnly,
+					msg: '[[#{ms.onlyInputKorean}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.whnamen}]]',
+			dataType: 'string',
+			dataIndx: 'whnamen',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regEngOnly,
+					msg: '[[#{ms.onlyInputEnglish}]]'
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.whaddr1}]]',
+			dataType: 'string',
+			dataIndx: 'whaddr1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.whaddr2}]]',
+			dataType: 'string',
+			dataIndx: 'whaddr2',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.whaddr3}]]',
+			dataType: 'string',
+			dataIndx: 'whaddr3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.warelat}]]',
+			dataType: 'float',
+			dataIndx: 'warelat',
+			format: '#,###.0000000000',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000000000,
+					msg: '[[#{ms.validations.maxLenLength(15)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum15Dot10,
+					msg: '[[#{ms.validations.onlyNumber(15)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.warelon}]]',
+			dataType: 'float',
+			dataIndx: 'warelon',
+			format: '#,###.0000000000',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000000000,
+					msg: '[[#{ms.validations.maxLenLength(15)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum15Dot10,
+					msg: '[[#{ms.validations.onlyNumber(15)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wacitnm}]]',
+			dataType: 'string',
+			dataIndx: 'wacitnm',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.waregnm}]]',
+			dataType: 'string',
+			dataIndx: 'waregnm',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 100,
+					msg: '[[#{ms.validations.maxLenLength(100)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wateln1}]]',
+			dataType: 'string',
+			dataIndx: 'wateln1',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		 },
+		 {
+			 title: '[[#{md.mwarma.wateln2}]]',
+			 dataType: 'string',
+			 dataIndx: 'wateln2',
+			 styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			 validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+	 		]
+		},
+		{
+			title: '[[#{md.mwarma.wateln3}]]',
+			dataType: 'string',
+			dataIndx: 'wateln3',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wataxcd}]]',
+			dataType: 'string',
+			dataIndx: 'wataxcd',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.waposbx}]]',
+			dataType: 'string',
+			dataIndx: 'waposbx',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.waposcd}]]',
+			dataType: 'string',
+			dataIndx: 'waposcd',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.warepnm}]]',
+			dataType: 'string',
+			dataIndx: 'warepnm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wareptl}]]',
+			dataType: 'string',
+			dataIndx: 'wareptl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.warepem}]]',
+			dataType: 'string',
+			dataIndx: 'warepem',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wamannm}]]',
+			dataType: 'string',
+			dataIndx: 'wamannm',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 60,
+					msg: '[[#{ms.validations.maxLenLength(60)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wamantl}]]',
+			dataType: 'string',
+			dataIndx: 'wamantl',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wamanem}]]',
+			dataType: 'string',
+			dataIndx: 'wamanem',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 20,
+					msg: '[[#{ms.validations.maxLenLength(20)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.overall}]]',
+			dataType: 'string',
+			dataIndx: 'overall',
+			align: 'center',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mwarma.overloc}]]',
+			dataType: 'string',
+			dataIndx: 'overloc',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.shpcmul}]]',
+			dataType: 'string',
+			dataIndx: 'shpcmul',
+			align: 'center',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			type: 'checkbox',
+			editor: false,
+			hidden: true,
+			cb: {
+				all: false,
+				header: true,
+				check: 'Y',
+				uncheck: 'N'
+			}
+		},
+		{
+			title: '[[#{md.mwarma.inbokey}]]',
+			dataType: 'string',
+			dataIndx: 'inbokey',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.oubokey}]]',
+			dataType: 'string',
+			dataIndx: 'oubokey',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'minLen',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'maxLen',
+					value: 10,
+					msg: '[[#{ms.validations.maxLenLength(10)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.watarea}]]',
+			dataType: 'integer',
+			dataIndx: 'watarea',
+			format: '#,###',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.wascapa}]]',
+			dataType: 'integer',
+			dataIndx: 'wascapa',
+			format: '#,###',
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.maxLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.watmzon}]]',
+			dataType: 'integer',
+			dataIndx: 'watmzon',
+			format: '#,###',
+			hidden: true,
+			styleHead: { 'background-color': '[[#{grid.styleHead02}]]' },
+			validations: [
+				{
+					type: 'gte',
+					value: 0,
+					msg: '[[#{ms.validations.minLenLength(0)}]]',
+					warn: true
+				},
+				{
+					type: 'lte',
+					value: 1000000000,
+					msg: '[[#{ms.validations.maxLenLength(9)}]]',
+					warn: true
+				},
+				{
+					type: 'regexp',
+					value: regNum9Digit,
+					msg: '[[#{ms.validations.onlyNumber(9)}]]',
+					warn: true
+				}
+			]
+		},
+		{
+			title: '[[#{md.mwarma.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false
+		},
+		{
+			title: '[[#{md.mwarma.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false
+		}
+	];
+
+	// Grid Object 및 기본 세팅
+	const mdo02Grid = new GridUtil(mdo02GridCM, '[[${gprogrid}]]', `[[${gprogrid}]]Grid`);
+
+	// Grid 검색 세팅
+	mdo02Grid.setFind();
+
+	// Grid 초기화 세팅
+	mdo02Grid.setReset();
+
+	// Grid 데이터 추가 이벤트
+	mdo02Grid.setAdd(function(evt, ui){
+		const rowData = {
+			state: true,
+			compkey: '[[${userattr.compkey}]]',
+			whuseyn: 'Y'
+		};
+		const rowIndx = this.addRow({
+			rowData : rowData,
+			checkEditable : false
+		});
+
+		this.goToPage({ rowIndx : rowIndx });
+		this.focus({
+			rowIndxPage: rowIndx,
+			colIndx: $('#' + '[[${gprogrid}]]' + 'Grid').pqGrid( 'getColIndx', { dataIndx: rowIndx } )
+		});
+	});
+
+	// Grid 데이터 변경 이벤트
+	mdo02Grid.setChange(async function(evt, ui){
+		if('edit' === ui.source || 'paste' === ui.source){
+			const updateRowList = [];
+
+			for(const updateData of ui.updateList) {
+    			const newRow = { state: true };
+
+    			if(updateData.newRow.hasOwnProperty('warekey') && updateData.oldRow.hasOwnProperty('warekey')){
+    				newRow['warekey'] = updateData.newRow['warekey']?.toUpperCase();
+    			}
+
+    			updateRowList.push({
+					rowIndx: updateData.rowIndx,
+					newRow: newRow
+				});
+			}
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+
+    	} else if('checkbox' === ui.source){
+			const updateRowList = [];
+
+			await ui.updateList.forEach(updateData => {
+    			let newRow = {state: true};
+
+           		if(updateData.newRow.hasOwnProperty('whuseyn')){
+        			updateRowList.push({
+						rowIndx: updateData.rowIndx,
+						newRow: newRow
+					});
+       			}
+   			});
+			await this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+
+    	if('paste' === ui.source){
+    		await ui.addList.forEach( addData => addData.newRow = {
+				state: true,
+				compkey: '[[${userattr.compkey}]]',
+				whuseyn: addData?.newRow?.whuseyn || 'Y'
+			});
+			await this.updateRow({
+				rowList: ui.addList,
+				checkEditable: false
+			});
+    	}
+	});
+
+	// Grid 객체 생성
+	mdo02Grid.open();
+
+	// Grid 데이터 조회 함수
+	async function getMdo02List(){
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+		const data = {
+			warekey : $('#' + '[[${gprogrid}]]' + 'Warekey').val().toUpperCase(),
+			whnamlc : $('#' + '[[${gprogrid}]]' + 'Whnamlc').val()
+		};
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const response = await fetchUtil('GET', url, data);
+
+		if(response.status===200){
+			const resContent = await response.json();
+
+			grid.option( 'dataModel', {
+				data: resContent,
+				recIndx: '[[#{common.grid.recIndx}]]'
+			});
+			grid.refreshDataAndView();
+		}
+		grid.hideLoading();
+	}
+
+	// Grid 데이터 저장 함수
+	async function saveMdo02List(saveData){
+		if(!saveData){
+			return false;
+		}
+
+		const grid = pq.grid('#' + '[[${gprogrid}]]' + 'Grid');
+
+		grid.showLoading();
+
+		const url = '[[#{common.url.master}]]' + '[[#{common.url.organization}]]' + '/' + '[[${gprogrid}]]' + '[[#{common.url.grids}]]' + '/1';
+		const saveMdo02Response = await fetchUtil('POST', url, saveData);
+
+		if(saveMdo02Response.status === 200){
+			await getMdo02List();
+		}
+
+		grid.hideLoading();
+	}
+});
+</script>
+</div>
+</html>

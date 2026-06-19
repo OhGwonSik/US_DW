@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.9.0.final using JasperReports Library version 6.9.0-cb8f9004be492ccc537180b49c026951f4220bf3  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="test2" pageWidth="216" pageHeight="802" columnWidth="216" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="76ee19d1-fcd3-4a15-87d9-39bb061b69b9">
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="btrcsnm" class="java.lang.String"/>
+	<field name="btramot" class="java.lang.Integer"/>
+	<variable name="btramotSum" class="java.lang.Integer" calculation="Sum">
+		<variableExpression><![CDATA[$F{btramot} == null ? 0 : $F{btramot}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<summary>
+		<band height="30">
+			<frame>
+				<reportElement x="0" y="0" width="215" height="30" uuid="f690eb86-313e-4677-859c-52413e8ed029">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</reportElement>
+				<box>
+					<leftPen lineWidth="2.0" lineStyle="Double"/>
+					<bottomPen lineWidth="1.0"/>
+					<rightPen lineWidth="1.0"/>
+				</box>
+				<staticText>
+					<reportElement x="0" y="0" width="107" height="30" uuid="1e9cf1bc-c8f9-4289-93f0-38ad5d92901d">
+						<property name="com.jaspersoft.studio.unit.height" value="px"/>
+						<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					</reportElement>
+					<box>
+						<leftPen lineWidth="0.0" lineStyle="Double"/>
+						<bottomPen lineWidth="0.0"/>
+						<rightPen lineWidth="0.5" lineStyle="Solid"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="JasperNanumFont"/>
+					</textElement>
+					<text><![CDATA[]]></text>
+				</staticText>
+				<textField pattern="#,##0.###">
+					<reportElement x="107" y="0" width="103" height="30" uuid="d2e3abc6-240b-4ad8-a982-704a9375adf9">
+						<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					</reportElement>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="JasperNanumFont"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$V{btramotSum}]]></textFieldExpression>
+				</textField>
+			</frame>
+		</band>
+	</summary>
+</jasperReport>

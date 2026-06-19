@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainSideBar" class="sidebar-container show">
+	<div class="sidebar-header-logo">
+		<img th:src="@{/v2/assets/img_top_logo@3x.png}" alt="" width="26" height="26">
+		<span>스마트물류플랫폼</span>
+	</div>
+	<div class="sidebar-menu-wrapper">
+		<div class="sidebar-main-menu" id="sideMenuBar"></div>
+		<ul class="sidebar-bottom">
+			<li><img class="ic-left-help"> 도움말 </li>
+			<li th:text="${session.usernam}"><img class="ic-left-user"> 회사명 · 홍길동님 </li>
+			<li onclick='location.href=rPath+"/logout"'><img class="ic-left-logout"> 로그아웃 </li>
+		</ul>
+	</div>
+	<script type="text/javascript">
+		// 메뉴트리 구성
+		getUserMenuList();
+
+		// search 입력
+		function searchcmdKeyevent(o){
+			if(event.keyCode==13){
+				var tprogcmd = o.value.toLowerCase();
+				mainSearchKeyevent(tprogcmd);
+			}
+		}
+
+		//  Side Menu 열기/닫기
+		$(document).ready(function () {
+			$("#sidebar").mCustomScrollbar({
+				theme: "minimal"
+			});
+
+			$('#sidebarCollapse').on('click', function () {
+				$('#mainSidebar, #mainContent').toggleClass('active');
+				$('.collapse.in').toggleClass('in');
+				$('a[aria-expanded=true]').attr('aria-expanded', 'false');
+			});
+		});
+	</script>
+</div>
+</html>

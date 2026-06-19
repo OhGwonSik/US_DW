@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<!--  mainConten 시작 -->
+	<div th:fragment="fragments-mainContent">
+		<!-- <ul class="tab" id="tabs"></ul>
+		<div class="tab-arrow-wrapper">
+			<div class="btn-tab-arrow left"><img src="" alt=""></div>
+			<div class="btn-tab-arrow right on"><img src="" alt=""></div>
+		</div> -->
+		<!-- 2023-08-07 pda화면 연결 오권식 -->
+		<th:block th:if="${session.usertyp == 'PDA'}">
+				<div id="dashboard">
+					<th:block th:replace="@{/com/dashboard/pda.html :: fragments-dashboard}"></th:block>
+				</div>
+		</th:block>
+	</div>
+	<!--  mainConten 종료 -->
+</html>

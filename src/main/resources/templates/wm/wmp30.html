@@ -1,0 +1,398 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col">
+					<button id="wmp30_toggle" class="toggle-eoasnky" value="eoasnky">[[#{wm.wmp.eoasnky}]]</button>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" id="wmp30_input" name="wmp30_input" inputmode="none">
+				</div>
+			</div>
+			<div class="row">
+				<button type="button" class="btn-clear btn-white col" id="wmp30_btnReset">[[#{bt.reset}]]</button>
+				<button type="button" class="btn-save btn-main col" id="wmp30_btnSave">[[#{bt.save}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+			</div>
+			<div class="search-condition p">
+				<div class="row p">
+					<div class="condition-title col">
+						<label>[[#{wm.wmp.totalAsndqty}]]</label>
+					</div>
+					<div class="text-wrapper" id="wmp30TotalAsndqty">0</div>
+					<span>[[#{wm.wmp.unit}]]</span>
+				</div>
+				<div class="row p">
+					<div class="condition-title col">
+						<label>[[#{wm.wmp.scanRcveqty}]]</label>
+					</div>
+					<div class="text-wrapper" id="wmp30TotalRcveqty">0</div>
+					<span>[[#{wm.wmp.unit}]]</span>
+				</div>
+			</div>
+			<div class="table-wrapper con-box row2">
+				<table class="mobile-table wmp30-table">
+					<thead id="thtb">
+                        <tr>
+                            <th><input type="checkbox" id="wmp30_totalBox"></th>
+                            <th style="display:none" id="eoasnky">[[#{wm.wmp30.eoasnky}]]</th>
+                            <th style="display:none" id="doctype">[[#{wm.wmp30.doctype}]]</th>
+                            <th style="display:none" id="eoasnit">[[#{wm.wmp30.eoasnit}]]</th>
+                            <th style="display:none" id="ownerky">[[#{wm.wmp.ownerky}]]</th>
+                            <th style="display:none" id="skumkey">[[#{md.mskuma.skumkey}]]</th>
+                            <th style="display:none" id="expidat">[[#{md.mlotma.expidat}]]</th>
+                            <th id="skudesc">[[#{md.mskuma.skudesc}]]</th>
+                            <th id="asndqty" style="display:none">[[#{wm.wmp30.asndqty}]]</th>
+                            <th id="tempasn">[[#{wm.wmp30.asndqty}]]</th>
+                            <th style="display:none" id="rchsqty">[[#{wm.wmp30.rchsqty}]]</th>
+                            <th id="rcveqty">[[#{wm.wmp30.rcveqty}]]</th>
+                            <th style="display:none" id="upccode"></th>
+                        </tr>
+					</thead>
+					<tbody class="table-body" id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+		<div class="spinner" id="wmp30Spinner"></div>
+		<div class="bg"></div>
+	</main>
+	<script>
+		/*  wmp30 - 입하등록
+		*   최초 생성일시   : 2023-12-12 10:30
+		*   최초 생성자    : 오권식
+		*   설명      	: PDA로 창고에 부품(SKU)를 입하 등록 하는 화면
+		*   수정 내역  	:
+		*   수정일시	    :
+		*   수정자	    :
+		*   변경 사항      :
+		*/	
+		let totalAsndqty = 0;
+		let totalRcveqty = 0;
+		$(function() {
+			const pageId = 'wmp30';
+			let wmp30List;
+			let tempEoasnky;
+			const initToggle = document.querySelector('.condition-title').innerHTML;
+			const toggleArray = ['skumkey','eoasnky'];
+			let toggleIdx = 0;
+
+			//PDA니까 화면 처음 포커스 가게
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});	
+
+			//============================================================
+			//ASN 바코드, 상품코드 바코드 입력시 자동 검색(ASN, 상품코드 구별은 일단 - 로 구별[-있는건 상품코드])
+			//============================================================
+			document.querySelector('#'+pageId+'_input').addEventListener('keyup', async function(event){
+				if(event.keyCode === 13){
+					const codeData = document.querySelector('#'+pageId+'_input').value;
+					const toggleValue = document.querySelector('#'+pageId+'_toggle').value;
+					const trObjs = document.querySelectorAll('#tBody tr');
+
+					let matchCnt = 0;
+					if(!codeData) { //빈 문자열 일때 동작 X
+						return;
+					}
+
+					if(toggleValue === 'eoasnky' && tempEoasnky !== codeData) {	// 똑같은 ASN코드를 스캔했을때 무시
+						if(document.querySelectorAll('#tBody tr').length) {  // alert창 필요없고 찍는거 마다 데이터 넣어줄거면  삭제하기
+							await alertOpen('[[#{wm.wmp30.newEoasnky}]]',async function(){
+								totalRcveqty = 0;
+								document.querySelector('#'+pageId+'TotalRcveqty').innerHTML = totalRcveqty;
+								await getWasnifList(codeData);
+							});
+						}else{
+							await getWasnifList(codeData);
+						}
+						if(!document.querySelectorAll('#tBody tr').length) { // * 스캔 시에만 0데이터에 대한 alert창을 띄울지, 조회 시 0데이터에 대한 alert창을 띄울지 결정 필요(사유 : 저장 후 재조회)
+							alertOpen('[[#{ms.getDataZero}]]', function(){
+								tempEoasnky='';
+								document.querySelector('#'+pageId+'_totalBox').checked = false;
+								document.querySelector('#'+pageId+'_input').value = '';
+								document.querySelector('#'+pageId+'_input').focus();
+							});
+						}else{
+							tempEoasnky = codeData;
+							document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+							if(toggleIdx === toggleArray.length){
+								toggleIdx = 0;
+							}
+							document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+							document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+							document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+							document.querySelector('#'+pageId+'_input').focus();
+							toggleIdx++;
+						}
+					}else if(toggleValue === 'skumkey') {
+						if(!document.querySelectorAll('#tBody tr').length){ //ASN코드를 입력안했을때 테이블이 안펼쳐져있다(ASN코드보다 상품코드 먼저 입력하였을경우)
+							alertOpen('[[#{wm.wmp30.firstEoasnky}]]', function(){
+								if(toggleIdx === toggleArray.length){
+									toggleIdx = 0;
+								}
+								document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+								document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+								document.querySelector('.condition-title').innerHTML = initToggle;
+								document.querySelector('#'+pageId+'_input').focus();
+								toggleIdx++;
+								totalRcveqty = 0;
+								document.querySelector('#'+pageId+'TotalRcveqty').innerHTML = totalRcveqty;
+							});
+						}else{
+							for(let i=0; i<trObjs.length; i++){
+								if(codeData === trObjs[i].querySelector('.upccode').innerHTML){
+									trObjs[i].querySelector('.checkbox').checked = true;
+									totalRcveqty += Number(trObjs[i].querySelector('.rcveqty').value);
+									selectRow(trObjs[i].querySelector('.checkbox'));
+									isChecked();
+									matchCnt++;
+								}
+							}
+							if(!matchCnt){
+								alertOpen('[[#{wm.wmp30.missMatchSkumkey}]]', function(){
+									document.querySelector('#'+pageId+'_input').value = '';
+									document.querySelector('#'+pageId+'_input').focus();
+								});
+							}
+						}
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+					document.querySelector('#'+pageId+'_input').value = '';
+				}
+			});
+			//============================================================
+			//토글 버튼 클릭시 ASN코드(입고예정번호), 부품코드 바코드
+			//============================================================
+			document.querySelector('.condition-title').addEventListener('click', function(){
+				if(toggleIdx === toggleArray.length){
+					toggleIdx = 0;
+				}
+
+				if(toggleArray[toggleIdx] === 'skumkey'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wlotma.skumkey}]]';
+				}else if(toggleArray[toggleIdx] === 'eoasnky'){
+					document.querySelector('#'+pageId+'_toggle').innerHTML = '[[#{wm.wmp.eoasnky}]]';
+				}
+				document.querySelector('#'+pageId+'_toggle').value = toggleArray[toggleIdx];
+				document.querySelector('#'+pageId+'_toggle').setAttribute('class','');
+				document.querySelector('#'+pageId+'_toggle').classList.add('toggle-'+toggleArray[toggleIdx]);
+				document.querySelector('#'+pageId+'_input').focus();
+				toggleIdx++;
+			});
+
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function(){
+				confirmOpen('[[#{ms.listViewRollback}]]', async function(result){
+					if(result){
+						location.reload();
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			})
+			//============================================================
+			//입하등록 저장 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnSave').click(async function(){
+				const thObjs = document.querySelector('#thtb').querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tBody').querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});
+
+				if(!boxCheckedList.length){
+					alertOpen('[[#{ms.wmp.noCheckList}]]', function(){
+						document.querySelector('#'+pageId+'_input').value = '';
+						document.querySelector('#'+pageId+'_input').focus();
+					});
+					return;
+				}
+
+				let keyArray = [];
+
+				//체크박스떄문에 1부터 시작
+				for(let i=1;i<thObjs.length;i++){
+					keyArray.push(thObjs[i].getAttribute('id'));
+				}
+				let param;
+				let wmp30SaveList = [];
+
+				for(let i=0; i<trTagList.length;i++){
+					param = {};
+					for(let j=1; j<trTagList[i].querySelectorAll('td').length;j++){
+						if(trTagList[i].querySelectorAll('td')[j].children.length){
+							//벨리데이션 걸리는 이유는 입하수량을 수정했기 떄문에 값을 지워주는게 좋다.
+						    if(Number(trTagList[i].querySelectorAll('td')[j-3].innerHTML) - Number(trTagList[i].querySelectorAll('td')[j-1].innerHTML) < Number(trTagList[i].querySelectorAll('td')[j].children[0].value)) {
+						       alertOpen('[[#{wm.wmp30.missRcveqty}]]', function(){
+							       trTagList[i].querySelectorAll('td')[j].children[0].focus();
+							       trTagList[i].querySelectorAll('td')[j].children[0].value='';
+							       return;
+						       });
+						    }else if( !Number(trTagList[i].querySelectorAll('td')[j].children[0].value) || Number(trTagList[i].querySelectorAll('td')[j].children[0].value) < 0) {
+						       alert('[[#{wm.wmp30.inputRcveqty}]]');
+						       alertOpen('[[#{wm.wmp30.inputRcveqty}]]', function(){
+							       trTagList[i].querySelectorAll('td')[j].children[0].focus();
+							       trTagList[i].querySelectorAll('td')[j].children[0].value='';
+							       return;
+						       });
+						    }
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].children[0].value;
+						}else{
+							param[keyArray[j-1]] = trTagList[i].querySelectorAll('td')[j].innerHTML;
+						}
+					}
+					param['warekey'] = '[[${userattr.warekey}]]';
+					wmp30SaveList.push(param);
+				}
+				confirmOpen('[[#{ms.checksave}]]',async function(result){
+					if(result){
+						try{
+							document.querySelector('#wmp30Spinner').style.display = 'block';
+							document.querySelector('.bg').style.display = 'block';
+							const rData =  await fetchUtil('POST','/wm/pda/wmp30/save',{ addList : wmp30SaveList });
+							if(rData.status === 200){
+								await getWasnifList(tempEoasnky);
+								totalAsndqty = 0;
+								totalRcveqty = 0;
+								document.querySelector('#'+ pageId +'TotalAsndqty').innerHTML = totalAsndqty;
+								document.querySelector('#wmp30TotalRcveqty').innerHTML = totalRcveqty;
+								document.querySelector('#'+pageId+'_input').focus();
+							}
+						}catch(err){
+							alertOpen('[[#{ms.saveErr}]]');
+							return;
+						}finally{
+							document.querySelector('#wmp30Spinner').style.display = 'none';
+							document.querySelector('.bg').style.display = 'none';
+							document.querySelector('#'+pageId+'_input').value = '';
+							document.querySelector('#'+pageId+'_input').focus();
+						}
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+				
+			});
+
+			//================================
+			//PDA 입하등록 조회 값 불러오기
+			//================================
+			async function getWasnifList(codeData){
+				document.querySelector('#wmp30Spinner').style.display = 'block';
+				document.querySelector('.bg').style.display = 'block';
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						eoasnky : codeData
+				};
+
+				const response = await fetchUtil('GET', '/wm/pda/wmp30/grid', param);
+				wmp30List = await response.json();
+				document.querySelector('#tBody').innerHTML = '';
+				if(!wmp30List.length) {
+					tempEoasnky = '';
+					document.querySelector('#'+pageId+'_totalBox').checked = false;
+					document.querySelector('#wmp30TotalAsndqty').innerHTML = 0;
+					document.querySelector('#wmp30TotalRcveqty').innerHTML = 0;
+					document.querySelector('.condition-title').innerHTML = initToggle;
+					toggleIdx = 0;
+					document.querySelector('#wmp30Spinner').style.display = 'none';
+					document.querySelector('.bg').style.display = 'none';
+					return;
+				}
+				
+				let html = '';
+				totalAsndqty = 0;
+				//입하등록 프로시저태울 값 숨겨 놓기!!
+				for(const wmp30Data of wmp30List){
+					totalAsndqty += Number(wmp30Data.asndqty - wmp30Data.rchsqty);
+					html += '<tr>';
+					html += '<td><input type="checkbox" class="checkbox" onclick="isChecked()"></td>';
+					html += '<td style="display:none" class="eoasnky">'+ wmp30Data.eoasnky +'</td>';
+					html += '<td style="display:none" class="doctype">'+ wmp30Data.doctype +'</td>';
+					html += '<td style="display:none" class="eoasnit">' + wmp30Data.eoasnit + '</td>';
+					html += '<td style="display:none" class="ownerky">' + wmp30Data.ownerky + '</td>';
+					html += '<td style="display:none" class="skumkey">' + wmp30Data.skumkey + '</td>';
+					html += '<td style="display:none" class="expidat">' + (wmp30Data.expidat ? wmp30Data.expidat : '') + '</td>';
+					html += '<td class="skudesc">' + wmp30Data.skudesc + '</td>';
+					html += '<td style="display:none" class="asndqty">' + wmp30Data.asndqty + '</td>';
+					html += '<td class="tempasn">'+ (wmp30Data.asndqty - wmp30Data.rchsqty) +'</td>'
+					html += '<td style="display:none" class="rchsqty">' + wmp30Data.rchsqty + '</td>';
+					html += '<td><input type="number" class="rcveqty" value="' + (wmp30Data.asndqty - wmp30Data.rchsqty) + '"onchange="rcveqtyControl()"></td>';
+					html += '<td style="display:none" class="upccode">' + wmp30Data.upccode + '</td>';
+					html += '</tr>';
+				}
+				document.querySelector('#'+ pageId +'TotalAsndqty').innerHTML = totalAsndqty;
+				document.querySelector('#wmp30Spinner').style.display = 'none';
+				document.querySelector('.bg').style.display = 'none';
+				document.querySelector('#tBody').insertAdjacentHTML('afterbegin', html);
+			}
+
+			//전체 체크박스 컨트롤
+			document.querySelector('#'+pageId+'_totalBox').addEventListener('click', function(){
+				totalRcveqty = 0;
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(tagObj){
+					tagObj.checked = document.querySelector('#'+pageId+'_totalBox').checked;
+					tagObj.closest('tr').style.backgroundColor = tagObj.checked ? '#5372d97d' : 'white';
+					totalRcveqty += tagObj.checked ? Number(tagObj.closest('tr').querySelector('.rcveqty').value) : totalRcveqty;
+				});
+				document.querySelector('#'+ pageId +'TotalRcveqty').innerHTML = totalRcveqty;
+				document.querySelector('#wmp30_input').focus();
+			});
+			//물건 스캔시 일치할 경우 위로 올리면서 tr 색 입혀주는 함수
+			function selectRow(row){
+				const tableRow = row.parentElement.parentElement;
+				const table = tableRow.parentElement;
+				tableRow.style.backgroundColor = '#5372d97d';
+				table.insertBefore(tableRow, table.firstElementChild);
+			}
+		});
+
+		//로우 체크박스 컨트롤
+		function isChecked(){
+			
+			let checkedCnt = 0;
+			
+			totalRcveqty = 0;
+			
+			document.querySelectorAll('input[class*="checkbox"]').forEach(function(element){
+				if(element.checked){
+					totalRcveqty += Number(element.closest('tr').querySelector('.rcveqty').value);
+					element.closest('tr').style.backgroundColor = '#5372d97d';
+					checkedCnt++;
+				}else{
+					element.closest('tr').style.backgroundColor = 'white';
+				}
+			});
+			
+			document.querySelector('#wmp30TotalRcveqty').innerHTML = totalRcveqty;
+			
+			if(document.querySelectorAll('input[class*="checkbox"]').length === checkedCnt){
+				document.querySelector('#wmp30_totalBox').checked = true;
+			}else{
+				document.querySelector('#wmp30_totalBox').checked = false;
+			}
+			document.querySelector('#wmp30_input').focus();
+		}
+		//입하수량 변경시 헤더에 토탈 값 핸들링
+		function rcveqtyControl(){
+			isChecked();
+		}
+	</script>
+</div>
+</html>

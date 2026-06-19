@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+	<div th:fragment="fragments-mainContent">
+		<div class="tab-contents">
+            <div class="location"></div>
+            <div class="search-conditions con-box">
+                <div class="setting-grid">
+					<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{md.mwarma.whnamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select th:placeholder="${#messages.msg('md.mwarma.warekey')}" id="wmi10_warekey"></select>
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title ic-title-nece">[[#{md.mowrma.ownamlc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select th:placeholder="${#messages.msg('md.mowrma.ownerky')}" id="wmi10_ownerky">
+                            	<option value="" selected>[[#{ms.chooseAll}]]</option>
+                            </select>
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wstkky.skumkey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('wm.wstkky.skumkey')}" id="wmi10_skumkey">
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wstkky.skudesc}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('wm.wstkky.skudesc')}" id="wmi10_skudesc">
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wmi10.areanam}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmi10_areanam">
+                            	<option value="" selected>[[#{ms.chooseAll}]]</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label for="inputGroupSelect01" class="setting-grid-title">[[#{md.mzonma.zonekey}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select id="wmi10_zonenam">
+                            	<option value="" selected>[[#{ms.chooseAll}]]</option>
+                            </select>
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wmi10.locanam}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('wm.wmi10.locanam')}" id="wmi10_locanam">
+                        </div>
+                    </div>
+					<label for="inputGroupSelect01" class="setting-grid-title">[[#{wm.wstkdy.stkstat}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-group">
+                            <select th:placeholder="${#messages.msg('wm.wstkdy.stkstat')}" id="wmi10_stkstat">
+								<option value="" selected>[[#{ms.chooseAll}]]</option>
+							</select>
+                        </div>
+                    </div>
+                    <label for="inputGroupSelect01" class="setting-grid-title">[[#{md.mskuwc.upccode}]]</label>
+                    <div class="setting-grid-content">
+                        <div class="input-wrapper">
+                            <input type="text" th:placeholder="${#messages.msg('md.mskuwc.upccode')}" id="wmi10_upccode">
+                        </div>
+                    </div>
+                </div>
+                <div class="search-btn-group">
+                    <button type="button" class="btn-search btn-navy btn-green" id="wmi10_btnSearch"><img>[[#{bt.search}]]</button>
+                	<button type="button" class="btn-clear btn-white" id="wmi10_reset"><img>[[#{bt.reset}]]</button>
+                </div>
+            </div>
+            <div class="search-list">
+                <div class="list-top">
+                    <div class="list-title ic-title-mark">
+                        <span th:text="${gnatitle}"></span>
+                    </div>
+                </div>
+				<ul class="nav nav-tabs" id="wmi10_tab">
+						<li class="nav-item">
+							<a class="nav-link sku active" data-toggle="tab" href="#wmi10_SKU" data-tab-type="SKU">[[#{wm.wmi10.sku}]]</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link loca" data-toggle="tab" href="#wmi10_LOCA" data-tab-type="LOCA">[[#{wm.wmi10.loca}]]</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link lot" data-toggle="tab" href="#wmi10_LOT" data-tab-type="LOT">[[#{wm.wmi10.lot}]]</a>
+						</li>
+				</ul>
+				<div class="tab-content">
+					<div class="list-grid-wrapper con-box tab-pane show active" id="wmi10_SKU">
+						<div class="grid-container">
+							<div id="wmi10_SKUpqgrid"></div>
+						</div>
+					</div>
+					<div class="list-grid-wrapper con-box tab-pane active" id="wmi10_LOCA">
+						<div class="grid-container">
+							<div id="wmi10_LOCApqgrid"></div>
+						</div>
+					</div>
+					<div class="list-grid-wrapper con-box tab-pane active" id="wmi10_LOT">
+						<div class="grid-container">
+							<div id="wmi10_LOTpqgrid"></div>
+						</div> 
+					</div>
+				</div>
+            </div>
+        </div>
+	<script>
+		$(function() {
+			/*  wmi10 - 재고조회
+			*   최초 생성일시	: 2023-12-12 11:30
+			*   최초 생성자	: 최강호 
+			*   설명			: 재고를 상단 탭을 기준으로 조회하는 페이지
+			*   수정 내역		:
+			*   수정일시		:
+			*	수정자		: 
+			*	변경 사항		: 
+			*/
+			
+			let areaList;
+			let zoneList;
+			wmi10Init();
+			
+			//============================================================
+			//검색조건 초기화
+			//============================================================
+			$('#wmi10_reset').click(function(){
+				resetSearchConditions();
+				let skuGrid  = pq.grid('#wmi10_SKUpqgrid');
+				let locaGrid = pq.grid('#wmi10_LOCApqgrid');
+				let lotGrid  = pq.grid('#wmi10_LOTpqgrid');
+				
+				document.getElementById("wmi10_warekey").value = $('#wmi10_warekey option:first').val();
+				
+				$('#wmi10_ownerky').pqSelect();
+				let pqSelectElement = $('#wmi10_ownerky')[0];
+				pqSelectElement.selectedIndex = 0;
+				$('#wmi10_ownerky').pqSelect('refreshData');
+				
+				let resetAreaList = areaList.filter(element => element['warekey'] === $('#wmi10_warekey').val() 
+													&& element['aruseyn'] === 'Y'
+													&& element['areakey'] !== 'SHP'
+													&& element['areakey'] !== 'SYS');
+				if(resetAreaList.length > 0){
+					$("#wmi10_areanam option").not("[value='']").remove();
+					resetAreaList.forEach(function(option){
+			             $('#wmi10_areanam').append($("<option></option>").attr("value", option.areakey).text(option.areanam)); 
+			        });
+					$("#wmi10_areanam").pqSelect('refreshData');
+				}
+				
+				let resetZoneList = zoneList.filter(element => element['warekey'] === $('#wmi10_warekey').val()
+													&& element['areakey'] !== 'SHP'
+													&& element['areakey'] !== 'SYS');
+				if(resetZoneList.length > 0){
+					$("#wmi10_zonenam option").not("[value='']").remove();
+					resetZoneList.forEach(function(option){
+			             $('#wmi10_zonenam').append($("<option></option>").attr("value", option.zonekey).text(option.zonenam)); 
+			        });
+					$("#wmi10_zonenam").pqSelect('refreshData');
+				}
+				
+				skuGrid.option('dataModel', { data : [] });
+				skuGrid.refreshDataAndView();
+				
+				locaGrid.option('dataModel', { data : [] });
+				locaGrid.refreshDataAndView();
+				
+				lotGrid.option('dataModel', { data : [] });
+				lotGrid.refreshDataAndView();
+			});
+			
+		//============================================================
+		// 검색
+		//============================================================	
+			$('#wmi10_btnSearch').click(function(){
+				let param = $('#wmi10_tab .nav-link.active');
+				let tab = param.data("tab-type");
+				getAjax(tab);
+			});
+			
+			$("#wmi10_tab .nav-link").click(function(){
+				let tab = $(this).data("tab-type");
+				getAjax(tab);
+			});
+			
+			getSKU();
+			getLocation();
+			getLot();
+			tabGridInit();
+			
+			//============================================================
+			//SKU Call back
+			//==========================================
+				function getSKU(){
+					let SKUColModel = [
+							{ title: "[[#{wm.wstkky.compkey}]]", dataType: "string", dataIndx: "compkey" , hidden: true , editable: false }, //회사
+							{ title: "[[#{grid.ownamlc}]]", dataType: "string", dataIndx: "ownerky" , editable: false,
+								editor: { type: "select", options: [] },
+							  	render : function(ui){
+									let option = ui.column.editor.options.find(function (obj) {
+									 	return (obj[ui.cellData] != null);
+				                 	});
+				                	return option ? option[ui.cellData] : "";
+							   	}	
+							}, //화주
+							{ title: "[[#{grid.skuCode}]]", dataType: "string", dataIndx: "skumkey" , editable: false }, //부폼코드
+							{ title: "[[#{grid.skunm}]]", dataType: "string", dataIndx: "skudesc" , editable: false }, //부품명
+							{ title: "[[#{md.mskuwc.upccode}]]", dataType: "string", dataIndx: "upccode" , editable: false }, //바코드
+							{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey" , editable: false,
+								editor: { type: "select", options: [] },
+							  	render : function(ui){
+									let option = ui.column.editor.options.find(function (obj) {
+									 	return (obj[ui.cellData] != null);
+				                 	});
+				                	return option ? option[ui.cellData] : "";
+							   	}
+							}, //창고
+							{ title: "[[#{wm.wstkky.stotqty}]]", dataType: "integer", dataIndx: "stotqty" , format: '###,###,###' ,  editable: false ,
+								summary: { type: "sum" }
+							},//총재고 수량
+							{ title: "[[#{wm.wmi10.avalqty}]]", dataType: "integer", dataIndx: "avalqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }	
+							},//가용재고
+							{ title: "[[#{wm.wstkky.sallqty}]]", dataType: "integer", dataIndx: "sallqty" , format: '###,###,###' , editable: false , hidden: true,
+								summary: { type: "sum" }
+							},//할당수량
+							{ title: "[[#{wm.wstkky.sinbqty}]]", dataType: "integer", dataIndx: "sinbqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//입고중 수량
+							{ title: "[[#{wm.wstkky.soubqty}]]", dataType: "integer", dataIndx: "soubqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//출고중 수량
+							{ title: "[[#{wm.wstkky.sbloqty}]]", dataType: "integer", dataIndx: "sbloqty" , format: '###,###,###' ,  editable: false ,
+								summary: { type: "sum" }
+							},//블락수량
+							{ title: "[[#{wm.wmi10.rcvqty}]]", dataType: "integer", dataIndx: "rcvsqty" , format: '###,###,###' ,  editable: false ,
+								summary: { type: "sum" }
+							},//입고에어리어 수량
+							{ title: "[[#{wm.wmi10.stgqty}]]", dataType: "integer", dataIndx: "stgsqty" , format: '###,###,###' ,  editable: false ,
+								summary: { type: "sum" }
+							},//보관에어리어 수량
+							{ title: "[[#{wm.wmi10.takqty}]]", dataType: "integer", dataIndx: "taksqty" , format: '###,###,###' ,  editable: false ,
+								summary: { type: "sum" }
+							},//작업에어리어 수량
+							{ title: "[[#{wm.wstkky.stkstat}]]", dataType: "string", dataIndx: "stkstat" , editable: false ,
+								   editor: {
+					   	                type: "textbox",
+				                        options: []
+					   	           },
+								   render : function(ui){
+									 let option = ui.column.editor.options.find(function (obj) {
+										 return (obj[ui.cellData] != null);
+					               	 });
+					                	return option ? option[ui.cellData] : "";
+								   } 
+							},//작업상태
+					];                   
+					SKUgul = new GridUtil(SKUColModel , '[[${gprogrid}]]' , 'wmi10_SKUpqgrid');
+					SKUgul.setFind();
+					
+					SKUgul.setCreate(function(evt, ui){
+						Combo("wmi10_SKUpqgrid", "warekey", "", "/md/common/organization/warehouse"); //창고
+						Combo("wmi10_SKUpqgrid", "stkstat",  {comcdky : 'STKSTAT'}, "/md/common/code/common-code"); //재고상태
+						Combo("wmi10_SKUpqgrid", "ownerky", "", "/md/common/partner/owner"); //화주
+						$('#wmi10_ownerky').pqSelect({
+							deselect: false
+						});
+						
+						$('#wmi10_areanam').pqSelect({
+							deselect: false
+						});
+						
+						$('#wmi10_zonenam').pqSelect({
+							deselect: false
+						});
+					});	
+					
+			 		SKUgul.open();
+			 		let param = $('#wmi10_tab .nav-link.active');
+					let tab = param.data("tab-type");
+				};
+		
+			
+		
+			//============================================================
+			//LOCATION Call back
+			//============================================================	
+				function getLocation(){
+					let LOCAColModel = [
+							{ title: "[[#{wm.wstkky.compkey}]]", dataType: "string", dataIndx: "compkey", hidden: true , editable: false },//회사
+							{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey", editable: false, 
+								editor: { type: "select", options: [] },
+							  	render : function(ui){
+									let option = ui.column.editor.options.find(function (obj) {
+									 	return (obj[ui.cellData] != null);
+				                 	});
+				                	return option ? option[ui.cellData] : "";
+							   	}	
+							},//창고
+							{ title: "[[#{grid.ownamlc}]]", dataType: "string", dataIndx: "ownerky", editable: false,
+								editor: { type: "select", options: [] },
+							  	render : function(ui){
+									let option = ui.column.editor.options.find(function (obj) {
+									 	return (obj[ui.cellData] != null);
+				                 	});
+				                	return option ? option[ui.cellData] : "";
+							   	}		
+							},//화주
+							{ title: "[[#{grid.skuCode}]]", dataType: "string", dataIndx: "skumkey", editable: false }, //부품코드
+							{ title: "[[#{grid.skunm}]]", dataType: "string", dataIndx: "skudesc", editable: false }, //부품명
+							{ title: "[[#{md.mskuwc.upccode}]]", dataType: "string", dataIndx: "upccode" , editable: false }, //바코드
+							{ title: "[[#{md.marema.areakey}]]", dataType: "string", dataIndx: "areakey", editable: false, hidden: true }, //에어리어 키
+							{ title: "[[#{wm.wmi10.areanam}]]", dataType: "string", dataIndx: "areanam", editable: false }, //에어리어 명칭
+							{ title: "[[#{md.mzonma.zonekey}]]", dataType: "string", dataIndx: "zonekey", editable: false, hidden: true }, //존 키
+							{ title: "[[#{wm.wmi10.zonenam}]]", dataType: "string", dataIndx: "zonenam", editable: false }, //존 명칭
+							{ title: "[[#{md.mlocma.locakey}]]", dataType: "string", dataIndx: "locakey", editable: false, hidden: true }, //로케이션 키
+							{ title: "[[#{wm.wmi10.locanam}]]", dataType: "string", dataIndx: "locanam", editable: false }, //로케이션 명칭
+							{ title: "[[#{wm.wstkky.stkstat}]]", dataType: "string", dataIndx: "stkstat" , editable: false ,
+							   editor: {
+				   	                type: "textbox",
+			                        options: []
+				   	           },
+							   render : function(ui){
+								 let option = ui.column.editor.options.find(function (obj) {
+									 return (obj[ui.cellData] != null);
+				               	 });
+				                	return option ? option[ui.cellData] : "";
+							   } 
+							},//작업상태
+							{ title: "[[#{wm.wstkky.stotqty}]]", dataType: "integer", dataIndx: "stotqty", format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//총재고 수량
+							{ title: "[[#{wm.wmi10.avalqty}]]", dataType: "integer", dataIndx: "avalqty", format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//가용 재고
+							{ title: "[[#{wm.wstkky.sallqty}]]", dataType: "integer", dataIndx: "sallqty", format: '###,###,###' , editable: false , hidden: true,
+								summary: { type: "sum" }
+							},//할당수량
+							{ title: "[[#{wm.wstkky.sinbqty}]]", dataType: "integer", dataIndx: "sinbqty", format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//입고중 수량
+							{ title: "[[#{wm.wstkky.soubqty}]]", dataType: "integer", dataIndx: "soubqty", format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//출고중 수량
+							{ title: "[[#{wm.wstkky.sbloqty}]]", dataType: "integer", dataIndx: "sbloqty", format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//블락 수량
+					 ];                   
+					LOCAgul = new GridUtil(LOCAColModel , '[[${gprogrid}]]' , 'wmi10_LOCApqgrid');
+					LOCAgul.setFind();
+					
+					LOCAgul.setCreate(function(evt, ui){
+						Combo("wmi10_LOCApqgrid", "warekey", "", "/md/common/organization/warehouse"); //창고
+						Combo("wmi10_LOCApqgrid", "stkstat",  {comcdky : 'STKSTAT'}, "/md/common/code/common-code"); //재고상태
+						Combo("wmi10_LOCApqgrid", "ownerky", "", "/md/common/partner/owner"); //화주
+					});	
+		 	 		LOCAgul.open();
+		 	 		
+				};
+				
+				
+			//============================================================
+			//LOT Call back
+			//============================================================
+				function getLot(){				
+					let LOTColModel = [
+							{ title: "[[#{wm.wstkky.compkey}]]", dataType: "string", dataIndx: "compkey" , hidden: true , editable: false },
+							{ title: "[[#{grid.ownamlc}]]", dataType: "string", dataIndx: "ownerky" , editable: false, 
+								editor: { type: "select", options: [] },
+							  	render : function(ui){
+									let option = ui.column.editor.options.find(function (obj) {
+									 	return (obj[ui.cellData] != null);
+				                 	});
+				                	return option ? option[ui.cellData] : "";
+							   	}	
+							},//화주
+							{ title: "[[#{grid.whnamlc}]]", dataType: "string", dataIndx: "warekey" , editable: false, 
+								editor: { type: "select", options: [] },
+							  	render : function(ui){
+									let option = ui.column.editor.options.find(function (obj) {
+									 	return (obj[ui.cellData] != null);
+				                 	});
+				                	return option ? option[ui.cellData] : "";
+							   	}	
+							},//창고
+							{ title: "[[#{grid.skuCode}]]", dataType: "string", dataIndx: "skumkey" , editable: false }, //부품코드
+							{ title: "[[#{grid.skunm}]]", dataType: "string", dataIndx: "skudesc" , editable: false }, //부품명
+							{ title: "[[#{md.mskuwc.upccode}]]", dataType: "string", dataIndx: "upccode" , editable: false }, //바코드
+							{ title: "[[#{md.marema.areakey}]]", dataType: "string", dataIndx: "areakey" , editable: false, hidden: true }, //에어리어 키
+							{ title: "[[#{wm.wmi10.areanam}]]", dataType: "string", dataIndx: "areanam" , editable: false }, //에어리어 명칭
+							{ title: "[[#{md.mzonma.zonekey}]]", dataType: "string", dataIndx: "zonekey" , editable: false, hidden: true }, //존 키
+							{ title: "[[#{wm.wmi10.zonenam}]]", dataType: "string", dataIndx: "zonenam" , editable: false }, //존 명칭
+							{ title: "[[#{md.mlocma.locakey}]]", dataType: "string", dataIndx: "locakey" , editable: false, hidden: true }, //로케이션 키
+							{ title: "[[#{wm.wmi10.locanam}]]", dataType: "string", dataIndx: "locanam" , editable: false }, //로케이션 명칭
+							{ title: "[[#{wm.wstkky.lotnmky}]]", dataType: "string", dataIndx: "lotnmky" , editable: false }, //로트넘버
+							{ title: "[[#{wm.wstkky.lotat01}]]", dataType: "string", dataIndx: "lotat01" , editable: false, hidden: true }, //lot 속성 01
+							{ title: "[[#{wm.wstkky.lotat02}]]", dataType: "string", dataIndx: "lotat02" , editable: false, hidden: true }, //lot 속성 02
+							{ title: "[[#{wm.wstkky.lotat03}]]", dataType: "string", dataIndx: "lotat03" , editable: false, hidden: true }, //lot 속성 03
+							{ title: "[[#{wm.wstkky.lotat04}]]", dataType: "string", dataIndx: "lotat04" , editable: false, hidden: true }, //lot 속성 04
+							{ title: "[[#{wm.wstkky.lotat05}]]", dataType: "string", dataIndx: "lotat05" , editable: false, hidden: true }, //lot 속성 05
+							{ title: "[[#{wm.wstkky.lotat06}]]", dataType: "string", dataIndx: "lotat06" , editable: false, hidden: true }, //lot 속성 06
+							{ title: "[[#{wm.wstkky.lotat07}]]", dataType: "string", dataIndx: "lotat07" , editable: false, hidden: true }, //lot 속성 07
+							{ title: "[[#{wm.wstkky.lotat08}]]", dataType: "string", dataIndx: "lotat08" , editable: false, hidden: true }, //lot 속성 08
+							{ title: "[[#{wm.wstkky.lotat09}]]", dataType: "string", dataIndx: "lotat09" , editable: false, hidden: true }, //lot 속성 09
+							{ title: "[[#{wm.wstkky.lotat10}]]", dataType: "string", dataIndx: "lotat10" , editable: false, hidden: true }, //lot 속성 10
+							{ title: "[[#{wm.wstkky.lotat11}]]", dataType: "string", dataIndx: "lotat11" , editable: false, hidden: true }, //lot 속성 11
+							{ title: "[[#{wm.wstkky.lotat12}]]", dataType: "string", dataIndx: "lotat12" , editable: false, hidden: true }, //lot 속성 12
+							{ title: "[[#{wm.wstkky.lotat13}]]", dataType: "string", dataIndx: "lotat13" , editable: false, hidden: true }, //lot 속성 13
+							{ title: "[[#{wm.wstkky.lotat14}]]", dataType: "string", dataIndx: "lotat14" , editable: false, hidden: true }, //lot 속성 14
+							{ title: "[[#{wm.wstkky.lotat15}]]", dataType: "string", dataIndx: "lotat15" , editable: false, hidden: true }, //lot 속성 15
+							{ title: "[[#{wm.wstkky.lotat16}]]", dataType: "string", dataIndx: "lotat16" , editable: false, hidden: true }, //lot 속성 16
+							{ title: "[[#{wm.wstkky.lotat17}]]", dataType: "string", dataIndx: "lotat17" , editable: false, hidden: true }, //lot 속성 17
+							{ title: "[[#{wm.wstkky.lotat18}]]", dataType: "string", dataIndx: "lotat18" , editable: false, hidden: true }, //lot 속성 18
+							{ title: "[[#{wm.wstkky.lotat19}]]", dataType: "string", dataIndx: "lotat19" , editable: false, hidden: true }, //lot 속성 19
+							{ title: "[[#{wm.wstkky.lotat20}]]", dataType: "string", dataIndx: "lotat20" , editable: false, hidden: true }, //lot 속성 20
+							{ title: "[[#{wm.wstkky.shelife}]]", dataType: "integer", dataIndx: "shelife" , editable: false, hidden: true }, //유통기한
+							{ title: "[[#{wm.wstkky.expidat}]]", dataType: "string", dataIndx: "expidat" , editable: false, hidden: true }, //유통기간
+							{ title: "[[#{wm.wstkky.stkstat}]]", dataType: "string", dataIndx: "stkstat" , editable: false ,
+								editor: {
+				   	                type: "textbox",
+				                    options: []
+				   	            }
+							 , render : function(ui){
+								 let option = ui.column.editor.options.find(function (obj) {
+									 return (obj[ui.cellData] != null);
+				                 });
+				                	return option ? option[ui.cellData] : "";
+							   } 
+							},//작업상태
+							{ title: "[[#{wm.wstkky.stotqty}]]", dataType: "integer", dataIndx: "stotqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//총재고 수량
+							{ title: "[[#{wm.wmi10.avalqty}]]", dataType: "integer", dataIndx: "avalqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//가용재고
+							{ title: "[[#{wm.wstkky.sallqty}]]", dataType: "integer", dataIndx: "sallqty" , format: '###,###,###' , editable: false , hidden: true,
+								summary: { type: "sum" }
+							},//할당수량
+							{ title: "[[#{wm.wstkky.sinbqty}]]", dataType: "integer", dataIndx: "sinbqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//입고중 수량
+							{ title: "[[#{wm.wstkky.soubqty}]]", dataType: "integer", dataIndx: "soubqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//출고중 수량
+							{ title: "[[#{wm.wstkky.sbloqty}]]", dataType: "integer", dataIndx: "sbloqty" , format: '###,###,###' , editable: false ,
+								summary: { type: "sum" }
+							},//블록 수량
+						];
+						LOTgul = new GridUtil(LOTColModel , '[[${gprogrid}]]' , 'wmi10_LOTpqgrid');
+						LOTgul.setFind();
+					    LOTgul.setCreate(function(evt, ui){
+					    	Combo("wmi10_LOTpqgrid", "warekey", "", "/md/common/organization/warehouse"); //창고
+							Combo("wmi10_LOTpqgrid", "stkstat",  {comcdky : 'STKSTAT'}, "/md/common/code/common-code"); //재고상태
+							Combo("wmi10_LOTpqgrid", "ownerky", "", "/md/common/partner/owner"); //화주
+						});	
+				    	LOTgul.open();
+				};
+				
+				async function getAjax(tab){
+					let grid = pq.grid('#wmi10_'  + tab + "pqgrid");
+					let data = { 
+								 ownerky : $('#wmi10_ownerky option:selected').val() , warekey : $('#wmi10_warekey option:selected').val() , 
+								 skumkey : $('#wmi10_skumkey').val().toUpperCase()   , skudesc : $('#wmi10_skudesc').val() , 
+								 stkstat : $('#wmi10_stkstat option:selected').val() , 
+								 areakey : $('#wmi10_areanam').val(),
+								 zonekey : $('#wmi10_zonenam').val(),
+								 locanam : $('#wmi10_locanam').val().toUpperCase(),
+								 upccode : $('#wmi10_upccode').val().toUpperCase(),
+								  };
+					grid.showLoading();
+					
+					if(tab === 'SKU'){
+						let response = await fetchUtil("GET", "/wm/inventory/wmi10/grids/1", data);
+						try{
+							if(response.status === 200){
+								let resContent = await response.json();
+								if(resContent.length === 0){
+									grid.hideLoading();
+								}
+								grid.option("dataModel", { data: resContent });
+								grid.refreshDataAndView();
+							}
+						}catch(err){
+							console.log(err);
+						}finally{
+							grid.hideLoading();
+						}
+					} else if(tab === 'LOCA'){
+						let response = await fetchUtil("GET", "/wm/inventory/wmi10/grids/2", data);
+						try{
+							if(response.status === 200){
+								let resContent = await response.json();
+								if(resContent.length === 0){
+									grid.hideLoading();
+								}
+								grid.option("dataModel", { data: resContent });
+								grid.refreshDataAndView();
+							}
+						}catch(err){
+							console.log(err);
+						}finally{
+							grid.hideLoading();
+						}
+					} else if(tab === 'LOT'){
+						let response = await fetchUtil("GET", "/wm/inventory/wmi10/grids/3", data);
+						try{
+							if(response.status === 200){
+								let resContent = await response.json();
+								if(resContent.length === 0){
+									grid.hideLoading();
+								}
+								grid.option("dataModel", { data: resContent });
+								grid.refreshDataAndView();
+							}
+						}catch(err){
+							console.log(err);
+						}finally{
+							grid.hideLoading();
+						}
+					}
+				}
+				
+				function wmi10Init(){
+					let itemList = callAjax("data", "GET" , "/wm/inventory/wmi10/init/1", {});
+					areaList = callAjax('data', "GET", "/md/organization/mdo03/grids/1");
+					zoneList = callAjax('data', 'GET', "/wm/task/wmt10/zone");
+					let list = itemList;
+
+					let item1 = $('#wmi10_ownerky') //화주
+					let item2 = $('#wmi10_warekey') //창고
+					let item3 = $('#wmi10_stkstat') //재고상태
+					
+					//화주 ( item1 )
+					list.item1.filter(function(data) {
+						item1.append('<option value="' + data.combovl + '">' + data.combonm + '</option>');
+					});
+					
+					//창고 ( item2 )
+					list.item2.filter(function(data) {
+						item2.append('<option value="' + data.combovl + '">' + data.combonm + '</option>');
+					});
+					
+					//재고상태 ( item3 )
+					list.item3.filter(function(data) {
+						item3.append('<option value="' + data.combovl + '">' + data.combonm + '</option>');
+					});
+					
+					//검색영역에어리어
+					searchAreaList = areaList.filter(item => item['warekey'] === list.item2[0].combovl 
+													 && item['aruseyn'] === 'Y' 
+													 && item['areakey'] !== 'SHP'
+													 && item['areakey'] !== 'SYS');
+					//검색영역존
+					let searchZoneList = zoneList.filter(item => item['warekey'] === list.item2[0].combovl
+														 && item['areakey'] !== 'SHP'
+											 			 && item['areakey'] !== 'SYS');
+					
+					if(searchAreaList){
+						$("#wmi10_areanam option").not("[value='']").remove();
+						$.each(searchAreaList, function(key, value) {
+							$('#wmi10_areanam').append($("<option></option>").attr("value",value.areakey).text(value.areanam)); 
+						});
+					}
+					
+					if(searchZoneList){
+						$("#wmi10_zonenam option").not("[value='']").remove();
+						$.each(searchZoneList, function(key, value) {
+							$('#wmi10_zonenam').append($("<option></option>").attr("value",value.zonekey).text(value.zonenam)); 
+						});
+					}
+					
+					//창고변경시
+					item2.on('change', function(){
+						searchAreaList = areaList.filter(item => item['warekey'] === item2.val() 
+														 && item['aruseyn'] === 'Y'
+														 && item['areakey'] !== 'SHP'
+														 && item['areakey'] !== 'SYS');
+						$("#wmi10_areanam option").not("[value='']").remove();
+						$.each(searchAreaList, function(key, value) {
+							$('#wmi10_areanam').append($("<option></option>").attr("value",value.areakey).text(value.areanam)); 
+						});
+						$("#wmi10_areanam").pqSelect('refreshData');
+						
+						searchZoneList = zoneList.filter(item => item['warekey'] === item2.val()
+														&& item['areakey'] !== 'SHP'
+									 					&& item['areakey'] !== 'SYS');
+						$("#wmi10_zonenam option").not("[value='']").remove();
+						$.each(searchZoneList, function(key, value) {
+							$('#wmi10_zonenam').append($("<option></option>").attr("value",value.zonekey).text(value.zonenam)); 
+						});
+						$("#wmi10_zonenam").pqSelect('refreshData');
+						
+					});
+					
+					$("#wmi10_areanam").on('change', function(){
+						if($("#wmi10_areanam").val() !== ''){
+							searchZoneList = zoneList.filter(item => item['warekey'] === item2.val() 
+														  && item['areakey'] === $("#wmi10_areanam").val());
+							$("#wmi10_zonenam option").not("[value='']").remove();
+							$.each(searchZoneList, function(key, value) {
+								$('#wmi10_zonenam').append($("<option></option>").attr("value",value.zonekey).text(value.zonenam)); 
+							});
+							$("#wmi10_zonenam").pqSelect('refreshData');
+						} else{
+							searchZoneList = zoneList.filter(item => item['warekey'] === item2.val());;
+							$("#wmi10_zonenam option").not("[value='']").remove();
+							$.each(searchZoneList, function(key, value) {
+								$('#wmi10_zonenam').append($("<option></option>").attr("value",value.zonekey).text(value.zonenam)); 
+							});
+							$("#wmi10_zonenam").pqSelect('refreshData');
+						}
+					});
+				}
+				
+		});
+		
+		function tabGridInit(){
+			$(".tab-content .tab-pane").removeClass("active");
+			$(".tab-content .tab-pane.show").addClass("active");
+		}
+		
+		</script>
+	</div>
+</html>

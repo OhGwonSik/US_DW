@@ -1,0 +1,1199 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<div class="tab-contents">
+		<div class="search-conditions con-box">
+			<div class="setting-grid">
+				<!-- 창고 -->
+				<label for="bmb02Warekey" class="setting-grid-title ic-title-nece">[[#{bm.blgthd.warekey}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-group">
+						<select id="bmb02Warekey" name="bmb02Warekey" data-cb-val="combovl" data-cb-name="combonm" data-cb-url="/md/common/organization/warehouse-user" data-cb-select="" data-cb-variable="warekeyList">
+						</select>
+					</div>
+				</div>
+				<!-- 정산년월 -->
+				<label class="setting-grid-title ic-title-nece">[[#{bm.blgthd.blhyymm}]]</label>
+				<div class="setting-grid-content">
+					<div class="input-wrapper">
+						<input type="month" style="width: 100%;" max="2999-12" id="bmb02Blhyymm" onkeyup="setInputDateDel(this)" />
+					</div>
+				</div>
+			</div>
+			<div class="search-btn-group">
+				<button type="button" class="btn-search btn-navy btn-green" id="bmb02Search">
+					<img>[[#{bt.search}]]
+				</button>
+				<button type="button" class="btn-clear btn-white" id="bmb02Reset">
+					<img>[[#{bt.reset}]]
+				</button>
+			</div>
+		</div>
+		<div class="search-list">
+			<div class="list-top">
+				<div class="list-title ic-title-mark">
+					<span th:text="${gnatitle}"></span>
+				</div>
+				<div class="edit-btn-wrapper">
+					<button class="btn-white" id="bmb02Receipt">
+						<img class="ic-bt-print">[[#{bt.bm.receipt}]]
+					</button>
+					<button class="btn-navy btn-green" id="bmb02CancelDeadLine">
+						<img class="ic-bt-cancel-g">[[#{bt.bm.canceldeadline}]]
+					</button>
+					<button class="btn-navy btn-green" id="bmb02Verify" disabled>
+						<img class="ic-bt-save">[[#{bt.bm.verification}]]
+					</button>
+					<button class="btn-navy btn-green" id="bmb02ModalOpen" disabled>
+						<img class="ic-bt-add-g">[[#{bt.bm.othercost}]]
+					</button>
+				</div>
+			</div>
+			<!-- Head Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb02HeadPqgrid"></div>
+				</div>
+			</div>
+			<!-- Item Grid -->
+			<div class="search-list">
+				<div class="list-grid-wrapper con-box">
+					<div id="bmb02ItemPqgrid"></div>
+				</div>
+			</div>
+			<!-- 로딩 이미지 부분 -->
+			<div class="spinner" id="spinner"></div>
+		</div>
+	</div>
+	<div class="modal fade" id="bmb02Modal" tabindex="-1" role="dialog" aria-labelledby="bmb02ModalTitle" aria-hidden="true" data-backdrop='static' data-keyboard='false'>
+		<div class="modal-dialog" role="document">
+			<div class="modal-content popup-register modal-con" style="top: 120px; display: flex;">
+				<div class="modal-top" id="bmb02ModalTitle">
+					<h5 class="box-title">[[#{bt.bm.othercost}]]</h5>
+					<button type="button" id="modalHeadClose" class="close" data-bs-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<div class="setting-grid">
+						<label class="setting-grid-title ic-title-nece"> [[#{bm.bmb02.othercost}]] </label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="text" id="bmb02OtherCost" onfocus="this.select()" th:placeholder="${#messages.msg('bm.bmb02.othercost')}">
+							</div>
+						</div>
+						<label class="setting-grid-title"> [[#{bm.blgtit.blrremk}]] </label>
+						<div class="setting-grid-content">
+							<div class="input-wrapper">
+								<input type="text" id="bmb02Blrremk" onfocus="this.select()" th:placeholder="${#messages.msg('bm.blgtit.blrremk')}">
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-bottom">
+					<button type="button" class="btn-save btn-navy btn-green" id="bmb02SaveModal">[[#{bt.save}]]</button>
+					<button type="button" class="btn-white btn-close" id="bmb02CloseModal" data-bs-dismiss="modal">[[#{bt.cancel}]]</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+	/*
+	  ------------------------------------------
+	  - 페이지명 : bmb02
+	  - 최초생성자 : BM
+	  - 최초생성일시 : 2023.10
+	  - 설명 : 물류비검증처리
+	  ------------------------------------------
+	*/
+
+	// regular expression 함수
+    function inputOnlyNumberFormat(obj) { // 함수형 프로그래밍
+        obj.value = inputOnlyNumberAndComma(removeComma(obj.value));
+    }
+
+    function inputOnlyNumberAndComma(str) { // 숫자전용 및 콤마 처리(공통 함수 있는 것을 사용하면 오류가 나서 따로 만듦)
+	    return String(str).replace(/(\d)(?=(?:\d{3})+(?!\d))/g, '$1,');
+	}
+
+    function removeComma(str) { // 콤마제거(공통 함수 있는 것을 사용하면 오류가 나서 따로 만듦)
+        return String(str).replace(/[^-+\d]+/g, '');
+    }
+
+$(function() {
+	//----------- 전역변수 ------------//
+	const pageId = '[[${gprogrid}]]';
+	const bmb02ComboData = {};
+	let bmb02InitData;
+	let bmb02Warekey;
+	let bmb02HeadGridObject;
+	let bmb02ItemGridObject;
+	//----------- 전역변수 end ------------//
+
+	//----------- 검색영역 Event ------------//
+	$('#'+pageId+'Blhyymm').val(moment().format('YYYY-MM')); //당월
+
+	$('#'+pageId+'Search').click(async function(){
+		await searchBmb02HeadList();
+		setDisableButtonForVerifiedLogisCost();
+	});
+
+	$('#'+pageId+'Reset').click(async function(){
+		resetSearchConditions();
+		await resetTabContainer(bmb02HeadGridObject.getGrid());
+		await makeEmptyGrid(bmb02ItemGridObject);
+		setDisableButtonForVerifiedLogisCost();
+	});
+
+	$('#'+pageId+'OtherCost').keyup(function(){
+		inputOnlyNumberFormat(this);
+	});
+	//----------- 검색영역 Event end ------------//
+
+	//----------- 기능버튼 Event ------------//
+	// 출력물
+	$('#'+pageId+'Receipt').click(async function() {
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const hgTabs = headGrid.Tab().tabs();
+
+		if(!hgTabs?.length || !headGrid?.Tab()?.activeTab()?.gridOptions?.dataModel?.data?.length){ // 탭이 없거나 활성화 된 탭의 데이터가 없다면
+			alert('[[#{ms.nodataForPrintOut}]]');
+
+			return;
+		}
+
+		if(await confirm('[[#{ms.printout}]]')) {
+			headGrid.Tab().activeTab()._inst.showLoading();
+			bmb02ItemGridObject.getGrid().showLoading();
+			$('#spinner').css('display', '');
+
+			const report = [];
+
+			for(const tab of hgTabs) {
+				const tabData = tab?.gridOptions?.dataModel?.data;
+				const reportObj = {
+					warekey: tabData[0].warekey,
+					ownerky: tabData[0].ownerky,
+					ptnrkey: tabData[0].ptnrkey,
+					blhdcky: tabData[0].blhdcky,
+					blrpmgb: tabData[0].blrpmgb,
+					type: 'bmb10'
+				};
+
+				report.push(reportObj);
+			};
+
+			const sendReportObj = {
+				reportList: report,
+				progrid: '[[${gprogrid}]]',
+				warekey: bmb02Warekey,
+				type: 'bmb10'
+			}
+
+			await reportPrint(sendReportObj, 'bm');
+			headGrid.Tab().activeTab()._inst.hideLoading();
+			bmb02ItemGridObject.getGrid().hideLoading();
+		}
+	});
+
+	// 마감 취소
+	$('#'+pageId+'CancelDeadLine').click(async function() {
+		await cancelLogisCostDeadLine(); // 프로시저 실행
+	});
+
+	// 검증완료
+	$('#'+pageId+'Verify').click(async function() {
+		if(await !confirm('[[#{ms.confirm.verifying}]]')){
+			return;
+		}
+
+		await verifyingLogisCost(); // 프로시저 실행
+	});
+
+	// 기타비용 추가
+	$('#' + pageId + 'ModalOpen').click(function() {
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const hgTabs = headGrid.Tab().tabs();
+		const hgActiveTab = bmb02HeadGridObject.getGrid().Tab().activeTab();
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		if(!hgTabs?.length || !dataTarget?.length){ // 탭이 없거나 그리드에 데이터가 없을 경우
+			alert('[[#{ms.noDataForVerifying}]]');
+
+			return;
+		}
+
+		$('#' + pageId +'Modal').modal('show');
+	});
+
+	// Head Grid column model
+	const bmb02HeadGridColModel = [
+		{
+			title: '[[#{bm.blgtit.compkey}]]',
+			dataType: 'string',
+			dataIndx: 'compkey',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.warekey}]]',
+			dataType: 'string',
+			dataIndx: 'warekey',
+			editable: false,
+			hidden: true,
+ 			editor: {
+        		type: 'select',
+                options: ui => bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.blhdcky}]]',
+			dataType: 'string',
+			dataIndx: 'blhdcky',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.ownerky}]]',
+			dataType: 'string',
+			dataIndx: 'ownerky',
+			editable: false,
+			hidden: true,
+ 			editor: {
+        		type: 'select',
+                options: ui => bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.ptnrkey}]]',
+			dataType: 'string',
+			dataIndx: 'ptnrkey',
+			editable: false,
+			hidden: true,
+ 			editor: {
+        		type: 'select',
+                options: ui =>  bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.bflcode}]]',
+			dataType: 'string',
+			dataIndx: 'bflcode',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.bvlcode}]]',
+			dataType: 'string',
+			dataIndx: 'bvlcode',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.bplcode}]]',
+			dataType: 'string',
+			dataIndx: 'bplcode',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.blrpmgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrpmgb',
+			editable: false,
+			hidden: true,
+ 			editor: {
+        		type: 'select',
+                options: ui =>  bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.blrcsgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrcsgb',
+			editable: false,
+			width: 120,
+ 			editor: {
+        		type: 'select',
+                options: ui => bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return {
+              		text: option ? option[ui.cellData] : ui.cellData,
+     				cls : getSummaryCellClass(ui)
+              	};
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.blrtkgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrtkgb',
+			editable: false,
+			width: 120,
+ 			editor: {
+        		type: 'select',
+                options: ui => bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return {
+              		text: option ? option[ui.cellData] : ui.cellData,
+              		cls : getSummaryCellClass(ui)
+              	};
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.doccate}]]',
+			dataType: 'string',
+			dataIndx: 'doccate',
+			editable: false,
+			width: 120,
+ 			editor: {
+        		type: 'select',
+	            options: ui => {
+	           		return bmb02InitData[ui.dataIndx].map(obj => {
+	           			if(obj['warekey'] === ui.rowData['warekey']){
+	        				let rObj = new Object;
+
+	        				rObj[obj[ui.dataIndx]] = obj['docctnm'];
+
+	        				return rObj;
+	           			}
+	           		}).filter(e => e);
+	          	},
+           		prepend: { '' : ' ' }
+       		},
+			render: ui => {
+				const option = bmb02InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey'] && obj[ui.dataIndx] === ui.cellData);
+
+				return {
+					text: option && ui.cellData ? option['docctnm'] : ui.cellData,
+					cls : getSummaryCellClass(ui)
+				};
+			},
+		},
+		{
+			title: '[[#{bm.blgtit.doctype}]]',
+			dataType: 'string',
+			dataIndx: 'doctype',
+			editable: false,
+			width: 120,
+ 			editor: {
+        		type: 'select',
+	            options: ui => {
+	           		return bmb02InitData[ui.dataIndx].map(obj => {
+	           			if(obj['warekey'] === ui.rowData['warekey'] && obj['doccate'] === ui.rowData['doccate']){
+	        				let rObj = new Object;
+
+	        				rObj[obj[ui.dataIndx]] = obj['doctynm'];
+
+	        				return rObj;
+	           			}
+	           		}).filter(e => e);
+	          },
+           	  prepend: { '' : ' ' }
+   		  	},
+			render: ui => {
+				const option = bmb02InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey']
+																					&& obj['doccate'] === ui.rowData['doccate']
+																					&& obj[ui.dataIndx] === ui.cellData);
+
+				return {
+					text: option && ui.cellData ? option['doctynm'] : ui.cellData,
+					cls : getSummaryCellClass(ui)
+				};
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.refcqty}]]',
+			dataType: 'integer',
+			dataIndx: 'refcqty',
+			editable: false,
+			width: 120,
+			summary: { type: 'sum' },
+			format: '#,###',
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blrunit}]]',
+			dataType: 'string',
+			dataIndx: 'blrunit',
+			editable: false,
+			width: 120,
+			editor: {
+				type: 'select',
+				options: ui => bmb02ComboData[ui.dataIndx]
+			},
+			render: ui => {
+				const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return {
+					text: option ? option[ui.cellData] : ui.cellData,
+					cls : getSummaryCellClass(ui)
+				};
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blrcost}]]',
+			dataType: 'integer',
+			dataIndx: 'blrcost',
+			width: 120,
+			summary: { type: 'sum'},
+			format: '#,###',
+            editable: ui => {
+            	const headGrid = bmb02HeadGridObject.getGrid();
+        		const hgActiveTab = headGrid.Tab().activeTab();
+
+            	return hgActiveTab?._inst?.iUCData?.adata?.findIndex(e => e.rowData.pq_ri === ui.rowIndx) !== -1; // add된 데이터일 경우
+            },
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blramot}]]',
+			dataType: 'integer',
+			dataIndx: 'blramot',
+			editable: false,
+			width: 120,
+			summary: { type: 'sum' },
+			format: '#,###',
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		},
+		{
+			title: '[[#{bm.bmb02.blramtx}]]',
+			dataType: 'integer',
+			dataIndx: 'blramtx',
+			editable: false,
+			width: 120,
+			summary: { type: 'sum' },
+			format: '#,###',
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		},
+		{
+			title: '[[#{bm.bmb02.blrsumy}]]',
+			dataType: 'integer',
+			dataIndx: 'blrsumy',
+			editable: false,
+			width: 120,
+			summary: { type: 'sum' },
+			format: '#,###',
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blrremk}]]',
+			dataType: 'string',
+			dataIndx: 'blrremk',
+			width: 120,
+            editable: ui => {
+            	const headGrid = bmb02HeadGridObject.getGrid();
+        		const hgActiveTab = headGrid.Tab().activeTab();
+
+        		return hgActiveTab.gridOptions.dataModel.data.findIndex(e => e.pq_ri === ui.rowIndx) !== -1 && 'Y' !== ui.rowData.lcvrfyn; // add된 데이터일 경우 + 검증완료 아닐경우
+            },
+			render : ui => {
+ 				return {
+ 					cls : getSummaryCellClass(ui)
+ 				}
+			}
+		}
+	]
+
+	// Head Grid Object 및 기본 세팅
+	bmb02HeadGridObject = new GridUtil([], '[[${gprogrid}]]', pageId+'HeadPqgrid');
+
+	// Item Grid column model
+	const bmb02ItemGridColModel = [
+		{
+			title: '[[#{bm.blgtit.compkey}]]',
+			dataType: 'string',
+			dataIndx: 'compkey',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.warekey}]]',
+			dataType: 'string',
+			dataIndx: 'warekey',
+			editable: false,
+ 			editor: {
+        		type: 'select',
+                options: ui => bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.blhdcky}]]',
+			dataType: 'string',
+			dataIndx: 'blhdcky',
+			editable: false
+		},
+		{
+			title: '[[#{bm.blgtit.doccate}]]',
+			dataType: 'string',
+			dataIndx: 'doccate',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => {
+					return bmb02InitData[ui.dataIndx].map(obj => {
+						if(obj['warekey'] === ui.rowData['warekey']){
+							let rObj = new Object;
+
+							rObj[obj[ui.dataIndx]] = obj['docctnm'];
+
+							return rObj;
+						}
+					}).filter(e => e);
+				},
+				prepend: { '' : ' ' }
+			},
+			render: ui => {
+				const option = bmb02InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey'] && obj[ui.dataIndx] === ui.cellData);
+
+				return { text: option && ui.cellData ? option['docctnm'] : ui.cellData };
+			},
+		},
+		{
+			title: '[[#{bm.blgtit.doctype}]]',
+			dataType: 'string',
+			dataIndx: 'doctype',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => {
+					return bmb02InitData[ui.dataIndx].map(obj => {
+						if(obj['warekey'] === ui.rowData['warekey'] && obj['doccate'] === ui.rowData['doccate']){
+							let rObj = new Object;
+
+							rObj[obj[ui.dataIndx]] = obj['doctynm'];
+
+							return rObj;
+						}
+					}).filter(e => e);
+				},
+				prepend: { '' : ' ' }
+			},
+			render: ui => {
+				const option = bmb02InitData[ui.dataIndx].find(obj => obj['warekey'] === ui.rowData['warekey']
+						&& obj['doccate'] === ui.rowData['doccate']
+						&& obj[ui.dataIndx] === ui.cellData);
+
+				return { text: option && ui.cellData ? option['doctynm'] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.ownerky}]]',
+			dataType: 'string',
+			dataIndx: 'ownerky',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => bmb02ComboData[ui.dataIndx]
+			},
+			render: ui => {
+				const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.ptnrkey}]]',
+			dataType: 'string',
+			dataIndx: 'ptnrkey',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => bmb02ComboData[ui.dataIndx]
+			},
+			render: ui => {
+				const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.skumkey}]]',
+			dataType: 'string',
+			dataIndx: 'skumkey',
+			editable: false
+		},
+		{
+			title: '[[#{bm.blgtit.skudesc}]]',
+			dataType: 'string',
+			dataIndx: 'skudesc',
+			editable: false
+		},
+		{
+			title: '[[#{bm.blgtit.refcqty}]]',
+			dataType: 'integer',
+			dataIndx: 'refcqty',
+			editable: false,
+			summary: { type: 'sum' },
+			format: '#,###'
+		},
+		{
+			title: '[[#{bm.blgtit.blrunit}]]',
+			dataType: 'string',
+			dataIndx: 'blrunit',
+			editable: false,
+ 			editor: {
+        		type: 'select',
+                options: ui => bmb02ComboData[ui.dataIndx]
+			},
+            render: ui => {
+            	const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+              	return { text: option ? option[ui.cellData] : ui.cellData };
+            }
+		},
+		{
+			title: '[[#{bm.blgtit.blrpmgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrpmgb',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => bmb02ComboData[ui.dataIndx]
+			},
+			render: ui => {
+				const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blrcsgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrcsgb',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => bmb02ComboData[ui.dataIndx]
+			},
+			render: ui => {
+				const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blrtkgb}]]',
+			dataType: 'string',
+			dataIndx: 'blrtkgb',
+			editable: false,
+			editor: {
+				type: 'select',
+				options: ui => bmb02ComboData[ui.dataIndx]
+			},
+			render: ui => {
+				const option = bmb02ComboData[ui.dataIndx].find(obj => obj[ui.cellData]);
+
+				return { text: option ? option[ui.cellData] : ui.cellData };
+			}
+		},
+		{
+			title: '[[#{bm.blgtit.blrcost}]]',
+			dataType: 'integer',
+			dataIndx: 'blrcost',
+			editable: false,
+			summary: { type: 'sum' },
+			format: '#,###'
+		},
+		{
+			title: '[[#{bm.blgtit.blramot}]]',
+			dataType: 'integer',
+			dataIndx: 'blramot',
+			editable: false,
+			summary: { type: 'sum' },
+			format: '#,###'
+		},
+		{
+			title: '[[#{bm.blgtit.credate}]]',
+			dataType: 'string',
+			dataIndx: 'credate',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.cretime}]]',
+			dataType: 'string',
+			dataIndx: 'cretime',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.creuser}]]',
+			dataType: 'string',
+			dataIndx: 'creuser',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.lmodate}]]',
+			dataType: 'string',
+			dataIndx: 'lmodate',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.lmotime}]]',
+			dataType: 'string',
+			dataIndx: 'lmotime',
+			editable: false,
+			hidden: true
+		},
+		{
+			title: '[[#{bm.blgtit.lmouser}]]',
+			dataType: 'string',
+			dataIndx: 'lmouser',
+			editable: false,
+			hidden: true
+		}
+	];
+
+	bmb02ItemGridObject = new GridUtil(bmb02ItemGridColModel, '[[${gprogrid}]]', pageId+'ItemPqgrid');
+
+	bmb02HeadGridObject.setTabModel([createDefaultTabObject()]);
+
+	bmb02HeadGridObject.setCreate(async function (evt, ui) {
+		if(bmb02InitData){
+			return;
+		}
+
+		await _commonInit();
+		await initBmb02();
+
+		for(const key of Object.keys(bmb02InitData)){
+			const gData = bmb02InitData[key];
+
+			if('doccate' !== key || 'doctype' !== key){
+				const options = gData.map(obj => {
+		        	let rObj = new Object;
+
+		        	rObj[obj['combovl']] = obj['combonm'];
+
+		        	return rObj;
+				});
+
+				bmb02ComboData[key] = options;
+			}
+		}
+	});
+
+	// Head Grid DoubleClick Event
+	bmb02HeadGridObject.setRowDblClick(async function(event, ui) {
+		const target = ui.rowData;
+
+		if('[[#{bm.bmb02.blrcsgb.other}]]' === target.blrcsgb || !target.blrcsgb){ // ETC 또는 계정 값이 없을 때
+			return;
+		}
+
+		if('blrpmgb' === ui.dataIndx && 'blrcsgb' === ui.dataIndx && 'blrtkgb' === ui.dataIndx){ // 특정 column에서는 작동 하지 않게
+			return;
+		}
+
+		const params = new Object;
+		const colData = ['compkey', 'warekey', 'blhdcky', 'ownerky', 'bflcode',
+								'bvlcode', 'bplcode', 'ptnrkey', 'blrpmgb', 'blrcsgb',
+								'blrtkgb', 'blrunit', 'doccate', 'doctype']
+
+		colData.forEach(key => {
+								if(target.hasOwnProperty(key)){ // 오류방지
+									params[key] = target[key];
+								}
+							});
+
+		const groupCols = ['blrpmgb' ,'blrcsgb', 'blrtkgb'];
+		const changeCols = Object.keys(this.columns).filter(col => !groupCols.includes(col)); // group column들은 제외하고 강조하기 위한 배열 생성
+
+		for(let rowIdx=0; rowIdx<this.pdata.length; rowIdx++){ // 선택한 row 강조
+			for(const col of changeCols){
+				rowIdx === ui.rowIndx && !(this.pdata[rowIdx].hasOwnProperty('pq_gsummary') && this.pdata[rowIdx].pq_gsummary)
+						  ? this.addClass({
+								  rowIndx : ui.rowIndx,
+								  dataIndx: col, cls: 'color-blue font-weight-bold'
+							  })
+						  : this.removeClass({
+								  rowIndx : rowIdx,
+								  dataIndx: col,
+								  cls: 'color-blue font-weight-bold'
+							 });
+			}
+		}
+
+		if(!target.bflcode?.trim() && (target.bvlcode?.trim() || target.bplcode?.trim())){ // 고정코드row = 검색안함
+			await searchBmb02ItemList(params);
+			turnOnGridGruopSummary(bmb02ItemGridObject.getGrid());
+
+			return;
+		}
+
+		bmb02ItemGridObject.getGrid().showLoading();
+		bmb02ItemGridObject.getGrid().option('dataModel', { data : [] });
+		bmb02ItemGridObject.getGrid().refreshDataAndView();
+		bmb02ItemGridObject.getGrid().hideLoading();
+	});
+
+	// Head Grid 데이터 변경시 Event
+	bmb02HeadGridObject.setChange(function(event, ui){
+    	if('add' === ui.source){
+    		for(const addData of ui.addList){
+    			if(addData.newRow.hasOwnProperty('blrcost') && !addData.rowData.bflcode?.trim()
+    																			&& !addData.rowData.bvlcode?.trim()
+																				&& !addData.rowData.bplcode?.trim()
+																				&& '[[#{bm.bmb02.blrcsgb.other}]]' === addData.rowData.blrcsgb
+																				&& 'number' === (typeof addData.rowData.blrcost)){
+   				 addData.rowData['blramot'] = addData.rowData.blrcost;
+   				 addData.rowData['blramtx'] = Math.round(addData.rowData.blrcost * 0.1);
+   				 addData.rowData['blrsumy'] = Number(addData.rowData.blramtx) + Number(addData.rowData.blramot);
+   				}
+    		}
+    	}
+
+     	if('edit' === ui.source || 'paste' === ui.source){
+	    	const updateRowList = [];
+
+			for(const updateData of ui.updateList){
+    			if(updateData.newRow.hasOwnProperty('blrcost') && updateData.oldRow.hasOwnProperty('blrcost')
+    																				&& !updateData.rowData.bflcode?.trim()
+																					&& !updateData.rowData.bvlcode?.trim()
+																					&& !updateData.rowData.bplcode?.trim()
+																					&& '[[#{bm.bmb02.blrcsgb.other}]]' === updateData.rowData.blrcsgb
+																					&& 'number' === (typeof updateData.rowData.blrcost)){
+					updateData.rowData['blramot'] = updateData.rowData.blrcost;
+					updateData.newRow['blramot'] = updateData.rowData['blramot'];
+
+					updateData.rowData['blramtx'] = Math.round(updateData.rowData.blrcost * 0.1);
+					updateData.newRow['blramot'] = updateData.rowData['blramtx'];
+
+					updateData.rowData['blrsumy'] = Number(updateData.rowData.blramtx) + Number(updateData.rowData.blramot);
+					updateData.newRow['blrsumy'] = updateData.rowData['blrsumy'];
+    			}
+				updateRowList.push({
+					rowIndx: updateData.rowIndx,
+					newRow: updateData.newRow
+				});
+			}
+
+			this.updateRow({
+				rowList: updateRowList,
+				checkEditable: false
+			});
+    	}
+	});
+
+	// Grid 객체 생성
+	bmb02HeadGridObject.open();
+	bmb02ItemGridObject.open();
+
+	//============================================================
+	// 검색 버튼 이벤트
+	//============================================================
+	// Head Grid 정산 데이터 조회
+	async function searchBmb02HeadList(){
+		//검색 영역 필수값 (창고,정산년월To)
+		if(!$('#'+pageId+'Blhyymm').val()){
+			alert('[[#{bm.bmb02.blhyymmto.requiredValue}]]');	//정산년월을 선택해주세요.
+
+			return false;
+		}
+
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const headGridTab = headGrid.Tab();
+		const tabModel = headGrid.option('tabModel');
+		const tabs = headGridTab.tabs();
+
+		tabModel.tabs.length>0 ? headGridTab.activeTab()._inst.showLoading() : headGrid.showLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+		bmb02Warekey = $('#'+pageId+'Warekey').val();
+		const param = {
+			warekey: bmb02Warekey,
+			blhyymm: $('#'+pageId+'Blhyymm').val()
+		}
+		const rData = await fetchUtil('GET', '/bm/billing/'+ pageId + '/grid-head', param);
+
+		if(rData.status===200){
+			const items = await rData.json();
+
+			resetTabContainer(bmb02HeadGridObject.getGrid());
+
+			if(items?.length){
+				const startIdxForInsert = tabModel.tabs.length-1;
+				const groupCols = ['blrpmgb' ,'blrcsgb', 'blrtkgb'];
+				const groupBy = ['ownerky', 'ptnrkey', 'blrpmgb'];
+				const groupByName = ['ownamlc', 'ptnamlc', 'blrpmnm'];
+				const summaryCols = ['refcqty', 'blrcost', 'blramot', 'blramtx', 'blrsumy'];
+
+				tabModel.tabs.push(... createTabModel(items, bmb02HeadGridColModel, groupCols, groupBy, groupByName, summaryCols)); // spread operator(배열 각 요소를 빼서 합침)
+
+				let tabModelLength = tabModel.tabs.length;
+
+				for(let idx=startIdxForInsert; idx<tabModelLength; idx++){
+					headGridTab.create(idx);
+				}
+
+				headGridTab.activate(startIdxForInsert+1); // 추가된 tab 중 첫번째 활성화
+
+				tabModelLength = tabModel.tabs.length; // 루프를 위해서 값 재할당
+
+				for(let tmIdx=0; tmIdx<tabModelLength; tmIdx++){
+					if(!tabs[tmIdx].hasOwnProperty('gridOptions') 	|| (tabs[tmIdx].hasOwnProperty('gridOptions') && !tabs[tmIdx].gridOptions)
+																					|| (tabs[tmIdx].gridOptions.hasOwnProperty('dataModel') && !tabs[tmIdx].gridOptions.dataModel)){
+						headGridTab.remove(tmIdx);  // gridOption값 이 없거나 dataModel이 없으면 default tab으로 간주하여 삭제함
+						tmIdx = 0;
+						tabModelLength = tabModel.tabs.length; // remove 했다면 배열 크기가 바뀌어 꼬이기 때문에 다시 초기 값으로 변경 후 재루프함
+					}
+				}
+			}
+		}
+
+		tabModel.tabs.length>0 ? headGridTab.activeTab()._inst.hideLoading() : headGrid.hideLoading();
+		bmb02ItemGridObject.getGrid().option( 'dataModel', { data: [] } );
+		bmb02ItemGridObject.getGrid().refreshDataAndView();
+		bmb02ItemGridObject.getGrid().hideLoading();
+	}
+
+	//============================================================
+	// 아이템 그리드 검색
+	//============================================================
+	// Head Grid Row 더블클릭시 조회
+	async function searchBmb02ItemList(params){
+		if(!params){
+			return;
+		}
+
+		bmb02ItemGridObject.getGrid().showLoading();
+
+		const rData = await fetchUtil('GET', '/bm/billing/'+ pageId + '/grid-item', params);
+		const itemGrid = bmb02ItemGridObject.getGrid();
+
+		if(rData.status===200){
+			const items = await rData.json();
+
+			itemGrid.option( 'dataModel', { data : items });
+			itemGrid.refreshDataAndView();
+		}
+		itemGrid.hideLoading();
+	}
+
+	// 검증완료 함수
+	async function verifyingLogisCost(){
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const tabModel = headGrid.option('tabModel');
+		const hgTabs = headGrid.Tab().tabs();
+		const hgActiveTab = headGrid.Tab().activeTab();
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		if(!hgTabs?.length || !dataTarget?.length){ // Head Grid에 탭이 없거나 데이터가 없으면
+			alert('[[#{ms.noDataForVerifying}]]');
+
+			return;
+		}
+
+		const etcList = [];
+		const updateBlrremkList = [];
+
+		for(const hgTab of hgTabs){
+			etcList.push(... hgTab._inst.getChanges().addList); // 기타비용
+
+			const tabDataList = await hgTab._inst.getData().filter(data => hgTab._inst.getChanges().addList.findIndex(etc => etc.pq_ri === data.pq_ri) === -1 && data.blrremk); // 비고
+
+			updateBlrremkList.push(... tabDataList);
+ 		}
+
+ 		const data = {
+ 			compkey: '[[${userattr.compkey}]]',
+ 			warekey: dataTarget[0].warekey,
+			blhdcky: dataTarget[0].blhdcky,
+ 			etcList: etcList,
+ 			updateBlrremkList: updateBlrremkList
+ 		}
+
+		tabModel.tabs.length>0 ? hgActiveTab._inst.showLoading() : headGrid.showLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+		const url = '/bm/billing/' + pageId + '/verify';
+		const verifyingLogisCostResponse = await fetchUtil('POST', url, data);
+
+		tabModel.tabs.length>0 ? hgActiveTab._inst.hideLoading() : headGrid.hideLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+		if(verifyingLogisCostResponse.status === 200){
+			resetTabContainer(bmb02HeadGridObject.getGrid());
+			makeEmptyGrid(bmb02ItemGridObject);
+		}
+	}
+
+	// 마감취소
+	async function cancelLogisCostDeadLine(){
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const tabModel = headGrid.option('tabModel');
+		const hgTabs = headGrid.Tab().tabs();
+		const hgActiveTab = headGrid.Tab().activeTab();
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		if(hgTabs.length === 0 || !dataTarget?.length){ // 탭이 없거나 데이터가 없으면
+			alert('[[#{ms.noDataForCancelDeadline}]]');
+
+			return;
+		}
+
+ 		const data = {
+ 			compkey: '[[${userattr.compkey}]]',
+ 			warekey: dataTarget[0].warekey,
+ 			blhdcky: dataTarget[0].blhdcky
+ 		}
+
+		tabModel.tabs.length>0 ? hgActiveTab._inst.showLoading() : headGrid.showLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+		const url = '/bm/billing/' + pageId + '/cancel-deadline';
+		const cancelLogisCostDeadLineResponse = await fetchUtil('POST', url, data);
+
+		tabModel.tabs.length>0 ? hgActiveTab._inst.hideLoading() : headGrid.hideLoading(); // Grid 탭 상태에 따라 로딩 주체 구분
+
+		if(cancelLogisCostDeadLineResponse.status === 200){
+			alert('[[#{ms.cancelComplete}]]');
+			await resetTabContainer(bmb02HeadGridObject.getGrid());
+			await makeEmptyGrid(bmb02ItemGridObject);
+			setDisableButtonForVerifiedLogisCost();
+		}
+	}
+
+	// 검증완료, 기타비용추가 비활성화 함수
+	function setDisableButtonForVerifiedLogisCost(){
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const hgTabs = headGrid.Tab().tabs();
+		const hgActiveTab = headGrid.Tab().activeTab();
+		const verifyBtn = document.getElementById(pageId + 'Verify');
+		const otherCostModalBtn = document.getElementById(pageId + 'ModalOpen');
+
+		if(!hgTabs?.length || !hgActiveTab?._inst.getData()?.length || 'Y' === hgActiveTab?._inst.getData()[0]?.lcvrfyn ){ // 탭이 없거나 데이터가 없거나 검증완료 했을 경우
+			verifyBtn.setAttribute('disabled', 'disabled');
+			otherCostModalBtn.setAttribute('disabled', 'disabled');
+		} else {
+			verifyBtn.removeAttribute('disabled');
+			otherCostModalBtn.removeAttribute('disabled');
+		}
+	}
+
+	//============================================================
+	// Init 이벤트
+	//============================================================
+	async function initBmb02(){
+		const iData = await fetchUtil('GET', '/bm/billing/' + pageId + '/init');
+		const jData = await iData.json();
+
+		bmb02InitData = jData.item;
+	}
+
+	// 모달창 닫기 및 초기화 함수
+	function closeAndResetModal(){
+		$('#' + pageId +'Modal').modal('hide');
+
+		const $inputs = $('#' + pageId +'Modal' + ' .modal-body .setting-grid').find('input');
+
+		for(let inputDom of $inputs){
+			inputDom.value = '';
+		}
+	}
+
+	//============================================================
+	// modal close 버튼들 클릭 이벤트
+	//============================================================
+	$('#modalHeadClose, #' + pageId + 'CloseModal').click(function(){
+		closeAndResetModal();
+	});
+
+	//============================================================
+	// modal save 버튼 클릭 이벤트
+	//============================================================
+	$('#' + pageId + 'SaveModal').click(async function(){
+		if(!bmb02Warekey){
+			alert('[[#{ms.noSearchError}]]');
+
+			return;
+		}
+
+		if(!$('#' + pageId + 'OtherCost').val()){
+			alert('[[#{ms.requiredValue}]]');
+
+			return;
+		}
+
+		const headGrid = bmb02HeadGridObject.getGrid();
+		const hgActiveTab = headGrid.Tab().activeTab();
+		const dataTarget = hgActiveTab.gridOptions?.dataModel?.data;
+
+		if(dataTarget?.length === 0){
+			alert('[[#{bm.bmb02.noLogisticCostData}]]');
+
+			return;
+		}
+
+		const rowData = {
+			compkey: '[[${userattr.compkey}]]',
+			warekey: dataTarget[0].warekey,
+			blhdcky: dataTarget[0].blhdcky,
+			ownerky: dataTarget[0].ownerky,
+			ptnrkey: dataTarget[0].ptnrkey,
+			blrpmgb: dataTarget[0].blrpmgb,
+			blrcsgb: '[[#{bm.bmb02.blrcsgb.other}]]',
+			blrcost: removeComma($('#' + pageId + 'OtherCost').val()) || 0,
+			blramot: removeComma($('#' + pageId + 'OtherCost').val()) || 0,
+			refcqty: 0,
+			blrremk: $('#' + pageId + 'Blrremk').val()
+		}
+
+ 		await hgActiveTab._inst.addRow({
+ 			rowData: rowData,
+ 			checkEditable: false
+ 		});
+		closeAndResetModal();
+	});
+});
+</script>
+</div>
+</html>

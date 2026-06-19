@@ -1,0 +1,344 @@
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="fragments-mainContent">
+	<main class="mobile-content tmp06">
+		<div class="search-condition">
+			<div class="row">
+				<div class="condition-title col">
+					<label for="inputGroupSelect02">[[#{tm.tmp.shtrtky}]]</label>
+				</div>
+				<div class="input-wrapper col">
+					<div class="select-group">
+						<select class="form-control" id="tmp06_shtrtky" name="tmp06_shtrtky">
+							<option value ="">[[#{tm.tmp05.pltscan}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="condition-title col">
+					<label for="inputGroupSelect02">[[#{tm.tmp.vehicky}]]</label>
+				</div>
+				<div class="input-wrapper col">
+					<div class="select-group">
+						<select class="form-control" id="tmp06_vehicky" name="tmp06_vehicky">
+							<option value ="">[[#{tm.tmp05.pltscan}]]</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="condition-title col">
+					<button type="button" class="toggle-add" id="tmp06_toggle" value="add" disabled>[[#{tm.tmp.add}]]</button>
+				</div>
+				<div class="input-wrapper col">
+					<input type="text" class="form-control" id="tmp06_input" name="tmp06_input">
+				</div>
+			</div>
+			<div class="row">
+				<button type="button" class="btn-clear btn-white col" id="tmp06_btnReset">[[#{bt.reset}]]</button>
+				<button type="button" class="btn-save btn-main col" id="tmp06_btnSave">[[#{bt.save}]]</button>
+			</div>
+		</div>
+		<div class="search-list flex-1">
+			<div class="list-top">
+				<div class="list-title ic-title-mark" th:text="${gnatitle}"></div>
+				<div class="list-text">
+					<div id="tmp06_pallet">0</div>
+					<div>[[#{tm.tmp.pallet}]]</div>
+				</div>
+			</div>
+			<div class="table-wrapper con-box">
+				<table class="mobile-table tmp06-table">
+					<thead id="thtb">
+						<tr>
+							<th><input type="checkbox" id="tmp06TotalBox"></th>
+							<th id="postdat" style="display: none">[[#{tm.tmp05.postdat}]]</th>
+							<th id="vehicky" style="display: none">[[#{tm.tmp05.vehicky}]]</th>
+							<th id="trnstat" style="display: none">[[#{tm.tmp05.trnstat}]]</th>
+							<th id="saatc08">[[#{tm.tmp05.saatc08}]]</th>
+							<th id="mintc10">[[#{tm.tmp05.mintc10}]]</th>
+							<th id="maxtc10">[[#{tm.tmp05.maxtc10}]]</th>
+							<th id="saatc06">[[#{tm.tmp05.saatc06}]]</th>
+						</tr>
+					</thead>
+					<tbody class="table-body" id="tBody"></tbody>
+				</table>
+			</div>
+		</div>
+		<div class="spinner" id="tmp06Spinner"></div> 
+	</main>
+	<script>
+		$(function() {
+			const pageId = 'tmp06';
+			let tmp06PltData;
+			let tempDestkey;
+			let tmpVhplnky; // 배차계획번호
+			let palletCnt = 0;
+
+			//PDA니까 화면 처음 포커스 가게
+			document.querySelector('#'+pageId+'_input').focus();
+			
+			//============================================================				
+			//바코드 입력칸 포커스(가상 키보드 삭제)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('focus', async function(event) {
+				document.querySelector('#'+pageId+'_input').setAttribute('inputmode', 'none');
+			});
+			//============================================================				
+			//바코드 스캔시 키 입력이 될떄(가상 키보드 ON)
+			//============================================================	
+			document.querySelector('#'+pageId+'_input').addEventListener('keypress', async function(event) {
+				document.querySelector('#'+pageId+'_input').removeAttribute('inputmode');
+			});
+
+			//============================================================
+			//팔레트Num 입력시 있으면 해당 로우 체크 없으면 alert
+			//============================================================
+ 			document.querySelector('#'+pageId+'_input').addEventListener('keyup', async function(){
+ 				if(event.keyCode === 13){
+ 					const scanData = document.querySelector('#'+pageId+'_input').value;
+ 					let sameSaatc06 = 0;
+ 					if(!scanData){
+ 						return;
+ 					}
+ 					
+ 					for(const element of document.querySelectorAll('#tbody tr')){
+ 						if(element.closest('tr').querySelector('.saatc06').innerHTML === scanData){
+ 							sameSaatc06++;
+ 						}
+ 					}
+ 					if(!sameSaatc06){
+ 						await getTmp06PltList();
+ 					}
+ 					document.querySelector('#'+pageId+'_input').value = '';
+ 					document.querySelector('#'+pageId+'_input').focus();
+ 				}
+			});
+
+			//============================================================
+			//차키 리스트 조회
+			//============================================================
+			async function getShtrtkyList(){
+				let html = '';
+
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						shtrtky : document.querySelector('#'+pageId+'_shtrtky').value
+				}
+
+				const response = await fetchUtil('GET', '/tm/pda/tmp06/tvhcma', param);
+				const tvhcmaList = await response.json();
+
+				for(const tvhcmaData of tvhcmaList){
+					html += '<option value="'+ tvhcmaData.vehicky +'">'+ tvhcmaData.vhcfnam +' ('+tvhcmaData.sumvehi+')'+'</option>';
+				}
+
+				document.querySelector('#'+pageId+'_vehicky').innerHTML = html;
+				document.querySelector('#'+pageId+'_input').value = '';
+				document.querySelector('#'+pageId+'_input').focus();
+			}
+			
+			document.querySelector('#'+pageId+'_shtrtky').addEventListener('change', async function(){
+				let html = '';
+
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						shtrtky : document.querySelector('#'+pageId+'_shtrtky').value
+				}
+
+				const response = await fetchUtil('GET', '/tm/pda/tmp06/tvhcma', param);
+				const tvhcmaList = await response.json();
+
+				for(const tvhcmaData of tvhcmaList){
+					html += '<option value="'+ tvhcmaData.vehicky +'">'+ tvhcmaData.vhcfnam +' ('+tvhcmaData.sumvehi+')'+'</option>';
+				}
+
+				document.querySelector('#'+pageId+'_vehicky').innerHTML = html;
+			});
+
+			//============================================================
+			//초기화 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnReset').click(function(){
+				confirmOpen('[[#{ms.listViewRollback}]]', function(result){
+					if(result){
+						location.reload();
+					}
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			});
+			//============================================================
+			//상차 저장 버튼 클릭 시 검색 조건 초기화
+			//============================================================
+			$('#'+pageId+'_btnSave').click(async function(){
+				const thObjs = document.querySelector('#thtb').querySelectorAll('th');
+				const boxCheckedList = document.querySelector('#tbody').querySelectorAll('input[class*="checkbox"]:checked');
+				const trTagList = Array.from(boxCheckedList).map(function(boxCheckedList){
+					  return boxCheckedList.closest('tr');
+				});
+
+				if(!boxCheckedList.length){
+					alertOpen('[[#{ms.wmp.noCheckList}]]', function(){
+						document.querySelector('#'+pageId+'_input').focus();	
+					});
+					return;
+				}
+				
+				const keyArray = [];
+
+				//체크박스떄문에 1부터 시작(키값 세팅)
+				for(let i=1;i<thObjs.length;i++){
+					keyArray.push(thObjs[i].getAttribute('id'));
+				}
+				let param;
+				let tmp06SaveList = [];
+
+				//키 : 벨류 형식 만들기
+				for (const trTag of trTagList) {
+				    param = {};
+				    const tdList = trTag.querySelectorAll('td');
+
+				    for (let j = 1; j < tdList.length; j++) {
+				        param[keyArray[j - 1]] = tdList[j].innerHTML;
+				    }
+				    param['warekey'] = '[[${userattr.warekey}]]';
+			    	param['vehicky'] = document.querySelector('#'+pageId+'_vehicky').value;
+
+				    tmp06SaveList.push(param);
+				}
+				confirmOpen('[[#{ms.checksave}]]', async function(result){
+					if(result){
+						try{
+							const rData =  await fetchUtil('POST','/tm/pda/tmp06/save',{addList : tmp06SaveList});
+							if(rData.status === 200){
+								palletCnt=0;
+								document.querySelector('#tBody').innerHTML = '';
+								document.querySelector('#'+pageId+'_pallet').innerHTML = palletCnt;
+								document.querySelector('#'+ pageId +'TotalBox').checked = false;
+								document.querySelector('#'+pageId+'_shtrtky').innerHTML = '<option value ="">[[#{tm.tmp05.pltscan}]]</option>';
+								document.querySelector('#'+pageId+'_vehicky').innerHTML = '<option value ="">[[#{tm.tmp05.pltscan}]]</option>';
+								tempDestkey = null;
+								document.querySelector('#'+pageId+'_vehicky').disabled = false;
+								document.querySelector('#'+pageId+'_input').value = '';
+								document.querySelector('#'+pageId+'_input').focus();
+							}
+						}catch(err){
+							alertOpen('[[#{ms.saveErr}]]');
+							return;
+						}
+					}
+					document.querySelector('#'+pageId+'_input').value = '';
+					document.querySelector('#'+pageId+'_input').focus();
+				});
+			});
+
+			//================================
+			//PDA 배차된 PLT 리스트 불러오기
+			//================================
+			async function getTmp06PltList(){
+				
+				document.querySelector('#tmp06Spinner').style.display = 'block';
+				
+				const saatc06Data = document.querySelector('#'+pageId+'_input').value;
+				const param = {
+						warekey : '[[${userattr.warekey}]]',
+						saatc06 : saatc06Data
+				}
+
+				const response = await fetchUtil('GET', '/tm/pda/tmp06/grid/1', param);
+
+				tmp06PltData = await response.text();
+				
+				if(!tmp06PltData.length){
+					document.querySelector('#tmp06Spinner').style.display = 'none';
+					alertOpen('[[#{ms.tmp05.notExistPlt}]]', function(){
+						document.querySelector('#tmp06Spinner').style.display = 'none';
+						document.querySelector('#'+pageId+'_input').value = '';
+						document.querySelector('#'+pageId+'_input').focus();
+					});
+					return;
+				}
+				
+				tmp06PltData = JSON.parse(tmp06PltData);
+				
+				if(!document.querySelector('#'+pageId+'_shtrtky').value){
+					let shtrtkyHtml;
+					shtrtkyHtml +='<option value="'+ tmp06PltData.shtrtky +'">' + tmp06PltData.shtrtnm +'</option>';
+					document.querySelector('#'+pageId+'_shtrtky').innerHTML = shtrtkyHtml;
+				}
+				
+				tempDestkey ??= tmp06PltData.destkey;
+				
+				if(tempDestkey === tmp06PltData.destkey){
+					let html = '';
+					html += '<tr>';
+					html += '<td><input type="checkbox" class="checkbox" checked onclick="rowCheckControl(this)"></td>';
+					html += '<td class="postdat" style="display:none">'+ tmp06PltData.postdat  +'</td>';
+					html += '<td class="vehicky" style="display:none"></td>';
+					html += '<td class="trnstat" style="display:none">' + tmp06PltData.trnstat + '</td>';
+					html += '<td class="saatc08">' + tmp06PltData.mcatenm + '</td>';
+					html += '<td class="mintc10">' + tmp06PltData.mintc10 + '</td>';
+					html += '<td class="maxtc10">' + tmp06PltData.maxtc10 + '</td>';
+					html += '<td class="saatc06">' + tmp06PltData.saatc06 + '</td>';
+					html += '</tr>';
+					
+					document.querySelector('#tBody').insertAdjacentHTML('afterbegin', html);
+					
+					
+					let checkedCnt = 0;
+					document.querySelectorAll('input[class*="checkbox"]').forEach(function(element){
+						if(element.checked){
+							checkedCnt++;
+						}
+						document.querySelector('#'+pageId+'_pallet').innerHTML = checkedCnt;
+					});
+					
+					document.querySelector('#'+pageId+'TotalBox').checked = document.querySelectorAll('#tbody input[class*="checkbox"]:checked').length === document.querySelectorAll('#tbody input[class*="checkbox"]').length;
+					
+					if(!document.querySelector('#'+pageId+'_vehicky').value){
+						getShtrtkyList();
+					}
+				}else{
+					alertOpen('[[#{ms.tmp05.unmacthdestkey}]]', function(){
+						document.querySelector('#tmp06Spinner').style.display = 'none';
+						document.querySelector('#'+pageId+'_input').value = '';
+						document.querySelector('#'+pageId+'_input').focus();
+					});
+				}
+				document.querySelector('#tmp06Spinner').style.display = 'none';
+				document.querySelector('#'+pageId+'_input').value = '';
+				document.querySelector('#'+pageId+'_input').focus();
+			}
+			
+			//전체체크박스 컨트롤
+			document.querySelector('#'+pageId+'TotalBox').addEventListener('click', function(){
+				let checkedCnt = 0;
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(tagObj){
+					tagObj.checked = document.querySelector('#'+ pageId +'TotalBox').checked;
+					checkedCnt += tagObj.checked ? 1 : 0;
+				});
+				document.querySelector('#'+pageId+'_pallet').innerHTML = checkedCnt;
+				document.querySelector('#'+pageId+'_input').focus();
+			});
+			
+			//로우별 체크박스
+			rowCheckControl = function(obj){
+				let checkedCnt = 0;
+				document.querySelectorAll('input[class*="checkbox"]').forEach(function(element){
+					if(element.checked){
+						checkedCnt++;
+					}
+					document.querySelector('#'+pageId+'_pallet').innerHTML = checkedCnt;
+					document.querySelector('#'+ pageId +'TotalBox').checked = document.querySelectorAll('input[class*="checkbox"]').length === checkedCnt;
+				});
+				document.querySelector('#'+pageId+'_input').focus();
+			}
+			//차량선택후 disabled tmp06_vehicky
+			document.querySelector('#'+pageId+'_vehicky').addEventListener('change', function(){
+				document.querySelector('#'+pageId+'_vehicky').disabled = true;
+			});
+			
+		});
+	</script>
+</div>
+</html>
